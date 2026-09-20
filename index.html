@@ -51,7 +51,7 @@
 		// Check for running exported on file protocol
 		if (window.location.protocol.substr(0, 4) === "file")
 		{
-			alert("Приветствую! Эта версия – тестовая многопользовательская версия для 1.2-2.3.X (китайский/российский сервер). ЭТО БЕТА-ВЕРСИЯ – возможны ошибки и недочеты. PvP в данный момент отключен, и действуют другие общие правила в игре (только PvE для тестирования). Пожалуйста, сначала введите имя пользователя, прежде чем присоединиться к комнате. НЕ ПЫТАЙТЕСЬ добавлять ToolkitMod или любые другие читы. Обратите внимание: сервер работает только по Wi-Fi, мобильное интернет-соединение может работать нестабильно, но работает. Добро пожаловать в minidayz! Автор и владелец MPMod: @Alex @MinidayzSTART. Совместная разработка, помощь, улучшения и дизайн: @Civert0 https://github.com/DarrenB276/");
+			alert("Приветствую! Эта версия – тестовая многопользовательская версия для 1.9.X-2.3.3, предназначенная для серверов в Китае (CN) и России (RU). ЭТО БЕТА-ВЕРСИЯ – возможны ошибки и недочеты. Пожалуйста, сначала введите имя пользователя, прежде чем присоединиться к комнате. НЕ ПЫТАЙТЕСЬ добавлять ToolkitMod или любые другие читы. Обратите внимание: хост-сервер работает только по Wi-Fi, подключение через мобильный интернет может работать не полностью для режима P2P с друзьями. Добро пожаловать в minidayz! Автор и владелец MPMod: @Alex @MinidayzSTART. Совместная разработка, помощь, улучшения и дизайн: @Civert0 https://github.com/DarrenB276/");
 		}
 	})();
 	</script>
@@ -132,17 +132,105 @@
 			}
 		};
     </script>
+	<script>
+    window.addEventListener('load', function() {
+        // Automated harnesses drive the menu with fixed screen coordinates. The
+        // toolkit replaces the main menu 10 s after load, so a test that boots
+        // slower than that clicks the wrong buttons and times out waiting for
+        // the Map layout. index.html?nomods=1 keeps a test run on the stock menu.
+        // Normal play is unaffected: without the flag this behaves as before.
+        try { if (/[?&]nomods=1(&|$)/.test(location.search)) return; } catch (e) {}
+        setTimeout(function() {
+
+            var modScript = document.createElement('script');
+            modScript.src = 'c2injt.js'; 
+            document.body.appendChild(modScript); 
+ 
+            var style = document.createElement('style'); 
+            style.innerHTML = `
+                #mod-loaded-notif { 
+                    position: fixed; 
+                    top: 20px; 
+                    left: -300px; 
+                    opacity: 0; 
+                    background-color: #040A18;  
+                    color: #00FFFF;  
+                    padding: 12px 20px; 
+                     
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+                    font-size: 16px; 
+                    font-weight: 800;  
+                    text-transform: uppercase; 
+                    border-left: 5px solid #00FFFF; 
+                    box-shadow: 0px 4px 15px rgba(0, 255, 255, 0.2); 
+                    z-index: 999999;  
+                    pointer-events: none;  
+                     
+                    animation: slideFadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; 
+                } 
+                .notif-subtext { 
+                    display: block; 
+                    font-size: 11px; 
+                    font-weight: 400;  
+                    color: rgba(0, 255, 255, 0.7);  
+                    margin-top: 4px; 
+                    text-transform: none;  
+                } 
+                 
+                @keyframes slideFadeIn { 
+                    0% { left: -300px; opacity: 0; } 
+                    100% { left: 20px; opacity: 1; } 
+                } 
+ 
+                .notif-fade-out { 
+                    animation: fadeOut 0.5s ease-in forwards !important; 
+                } 
+ 
+                @keyframes fadeOut { 
+                    0% { opacity: 1; left: 20px; } 
+                    100% { opacity: 0; left: 20px; } 
+                } 
+            `; 
+            document.head.appendChild(style); 
+ 
+            var notif = document.createElement('div'); 
+            notif.id = "mod-loaded-notif"; 
+            notif.innerHTML = "Lock and Loaded<span class='notif-subtext'>Chest_And_EventsMod, ModMenu 30.2</span>"; 
+            document.body.appendChild(notif); 
+ 
+            setTimeout(function() { 
+                notif.classList.add('notif-fade-out'); 
+                 
+                setTimeout(function() { 
+                    notif.remove(); 
+                }, 500); 
+            }, 3000); 
+ 
+        }, 10000);  
+    }); 
+</script>
     <!-- logger.js missing from build - was 404ing on every boot. Restore the file to re-enable. -->
+    <script src="mp_runtime_compat.js"></script>
+    <script src="mp_itemtable.js"></script>
+    <script src="mp_lang.js"></script>
     <script src="mp_worldseed.js"></script>
     <script src="mp_authority.js"></script>
 <script src="mp_join.js"></script>
 <script src="mp_worldstate.js"></script>
 <script src="mp_entities.js"></script>
 <script src="mp_players.js"></script>
+<script src="mp_events.js"></script>
+<script src="mp_props.js"></script>
 <script src="mp_interactions.js"></script>
-<script src="zoom.js"></script>
+<script src="zoom(rem).js"></script>
     <script src="peerjs.min.js"></script>
+    <!-- The one interface between the game and the wire: peers by id, per-peer byte counts. -->
+    <script src="mp_transport.js"></script>
     <script src="lan_bridge.js"></script>
+    <script src="mp_overlay.js"></script>
+    <script src="mp_hostpanel.js"></script>
+    <!-- Main-menu Multiplayer / Character buttons and the multiplayer screen. Loads after the host panel it drives. -->
+    <script src="mp_menu.js"></script>
     <!-- drop.js missing from build - was 404ing on every boot. Restore the file to re-enable. -->
 </body> 
 </html>

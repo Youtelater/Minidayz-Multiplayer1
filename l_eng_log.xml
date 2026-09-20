@@ -2,7 +2,12 @@
 
 <list>
 
-<!--Player phrases-->
+<!--Player feedback-->
+
+<text>
+	<id>0</id>
+	<name></name>
+</text>
 
 <text>
 	<id>1</id>
@@ -16,22 +21,22 @@
 
 <text>
 	<id>3</id>
-	<name>I can feel blood dripping.</name>
+	<name>I can feel blood dripping!</name>
 </text>
 
 <text>
 	<id>4</id>
-	<name>I'm freezing.</name>
+	<name>I'm freezing!</name>
 </text>
 
 <text>
 	<id>5</id>
-	<name>I'm dying of starvation.</name>
+	<name>I'm dying of starvation!</name>
 </text>
 
 <text>
 	<id>6</id>
-	<name>I'm dying of dehydration.</name>
+	<name>I'm dying of dehydration!</name>
 </text>
 
 <text>
@@ -41,18 +46,19 @@
 
 <text>
 	<id>8</id>
-	<name>There is nothing in this trunk.</name>
+	<name>The trunk is empty.</name>
 </text>
 
 <!--Player phrase: when no ammo for reloading-->
 <text>
 	<id>9</id>
-	<name>No more ammo.</name>
+	<name>I'm out of ammo!</name>
 </text>
+
 <!--Player phrase: when ranged weapon is empited-->
 <text>
 	<id>10</id>
-	<name>Mag empty.</name>
+	<name>Mag empty!</name>
 </text>
 
 <text>
@@ -62,17 +68,17 @@
 
 <text>
 	<id>12</id>
-	<name>There's no water in this pump.</name>
+	<name>The water pump is dry.</name>
 </text>
 
 <text>
 	<id>13</id>
-	<name>I don't want to drink.</name>
+	<name>I'm quenched.</name>
 </text>
 
 <text>
 	<id>14</id>
-	<name>I've eaten a raw steak.</name>
+	<name>I've eaten a raw meat.</name>
 </text>
 
 <text>
@@ -82,7 +88,7 @@
 
 <text>
 	<id>16</id>
-	<name>I've filled it with a waterpump.</name>
+	<name>I've filled it with water.</name>
 </text>
 
 <text>
@@ -110,7 +116,8 @@
 	<name>Ammo loaded.</name>
 </text>
 
-<!--Player phrase: when trying to load wrong ammo-->
+<!--Player log: when trying to load wrong ammo-->
+
 <text>
 	<id>34</id>
 	<name>It doesn't fit there.</name>
@@ -118,7 +125,7 @@
 
 <text>
 	<id>35</id>
-	<name>I've applied bandage.</name>
+	<name>I've bandaged myself.</name>
 </text>
 
 <text>
@@ -128,10 +135,11 @@
 
 <text>
 	<id>37</id>
-	<name>Blood transfusion completed.</name>
+	<name>Blood transfusion complete.</name>
 </text>
 
-<!--Player phrase: when trying to load battery to nvg/headlamp-->
+<!--Player log: when trying to load battery in NVG/headlamp❓-->
+
 <text>
 	<id>38</id>
 	<name>Already charged.</name>
@@ -139,12 +147,12 @@
 
 <text>
 	<id>39</id>
-	<name>I need a headlamp or NVG.</name>
+	<name>I need a headlamp or a NVG.</name>
 </text>
 
 <text>
 	<id>40</id>
-	<name>I need a fireplace kit on the ground to ignite.</name>
+	<name>I need a campfire kit deployed on the ground.</name>
 </text>
 
 <text>
@@ -159,12 +167,12 @@
 
 <text>
 	<id>43</id>
-	<name>I've eaten vitamins.</name>
+	<name>I've took vitamins.</name>
 </text>
 
 <text>
 	<id>44</id>
-	<name>Weapon ruined.</name>
+	<name>Weapon ruined!</name>
 </text>
 
 <text>
@@ -174,12 +182,12 @@
 
 <text>
 	<id>46</id>
-	<name>I've eaten tetracycline.</name>
+	<name>I've took tetracycline.</name>
 </text>
 
 <text>
 	<id>47</id>
-	<name>Vehicle fueled.</name>
+	<name>The vehicle has been refueled.</name>
 </text>
 
 <text>
@@ -189,7 +197,7 @@
 
 <text>
 	<id>49</id>
-	<name>Bottle empty.</name>
+	<name>The water bottle is empty.</name>
 </text>
 
 <text>
@@ -199,7 +207,7 @@
 
 <text>
 	<id>51</id>
-	<name>Canteen empty.</name>
+	<name>The canteen is empty.</name>
 </text>
 
 <text>
@@ -209,37 +217,37 @@
 
 <text>
 	<id>53</id>
-	<name>Landmine planted.</name>
+	<name>Landmine deployed.</name>
 </text>
 
 <text>
 	<id>54</id>
-	<name>Beartrap planted.</name>
+	<name>Bear trap deployed.</name>
 </text>
 
 <text>
 	<id>55</id>
-	<name>Vehicle repaired.</name>
+	<name>The vehicle has been repaired.</name>
 </text>
 
 <text>
 	<id>56</id>
-	<name>I've cooked a steak.</name>
+	<name>I've roasted some meat.</name>
 </text>
 
 <text>
 	<id>57</id>
-	<name>I need an active fireplace for that.</name>
+	<name>I need an active campfire for that.</name>
 </text>
 
 <text>
 	<id>58</id>
-	<name>I've eaten cooked steak.</name>
+	<name>I've eaten some roasted meat.</name>
 </text>
 
 <text>
 	<id>59</id>
-	<name>I've drunk a Nuko Cola. Feels great!</name>
+	<name>I've drank a Nuka-Cola... It feels great!</name>
 </text>
 
 <text>
@@ -269,12 +277,12 @@
 
 <text>
 	<id>65</id>
-	<name>Headlamp ruined.</name>
+	<name>Headlamp is out of charge.</name>
 </text>
 
 <text>
 	<id>66</id>
-	<name>NVG ruined.</name>
+	<name>NVG is out of charge.</name>
 </text>
 
 <text>
@@ -284,30 +292,31 @@
 
 <text>
 	<id>68</id>
-	<name>It requires a pickaxe, pitchfork or shovel.</name>
+	<name>It requires a pickaxe, pitchfork, or shovel.</name>
 </text>
 
 <text>
 	<id>69</id>
-	<name>Not possible to plant here.</name>
+	<name>I can't dig here.</name>
 </text>
 
 <text>
 	<id>70</id>
-	<name>Planted.</name>
+	<name>I've planted the crop.</name>
 </text>
 
 <text>
 	<id>71</id>
-	<name>Block</name>
+	<name>Deployed.</name>
 </text>
 
 <text>
 	<id>72</id>
-	<name>I need a knife to flay prey.</name>
+	<name>I need a knife to flay the animal.</name>
 </text>
 
-<!-- When trying to switch to firearm and you dont have any  -->
+<!--When trying to switch to firearm and you dont have any-->
+
 <text>
 	<id>73</id>
 	<name>I have no ranged weapon.</name>
@@ -315,12 +324,12 @@
 
 <text>
 	<id>74</id>
-	<name>Tap where to throw the flare.</name>
+	<name>Tap to throw the flare.</name>
 </text>
 
 <text>
 	<id>75</id>
-	<name>Tap where to throw the grenade.</name>
+	<name>Tap to throw the grenade.</name>
 </text>
 
 <text>
@@ -345,12 +354,12 @@
 
 <text>
 	<id>80</id>
-	<name>It's pretty cold.</name>
+	<name>I'm very cold.</name>
 </text>
 
 <text>
 	<id>81</id>
-	<name>I'm cooling off.</name>
+	<name>I'm freezing to death!</name>
 </text>
 
 <text>
@@ -365,7 +374,7 @@
 
 <text>
 	<id>84</id>
-	<name>Looks like there are no military crashes nearby.</name>
+	<name>Looks like there are no military crash sites nearby.</name>
 </text>
 
 <text>
@@ -373,52 +382,55 @@
 	<name>Looks like a military crash site is nearby.</name>
 </text>
 
-<!-- Friend bots phrase: on health lower than 50%  -->
+<!--Friend bots phrase: on health lower than 50%-->
+
 <text>
 	<id>100</id>
-	<name>Damn, I'm seriously wounded.</name>
+	<name>Damn... I'm seriously wounded!</name>
 </text>
 
-<!-- Friend bots phrases: when player get into house, bot starts patroling entrance  -->
+<!--Friend bots phrases: when player get into house, bot starts patroling entrance-->
 <text>
 	<id>101</id>
-	<name>Ok, I'm on the watch.</name>
+	<name>Ok, I'll watch your back, buddy.</name>
 </text>
 
 <text>
 	<id>102</id>
-	<name>I will cover while you loot.</name>
+	<name>I will cover while you loot, buddy.</name>
 </text>
 
-<!-- Friend bots phrase: when player gets on firing line -->
+<!--Friend bots phrase: when player gets on firing line-->
 <text>
 	<id>103</id>
 	<name>You're blocking the target!</name>
 </text>
 
-<!-- Friend bots phrase: on health lower than 50%  -->
+<!-- Friend bots phrase: when meeting player-->
 <text>
 	<id>104</id>
-	<name>Hey! Let's team up!</name>
+	<name>Hey! you there...lets team up.</name>
 </text>
 
 <!-- Enemy Melee bot phrases on getting hit from firearm-->
+
 <text>
 	<id>105</id>
-	<name>Unfair!</name>
+	<name>Motherfu...!</name>
 </text>
 
 <text>
 	<id>106</id>
-	<name>Damn, he has a gun!</name>
+	<name>Damn! sucker's got a gun!</name>
 </text>
 
 <text>
 	<id>107</id>
-	<name>Shit!</name>
+	<name>Shit! I'mma skeddadle!</name>
 </text>
 
-<!-- Enemy Bot with firearm when spots player -->
+<!--Enemy Bot with firearm when spots player-->
+
 <text>
 	<id>108</id>
 	<name>Get over here!</name>
@@ -426,7 +438,7 @@
 
 <text>
 	<id>109</id>
-	<name>Eat this!</name>
+	<name>Eat lead!</name>
 </text>
 
 <text>
@@ -436,10 +448,15 @@
 
 <text>
 	<id>111</id>
-	<name>I have nothing for exchange. Sorry, ask someone else.</name>
+	<name>Caught the sucker!</name>
 </text>
 
-<!-- Additional player phrases -->
+<text>
+	<id>112</id>
+	<name>This motherfucker here!</name>
+</text>
+
+<!--Additional player phrases -->
 
 <text>
 	<id>125</id>
@@ -460,7 +477,7 @@
 
 <text>
 	<id>86</id>
-	<name>This rifle can't be sawed off.</name>
+	<name>This rifle can't be sawn off.</name>
 </text>
 
 <text>
@@ -470,46 +487,46 @@
 
 <text>
 	<id>88</id>
-	<name>Gas is here! I need a gas mask!</name>
+	<name>There's poisonous gas around! I need a gas mask.</name>
 </text>
 
 <!-- Update 1.3.0 addings -->
 
 <text>
 	<id>89</id>
-	<name>I need a drivable vehicle for this.</name>
+	<name>I need a drivable vehicle for that.</name>
 </text>
 
 <text>
 	<id>90</id>
-	<name>I can't do it from inside of the car.</name>
+	<name>I can't do it from inside the vehicle.</name>
 </text>
 
 <text>
 	<id>91</id>
-	<name>This vehicle already is in a good condition.</name>
+	<name>This vehicle is already in good condition.</name>
 </text>
 
 <text>
 	<id>92</id>
-	<name>This vehicle already is fully fueled.</name>
+	<name>This vehicle is already fully fueled.</name>
 </text>
 
-<!-- Quests -->
+<!--Quests-->
 
 <text>
 	<id>131</id>
-	<name>I have nothing to say to you.</name>
+	<name>I have nothing to say to you, you're untrustworthy.</name>
 </text>
 
 <text>
 	<id>132</id>
-	<name>I need a lake or a sea for this.</name>
+	<name>I need to be on a shore of a lake or the ocean.</name>
 </text>
 
 <text>
 	<id>133</id>
-	<name>I don't see any fish nearby.</name>
+	<name>I don't see any fish swimming nearby.</name>
 </text>
 
 <text>
@@ -519,7 +536,7 @@
 
 <text>
 	<id>136</id>
-	<name>Thanks again for your help. We are leaving soon.</name>
+	<name>Thanks again for your help. We'll be leaving soon.</name>
 </text>
 
 <text>
@@ -534,12 +551,586 @@
 
 <text>
 	<id>140</id>
-	<name>Gotcha!</name>
+	<name>What a catch!</name>
 </text>
 
 <text>
 	<id>141</id>
-	<name>Damn, slipped away.</name>
+	<name>Skunked again!</name>
+</text>
+
+<!--1.7 content-->
+
+<text>
+	<id>142</id>
+	<name>This item cannot be attached.</name>
+</text>
+
+<text>
+	<id>143</id>
+	<name>I don't have a weapon to switch.</name>
+</text>
+
+<text>
+	<id>144</id>
+	<name>I can't fit any more.</name>
+</text>
+
+<text>
+	<id>145</id>
+	<name>I don't have a backpack.</name>
+</text>
+
+<text>
+	<id>146</id>
+	<name>Out of fuel.</name>
+</text>
+
+<text>
+	<id>147</id>
+	<name>I can't wear it over the liner.</name>
+</text>
+
+<text>
+	<id>148</id>
+	<name>The gas cannister is empty.</name>
+</text>
+
+<text>
+	<id>149</id>
+	<name>There's nothing to refuel.</name>
+</text>
+
+<text>
+	<id>150</id>
+	<name>I need a gas station to fill on fuel.</name>
+</text>
+
+<text>
+	<id>151</id>
+	<name>The gas station is out of fuel.</name>
+</text>
+
+<text>
+	<id>152</id>
+	<name>The generator is out of fuel.</name>
+</text>
+
+<text>
+	<id>153</id>
+	<name>Weapons, gear, and vehicles won't lose durability.</name>
+</text>
+
+<text>
+	<id>154</id>
+	<name>I need a lake nearby to filter water.</name>
+</text>
+
+<text>
+	<id>155</id>
+	<name>I've filtered some water from the lake.</name>
+</text>
+
+<text>
+	<id>156</id>
+	<name>Tap where to place the C4.</name>
+</text>
+
+<text>
+	<id>157</id>
+	<name>I'm irradiated and bleeding continuously!!!</name>
+</text>
+
+<text>
+	<id>158</id>
+	<name>I don't have a dog...</name>
+</text>
+
+<text>
+	<id>159</id>
+	<name>After death, respawn on the west coast.</name>
+</text>
+
+<text>
+	<id>160</id>
+	<name>Rainproof: Immunity against wetness and acid rains.</name>
+</text>
+
+<text>
+	<id>161</id>
+	<name>Immune from chemical and bio-hazards.</name>
+</text>
+
+<text>
+	<id>162</id>
+	<name>Ignore looting penalities.</name>
+</text>
+
+<text>
+	<id>163</id>
+	<name>Immunity against bio-hazard puddles.</name>
+</text>
+
+<text>
+	<id>164</id>
+	<name>Nothing convertible nearby.</name>
+</text>
+
+<text>
+	<id>165</id>
+	<name>It already has this.</name>
+</text>
+
+<text>
+	<id>166</id>
+	<name>Wet: movement speed -5%, heat -2</name>
+</text>
+
+<text>
+	<id>167</id>
+	<name>I'm soaked...</name>
+</text>
+
+<text>
+	<id>168</id>
+	<name>Sick: Health continuously decreases, accelerated hunger and thirst loss.</name>
+</text>
+
+<text>
+	<id>169</id>
+	<name>I've calculated my course for the next island...</name>
+</text>
+
+<text>
+	<id>170</id>
+	<name>Radiation resistant, bio-hazard contact proof, and insulated from electricity.</name>
+</text>
+
+<text>
+	<id>171</id>
+	<name>Toxic gas contamination: Health constantly drains, poisoned after 5 seconds.</name>
+</text>
+
+<text>
+	<id>172</id>
+	<name>I can't fit it into the vehicle.</name>
+</text>
+
+<text>
+	<id>173</id>
+	<name>This is an irradiated zone...I'd better have a NBC suit or other high tier suits!</name>
+</text>
+
+<text>
+	<id>174</id>
+	<name>I can't strap any more grenades.</name>
+</text>
+
+<text>
+	<id>175</id>
+	<name>My reputation is not high enough.</name>
+</text>
+
+<text>
+	<id>176</id>
+	<name>Infinite stacking for stackable items.</name>
+</text>
+
+<text>
+	<id>177</id>
+	<name>I should be able to take this boat across, but I need to refuel it first.</name>
+</text>
+
+<text>
+	<id>178</id>
+	<name>Gas mask is not equipped.</name>
+</text>
+
+<text>
+	<id>179</id>
+	<name>I can't do that.</name>
+</text>
+
+<text>
+	<id>180</id>
+	<name>You need at least 200 experience points to enable this feature.</name>
+</text>
+
+<text>
+	<id>181</id>
+	<name>Durability is at max.</name>
+</text>
+
+<!--Unfinished-->
+<text>
+	<id>182</id>
+	<name>Creatures health bar hidden, infected count increased.</name>
+</text>
+
+<text>
+	<id>183</id>
+	<name>Let the dead rest...</name>
+</text>
+
+<text>
+	<id>184</id>
+	<name>I don't feel well!</name>
+</text>
+
+<text>
+	<id>185</id>
+	<name>I'm about to die!!!</name>
+</text>
+
+<text>
+	<id>186</id>
+	<name>No firearm to store.</name>
+</text>
+
+<text>
+	<id>187</id>
+	<name>Health bar increased by 50%; hunger and thirst bars increased by 100%</name>
+</text>
+
+<text>
+	<id>188</id>
+	<name>I can't wear it anymore.</name>
+</text>
+
+<text>
+	<id>189</id>
+	<name>I'm poisoned, I feel awful and my body is deteriorating!</name>
+</text>
+
+<!--Headgear hide/show-->
+<text>
+	<id>190</id>
+	<name>I've layered the headgear outside.</name>
+</text>
+
+<text>
+	<id>191</id>
+	<name>I've layered the headgear inside.</name>
+</text>
+
+<text>
+	<id>192</id>
+	<name>Current infected health and damage multiplier: </name>
+</text>
+
+<text>
+	<id>193</id>
+	<name>My body is numb!</name>
+</text>
+
+<text>
+	<id>194</id>
+	<name>I need a human corpse to do that.</name>
+</text>
+
+<text>
+	<id>195</id>
+	<name>This gas canister is full.</name>
+</text>
+
+<text>
+	<id>196</id>
+	<name>What da dog doin?!</name>
+</text>
+
+<text>
+	<id>197</id>
+	<name>Stackable items can't be placed there.</name>
+</text>
+
+<text>
+	<id>198</id>
+	<name>This generator's fuel tank is empty.</name>
+</text>
+
+<text>
+	<id>199</id>
+	<name>Run!</name>
+</text>
+
+<text>
+	<id>200</id>
+	<name>Can't be used at the moment.</name>
+</text>
+
+<text>
+	<id>201</id>
+	<name>Time until next Blood Moon: </name>
+</text>
+
+<text>
+	<id>202</id>
+	<name>NPCs with automatic weapons will spray continously without needing to reload.</name>
+</text>
+
+<text>
+	<id>203</id>
+	<name>This vehicle can't be reinforced any further.</name>
+</text>
+
+<text>
+	<id>204</id>
+	<name>Ahh shit... here we go again.</name>
+</text>
+
+<text>
+	<id>205</id>
+	<name>I can't see clearly!</name>
+</text>
+
+<text>
+	<id>206</id>
+	<name>I need a metal sheet</name>
+</text>
+
+<text>
+	<id>207</id>
+	<name>I need my buddy near me.</name>
+</text>
+
+<text>
+	<id>208</id>
+	<name>The past is past, this is now! </name>
+</text>
+
+<text>
+	<id>209</id>
+	<name>Who are you buddy?! A stray dog...</name>
+</text>
+
+<text>
+	<id>210</id>
+	<name>Full-auto enabled.</name>
+</text>
+
+<text>
+	<id>211</id>
+	<name>Semi-auto enabled.</name>
+</text>
+
+<text>
+	<id>212</id>
+	<name>There's nothing deployed nearby.</name>
+</text>
+
+<text>
+	<id>213</id>
+	<name>Battery fully charged.</name>
+</text>
+
+<text>
+	<id>214</id>
+	<name>I've filled it with fuel.</name>
+</text>
+
+<text>
+	<id>215</id>
+	<name>There's nothing to dismantle nearby.</name>
+</text>
+
+<text>
+	<id>216</id>
+	<name>Fireproof.</name>
+</text>
+
+<text>
+	<id>217</id>
+	<name> The boat is out of fuel.</name>
+</text>
+
+<text>
+	<id>218</id>
+	<name> The boat's fuel tank is full.</name>
+</text>
+
+<text>
+	<id>219</id>
+	<name>The durability is too low.</name>
+</text>
+
+<text>
+	<id>220</id>
+	<name>I need more rags.</name>
+</text>
+
+<text>
+	<id>221</id>
+	<name> days until it arrives.</name>
+</text>
+
+<text>
+	<id>222</id>
+	<name>A blood moon has occured!...The infected now smell the blood a mile away!!!</name>
+</text>
+
+<text>
+	<id>223</id>
+	<name>Bipod deployed, recoil greatly reduced.</name>
+</text>
+
+<text>
+	<id>224</id>
+	<name>I'm hauling something heavy, I can't do that!</name>
+</text>
+
+<text>
+	<id>225</id>
+	<name>I don't have this gear on me.</name>
+</text>
+
+<text>
+	<id>226</id>
+	<name>Only knives, firestarters, flares, and water containers can be stored here.</name>
+</text>
+
+<text>
+	<id>227</id>
+	<name>Only medicine, medical supplies and bandages can be stored here.</name>
+</text>
+
+<text>
+	<id>228</id>
+	<name>Only duct tapes, epoxy glue and sewing kits can be stored here.</name>
+</text>
+
+<text>
+	<id>229</id>
+	<name>Battery doesn't have sufficient charges.</name>
+</text>
+
+<text>
+	<id>230</id>
+	<name>I have discovered the underground bunker's location.</name>
+</text>
+
+<text>
+	<id>231</id>
+	<name>This blast door looks like it's out of power, It needs electricity to function.</name>
+</text>
+
+<text>
+	<id>232</id>
+	<name>I need a generator nearby.</name>
+</text>
+
+<text>
+	<id>233</id>
+	<name>This battery is fully charged.</name>
+</text>
+
+<text>
+	<id>234</id>
+	<name>I have entered a toxic gas contaminated zone!</name>
+</text>
+
+<text>
+	<id>235</id>
+	<name>I have entered a radiation zone!</name>
+</text>
+
+<text>
+	<id>236</id>
+	<name>I need a campfire and a frying pan.</name>
+</text>
+
+<text>
+	<id>237</id>
+	<name>I fried an egg.</name>
+</text>
+
+<text>
+	<id>238</id>
+	<name>I've cooked pepper steak.</name>
+</text>
+
+<text>
+	<id>239</id>
+	<name>I've cooked shakshuka.</name>
+</text>
+
+<text>
+	<id>240</id>
+	<name>Tap to switch, hold to throw, hold to remove when backpack is open.</name>
+</text>
+
+<text>
+	<id>241</id>
+	<name>I feel a grim tonight! I can't sleep...</name>
+</text>
+
+<text>
+	<id>242</id>
+	<name>Remaining amount: </name>
+</text>
+
+<text>
+	<id>243</id>
+	<name>Fatigued: block chance -20%, movement speed -10%</name>
+</text>
+
+<text>
+	<id>244</id>
+	<name>Missing NBC gloves for this slot.</name>
+</text>
+
+<text>
+	<id>245</id>
+	<name>Missing NBC boots for this slot.</name>
+</text>
+
+<text>
+	<id>246</id>
+	<name>No such item nearby.</name>
+</text>
+
+<text>
+	<id>247</id>
+	<name>I need </name>
+</text>
+
+<text>
+	<id>248</id>
+	<name>XP</name>
+</text>
+
+<text>
+	<id>249</id>
+	<name>No such creature nearby.</name>
+</text>
+
+<text>
+	<id>250</id>
+	<name>It's stored in build mode.</name>
+</text>
+
+<text>
+	<id>251</id>
+	<name>The fuelpack is missing!</name>
+</text>
+
+<text>
+	<id>252</id>
+	<name>The fuelpack is full.</name>
+</text>
+
+<text>
+	<id>253</id>
+	<name>I need to be next to a tent.</name>
+</text>
+
+<text>
+	<id>254</id>
+	<name>I should probably come here at night!</name>
+</text>
+
+<text>
+	<id>255</id>
+	<name>The gun is out of power.</name>
 </text>
 
 </list>
