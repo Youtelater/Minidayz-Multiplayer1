@@ -1,0 +1,6 @@
+{
+  "appId": "com.minidayz.mp",
+  "appName": "Mini DAYZ MP",
+  "webDir": ".",
+  "bundledWebRuntime": false
+}
