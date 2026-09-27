@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-14
+    runs-on: macos-latest
 
     steps:
       - name: Checkout Code
@@ -14,11 +14,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
-      - name: Install Dependencies & Initialize Capacitor
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods
+
+      - name: Install Dependencies & Setup Capacitor
         run: |
           npm install
+          npx cap init "Mini DAYZ MP" "com.minidayz.mp" --web-dir "."
           npx cap add ios
           npx cap copy ios
 
