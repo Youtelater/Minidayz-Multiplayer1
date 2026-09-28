@@ -51,7 +51,7 @@
 		// Check for running exported on file protocol
 		if (window.location.protocol.substr(0, 4) === "file")
 		{
-			alert("特别鸣谢：每一个热爱MDZ的玩家                                                                                        Greetings, This version is a test multiplayer version for 1.9.X-2.3.3 CN/RU. THIS IS A WORK IN PROGRESS - Bugs and Errors might occur. Please Enter username first before joining a room.. Welcome to minidayz！ MPMod Author @Alex @MinidayzSTART. Custom API's, Co-Developed/Assisted and Designed by @Civert0 https://github.com/DarrenB276/ Refined Eng Translation: Grinding til 3AM, MaxPayne, Cedric Armel, Cayden, Rice and Pies  |  Spanish Translation: JayNghtmr  |  Portugese Translation: Zennick | MiniDayZ Reimagined Shader Mod: Civert0");
+			alert("Greetings, This version is a test multiplayer version for 1.9.X-2.3.3 CN/RU. THIS IS A WORK IN PROGRESS - Bugs and Errors might occur. Please Enter username first before joining a room, DO NOT Attempt to add ToolkitMod or any other cheats. Mobile Data Connection might not fully work for friend P2P. Welcome to minidayz！ MPMod Author @Alex @MinidayzSTART. Custom API's, Co-Developed/Assisted and Designed by @Civert0 https://github.com/DarrenB276/");
 		}
 	})();
 	</script>
@@ -77,6 +77,18 @@
 	<!-- Pages load faster with scripts at the bottom -->
 	
 	<!-- Construct 2 exported games require jQuery. -->
+	<script>
+	// The APK (Android, game loaded from file://) ships Cordova and its plugins
+	// - file storage for Export, the system browser - but this page never loaded
+	// them, so none of it existed. Load them there only: Android's cordova.js on
+	// a normal web page would try to reach a native side that is not there.
+	(function () {
+		try {
+			if (location.protocol === "file:" && /Android/i.test(navigator.userAgent))
+				document.write('<script src="cordova.js"><\/script>');
+		} catch (e) {}
+	})();
+	</script>
 	<script src="jquery-3.4.1.min.js"></script>
 
 
