@@ -18,8 +18,7 @@ jobs:
         shell: bash
         run: |
           dkp-pacman -Sy --noconfirm 3ds-dev
-          export DEVKITPRO=/opt/devkitpro
-          export DEVKITARM=${DEVKITPRO}/devkitARM
+          source /etc/profile.d/devkit-env.sh
           cd src
           make
 
