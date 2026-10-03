@@ -1,7 +1,6 @@
 #---------------------------------------------------------------------------------
 # CLEAR VARIABLES
 #---------------------------------------------------------------------------------
-# Clear out built-in rules and variables to prevent unexpected behavior
 .SUFFIXES:
 
 #---------------------------------------------------------------------------------
@@ -32,7 +31,7 @@ CFLAGS	:=	-g -Wall -O2 -mword-relocations \
 			-fomit-frame-pointer \
 			$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -DARM11 -D_3DS
+CFLAGS	+=	$(INCLUDE) -D__3DS__
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
@@ -41,7 +40,7 @@ ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 #---------------------------------------------------------------------------------
-# LIBRARIES TO LINK (citro2d, citro3d, and libctru)
+# LIBRARIES TO LINK
 #---------------------------------------------------------------------------------
 LIBDIRS	:= $(PORTLIBS) $(CTRULIB)
 LIBS	:= -lcitro2d -lcitro3d -lctru -lm
@@ -71,6 +70,9 @@ export OFILES := $(OFILES_BIN) $(OFILES_SOURCES)
 
 export HFILES	:=	$(addsuffix .h, $(subst .,_,$(BINFILES)))
 
+export LIBDIRS	:=	$(LIBDIRS)
+export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD)
@@ -99,6 +101,8 @@ all	:	$(OUTPUT).3dsx
 $(OUTPUT).3dsx	:	$(OUTPUT).elf
 
 $(OUTPUT).elf	:	$(OFILES)
+	@echo linking $(notdir $@)
+	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
 
 -include $(DEPENDS)
 
