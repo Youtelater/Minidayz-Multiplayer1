@@ -14,13 +14,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup devkitPro Environment
-        uses: devkitPro/setup-devkitpro@v1
-        with:
-          3ds-dev: true
-
       - name: Compile 3DS Executable
         run: |
+          source /etc/profile.d/devkit-env.sh
           cd src
           make
 
