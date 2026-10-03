@@ -8,19 +8,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm:latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install 3DS Development Libraries
-        run: |
-          dkp-pacman -Sy --noconfirm 3ds-dev
+      - name: Setup devkitPro & 3DS Libraries
+        uses: devkitPro/setup-devkitpro@v1
+        with:
+          3ds-dev: true
 
       - name: Compile 3DS Executable
         run: |
-          source /etc/profile.d/devkit-env.sh
           cd src
           make
 
