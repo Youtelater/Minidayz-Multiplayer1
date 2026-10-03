@@ -8,12 +8,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup devkitPro & 3DS Libraries
+      - name: Setup devkitPro Environment
         uses: devkitPro/setup-devkitpro@v1
         with:
           3ds-dev: true
