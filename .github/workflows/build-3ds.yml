@@ -20,6 +20,7 @@ jobs:
 
       - name: Compile 3DS Executable
         run: |
+          source /etc/profile.d/devkit-env.sh
           cd src
           make
 
