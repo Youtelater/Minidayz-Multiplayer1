@@ -17,8 +17,9 @@ jobs:
       - name: Install 3DS Libraries & Compile
         shell: bash
         run: |
-          source /etc/profile.d/devkit-env.sh
           dkp-pacman -Sy --noconfirm 3ds-dev
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=${DEVKITPRO}/devkitARM
           cd src
           make
 
