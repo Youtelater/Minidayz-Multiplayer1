@@ -1,0 +1,26 @@
+name: Build 3DS Homebrew
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Compile 3DS Executable
+        run: |
+          cd src
+          make
+
+      - name: Upload .3dsx Executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3DS-Executable
+          path: src/*.3dsx
