@@ -6,12 +6,13 @@
 #---------------------------------------------------------------------------------
 # TARGET SETTINGS
 #---------------------------------------------------------------------------------
-TARGET		:=	$(notdir $(CURDIR))
-BUILD		:=	build
-SOURCES		:=	.
-DATA		:=	data
-INCLUDES	:=	include
-GRAPHICS	:=	romfs
+TARGET      :=  $(notdir $(CURDIR))
+BUILD       :=  build
+SOURCES     :=  .
+DATA        :=  data
+INCLUDES    :=  include
+GRAPHICS    :=  gfx
+ROMFS       :=  romfs
 
 #---------------------------------------------------------------------------------
 # COMPILER AND TOOL SELECTION
