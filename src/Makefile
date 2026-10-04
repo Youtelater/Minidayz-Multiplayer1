@@ -11,7 +11,7 @@ BUILD		:=	build
 SOURCES		:=	.
 DATA		:=	data
 INCLUDES	:=	include
-GRAPHICS	:=	gfx
+GRAPHICS	:=	romfs
 
 #---------------------------------------------------------------------------------
 # COMPILER AND TOOL SELECTION
