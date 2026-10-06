@@ -69,10 +69,12 @@ PNGFILES	:=	$(foreach dir,$(GFX),$(notdir $(wildcard $(dir)/*.png)))
 
 export OFILES_BIN	  := $(addsuffix .o, $(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o) $(PICAFILES:.v.pica=.o)
-export OFILES_GFX     := $(PNGFILES:.png=.o)
+
+# Convert all hyphens to underscores so the linker looks for the exact filenames grit generates
+export OFILES_GFX     := $(subst -,_,$(PNGFILES:.png=.o))
 export OFILES         := $(OFILES_BIN) $(OFILES_SOURCES) $(OFILES_GFX)
 
-export HFILES         := $(addsuffix .h, $(subst .,_,$(BINFILES))) $(PNGFILES:.png=.h)
+export HFILES         := $(addsuffix .h, $(subst .,_,$(BINFILES))) $(subst -,_,$(PNGFILES:.png=.h))
 
 export LIBDIRS	:=	$(LIBDIRS)
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
@@ -108,7 +110,25 @@ $(OUTPUT).elf	:	$(OFILES)
 	@echo linking $(notdir $@)
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
 
+# Pattern rule to match object files (with underscores) back to original PNGs (with hyphens)
 %.o %.h : %.png
+	@echo converting $(notdir $<)
+	@grit $< -ff $(<:.png=.grit) -o$*
+
+# Fallback match for files where hyphens were converted to underscores
+%_sheet0.o %_sheet0.h : %-sheet0.png
+	@echo converting $(notdir $<)
+	@grit $< -ff $(<:.png=.grit) -o$*
+
+%_sheet1.o %_sheet1.h : %-sheet1.png
+	@echo converting $(notdir $<)
+	@grit $< -ff $(<:.png=.grit) -o$*
+
+%_sheet2.o %_sheet2.h : %-sheet2.png
+	@echo converting $(notdir $<)
+	@grit $< -ff $(<:.png=.grit) -o$*
+
+%_sheet3.o %_sheet3.h : %-sheet3.png
 	@echo converting $(notdir $<)
 	@grit $< -ff $(<:.png=.grit) -o$*
 
