@@ -10,8 +10,9 @@ TOPDIR      := $(CURDIR)
 TARGET      := $(notdir $(CURDIR))
 BUILD       := build
 SOURCES     := source
-DATA        := gfx
-GFXBUILD    := romfs
+INCLUDES    := include
+DATA        := data
+GFX         := gfx
 
 #---------------------------------------------------------------------------------
 # COMPILER AND TOOL SELECTION
@@ -54,7 +55,8 @@ export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
-					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
+					$(foreach dir,$(DATA),$(CURDIR)/$(dir)) \
+					$(foreach dir,$(GFX),$(CURDIR)/$(dir))
 
 export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
@@ -63,12 +65,14 @@ CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 PICAFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.v.pica)))
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
+PNGFILES	:=	$(foreach dir,$(GFX),$(notdir $(wildcard $(dir)/*.png)))
 
-export OFILES_BIN	:=	$(addsuffix .o, $(BINFILES))
+export OFILES_BIN	  := $(addsuffix .o, $(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o) $(PICAFILES:.v.pica=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES)
+export OFILES_GFX     := $(PNGFILES:.png=.o)
+export OFILES         := $(OFILES_BIN) $(OFILES_SOURCES) $(OFILES_GFX)
 
-export HFILES	:=	$(addsuffix .h, $(subst .,_,$(BINFILES)))
+export HFILES	:=	$(addsuffix .h, $(subst .,_,$(BINFILES))) $(PNGFILES:.png=.h)
 
 export LIBDIRS	:=	$(LIBDIRS)
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
@@ -103,6 +107,11 @@ $(OUTPUT).3dsx	:	$(OUTPUT).elf
 $(OUTPUT).elf	:	$(OFILES)
 	@echo linking $(notdir $@)
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+
+# Rule to process PNG images using grit into source code objects and headers
+%.o %.h : %.png
+	@echo converting $(notdir $<)
+	@grit $< -ff $(<:.png=.grit) -o$*
 
 -include $(DEPENDS)
 
