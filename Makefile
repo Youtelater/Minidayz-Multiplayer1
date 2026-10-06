@@ -1,16 +1,20 @@
 #---------------------------------------------------------------------------------
-# TARGET & DIRECTORY SETTINGS
+# TARGET SETTINGS
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 
-export TOPDIR   := $(CURDIR)
-export TARGET   := $(notdir $(CURDIR))
-export BUILD    := build
-export SOURCES  := source
-export INCLUDES := include
-export DATA     := data
-export GFX      := gfx
-export GFXDIR   := $(CURDIR)/$(GFX)
+# Set TOPDIR to current directory if not already set by parent make process
+TOPDIR      ?= $(CURDIR)
+TARGET      := $(notdir $(TOPDIR))
+BUILD       := build
+SOURCES     := source
+INCLUDES    := include
+DATA        := data
+GFX         := gfx
+
+export TOPDIR
+export TARGET
+export GFXDIR   := $(TOPDIR)/$(GFX)
 
 #---------------------------------------------------------------------------------
 # COMPILER AND TOOL SELECTION
@@ -49,19 +53,19 @@ LIBS      := -lcitro2d -lcitro3d -lctru -lm
 #---------------------------------------------------------------------------------
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 
-export OUTPUT         := $(CURDIR)/$(TARGET)
-export VPATH          := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
-                         $(foreach dir,$(DATA),$(CURDIR)/$(dir)) \
-                         $(foreach dir,$(GFX),$(CURDIR)/$(dir))
+export OUTPUT         := $(TOPDIR)/$(TARGET)
+export VPATH          := $(TOPDIR)/$(SOURCES) \
+                         $(TOPDIR)/$(DATA) \
+                         $(TOPDIR)/$(GFX)
 
-export DEPSDIR        := $(CURDIR)/$(BUILD)
+export DEPSDIR        := $(TOPDIR)/$(BUILD)
 
-CFILES                := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES              := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-SFILES                := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-PICAFILES             := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.v.pica)))
-BINFILES              := $(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
-PNGFILES              := $(foreach dir,$(GFX),$(notdir $(wildcard $(dir)/*.png)))
+CFILES                := $(notdir $(wildcard $(TOPDIR)/$(SOURCES)/*.c))
+CPPFILES              := $(notdir $(wildcard $(TOPDIR)/$(SOURCES)/*.cpp))
+SFILES                := $(notdir $(wildcard $(TOPDIR)/$(SOURCES)/*.s))
+PICAFILES             := $(notdir $(wildcard $(TOPDIR)/$(SOURCES)/*.v.pica))
+BINFILES              := $(notdir $(wildcard $(TOPDIR)/$(DATA)/*.*))
+PNGFILES              := $(notdir $(wildcard $(TOPDIR)/$(GFX)/*.png))
 
 export OFILES_BIN     := $(addsuffix .o, $(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o) $(PICAFILES:.v.pica=.o)
@@ -73,14 +77,14 @@ export HFILES         := $(addsuffix .h, $(subst .,_,$(BINFILES))) $(subst -,_,$
 export LIBDIRS        := $(LIBDIRS)
 export LIBPATHS       := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-export INCLUDE        := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+export INCLUDE        := $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
                          $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-                         -I$(CURDIR)/$(BUILD)
+                         -I$(TOPDIR)/$(BUILD)
 
 .PHONY: clean all
 
 all: $(BUILD)
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(TOPDIR)/Makefile
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
@@ -104,7 +108,7 @@ $(OUTPUT).elf : $(OFILES)
 	@echo linking $(notdir $@)
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
 
-# Direct matching using standard shell expansion instead of nested find loops
+# Direct matching using standard shell expansion in TOPDIR/gfx
 %.o %.h :
 	@TARGET_BASE="$*"; \
 	MATCH=$$(for f in "$$GFXDIR"/*.png; do \
