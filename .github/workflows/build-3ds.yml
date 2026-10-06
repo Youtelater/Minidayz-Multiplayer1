@@ -14,10 +14,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install 3DS Libraries & Compile
+      - name: Compile 3DS Executable
         shell: bash
         run: |
-          dkp-pacman -Sy --noconfirm 3ds-dev 3ds-citro2d 3ds-citro3d 3ds-grit
           source /etc/profile.d/devkit-env.sh
           make clean
           make
