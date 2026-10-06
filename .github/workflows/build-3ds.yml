@@ -17,13 +17,13 @@ jobs:
       - name: Install 3DS Libraries & Compile
         shell: bash
         run: |
-          dkp-pacman -Sy --noconfirm 3ds-dev
+          dkp-pacman -Sy --noconfirm 3ds-dev 3ds-citro2d 3ds-citro3d 3ds-grit
           source /etc/profile.d/devkit-env.sh
-          cd src
+          make clean
           make
 
       - name: Upload .3dsx Executable
         uses: actions/upload-artifact@v4
         with:
           name: 3DS-Executable
-          path: src/*.3dsx
+          path: "*.3dsx"
