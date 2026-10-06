@@ -69,11 +69,10 @@ PNGFILES	:=	$(foreach dir,$(GFX),$(notdir $(wildcard $(dir)/*.png)))
 
 export OFILES_BIN	  := $(addsuffix .o, $(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o) $(PICAFILES:.v.pica=.o)
-# Only map hyphens to underscores for file output names
-export OFILES_GFX     := $(subst -,_,$(PNGFILES:.png=.o))
+export OFILES_GFX     := $(PNGFILES:.png=.o)
 export OFILES         := $(OFILES_BIN) $(OFILES_SOURCES) $(OFILES_GFX)
 
-export HFILES         := $(addsuffix .h, $(subst .,_,$(BINFILES))) $(subst -,_,$(PNGFILES:.png=.h))
+export HFILES         := $(addsuffix .h, $(subst .,_,$(BINFILES))) $(PNGFILES:.png=.h)
 
 export LIBDIRS	:=	$(LIBDIRS)
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
@@ -109,11 +108,9 @@ $(OUTPUT).elf	:	$(OFILES)
 	@echo linking $(notdir $@)
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
 
-# Pattern rule handling hyphenated filenames during grit generation
 %.o %.h : %.png
 	@echo converting $(notdir $<)
 	@grit $< -ff $(<:.png=.grit) -o$*
-	@if [ -f $(subst -,_,$*).o ]; then : ; else mv $*.o $(subst -,_,$*).o 2>/dev/null || true; fi
 
 -include $(DEPENDS)
 
