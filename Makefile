@@ -112,7 +112,7 @@ $(OUTPUT).elf	:	$(OFILES)
 
 # Catch-all rule: dynamic shell resolution maps any PNG to its underscore object target
 %.o %.h :
-	@PNG_MATCH=$$(find $(VPATH) -maxdepth 1 -type f -name "*.png" | while read f; do \
+	@PNG_MATCH=$$(find $(TOPDIR)/$(GFX) -maxdepth 1 -type f -name "*.png" 2>/dev/null | while read f; do \
 		fname=$$(basename "$$f"); \
 		uname=$$(echo "$$fname" | tr '-' '_'); \
 		if [ "$$uname" = "$*.png" ]; then echo "$$f"; break; fi; \
