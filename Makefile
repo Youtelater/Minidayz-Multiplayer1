@@ -54,10 +54,31 @@ export INCLUDE        := $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
                          $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
                          -I$(TOPDIR)/$(BUILD)
 
-.PHONY: clean all convert_gfx
+.PHONY: clean all
 
 all: $(BUILD)
-	@python3 $(TOPDIR)/convert_gfx.py
+	@python3 -c '\
+import os, subprocess;\
+gfx = os.path.abspath("$(TOPDIR)/gfx");\
+build = os.path.abspath("$(TOPDIR)/build");\
+os.makedirs(build, exist_ok=True);\
+pngs = [f for f in os.listdir(gfx) if f.endswith(".png")] if os.path.exists(gfx) else [];\
+print(f"Converting {len(pngs)} PNGs...");\
+for f in pngs:\
+    raw = os.path.splitext(f)[0];\
+    target = raw.replace("-", "_");\
+    src = os.path.join(gfx, f);\
+    out_o = os.path.join(build, f"{target}.o");\
+    out_h = os.path.join(build, f"{target}.h");\
+    if os.path.exists(out_o) and os.path.getmtime(out_o) > os.path.getmtime(src): continue;\
+    cfg = os.path.join(gfx, f"{raw}.grit");\
+    cmd = ["grit", src] + (["-ff", cfg] if os.path.exists(cfg) else ["-gt", "-gB16"]) + ["-s", target, "-o", os.path.join(build, target)];\
+    subprocess.run(cmd, check=True);\
+    gen_o = os.path.join(build, f"{raw}.o");\
+    if os.path.exists(gen_o) and gen_o != out_o: os.replace(gen_o, out_o);\
+    gen_h = os.path.join(build, f"{raw}.h");\
+    if os.path.exists(gen_h) and gen_h != out_h: os.replace(gen_h, out_h);\
+'
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(TOPDIR)/Makefile
 
 $(BUILD):
