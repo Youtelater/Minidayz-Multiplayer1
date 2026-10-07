@@ -10,26 +10,27 @@ extern "C" {
 static C2D_Image ImageFromGrit(const void* tiles, u32 width, u32 height) {
     C3D_Tex* tex = (C3D_Tex*)malloc(sizeof(C3D_Tex));
     
-    // Set format to GPU_RGBA8 to match -gB32 grit output
+    // Initialize 32-bit RGBA hardware texture
     C3D_TexInit(tex, (u16)width, (u16)height, GPU_RGBA8);
     
-    // Upload raw bitmap pixels into texture memory
+    // Copy 3DS tiled data directly into VRAM
     C3D_TexUpload(tex, tiles);
     
-    // Set texture UV mapping coordinates
+    // Define texture coordinates
     static Tex3DS_SubTexture subtex;
     subtex.width = (u16)width;
     subtex.height = (u16)height;
     subtex.left = 0.0f;
-    subtex.top = 1.0f;
+    subtex.top = 0.0f;
     subtex.right = 1.0f;
-    subtex.bottom = 0.0f;
+    subtex.bottom = 1.0f;
     
     C2D_Image img;
     img.tex = tex;
     img.subtex = &subtex;
     return img;
 }
+
 
 
 
