@@ -41,6 +41,25 @@ jobs:
                       print(f'Renamed: {filename} -> {new_name}')
           "
 
+      - name: Pad PNG canvases to power-of-two dimensions
+        run: |
+          apt-get update && apt-get install -y imagemagick
+          find gfx -type f -name "*.png" | while read img; do
+            W=$(identify -format "%w" "$img")
+            H=$(identify -format "%h" "$img")
+            
+            # Calculate next power of two for Width
+            NEW_W=16
+            while [ $NEW_W -lt $W ]; do NEW_W=$((NEW_W * 2)); done
+            
+            # Calculate next power of two for Height
+            NEW_H=16
+            while [ $NEW_H -lt $H ]; do NEW_H=$((NEW_H * 2)); done
+            
+            # Pad canvas with transparent background
+            mogrify -background none -gravity NorthWest -extent ${NEW_W}x${NEW_H} "$img"
+          done
+
       - name: Generate asset aliases for C code dynamically
         run: |
           python3 -c "
