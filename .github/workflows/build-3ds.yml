@@ -41,6 +41,35 @@ jobs:
                       print(f'Renamed: {filename} -> {new_name}')
           "
 
+      - name: Generate asset aliases for C code
+        run: |
+          python3 -c "
+          import os
+
+          # Map of transliterated names back to original C variable prefixes
+          mappings = {
+              'pokoy': 'покой',
+              'verh': 'верх',
+              'levo': 'лево',
+              'pravo': 'право',
+              'niz': 'низ',
+              'pers': 'перс'
+          }
+
+          os.makedirs('include', exist_ok=True)
+          with open('include/gfx_aliases.h', 'w', encoding='utf-8') as f:
+              f.write('#ifndef GFX_ALIASES_H\n#define GFX_ALIASES_H\n\n')
+              
+              # Map numbers 1 to 20 for assets
+              for en, ru in mappings.items():
+                  for i in range(1, 21):
+                      f.write(f'#include \"{en}{i}.h\"\n')
+                      f.write(f'#define {ru}{i}Tiles {en}{i}Tiles\n')
+                      f.write(f'#define {ru}{i}Pal {en}{i}Pal\n\n')
+              
+              f.write('#endif\n')
+          "
+
       - name: Compile 3DS Executable
         run: |
           . /etc/profile.d/devkit-env.sh
