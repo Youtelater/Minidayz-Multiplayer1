@@ -1,9 +1,10 @@
-name: Build 3DS Homebrew
+name: Build 3DS Executable
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
 
 jobs:
   build:
@@ -11,18 +12,44 @@ jobs:
     container: devkitpro/devkitarm:latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Transliterate non-ASCII asset filenames
+        run: |
+          python3 -c "
+          import os
+
+          gfx_dir = 'gfx'
+          charmap = {
+              'а':'a', 'б':'b', 'в':'v', 'г':'g', 'д':'d', 'е':'e', 'ё':'yo',
+              'ж':'zh', 'з':'z', 'и':'i', 'й':'y', 'к':'k', 'л':'l', 'м':'m',
+              'н':'n', 'о':'o', 'п':'p', 'р':'r', 'с':'s', 'т':'t', 'у':'u',
+              'ф':'f', 'х':'h', 'ц':'ts', 'ч':'ch', 'ш':'sh', 'щ':'shch',
+              'ъ':'', 'ы':'y', 'ь':'', 'э':'e', 'ю':'yu', 'я':'ya',
+              'перс': 'pers', 'покой': 'pokoy', 'лево': 'levo', 'право': 'pravo',
+              'верх': 'verh', 'низ': 'niz'
+          }
+
+          if os.path.exists(gfx_dir):
+              for filename in os.listdir(gfx_dir):
+                  new_name = filename
+                  for ru, en in charmap.items():
+                      new_name = new_name.replace(ru, en)
+                  if new_name != filename:
+                      os.rename(os.path.join(gfx_dir, filename), os.path.join(gfx_dir, new_name))
+                      print(f'Renamed: {filename} -> {new_name}')
+          "
+
       - name: Compile 3DS Executable
-        shell: bash
         run: |
           source /etc/profile.d/devkit-env.sh
-          make clean
-          make -j$(nproc)
+          make
 
       - name: Upload .3dsx Executable
         uses: actions/upload-artifact@v4
         with:
           name: 3DS-Executable
-          path: "*.3dsx"
+          path: |
+            *.3dsx
+            *.elf
