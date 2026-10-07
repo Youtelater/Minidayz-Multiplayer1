@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
 
     // --- DEBUG PRINT INITIALIZATION ---
     consoleInit(GFX_BOTTOM, NULL);
-    printf("pokoy1TilesLen: %u\n", (unsigned int)покой1TilesLen);
+    printf("pokoy1TilesLen: %u\n", (unsigned int)pokoy1TilesLen);
     // ----------------------------------
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
