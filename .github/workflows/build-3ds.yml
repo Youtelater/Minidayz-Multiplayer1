@@ -47,7 +47,6 @@ jobs:
           import os, glob
 
           gfx_dir = 'gfx'
-          # Reverse charmap to create Cyrillic aliases for original variable names
           reverse_map = {
               'pers': 'перс',
               'pokoy': 'покой',
@@ -66,15 +65,17 @@ jobs:
                   f.write('#ifndef GFX_ALIASES_H\n#define GFX_ALIASES_H\n\n')
                   
                   for filepath in png_files:
-                      base_name = os.path.splitext(os.path.basename(filepath))[0]
-                      f.write(f'#include \"{base_name}.h\"\n')
+                      raw_name = os.path.splitext(os.path.basename(filepath))[0]
+                      # grit converts hyphens (-) to underscores (_) for C headers and variables
+                      grit_name = raw_name.replace('-', '_')
                       
-                      # Find matching Cyrillic prefix for alias mapping
+                      f.write(f'#include \"{grit_name}.h\"\n')
+                      
                       for en, ru in reverse_map.items():
-                          if en in base_name:
-                              ru_name = base_name.replace(en, ru)
-                              f.write(f'#define {ru_name}Tiles {base_name}Tiles\n')
-                              f.write(f'#define {ru_name}Pal {base_name}Pal\n')
+                          if en in grit_name:
+                              ru_name = grit_name.replace(en, ru)
+                              f.write(f'#define {ru_name}Tiles {grit_name}Tiles\n')
+                              f.write(f'#define {ru_name}Pal {grit_name}Pal\n')
                       f.write('\n')
                       
                   f.write('#endif\n')
