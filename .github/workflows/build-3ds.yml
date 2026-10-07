@@ -19,7 +19,7 @@ jobs:
         run: |
           source /etc/profile.d/devkit-env.sh
           make clean
-          make
+          make -j$(nproc)
 
       - name: Upload .3dsx Executable
         uses: actions/upload-artifact@v4
