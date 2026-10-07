@@ -6,7 +6,7 @@ extern "C" {
     #include "gfx_aliases.h"
 }
 
-// Helper function to dynamically construct a C2D_Image from direct tile arrays
+// Helper function to dynamically construct a C2D_Image
 static C2D_Image ImageFromGrit(const void* tiles, u32 width, u32 height) {
     C3D_Tex* tex = (C3D_Tex*)malloc(sizeof(C3D_Tex));
     
@@ -33,12 +33,17 @@ static C2D_Image ImageFromGrit(const void* tiles, u32 width, u32 height) {
 
 int main(int argc, char* argv[]) {
     gfxInitDefault();
+
+    // --- DEBUG PRINT INITIALIZATION ---
+    consoleInit(GFX_BOTTOM, NULL);
+    printf("pokoy1TilesLen: %u\n", (unsigned int)покой1TilesLen);
+    // ----------------------------------
+
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
     C3D_RenderTarget* topTarget = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-    C3D_RenderTarget* bottomTarget = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
     // Pass 32x32 dimensions to match the padded canvas output
     C2D_Image playerImg = ImageFromGrit(покой1Tiles, 32, 32);
@@ -55,10 +60,6 @@ int main(int argc, char* argv[]) {
         C2D_SceneBegin(topTarget);
         
         C2D_DrawImageAt(playerImg, 184.0f, 104.0f, 0.5f, NULL, 1.0f, 1.0f);
-
-        // --- BOTTOM SCREEN ---
-        C2D_TargetClear(bottomTarget, C2D_Color32(0x10, 0x10, 0x10, 0xFF));
-        C2D_SceneBegin(bottomTarget);
 
         C3D_FrameEnd(0);
     }
