@@ -93,8 +93,8 @@ jobs:
                           grit_name = '_' + grit_name
                       f.write(f'#include \"{grit_name}.h\"\n')
                   
-                  # 2. Build master pointer array
-                  f.write('\nstatic const u8* ALL_SPRITES[] = {\n')
+                  # 2. Build master pointer array using const void* to match grit types
+                  f.write('\nstatic const void* ALL_SPRITES[] = {\n')
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
                       grit_name = raw_name.replace('-', '_')
