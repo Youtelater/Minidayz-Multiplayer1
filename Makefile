@@ -117,10 +117,17 @@ $(OUTPUT).elf : $(OFILES)
 	done); \
 	if [ -n "$$MATCH" ]; then \
 		echo converting $$(basename "$$MATCH"); \
+		RAW_NAME=$$(basename "$$MATCH" .png); \
 		if [ -f "$${MATCH%.png}.grit" ]; then \
 			grit "$$MATCH" -ff "$${MATCH%.png}.grit" -s "$*" -o "$*"; \
 		else \
 			grit "$$MATCH" -gt -gB16 -s "$*" -o "$*"; \
+		fi; \
+		if [ -f "$${RAW_NAME}.o" ] && [ "$${RAW_NAME}" != "$*" ]; then \
+			mv "$${RAW_NAME}.o" "$*.o"; \
+		fi; \
+		if [ -f "$${RAW_NAME}.h" ] && [ "$${RAW_NAME}" != "$*" ]; then \
+			mv "$${RAW_NAME}.h" "$*.h"; \
 		fi; \
 	else \
 		echo "Error: Could not find PNG matching object $* in $$GFXDIR"; exit 1; \
