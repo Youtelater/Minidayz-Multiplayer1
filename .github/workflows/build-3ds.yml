@@ -66,42 +66,36 @@ jobs:
           # Create a clean global grit file with valid syntax
           echo "-gB16 -gt -p!" > gfx/grit.grit
 
-      - name: Generate asset aliases for C code dynamically
+      - name: Generate asset table for C code dynamically
         run: |
           python3 -c "
           import os, glob
 
           gfx_dir = 'gfx'
-          reverse_map = {
-              'pers': 'перс',
-              'pokoy': 'покой',
-              'levo': 'лево',
-              'pravo': 'право',
-              'verh': 'верх',
-              'niz': 'низ'
-          }
-
           os.makedirs('include', exist_ok=True)
-          
+
           if os.path.exists(gfx_dir):
-              png_files = glob.glob(f'{gfx_dir}/*.png')
+              png_files = sorted(glob.glob(f'{gfx_dir}/*.png'))
               
-              with open('include/gfx_aliases.h', 'w', encoding='utf-8') as f:
-                  f.write('#ifndef GFX_ALIASES_H\n#define GFX_ALIASES_H\n\n')
+              with open('include/gfx_table.h', 'w', encoding='utf-8') as f:
+                  f.write('#ifndef GFX_TABLE_H\n#define GFX_TABLE_H\n\n#include <3ds.h>\n\n')
                   
+                  # 1. Include every generated grit header
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
                       grit_name = raw_name.replace('-', '_')
-                      
                       f.write(f'#include \"{grit_name}.h\"\n')
-                      
-                      for en, ru in reverse_map.items():
-                          if en in grit_name:
-                              ru_name = grit_name.replace(en, ru)
-                              f.write(f'#define {ru_name}Tiles {grit_name}Tiles\n')
-                              f.write(f'#define {ru_name}Pal {grit_name}Pal\n')
-                      f.write('\n')
-                      
+                  
+                  # 2. Build master pointer array
+                  f.write('\nstatic const u8* ALL_SPRITES[] = {\n')
+                  for filepath in png_files:
+                      raw_name = os.path.splitext(os.path.basename(filepath))[0]
+                      grit_name = raw_name.replace('-', '_')
+                      f.write(f'    {grit_name}Tiles,\n')
+                  f.write('};\n\n')
+                  
+                  # 3. Output total sprite count
+                  f.write(f'#define TOTAL_SPRITES {len(png_files)}\n\n')
                   f.write('#endif\n')
           "
 
