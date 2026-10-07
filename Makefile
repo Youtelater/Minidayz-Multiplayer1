@@ -3,7 +3,6 @@
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 
-# Set TOPDIR to current directory if not already set by parent make process
 TOPDIR      ?= $(CURDIR)
 TARGET      := $(notdir $(TOPDIR))
 BUILD       := build
@@ -118,7 +117,11 @@ $(OUTPUT).elf : $(OFILES)
 	done); \
 	if [ -n "$$MATCH" ]; then \
 		echo converting $$(basename "$$MATCH"); \
-		grit "$$MATCH" -ff "$${MATCH%.png}.grit" -o$*; \
+		if [ -f "$${MATCH%.png}.grit" ]; then \
+			grit "$$MATCH" -ff "$${MATCH%.png}.grit" -s "$*" -o "$*"; \
+		else \
+			grit "$$MATCH" -gt -gB16 -s "$*" -o "$*"; \
+		fi; \
 	else \
 		echo "Error: Could not find PNG matching object $* in $$GFXDIR"; exit 1; \
 	fi
