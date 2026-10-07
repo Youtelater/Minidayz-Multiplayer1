@@ -6,15 +6,15 @@ extern "C" {
     #include "gfx_aliases.h"
 }
 
-// Helper function to dynamically construct a C2D_Image
+// Helper function updated for 16-bit texture output (2048 bytes for 32x32)
 static C2D_Image ImageFromGrit(const void* tiles, u32 width, u32 height) {
     C3D_Tex* tex = (C3D_Tex*)malloc(sizeof(C3D_Tex));
     
-    // Initialize 32-bit texture for padded power-of-two size
-    C3D_TexInit(tex, (u16)width, (u16)height, GPU_RGBA8);
+    // Initialize 16-bit texture format matching Grit's 2-byte-per-pixel array
+    C3D_TexInit(tex, (u16)width, (u16)height, GPU_RGB565);
     C3D_TexSetFilter(tex, GPU_NEAREST, GPU_NEAREST);
     
-    // Upload tiled memory directly to VRAM
+    // Upload tiled 16-bit memory directly to VRAM
     C3D_TexUpload(tex, tiles);
     
     static Tex3DS_SubTexture subtex;
@@ -33,19 +33,13 @@ static C2D_Image ImageFromGrit(const void* tiles, u32 width, u32 height) {
 
 int main(int argc, char* argv[]) {
     gfxInitDefault();
-
-    // --- DEBUG PRINT INITIALIZATION ---
-    consoleInit(GFX_BOTTOM, NULL);
-    printf("pokoy1TilesLen: %u\n", (unsigned int)pokoy1TilesLen);
-    // ----------------------------------
-
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
     C3D_RenderTarget* topTarget = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
 
-    // Pass 32x32 dimensions to match the padded canvas output
+    // Pass 32x32 dimensions matching the padded image
     C2D_Image playerImg = ImageFromGrit(покой1Tiles, 32, 32);
 
     while (aptMainLoop()) {
