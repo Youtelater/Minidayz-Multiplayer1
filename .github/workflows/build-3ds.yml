@@ -99,6 +99,13 @@ jobs:
                   f.write('#endif\n')
           "
 
+      - name: Convert PNGs to T3X textures
+        run: |
+          . /etc/profile.d/devkit-env.sh
+          find gfx -type f -name "*.png" | while read img; do
+            tex3ds -i "$img" -o "${img%.png}.t3x" -f rgba8888 -z auto
+          done
+
       - name: Compile 3DS Executable
         run: |
           . /etc/profile.d/devkit-env.sh

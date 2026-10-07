@@ -6,15 +6,13 @@ extern "C" {
     #include "gfx_aliases.h"
 }
 
-// Helper function updated for 16-bit texture output (2048 bytes for 32x32)
 static C2D_Image ImageFromGrit(const void* tiles, u32 width, u32 height) {
     C3D_Tex* tex = (C3D_Tex*)malloc(sizeof(C3D_Tex));
     
-    // Initialize 16-bit texture format matching Grit's 2-byte-per-pixel array
-    C3D_TexInit(tex, (u16)width, (u16)height, GPU_RGB565);
+    // GPU_RGBA5551 uses 16 bits (2 bytes) per pixel with 1-bit alpha transparency
+    C3D_TexInit(tex, (u16)width, (u16)height, GPU_RGBA5551);
     C3D_TexSetFilter(tex, GPU_NEAREST, GPU_NEAREST);
     
-    // Upload tiled 16-bit memory directly to VRAM
     C3D_TexUpload(tex, tiles);
     
     static Tex3DS_SubTexture subtex;
@@ -39,7 +37,6 @@ int main(int argc, char* argv[]) {
 
     C3D_RenderTarget* topTarget = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
 
-    // Pass 32x32 dimensions matching the padded image
     C2D_Image playerImg = ImageFromGrit(покой1Tiles, 32, 32);
 
     while (aptMainLoop()) {
@@ -49,7 +46,6 @@ int main(int argc, char* argv[]) {
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
-        // --- TOP SCREEN ---
         C2D_TargetClear(topTarget, C2D_Color32(0x20, 0x20, 0x20, 0xFF));
         C2D_SceneBegin(topTarget);
         
