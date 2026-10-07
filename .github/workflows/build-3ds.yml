@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Transliterate non-ASCII asset filenames
+      - name: Transliterate non-ASCII asset filenames and fix leading digits
         run: |
           python3 -c "
           import os
@@ -36,6 +36,11 @@ jobs:
                   new_name = filename
                   for ru, en in charmap.items():
                       new_name = new_name.replace(ru, en)
+                  
+                  # Prepend underscore if filename starts with a number
+                  if new_name[0].isdigit():
+                      new_name = '_' + new_name
+                      
                   if new_name != filename:
                       os.rename(os.path.join(gfx_dir, filename), os.path.join(gfx_dir, new_name))
                       print(f'Renamed: {filename} -> {new_name}')
@@ -84,6 +89,8 @@ jobs:
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
                       grit_name = raw_name.replace('-', '_')
+                      if grit_name[0].isdigit():
+                          grit_name = '_' + grit_name
                       f.write(f'#include \"{grit_name}.h\"\n')
                   
                   # 2. Build master pointer array
@@ -91,6 +98,8 @@ jobs:
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
                       grit_name = raw_name.replace('-', '_')
+                      if grit_name[0].isdigit():
+                          grit_name = '_' + grit_name
                       f.write(f'    {grit_name}Tiles,\n')
                   f.write('};\n\n')
                   
