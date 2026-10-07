@@ -94,8 +94,6 @@ jobs:
                               ru_name = grit_name.replace(en, ru)
                               f.write(f'#define {ru_name}Tiles {grit_name}Tiles\n')
                               f.write(f'#define {ru_name}Pal {grit_name}Pal\n')
-                              f.write(f'#define {ru_name}Width {grit_name}Width\n')
-                              f.write(f'#define {ru_name}Height {grit_name}Height\n')
                       f.write('\n')
                       
                   f.write('#endif\n')
