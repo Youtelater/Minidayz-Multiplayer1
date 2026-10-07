@@ -43,7 +43,7 @@ jobs:
 
       - name: Compile 3DS Executable
         run: |
-          source /etc/profile.d/devkit-env.sh
+          . /etc/profile.d/devkit-env.sh
           make
 
       - name: Upload .3dsx Executable
