@@ -41,33 +41,43 @@ jobs:
                       print(f'Renamed: {filename} -> {new_name}')
           "
 
-      - name: Generate asset aliases for C code
+      - name: Generate asset aliases for C code dynamically
         run: |
           python3 -c "
-          import os
+          import os, glob
 
-          # Map of transliterated names back to original C variable prefixes
-          mappings = {
+          gfx_dir = 'gfx'
+          # Reverse charmap to create Cyrillic aliases for original variable names
+          reverse_map = {
+              'pers': 'перс',
               'pokoy': 'покой',
-              'verh': 'верх',
               'levo': 'лево',
               'pravo': 'право',
-              'niz': 'низ',
-              'pers': 'перс'
+              'verh': 'верх',
+              'niz': 'низ'
           }
 
           os.makedirs('include', exist_ok=True)
-          with open('include/gfx_aliases.h', 'w', encoding='utf-8') as f:
-              f.write('#ifndef GFX_ALIASES_H\n#define GFX_ALIASES_H\n\n')
+          
+          if os.path.exists(gfx_dir):
+              png_files = glob.glob(f'{gfx_dir}/*.png')
               
-              # Map numbers 1 to 20 for assets
-              for en, ru in mappings.items():
-                  for i in range(1, 21):
-                      f.write(f'#include \"{en}{i}.h\"\n')
-                      f.write(f'#define {ru}{i}Tiles {en}{i}Tiles\n')
-                      f.write(f'#define {ru}{i}Pal {en}{i}Pal\n\n')
-              
-              f.write('#endif\n')
+              with open('include/gfx_aliases.h', 'w', encoding='utf-8') as f:
+                  f.write('#ifndef GFX_ALIASES_H\n#define GFX_ALIASES_H\n\n')
+                  
+                  for filepath in png_files:
+                      base_name = os.path.splitext(os.path.basename(filepath))[0]
+                      f.write(f'#include \"{base_name}.h\"\n')
+                      
+                      # Find matching Cyrillic prefix for alias mapping
+                      for en, ru in reverse_map.items():
+                          if en in base_name:
+                              ru_name = base_name.replace(en, ru)
+                              f.write(f'#define {ru_name}Tiles {base_name}Tiles\n')
+                              f.write(f'#define {ru_name}Pal {base_name}Pal\n')
+                      f.write('\n')
+                      
+                  f.write('#endif\n')
           "
 
       - name: Compile 3DS Executable
