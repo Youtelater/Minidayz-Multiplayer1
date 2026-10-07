@@ -6,17 +6,18 @@ extern "C" {
     #include "gfx_aliases.h"
 }
 
-// Helper function to dynamically construct a C2D_Image from Grit tile & palette arrays
+// Helper function to dynamically construct a C2D_Image from Grit tile arrays
 static C2D_Image ImageFromGrit(const void* tiles, u32 width, u32 height) {
     C3D_Tex* tex = (C3D_Tex*)malloc(sizeof(C3D_Tex));
     
     // Initialize 32-bit RGBA hardware texture
     C3D_TexInit(tex, (u16)width, (u16)height, GPU_RGBA8);
+    C3D_TexSetFilter(tex, GPU_NEAREST, GPU_NEAREST);
     
     // Copy 3DS tiled data directly into VRAM
     C3D_TexUpload(tex, tiles);
     
-    // Define texture coordinates
+    // Define texture coordinates (static struct persists for lifespan of C2D_Image)
     static Tex3DS_SubTexture subtex;
     subtex.width = (u16)width;
     subtex.height = (u16)height;
@@ -31,9 +32,6 @@ static C2D_Image ImageFromGrit(const void* tiles, u32 width, u32 height) {
     return img;
 }
 
-
-
-
 int main(int argc, char* argv[]) {
     // 1. Initialize core graphics
     gfxInitDefault();
@@ -46,38 +44,8 @@ int main(int argc, char* argv[]) {
     C3D_RenderTarget* bottomTarget = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
     // 3. Load grit arrays into C2D image objects
-    // (Replace 32, 32 with the pixel width and height of your original image)
+    // Replace (32, 32) if your image canvas is a different power-of-two size
     C2D_Image playerImg = ImageFromGrit(покой1Tiles, 32, 32);
 
     // Main render loop
-    while (aptMainLoop()) {
-        hidScanInput();
-        u32 kDown = hidKeysDown();
-        if (kDown & KEY_START) break; // Press START to exit back to menu
-
-        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-
-        // --- TOP SCREEN ---
-        C2D_TargetClear(topTarget, C2D_Color32(0x20, 0x20, 0x20, 0xFF)); // Dark Grey Background
-        C2D_SceneBegin(topTarget);
-        
-        // Render your sprite instead of the placeholder red box
-        C2D_DrawImageAt(playerImg, 184.0f, 104.0f, 0.5f, NULL, 1.0f, 1.0f);
-
-        // --- BOTTOM SCREEN ---
-        C2D_TargetClear(bottomTarget, C2D_Color32(0x10, 0x10, 0x10, 0xFF)); // Black/Dark Background
-        C2D_SceneBegin(bottomTarget);
-
-        C3D_FrameEnd(0);
-    }
-
-    // Cleanup texture memory and graphics
-    if (playerImg.tex) {
-        C3D_TexDelete(playerImg.tex);
-        free(playerImg.tex);
-    }
-    C2D_Fini();
-    C3D_Fini();
-    gfxExit();
-    return 0;
-}
+    while
