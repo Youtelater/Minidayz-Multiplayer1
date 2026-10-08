@@ -11,7 +11,7 @@ enum GameState {
     STATE_GAMEPLAY
 };
 
-// Safe upload function that maps full power-of-two texture space cleanly
+// Uploads sprite data to VRAM and sets full texture UV bounds to prevent texture distortion
 void LoadSpriteByID(C3D_Tex* tex, Tex3DS_SubTexture* subtex, C2D_Image* img, u32 spriteID) {
     if (spriteID >= TOTAL_SPRITES || ALL_SPRITES[spriteID] == NULL) {
         printf("Error: Invalid Sprite ID %lu\n", spriteID);
@@ -21,7 +21,7 @@ void LoadSpriteByID(C3D_Tex* tex, Tex3DS_SubTexture* subtex, C2D_Image* img, u32
     // 1. Upload pixel data to GPU VRAM
     C3D_TexUpload(tex, ALL_SPRITES[spriteID]);
 
-    // 2. Map full power-of-two texture coordinates
+    // 2. Map full power-of-two texture bounds cleanly
     subtex->width = tex->width;
     subtex->height = tex->height;
     subtex->left = 0.0f;
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
-        // --- State Machine ---
+        // --- State Machine Logic ---
         if (currentState == STATE_LOADING) {
             loadingTimer++;
             if (loadingTimer >= 180 || (kDown & KEY_A)) {
@@ -110,18 +110,18 @@ int main(int argc, char* argv[]) {
 
         // --- Render Frame ---
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        C2D_TargetClear(topTarget, C2D_Color32(0x20, 0x50, 0x20, 0xFF)); // Clear background to Dark Green
+        C2D_TargetClear(topTarget, C2D_Color32(0x00, 0x00, 0x00, 0xFF)); // Solid Black Background
         C2D_SceneBegin(topTarget);
 
         if (ALL_SPRITES[currentSpriteID] != NULL) {
-            // Draw sprite at center of top screen
+            // Draw active sprite centered on top screen
             C2D_DrawImageAt(gameImg, 184.0f, 104.0f, 0.5f, NULL, 1.0f, 1.0f);
         }
 
         C3D_FrameEnd(0);
     }
 
-    // Cleanup Memory on Exit
+    // Memory Cleanup
     C3D_TexDelete(&gameTex);
     C2D_Fini();
     C3D_Fini();
