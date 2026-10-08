@@ -42,12 +42,10 @@ CPPFILES              := $(notdir $(wildcard $(TOPDIR)/$(SOURCES)/*.cpp))
 SFILES                := $(notdir $(wildcard $(TOPDIR)/$(SOURCES)/*.s))
 PICAFILES             := $(notdir $(wildcard $(TOPDIR)/$(SOURCES)/*.v.pica))
 BINFILES              := $(notdir $(wildcard $(TOPDIR)/$(DATA)/*.*))
-T3SFILES              := $(notdir $(wildcard $(TOPDIR)/$(GRAPHICS)/*.t3s))
 
 export OFILES_BIN     := $(addsuffix .o, $(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o) $(PICAFILES:.v.pica=.o)
-export OFILES_T3X     := $(T3SFILES:.t3s=.o)
-export OFILES         := $(OFILES_BIN) $(OFILES_SOURCES) $(OFILES_T3X)
+export OFILES         := $(OFILES_BIN) $(OFILES_SOURCES)
 
 export LIBDIRS        := $(LIBDIRS)
 export LIBPATHS       := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
