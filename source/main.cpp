@@ -18,12 +18,13 @@ int main(int argc, char* argv[]) {
     // 1. Check RomFS Initialization
     Result rc = romfsInit();
     if (R_FAILED(rc)) {
-        printf("[FAIL] romfsInit() failed: %08lX\n", rc);
+        printf("[FAIL] romfsInit() failed: %08lX\n", (unsigned long)rc);
     } else {
         printf("[OK] RomFS mounted successfully!\n");
     }
 
-    C2D_Target* topTarget = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+    // Correct target type for citro2d screen targets
+    C3D_RenderTarget* topTarget = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
 
     // 2. Load Sprite Sheet from RomFS
     C2D_SpriteSheet spriteSheet = C2D_SpriteSheetLoad("romfs:/gfx/sprites.t3x");
