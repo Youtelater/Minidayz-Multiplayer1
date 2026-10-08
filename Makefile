@@ -10,6 +10,7 @@ SOURCES     := source
 INCLUDES    := include
 DATA        := data
 GFX         := gfx
+ROMFS       := romfs
 
 export TOPDIR
 export TARGET
