@@ -65,15 +65,14 @@ jobs:
             mogrify -background none -gravity NorthWest -extent ${NEW_W}x${NEW_H} "$img"
           done
 
-            - name: Ensure clean grit configuration
+      - name: Ensure clean grit configuration
         run: |
           mkdir -p gfx
           # -gB16: 16-bit color
-          # -gA1: 1-bit alpha channel (RGBA1555)
-          # -gt: tiled format (native for 3DS GPU)
-          # -p!: omit palette
+          # -gA1: 1-bit alpha (RGBA1555 matching GPU_RGBA5551 in main.cpp)
+          # -gt: tiled format for 3DS GPU
+          # -p!: omit palette data
           echo "-gB16 -gA1 -gt -p!" > gfx/grit.grit
-
 
       - name: Generate asset table for C code dynamically
         run: |
@@ -97,7 +96,7 @@ jobs:
                           grit_name = '_' + grit_name
                       f.write(f'#include \"{grit_name}.h\"\n')
                   
-                  # 2. Build master pointer array using const void* to match grit types
+                  # 2. Build master pointer array using void* for full type compatibility
                   f.write('\nstatic const void* ALL_SPRITES[] = {\n')
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
