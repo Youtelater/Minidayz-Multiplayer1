@@ -9,7 +9,7 @@ BUILD       := build
 SOURCES     := source
 INCLUDES    := include
 DATA        := data
-GFX         := gfx
+GRAPHICS    := gfx
 ROMFS       := romfs
 
 export TOPDIR
