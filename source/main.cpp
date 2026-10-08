@@ -6,16 +6,23 @@ extern "C" {
     #include "gfx_table.h"
 }
 
-// Global Texture and Image container
-static C3D_Tex g_playerTex;
-static C2D_Image g_playerImg;
+// Global Texture and Image containers
+static C3D_Tex g_gameTex;
+static C2D_Image g_gameImg;
 
-// Helper to swap active tile data into VRAM
+enum GameState {
+    STATE_LOADING,
+    STATE_GAMEPLAY
+};
+
+// Safe upload function with bounds safety
 void LoadSpriteByID(u32 spriteID) {
     if (spriteID >= TOTAL_SPRITES) return;
-
-    // Upload the selected sprite's tiled memory from our master array
-    C3D_TexUpload(&g_playerTex, ALL_SPRITES[spriteID]);
+    
+    // Safety check: ensure pointer is not NULL before sending to GPU
+    if (ALL_SPRITES[spriteID] != NULL) {
+        C3D_TexUpload(&g_gameTex, ALL_SPRITES[spriteID]);
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -26,43 +33,65 @@ int main(int argc, char* argv[]) {
 
     C3D_RenderTarget* topTarget = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
 
-    // Initialize one 32x32 16-bit texture buffer in VRAM once
-    C3D_TexInit(&g_playerTex, 32, 32, GPU_RGBA5551);
-    C3D_TexSetFilter(&g_playerTex, GPU_NEAREST, GPU_NEAREST);
+    // Initialize texture buffer to 512x512 to accommodate larger UI/loading screens safely
+    C3D_TexInit(&g_gameTex, 512, 512, GPU_RGBA5551);
+    C3D_TexSetFilter(&g_gameTex, GPU_NEAREST, GPU_NEAREST);
 
-    static Tex3DS_SubTexture subtex = { 32, 32, 0.0f, 1.0f, 1.0f, 0.0f };
-    g_playerImg.tex = &g_playerTex;
-    g_playerImg.subtex = &subtex;
+    // Default subtexture mapping for full screen / canvas dimensions
+    static Tex3DS_SubTexture subtex = { 512, 512, 0.0f, 1.0f, 1.0f, 0.0f };
+    g_gameImg.tex = &g_gameTex;
+    g_gameImg.subtex = &subtex;
 
-    // --- LOAD FIRST IMAGE ON BOOT ---
-    u32 currentSpriteID = 0;
-    LoadSpriteByID(currentSpriteID);
+    GameState currentState = STATE_LOADING;
+    u32 currentSpriteID = 0; 
+    int loadingTimer = 0;
+
+    // Safely load sprite index 0 on startup
+    if (TOTAL_SPRITES > 0) {
+        LoadSpriteByID(0);
+    }
 
     while (aptMainLoop()) {
         hidScanInput();
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
-        // D-Pad Left/Right controls which sprite ID to render
-        if (kDown & KEY_DRIGHT) {
-            currentSpriteID = (currentSpriteID + 1) % TOTAL_SPRITES;
-            LoadSpriteByID(currentSpriteID);
-        } else if (kDown & KEY_DLEFT) {
-            currentSpriteID = (currentSpriteID == 0) ? TOTAL_SPRITES - 1 : currentSpriteID - 1;
-            LoadSpriteByID(currentSpriteID);
+        // State Machine Logic
+        if (currentState == STATE_LOADING) {
+            loadingTimer++;
+
+            // Stay on loading screen for 180 ticks (~3 sec) or until 'A' button is pressed
+            if (loadingTimer >= 180 || (kDown & KEY_A)) {
+                currentState = STATE_GAMEPLAY;
+                if (TOTAL_SPRITES > 1) {
+                    currentSpriteID = 1;
+                    LoadSpriteByID(currentSpriteID);
+                }
+            }
+        } 
+        else if (currentState == STATE_GAMEPLAY) {
+            // D-Pad input cycles through all loaded sprite IDs
+            if (kDown & KEY_DRIGHT) {
+                currentSpriteID = (currentSpriteID + 1) % TOTAL_SPRITES;
+                LoadSpriteByID(currentSpriteID);
+            } else if (kDown & KEY_DLEFT) {
+                currentSpriteID = (currentSpriteID == 0) ? TOTAL_SPRITES - 1 : currentSpriteID - 1;
+                LoadSpriteByID(currentSpriteID);
+            }
         }
 
+        // Render Frame
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        C2D_TargetClear(topTarget, C2D_Color32(0x20, 0x20, 0x20, 0xFF));
+        C2D_TargetClear(topTarget, C2D_Color32(0x00, 0x00, 0x00, 0xFF));
         C2D_SceneBegin(topTarget);
 
-        // Render whichever sprite ID is currently active
-        C2D_DrawImageAt(g_playerImg, 184.0f, 104.0f, 0.5f, NULL, 1.0f, 1.0f);
+        // Render current VRAM texture centered
+        C2D_DrawImageAt(g_gameImg, 0.0f, 0.0f, 0.5f, NULL, 1.0f, 1.0f);
 
         C3D_FrameEnd(0);
     }
 
-    C3D_TexDelete(&g_playerTex);
+    C3D_TexDelete(&g_gameTex);
     C2D_Fini();
     C3D_Fini();
     gfxExit();
