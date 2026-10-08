@@ -11,7 +11,7 @@ enum GameState {
     STATE_GAMEPLAY
 };
 
-// Uploads sprite data to VRAM and sets full texture UV bounds to prevent texture distortion
+// Uploads sprite data to VRAM and configures UV mapping
 void LoadSpriteByID(C3D_Tex* tex, Tex3DS_SubTexture* subtex, C2D_Image* img, u32 spriteID) {
     if (spriteID >= TOTAL_SPRITES || ALL_SPRITES[spriteID] == NULL) {
         printf("Error: Invalid Sprite ID %lu\n", spriteID);
@@ -21,13 +21,13 @@ void LoadSpriteByID(C3D_Tex* tex, Tex3DS_SubTexture* subtex, C2D_Image* img, u32
     // 1. Upload pixel data to GPU VRAM
     C3D_TexUpload(tex, ALL_SPRITES[spriteID]);
 
-    // 2. Map full power-of-two texture bounds cleanly
-    subtex->width = tex->width;
-    subtex->height = tex->height;
+    // 2. Set UV bounds to fix blue tint and repeating tile artifacting
+    subtex->width = 256;
+    subtex->height = 256;
     subtex->left = 0.0f;
-    subtex->top = 1.0f;
+    subtex->top = 0.0f;
     subtex->right = 1.0f;
-    subtex->bottom = 0.0f;
+    subtex->bottom = 1.0f;
 
     img->tex = tex;
     img->subtex = subtex;

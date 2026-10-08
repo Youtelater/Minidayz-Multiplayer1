@@ -68,11 +68,12 @@ jobs:
       - name: Ensure clean grit configuration
         run: |
           mkdir -p gfx
-          # -gB16: 16-bit color
-          # -gA1: 1-bit alpha (RGBA1555 matching GPU_RGBA5551 in main.cpp)
-          # -gt: tiled format for 3DS GPU
-          # -p!: omit palette data
-          echo "-gB16 -gA1 -gt -p!" > gfx/grit.grit
+          # -gB16: 16-bit color depth
+          # -gA1: 1-bit alpha channel (RGBA5551)
+          # -gt: tiled format required by 3DS PICA200 GPU
+          # -p!: omit palette
+          # -m!: do not output tile map
+          echo "-gB16 -gA1 -gt -p! -m!" > gfx/grit.grit
 
       - name: Generate asset table for C code dynamically
         run: |
