@@ -53,17 +53,24 @@ export INCLUDE        := $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
                          $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
                          -I$(TOPDIR)/$(BUILD)
 
-.PHONY: clean all
+.PHONY: clean all build_t3x
 
-all: $(BUILD)
+all: build_t3x $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(TOPDIR)/Makefile
+
+build_t3x:
+	@mkdir -p $(TOPDIR)/$(ROMFS)/gfx
+	@if [ -f $(TOPDIR)/$(GRAPHICS)/sprites.t3s ]; then \
+		echo "Building texture sheet with tex3ds..."; \
+		tex3ds -i $(TOPDIR)/$(GRAPHICS)/sprites.t3s -o $(TOPDIR)/$(ROMFS)/gfx/sprites.t3x; \
+	fi
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 
 clean:
 	@echo cleaning build artifacts...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(ROMFS)/gfx/*.t3x
 
 else
 
