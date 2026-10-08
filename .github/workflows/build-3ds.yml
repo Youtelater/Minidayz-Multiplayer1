@@ -65,11 +65,15 @@ jobs:
             mogrify -background none -gravity NorthWest -extent ${NEW_W}x${NEW_H} "$img"
           done
 
-      - name: Ensure clean grit configuration
+            - name: Ensure clean grit configuration
         run: |
           mkdir -p gfx
-          # Create a clean global grit file with valid syntax
-          echo "-gB16 -gt -p!" > gfx/grit.grit
+          # -gB16: 16-bit color
+          # -gA1: 1-bit alpha channel (RGBA1555)
+          # -gt: tiled format (native for 3DS GPU)
+          # -p!: omit palette
+          echo "-gB16 -gA1 -gt -p!" > gfx/grit.grit
+
 
       - name: Generate asset table for C code dynamically
         run: |

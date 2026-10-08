@@ -11,30 +11,30 @@ enum GameState {
     STATE_GAMEPLAY
 };
 
-// Safe upload function taking pointers explicitly
-void LoadSpriteByID(C3D_Tex* tex, Tex3DS_SubTexture* subtex, C2D_Image* img, u32 spriteID, u16 width, u16 height) {
+// Safe upload function that maps full power-of-two texture space cleanly
+void LoadSpriteByID(C3D_Tex* tex, Tex3DS_SubTexture* subtex, C2D_Image* img, u32 spriteID) {
     if (spriteID >= TOTAL_SPRITES || ALL_SPRITES[spriteID] == NULL) {
         printf("Error: Invalid Sprite ID %lu\n", spriteID);
         return;
     }
 
-    // Upload pixel data to GPU VRAM
+    // 1. Upload pixel data to GPU VRAM
     C3D_TexUpload(tex, ALL_SPRITES[spriteID]);
 
-    // Setup Subtexture bounds dynamically
-    subtex->width = width;
-    subtex->height = height;
+    // 2. Map full power-of-two texture coordinates
+    subtex->width = tex->width;
+    subtex->height = tex->height;
     subtex->left = 0.0f;
     subtex->top = 1.0f;
-    subtex->right = (float)width / tex->width;
-    subtex->bottom = 1.0f - ((float)height / tex->height);
+    subtex->right = 1.0f;
+    subtex->bottom = 0.0f;
 
     img->tex = tex;
     img->subtex = subtex;
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Hardware Services First
+    // 1. Initialize Hardware Services
     gfxInitDefault();
     consoleInit(GFX_BOTTOM, NULL);
 
@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
     C2D_Prepare();
     C3D_RenderTarget* topTarget = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
 
-    // 2. Local GPU Structures (Initialized strictly AFTER hardware boots)
+    // 2. Local GPU Texture Structures
     C3D_Tex gameTex;
     C2D_Image gameImg;
     Tex3DS_SubTexture subtex;
@@ -71,10 +71,10 @@ int main(int argc, char* argv[]) {
     u32 currentSpriteID = 0; 
     int loadingTimer = 0;
 
-    // Load first sprite safely
+    // Load starting sprite
     if (TOTAL_SPRITES > 0) {
-        LoadSpriteByID(&gameTex, &subtex, &gameImg, 0, 32, 32);
-        printf("Loaded Sprite 0 successfully!\n");
+        LoadSpriteByID(&gameTex, &subtex, &gameImg, 0);
+        printf("Loaded Initial Sprite 0 successfully!\n");
     }
 
     printf("\nEntering Loop. Press START to exit.\n");
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
         u32 kDown = hidKeysDown();
         if (kDown & KEY_START) break;
 
-        // State Machine
+        // --- State Machine ---
         if (currentState == STATE_LOADING) {
             loadingTimer++;
             if (loadingTimer >= 180 || (kDown & KEY_A)) {
@@ -92,34 +92,36 @@ int main(int argc, char* argv[]) {
                 printf("State: GAMEPLAY\n");
                 if (TOTAL_SPRITES > 1) {
                     currentSpriteID = 1;
-                    LoadSpriteByID(&gameTex, &subtex, &gameImg, currentSpriteID, 32, 32);
+                    LoadSpriteByID(&gameTex, &subtex, &gameImg, currentSpriteID);
                 }
             }
         } 
         else if (currentState == STATE_GAMEPLAY) {
             if (kDown & KEY_DRIGHT) {
                 currentSpriteID = (currentSpriteID + 1) % TOTAL_SPRITES;
-                LoadSpriteByID(&gameTex, &subtex, &gameImg, currentSpriteID, 32, 32);
+                LoadSpriteByID(&gameTex, &subtex, &gameImg, currentSpriteID);
                 printf("Sprite ID: %lu\n", currentSpriteID);
             } else if (kDown & KEY_DLEFT) {
                 currentSpriteID = (currentSpriteID == 0) ? TOTAL_SPRITES - 1 : currentSpriteID - 1;
-                LoadSpriteByID(&gameTex, &subtex, &gameImg, currentSpriteID, 32, 32);
+                LoadSpriteByID(&gameTex, &subtex, &gameImg, currentSpriteID);
                 printf("Sprite ID: %lu\n", currentSpriteID);
             }
         }
 
-        // Render Frame
+        // --- Render Frame ---
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        C2D_TargetClear(topTarget, C2D_Color32(0x20, 0x50, 0x20, 0xFF)); // Green Canvas
+        C2D_TargetClear(topTarget, C2D_Color32(0x20, 0x50, 0x20, 0xFF)); // Clear background to Dark Green
         C2D_SceneBegin(topTarget);
 
         if (ALL_SPRITES[currentSpriteID] != NULL) {
+            // Draw sprite at center of top screen
             C2D_DrawImageAt(gameImg, 184.0f, 104.0f, 0.5f, NULL, 1.0f, 1.0f);
         }
 
         C3D_FrameEnd(0);
     }
 
+    // Cleanup Memory on Exit
     C3D_TexDelete(&gameTex);
     C2D_Fini();
     C3D_Fini();
