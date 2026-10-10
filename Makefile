@@ -8,7 +8,9 @@ endif
 
 export TOPDIR ?= $(CURDIR)
 
-# Include devkitARM 3DS rules
+# Force the linker frontend to use the cross-compiler
+export LD	:=	$(DEVKITARM)/bin/arm-none-eabi-g++
+
 include $(DEVKITARM)/3ds_rules
 
 TARGET		:=	minidayz-3ds
@@ -30,8 +32,16 @@ LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 
-# Explicitly define libctru and portlibs include directories
-LIBDIRS		:= $(CTRULIB) $(PORTLIBS)
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+					$(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir))
+
+export DEPSDIR	:=	$(CURDIR)/$(BUILD)
+
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+
+OFILES		:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
@@ -39,7 +49,6 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-# Automatically find and compile all texture sheets in gfx/
 T3SFILES    := $(wildcard $(GRAPHICS)/*.t3s)
 TEXFILES    := $(T3SFILES:$(GRAPHICS)/%.t3s=$(ROMFS)/gfx/%.t3x)
 
@@ -65,5 +74,4 @@ clean:
 	@echo cleaning build artifacts...
 	@rm -fr $(BUILD) $(ROMFS)/gfx $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf $(TARGET).map
 
-# Include auto-generated dependency files
 -include $(OFILES:.o=.d)
