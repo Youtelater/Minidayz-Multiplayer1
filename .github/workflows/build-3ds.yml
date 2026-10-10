@@ -143,8 +143,13 @@ jobs:
           export DEVKITARM=/opt/devkitpro/devkitARM
           export PATH="$DEVKITARM/bin:$DEVKITPRO/tools/bin:$PATH"
           
+          # Define standard toolchain include paths for newlib and libctru
+          SYS_INC="$DEVKITARM/arm-none-eabi/include"
+          CTRULIB_INC="$DEVKITPRO/libctru/include"
+          
           make clean
-          make CFLAGS="-I$DEVKITPRO/libctru/include" CXXFLAGS="-I$DEVKITPRO/libctru/include"
+          make CFLAGS="-I$CTRULIB_INC -I$SYS_INC" CXXFLAGS="-I$CTRULIB_INC -I$SYS_INC"
+
 
 
       - name: Upload .3dsx Executable
