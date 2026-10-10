@@ -9,11 +9,14 @@ enum GameState {
 };
 
 enum SpriteIndex {
-    SPRITE_PLAYER = 0,
-    SPRITE_LOADING_LOGO,
-    SPRITE_MENU_SKY,
-    SPRITE_MENU_CITY,
-    SPRITE_MENU_LOGO
+    SPRITE_PLAYER = 0
+};
+
+enum BgIndex {
+    BG_LOADING_LOGO = 0,
+    BG_MENU_SKY,
+    BG_MENU_CITY,
+    BG_MENU_LOGO
 };
 
 int main(int argc, char* argv[]) {
@@ -28,14 +31,16 @@ int main(int argc, char* argv[]) {
     C3D_RenderTarget* top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     C3D_RenderTarget* bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
-    // Load packed texture sheet from RomFS
+    // Load separate texture sheets from RomFS
     C2D_SpriteSheet spriteSheet = C2D_SpriteSheetLoad("romfs:/gfx/sprites.t3x");
+    C2D_SpriteSheet bgSheet     = C2D_SpriteSheetLoad("romfs:/gfx/backgrounds.t3x");
     
-    // Extract individual images by atlas index
-    C2D_Image imgSplashLogo = C2D_SpriteSheetGetImage(spriteSheet, SPRITE_LOADING_LOGO);
-    C2D_Image imgMenuSky    = C2D_SpriteSheetGetImage(spriteSheet, SPRITE_MENU_SKY);
-    C2D_Image imgMenuCity   = C2D_SpriteSheetGetImage(spriteSheet, SPRITE_MENU_CITY);
-    C2D_Image imgMenuLogo   = C2D_SpriteSheetGetImage(spriteSheet, SPRITE_MENU_LOGO);
+    // Extract images from sheets
+    C2D_Image imgPlayer     = C2D_SpriteSheetGetImage(spriteSheet, SPRITE_PLAYER);
+    C2D_Image imgSplashLogo = C2D_SpriteSheetGetImage(bgSheet, BG_LOADING_LOGO);
+    C2D_Image imgMenuSky    = C2D_SpriteSheetGetImage(bgSheet, BG_MENU_SKY);
+    C2D_Image imgMenuCity   = C2D_SpriteSheetGetImage(bgSheet, BG_MENU_CITY);
+    C2D_Image imgMenuLogo   = C2D_SpriteSheetGetImage(bgSheet, BG_MENU_LOGO);
 
     GameState state = STATE_SPLASH;
     int splashTimer = 0;
@@ -52,7 +57,6 @@ int main(int argc, char* argv[]) {
         // --- State Machine Updates ---
         if (state == STATE_SPLASH) {
             splashTimer++;
-            // Show splash logo for ~2 seconds (120 frames at 60fps) or skip with A
             if (splashTimer >= 120 || (kDown & KEY_A)) {
                 state = STATE_LOADING;
             }
@@ -66,7 +70,7 @@ int main(int argc, char* argv[]) {
         } 
         else if (state == STATE_MENU) {
             if (kDown & KEY_A) {
-                state = STATE_GAMEPLAY; // Press A to start game
+                state = STATE_GAMEPLAY;
             }
         }
 
@@ -81,7 +85,7 @@ int main(int argc, char* argv[]) {
             C2D_DrawImageAt(imgSplashLogo, x, y, 0.5f, NULL, 1.0f, 1.0f);
         } 
         else if (state == STATE_LOADING || state == STATE_MENU) {
-            // Layer 1: Stretched Sky background pinned to top (displays upper red section)
+            // Layer 1: Stretched Sky background pinned to top (upper red section)
             float scaleX = 400.0f / imgMenuSky.subtex->width;
             float scaleY = 240.0f / imgMenuSky.subtex->height;
             C2D_DrawImageAt(imgMenuSky, 0.0f, 0.0f, 0.1f, NULL, scaleX, scaleY * 2.0f);
@@ -98,7 +102,8 @@ int main(int argc, char* argv[]) {
         } 
         else if (state == STATE_GAMEPLAY) {
             C2D_TargetClear(top, C2D_Color32(34, 139, 34, 255));
-            // Player and map rendering logic goes here
+            // Draw player in gameplay
+            C2D_DrawImageAt(imgPlayer, 100.0f, 100.0f, 0.5f, NULL, 1.0f, 1.0f);
         }
 
         // --- Render Bottom Screen (320x240) ---
@@ -106,7 +111,6 @@ int main(int argc, char* argv[]) {
         C2D_TargetClear(bottom, C2D_Color32(0, 0, 0, 255));
 
         if (state == STATE_LOADING) {
-            // Centered loading bar parameters
             float barWidth = 240.0f;
             float barHeight = 8.0f;
             float barX = (320.0f - barWidth) / 2.0f;
@@ -123,6 +127,7 @@ int main(int argc, char* argv[]) {
 
     // Cleanup resources
     C2D_SpriteSheetFree(spriteSheet);
+    C2D_SpriteSheetFree(bgSheet);
     romfsExit();
     C2D_Fini();
     C3D_Fini();

@@ -1,38 +1,41 @@
-.SUFFIXES: .t3s .t3x
+#---------------------------------------------------------------------------------
+.SUFFIXES:
+#---------------------------------------------------------------------------------
 
 ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment.. export DEVKITARM=<path> அதற்கு பின் . /etc/profile.d/devkit-env.sh")
+$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to devkitARM>")
 endif
 
-# Target output name and folders
+include $(DEVKITARM)/3ds_rules
+
 TARGET		:=	minidayz-3ds
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
 INCLUDES	:=	include
 ROMFS		:=	romfs
+GRAPHICS	:=	gfx
 
-# Automatically compile all .t3s texture files found in gfx/ into romfs/gfx/
-T3SFILES	:=	$(wildcard gfx/*.t3s)
-TEXFILES	:=	$(T3SFILES:gfx/%.t3s=$(ROMFS)/gfx/%.t3x)
+CFLAGS		:= -g -Wall -Wextra -O3 -mword-relocations \
+			   -ffunction-sections \
+			   $(ARCH)
 
-# Ensure texture compilation runs before building the binary
-export RSFS_DEPS := $(TEXFILES)
+CXXFLAGS	:= $(CFLAGS) -std=gnu++11
 
-# Basic toolchain flags
-ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
-CFLAGS		:=	-g -Wall -O2 -ffunction-sections $(ARCH) -D__3DS__
-CXXFLAGS	:=	$(CFLAGS) -std=gnu++11 -fno-rtti -fno-exceptions
-ASFLAGS		:=	-g $(ARCH)
-LDFLAGS		:=	-specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $@).map
+ASFLAGS		:= -g $(ARCH)
+LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS		:=	-lciture2d -lcitro3d -lctru -lm
+LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 
-# Include standard devkitPro build rules
-include $(DEVKITARM)/3ds_rules
+# Automatically compile any .t3s file found in gfx/ into romfs/gfx/
+T3SFILES    := $(wildcard $(GRAPHICS)/*.t3s)
+TEXFILES    := $(T3SFILES:$(GRAPHICS)/%.t3s=$(ROMFS)/gfx/%.t3x)
 
-# Rule to compile texture sheets using tex3ds
-$(ROMFS)/gfx/%.t3x: gfx/%.t3s
-	@echo "Building texture sheet $<..."
+# Ensure graphics build rules are evaluated
+all: $(TEXFILES)
+
+$(ROMFS)/gfx/%.t3x: $(GRAPHICS)/%.t3s
 	@mkdir -p $(dir $@)
-	@tex3ds -i $< -o $@
+	tex3ds -i $< -o $@
+
+# Standard devkitPro build targets follow...
