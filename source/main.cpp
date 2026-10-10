@@ -1,6 +1,9 @@
+##include <3ds.h>
 #include <citro3d.h>
 #include <citro2d.h>
-#include <3ds.h>
+#include <tex3ds.h>
+
+// ... rest of your code
 
 
 enum GameState {
