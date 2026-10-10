@@ -104,7 +104,7 @@ jobs:
           "
 
       - name: Compile 3DS Executable
-  run: |
+        run: |
     export DEVKITPRO=/opt/devkitpro
     export DEVKITARM=$DEVKITPRO/devkitARM
     export PATH=$DEVKITARM/bin:$PATH
