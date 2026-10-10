@@ -84,12 +84,13 @@ jobs:
               with open('include/gfx_table.h', 'w', encoding='utf-8') as f:
                   f.write('#ifndef GFX_TABLE_H\n#define GFX_TABLE_H\n\n#include <3ds.h>\n\n')
                   
-                  # 1. Include headers preserving original filename hyphens
+                  # 1. Include headers using underscore-normalized names
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
-                      f.write(f'#include \"{raw_name}.h\"\n')
+                      safe_name = raw_name.replace('-', '_')
+                      f.write(f'#include \"{safe_name}.h\"\n')
                   
-                  # 2. Build pointer array using hyphen-to-underscore names for valid C identifiers
+                  # 2. Build pointer array using underscore-normalized variable names
                   f.write('\nstatic const void* ALL_SPRITES[] = {\n')
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
