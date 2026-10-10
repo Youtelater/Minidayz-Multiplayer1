@@ -15,47 +15,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configure Pacman and Install Core Toolchain
+      - name: Install Dependencies via Pacman
         run: |
           echo "XferCommand = /usr/bin/curl -C - -f -s -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64)\" %u -o %o" >> /etc/pacman.conf
-          dkp-pacman -Syy --noconfirm 3ds-dev devkitarm-rules citro2d citro3d libctru || true
+          dkp-pacman -Syy --noconfirm 3ds-dev devkitarm-rules citro2d citro3d libctru portlibs
 
-      - name: Inspector Safeguard
-        run: |
-          echo "Inspecting and validating entire devkitPro development environment..."
-          
-          DEVKIT_ROOT="/opt/devkitpro"
-          ARM_LIB="$DEVKIT_ROOT/devkitARM/arm-none-eabi/lib"
-          ARM_INC="$DEVKIT_ROOT/devkitARM/arm-none-eabi/include"
-
-          mkdir -p "$ARM_LIB" "$ARM_INC"
-          apt-get update && apt-get install -y git make
-
-          # 1. libctru recovery with selective header filtering
-          if [ ! -f "$ARM_INC/3ds.h" ]; then
-            git clone --depth 1 https://github.com/devkitPro/libctru.git /tmp/libctru_src
-            cp -r /tmp/libctru_src/libctru/include/* "$ARM_INC/"
-            # Remove only the conflicting wrapper files that break newlib, keeping sys/features.h safe
-            rm -f "$ARM_INC/sys/select.h" "$ARM_INC/sys/types.h"
-            make -C /tmp/libctru_src/libctru && cp /tmp/libctru_src/libctru/lib/*.a "$ARM_LIB/" || true
-          fi
-
-          # 2. citro3d recovery
-          if [ ! -f "$ARM_INC/citro3d.h" ]; then
-            git clone --depth 1 https://github.com/devkitPro/citro3d.git /tmp/citro3d_src
-            cp -r /tmp/citro3d_src/include/* "$ARM_INC/"
-            make -C /tmp/citro3d_src && cp /tmp/citro3d_src/lib/*.a "$ARM_LIB/" || true
-          fi
-
-          # 3. citro2d recovery
-          if [ ! -f "$ARM_INC/citro2d.h" ]; then
-            git clone --depth 1 https://github.com/devkitPro/citro2d.git /tmp/citro2d_src
-            cp -r /tmp/citro2d_src/include/* "$ARM_INC/"
-            make -C /tmp/citro2d_src && cp /tmp/citro2d_src/lib/*.a "$ARM_LIB/" || true
-          fi
-
-
-      -   name: Transliterate non-ASCII asset filenames and fix leading digits
+      - name: Transliterate non-ASCII asset filenames and fix leading digits
         run: |
           python3 -c "
           import os
@@ -144,15 +109,10 @@ jobs:
           export DEVKITPRO=/opt/devkitpro
           export DEVKITARM=/opt/devkitpro/devkitARM
           export PATH="$DEVKITARM/bin:$DEVKITPRO/tools/bin:$PATH"
-          
-          # Define standard toolchain include paths for newlib and libctru
-          SYS_INC="$DEVKITARM/arm-none-eabi/include"
-          CTRULIB_INC="$DEVKITPRO/libctru/include"
+          source /etc/profile
           
           make clean
-          make CFLAGS="-I$CTRULIB_INC -I$SYS_INC" CXXFLAGS="-I$CTRULIB_INC -I$SYS_INC"
-
-
+          make
 
       - name: Upload .3dsx Executable
         uses: actions/upload-artifact@v4
