@@ -1,6 +1,4 @@
 --atlas
--w 2048
--h 2048
 --format=rgba5551
 
 loading-logo.png
