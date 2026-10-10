@@ -83,7 +83,6 @@ dependency := $(OFILES:.o=.d)
 
 $(OUTPUT).3dsx : $(OUTPUT).elf
 
-# Ensure 3DS specs use the correct cross-compiler linker frontend
 $(OUTPUT).elf : $(OFILES)
 	@echo LD $(notdir $@)
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
