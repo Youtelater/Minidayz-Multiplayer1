@@ -84,7 +84,7 @@ DEPENDS   := $(OFILES:.o=.d)
 all : $(OUTPUT).3dsx
 
 $(OUTPUT).3dsx : $(OUTPUT).elf
-	@elf23dsx $< $@ $(3DSXFLAGS)
+	@$(3DSXTOOL) $< $@ $(3DSXFLAGS)
 
 $(OUTPUT).elf : $(OFILES)
 	@echo Linking $(notdir $@)...
