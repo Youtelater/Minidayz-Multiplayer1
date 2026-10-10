@@ -103,15 +103,15 @@ jobs:
                   f.write('#endif\n')
           "
 
-    - name: Compile 3DS Executable
-      run: |
-        P=/opt/devkitpro
-        export DEVKITPRO=$P
-        export DEVKITARM=$P/devkitARM
-        export PATH=$P/devkitARM/bin:$PATH
-        
-        make clean
-        make
+      - name: Compile 3DS Executable
+        run: |
+          P=/opt/devkitpro
+          export DEVKITPRO=$P
+          export DEVKITARM=$P/devkitARM
+          export PATH=$P/devkitARM/bin:$PATH
+          
+          make clean
+          make
 
       - name: Upload .3dsx Executable
         uses: actions/upload-artifact@v4
