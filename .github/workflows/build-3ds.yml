@@ -15,12 +15,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Prevent Cloudflare 403 and Install 3DS SDK
+      - name: Install 3DS SDK and Libraries
         run: |
-          # Force pacman to use curl with a recognized user-agent to bypass Cloudflare CI blocks
-          echo "XferCommand = /usr/bin/curl -C - -f -s -A \"dkp-pacman\" %u -o %o" >> /etc/pacman.conf
-          
-          # Synchronize databases and install libraries reliably
           dkp-pacman -Syy --noconfirm 3ds-dev citro2d citro3d libctru
 
       - name: Transliterate non-ASCII asset filenames and fix leading digits
@@ -88,11 +84,12 @@ jobs:
               with open('include/gfx_table.h', 'w', encoding='utf-8') as f:
                   f.write('#ifndef GFX_TABLE_H\n#define GFX_TABLE_H\n\n#include <3ds.h>\n\n')
                   
+                  # 1. Include headers preserving original filename hyphens
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
-                      include_name = raw_name
-                      f.write(f'#include \"{include_name}.h\"\n')
+                      f.write(f'#include \"{raw_name}.h\"\n')
                   
+                  # 2. Build pointer array using hyphen-to-underscore names for valid C identifiers
                   f.write('\nstatic const void* ALL_SPRITES[] = {\n')
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
