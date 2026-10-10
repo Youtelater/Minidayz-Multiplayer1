@@ -12,6 +12,11 @@ DATA        := data
 GRAPHICS    := gfx
 ROMFS       := romfs
 
+# Metadata settings
+APP_TITLE       := MiniDAYZ 3DS
+APP_DESCRIPTION := MiniDAYZ Port
+APP_AUTHOR      := Homebrew
+
 export TOPDIR
 export TARGET
 
@@ -19,7 +24,6 @@ ifeq ($(strip $(DEVKITARM)),)
 $(error "Please set DEVKITARM in your environment.")
 endif
 
-# Include 3DS rules first
 include $(DEVKITARM)/3ds_rules
 
 ARCH      := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
@@ -69,7 +73,7 @@ $(BUILD):
 
 clean:
 	@echo cleaning build artifacts...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(ROMFS)/gfx/*.t3x
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS)/gfx/*.t3x
 
 else
 
@@ -77,11 +81,14 @@ DEPENDS   := $(OFILES:.o=.d)
 
 all : $(OUTPUT).3dsx
 
-# Override default rule to explicitly feed the non-empty romfs folder to 3dsx tool
-$(OUTPUT).3dsx : $(OUTPUT).elf
+$(OUTPUT).smdh :
+	@echo "Creating SMDH metadata..."
+	@smdhtool --create "$(APP_TITLE)" "$(APP_DESCRIPTION)" "$(APP_AUTHOR)" $(DEVKITPRO)/libctru/default_icon.png $@
+
+$(OUTPUT).3dsx : $(OUTPUT).elf $(OUTPUT).smdh
 	@echo "Packaging 3DSX with RomFS..."
 	@_3dsx_cmd="$$(which 3dsxtool 2>/dev/null || which elf23dsx 2>/dev/null || echo $(DEVKITARM)/bin/elf23dsx)"; \
-	$$_3dsx_cmd $< $@ --romfs=$(TOPDIR)/$(ROMFS)
+	$$_3dsx_cmd $< $@ --smdh=$(OUTPUT).smdh --romfs=$(TOPDIR)/$(ROMFS)
 
 $(OUTPUT).elf : $(OFILES)
 	@echo Linking $(notdir $@)...
