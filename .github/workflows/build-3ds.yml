@@ -153,10 +153,13 @@ jobs:
       - name: Compile 3DS Executable
         shell: bash
         run: |
-          export D=/opt/devkitpro A=/opt/devkitpro/devkitARM
-          export PATH="$A/bin:$D/tools/bin:$PATH"
-          source /etc/profile
-          make clean && make
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=/opt/devkitpro/devkitARM
+          export PATH="$DEVKITARM/bin:$DEVKITPRO/tools/bin:$PATH"
+          
+          make clean
+          make CFLAGS="-I$DEVKITPRO/libctru/include" CXXFLAGS="-I$DEVKITPRO/libctru/include"
+
 
       - name: Upload .3dsx Executable
         uses: actions/upload-artifact@v4
