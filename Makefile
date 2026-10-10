@@ -16,7 +16,13 @@ TARGET		:= minidayz-3ds
 BUILD		:= build
 SOURCES		:= source
 DATA		:= data
-INCLUDES	:= include build $(LIBCTRU)/include $(PORTLIBS)/include
+INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
+			   $(foreach dir,$(SOURCES),-I$(TOPDIR)/$(dir)) \
+			   -I$(TOPDIR)/$(ROMFS) \
+			   -I$(LIBCTRU)/include \
+			   -I$(PORTLIBS)/include \
+			   -I$(DEVKITARM)/arm-none-eabi/include
+
 GRAPHICS	:= gfx
 ROMFS		:= romfs
 
