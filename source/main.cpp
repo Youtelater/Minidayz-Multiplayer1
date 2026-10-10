@@ -1,6 +1,7 @@
+#include <citro3d.h>
 #include <citro2d.h>
 #include <3ds.h>
-#include <stdio.h>
+
 
 enum GameState {
     STATE_LOADING = 0,
