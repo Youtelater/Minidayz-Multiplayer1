@@ -78,9 +78,9 @@ DEPENDS   := $(OFILES:.o=.d)
 
 all : $(OUTPUT).3dsx
 
-# Call elf23dsx directly from DEVKITPRO environment tools path
+# Use $(ELF23DSX) provided directly by 3ds_rules
 $(OUTPUT).3dsx : $(OUTPUT).elf
-	@$(DEVKITPRO)/tools/bin/elf23dsx $< $@ --romfs=$(TOPDIR)/$(ROMFS)
+	@$(ELF23DSX) $< $@ --romfs=$(TOPDIR)/$(ROMFS)
 
 $(OUTPUT).elf : $(OFILES)
 	@echo Linking $(notdir $@)...
