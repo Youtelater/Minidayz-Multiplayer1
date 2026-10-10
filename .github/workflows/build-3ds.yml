@@ -31,10 +31,12 @@ jobs:
           mkdir -p "$ARM_LIB" "$ARM_INC"
           apt-get update && apt-get install -y git make
 
-          # 1. libctru recovery
+          # 1. libctru recovery (excluding conflicting newlib wrapper headers)
           if [ ! -f "$ARM_INC/3ds.h" ]; then
             git clone --depth 1 https://github.com/devkitPro/libctru.git /tmp/libctru_src
             cp -r /tmp/libctru_src/libctru/include/* "$ARM_INC/"
+            # Remove conflicting libctru sys/ headers that break #include_next
+            rm -rf "$ARM_INC/sys"
             make -C /tmp/libctru_src/libctru && cp /tmp/libctru_src/libctru/lib/*.a "$ARM_LIB/" || true
           fi
 
@@ -51,6 +53,7 @@ jobs:
             cp -r /tmp/citro2d_src/include/* "$ARM_INC/"
             make -C /tmp/citro2d_src && cp /tmp/citro2d_src/lib/*.a "$ARM_LIB/" || true
           fi
+
 
 
       - name: Transliterate non-ASCII asset filenames and fix leading digits
