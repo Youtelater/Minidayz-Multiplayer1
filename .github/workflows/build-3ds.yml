@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configure Pacman User-Agent to Bypass Cloudflare 403
+      - name: Configure Pacman User-Agent and Install Dependencies
         run: |
           echo "XferCommand = /usr/bin/curl -C - -f -s -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64)\" %u -o %o" >> /etc/pacman.conf
           dkp-pacman -Syy --noconfirm 3ds-dev devkitarm-rules citro2d citro3d libctru
@@ -105,7 +105,10 @@ jobs:
 
       - name: Compile 3DS Executable
         run: |
-          . /opt/devkitpro/devkit-env.sh
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=$DEVKITPRO/devkitARM
+          export PATH=$DEVKITARM/bin:$PATH
+          
           make clean
           make
 
