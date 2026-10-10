@@ -31,12 +31,12 @@ jobs:
           mkdir -p "$ARM_LIB" "$ARM_INC"
           apt-get update && apt-get install -y git make
 
-          # 1. libctru recovery (excluding conflicting newlib wrapper headers)
+          # 1. libctru recovery with selective header filtering
           if [ ! -f "$ARM_INC/3ds.h" ]; then
             git clone --depth 1 https://github.com/devkitPro/libctru.git /tmp/libctru_src
             cp -r /tmp/libctru_src/libctru/include/* "$ARM_INC/"
-            # Remove conflicting libctru sys/ headers that break #include_next
-            rm -rf "$ARM_INC/sys"
+            # Remove only the conflicting wrapper files that break newlib, keeping sys/features.h safe
+            rm -f "$ARM_INC/sys/select.h" "$ARM_INC/sys/types.h"
             make -C /tmp/libctru_src/libctru && cp /tmp/libctru_src/libctru/lib/*.a "$ARM_LIB/" || true
           fi
 
@@ -55,8 +55,7 @@ jobs:
           fi
 
 
-
-      - name: Transliterate non-ASCII asset filenames and fix leading digits
+      -   name: Transliterate non-ASCII asset filenames and fix leading digits
         run: |
           python3 -c "
           import os
