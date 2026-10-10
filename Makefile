@@ -47,7 +47,8 @@ CFLAGS		:= -g -Wall -O2 -mword-relocations \
 CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
 ASFLAGS		:= -g $(ARCH)
-LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -L/opt/devkitpro/portlibs/armv6k/lib -Wl,-Map,$(notdir $*.map)
+
 
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 
