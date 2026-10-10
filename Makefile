@@ -14,12 +14,12 @@ ROMFS       := romfs
 
 export TOPDIR
 export TARGET
-export ROMFS
 
 ifeq ($(strip $(DEVKITARM)),)
 $(error "Please set DEVKITARM in your environment.")
 endif
 
+# Include 3DS rules first
 include $(DEVKITARM)/3ds_rules
 
 ARCH      := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
@@ -54,20 +54,18 @@ export INCLUDE        := $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
                          $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
                          -I$(TOPDIR)/$(BUILD)
 
-.PHONY: clean all build_t3x
+.PHONY: clean all
 
-all: build_t3x $(BUILD)
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(TOPDIR)/Makefile
+all: $(BUILD)
 
-build_t3x:
+$(BUILD):
 	@mkdir -p $(TOPDIR)/$(ROMFS)/gfx
 	@if [ -f $(TOPDIR)/$(GRAPHICS)/sprites.t3s ]; then \
 		echo "Building texture sheet with tex3ds..."; \
 		tex3ds -i $(TOPDIR)/$(GRAPHICS)/sprites.t3s -o $(TOPDIR)/$(ROMFS)/gfx/sprites.t3x; \
 	fi
-
-$(BUILD):
 	@[ -d $@ ] || mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(TOPDIR)/Makefile
 
 clean:
 	@echo cleaning build artifacts...
@@ -79,7 +77,11 @@ DEPENDS   := $(OFILES:.o=.d)
 
 all : $(OUTPUT).3dsx
 
+# Override default rule to explicitly feed the non-empty romfs folder to 3dsx tool
 $(OUTPUT).3dsx : $(OUTPUT).elf
+	@echo "Packaging 3DSX with RomFS..."
+	@_3dsx_cmd="$$(which 3dsxtool 2>/dev/null || which elf23dsx 2>/dev/null || echo $(DEVKITARM)/bin/elf23dsx)"; \
+	$$_3dsx_cmd $< $@ --romfs=$(TOPDIR)/$(ROMFS)
 
 $(OUTPUT).elf : $(OFILES)
 	@echo Linking $(notdir $@)...
