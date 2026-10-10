@@ -16,6 +16,7 @@ int main(int argc, char* argv[]) {
     C2D_Prepare();
     romfsInit();
 
+    // Prepare both screen targets (bottom screen ready for future gameplay/inventory)
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
@@ -43,49 +44,47 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // Render frame
+        // --- Start Frame Rendering ---
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
         // ==========================================
-        // --- TOP SCREEN (Main Display) ---
+        // 1. TOP SCREEN (Loading Screen & Main Menu)
         // ==========================================
-        C3D_SceneBegin(topScreen);
+        C2D_SceneBegin(topScreen);
 
         if (currentState == STATE_LOADING) {
-            // Clear loading screen to black
+            // Black background for loading
             C2D_TargetClear(topScreen, C2D_Color32(0, 0, 0, 255));
-            
+
             if (loadingSheet) {
                 C2D_Image img = C2D_SpriteSheetGetImage(loadingSheet, 0);
-                // Scale down the loading logo to fit comfortably on the 400x240 screen
-                // 400/512 ≈ 0.78, 240/512 ≈ 0.46
+                // Center and scale the loading logo on the top screen (400x240)
                 C2D_DrawImageAt(img, 0.0f, 0.0f, 0.5f, NULL, 0.75f, 0.75f);
             }
         } 
         else if (currentState == STATE_MENU) {
-            // 1. Clear top screen with the signature Mini DayZ red background color
+            // Mini DayZ Signature Red Background
             C2D_TargetClear(topScreen, C2D_Color32(180, 25, 25, 255));
 
-            // 2. Black City layer positioned at the bottom
+            // Black City layer scaled and placed at the bottom
             if (citySheet) {
                 C2D_Image cityImg = C2D_SpriteSheetGetImage(citySheet, 0);
-                // Scale and place it at the bottom of the 240p screen
                 C2D_DrawImageAt(cityImg, 0.0f, 120.0f, 0.5f, NULL, 0.78f, 0.5f);
             }
 
-            // 3. Mini DayZ Logo scaled down and centered in the middle
+            // Game Logo centered on top
             if (menuSheet) {
                 C2D_Image logoImg = C2D_SpriteSheetGetImage(menuSheet, 0);
-                // Scaled down (0.5x) so it's not oversized, centered horizontally and vertically
                 C2D_DrawImageAt(logoImg, 100.0f, 60.0f, 0.5f, NULL, 0.5f, 0.5f);
             }
         }
 
         // ==========================================
-        // --- BOTTOM SCREEN (Left Blank) ---
+        // 2. BOTTOM SCREEN (Blank during Menu)
         // ==========================================
-        C2D_TargetClear(bottomScreen, C2D_Color32(10, 10, 10, 255));
+        C2D_TargetClear(bottomScreen, C2D_Color32(0, 0, 0, 255));
         C2D_SceneBegin(bottomScreen);
+        // Reserved for touch controls, map, and inventory during gameplay!
 
         C3D_FrameEnd(0);
     }
@@ -102,4 +101,3 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-
