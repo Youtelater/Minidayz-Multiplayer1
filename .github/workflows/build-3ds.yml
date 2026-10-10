@@ -18,7 +18,7 @@ jobs:
       - name: Configure Pacman User-Agent to Bypass Cloudflare 403
         run: |
           echo "XferCommand = /usr/bin/curl -C - -f -s -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64)\" %u -o %o" >> /etc/pacman.conf
-          dkp-pacman -Syy --noconfirm 3ds-dev citro2d citro3d libctru
+          dkp-pacman -Syy --noconfirm 3ds-dev devkitarm-rules citro2d citro3d libctru
 
       - name: Transliterate non-ASCII asset filenames and fix leading digits
         run: |
