@@ -56,24 +56,15 @@ all: graphics $(OUTPUT).3dsx
 
 graphics:
 	@mkdir -p $(ROMFS)/gfx
-	@# Clear out old auto-generated wrapper files to ensure clean regeneration
+	@# Purge any leftover text wrapper files entirely
 	@rm -f $(GRAPHICS)/*.t3s
-	@# Automatically generate precise, single-input .t3s wrapper files for every PNG
+	@# Compile individual PNGs directly to .t3x standalone sheets without wrapper files
 	@for png in $(GRAPHICS)/*.png; do \
 		if [ -f "$$png" ]; then \
 			fname=$$(basename "$$png"); \
 			fbase=$${fname%.png}; \
-			t3s_file="$(GRAPHICS)/$$fbase.t3s"; \
-			echo "Creating auto .t3s for $$fbase"; \
-			printf -- "--format=rgba5551\n%s" "$$fname" > "$$t3s_file"; \
-		fi; \
-	done
-	@# Compile each single-input .t3s configuration into its own independent .t3x sheet
-	@for t3s in $(GRAPHICS)/*.t3s; do \
-		if [ -f "$$t3s" ]; then \
-			filename=$$(basename "$$t3s" .t3s); \
-			echo "Building texture sheet: $$filename.t3x"; \
-			tex3ds -i "$$t3s" -o "$(ROMFS)/gfx/$$filename.t3x" || exit 1; \
+			echo "Building texture sheet directly: $$fbase.t3x"; \
+			tex3ds --format=rgba5551 -i "$$png" -o "$(ROMFS)/gfx/$$fbase.t3x" || exit 1; \
 		fi; \
 	done
 
