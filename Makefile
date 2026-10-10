@@ -17,9 +17,9 @@ BUILD		:= build
 SOURCES		:= source
 DATA		:= data
 PORTLIBS	:= /opt/devkitpro/portlibs/3ds
+ROMFS		:= romfs
 INCLUDES	:= include build /opt/devkitpro/libctru/include $(PORTLIBS)/include
 GRAPHICS	:= gfx
-ROMFS		:= romfs
 
 #-----------------------------------------------------------------
 # FIND SOURCE FILES & INCLUDE PATHS
