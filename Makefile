@@ -56,11 +56,22 @@ all: graphics $(OUTPUT).3dsx
 
 graphics:
 	@mkdir -p $(ROMFS)/gfx
+	@# Automatically generate missing .t3s wrapper files for raw PNGs
+	@for png in $(GRAPHICS)/*.png; do \
+		if [ -f "$$png" ]; then \
+			filename=$$(basename $$png .png); \
+			if [ ! -f "$(GRAPHICS)/$$filename.t3s" ]; then \
+				echo "Creating auto .t3s for $$filename"; \
+				printf "--format=rgba5551\n$$(basename $$png)\n" > "$(GRAPHICS)/$$filename.t3s"; \
+			fi; \
+		fi; \
+	done
+	@# Compile all .t3s configs into binary .t3x texture sheets
 	@for t3s in $(GRAPHICS)/*.t3s; do \
 		if [ -f "$$t3s" ]; then \
 			filename=$$(basename $$t3s .t3s); \
 			echo "Building texture sheet: $$filename.t3x"; \
-			tex3ds -i "$$t3s" -o "$(ROMFS)/gfx/$$filename.t3x"; \
+			tex3ds -i "$$t3s" -o "$(ROMFS)/gfx/$$filename.t3x" || exit 1; \
 		fi; \
 	done
 
