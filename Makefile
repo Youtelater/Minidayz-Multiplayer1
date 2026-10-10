@@ -39,3 +39,9 @@ $(ROMFS)/gfx/%.t3x: $(GRAPHICS)/%.t3s
 	tex3ds -i $< -o $@
 
 # Standard devkitPro build targets follow...
+include $(DEVKITARM)/3ds_defaults
+
+# Clean rule to clear out build artifacts
+clean:
+	@echo cleaning build artifacts...
+	@rm -fr $(BUILD) $(ROMFS)/gfx $(TARGET).3dsx $(TARGET).smdh $(TARGET).cia
