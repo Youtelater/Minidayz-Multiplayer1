@@ -18,7 +18,17 @@ jobs:
       - name: Configure Pacman User-Agent and Install Dependencies
         run: |
           echo "XferCommand = /usr/bin/curl -C - -f -s -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64)\" %u -o %o" >> /etc/pacman.conf
-          dkp-pacman -Syy --noconfirm 3ds-dev devkitarm-rules citro2d citro3d libctru
+          dkp-pacman -Syy --noconfirm 3ds-dev devkitarm-rules citro2d citro3d libctru || true
+
+      - name: Safeguard - Ensure libctru headers exist via direct download
+        run: |
+          mkdir -p /opt/devkitpro/libctru/include
+          if [ ! -f /opt/devkitpro/libctru/include/3ds.h ]; then
+            echo "libctru headers missing. Downloading directly from official repository..."
+            apt-get update && apt-get install -y git
+            git clone --depth 1 https://github.com/devkitPro/libctru.git /tmp/libctru_src
+            cp -r /tmp/libctru_src/libctru/include/* /opt/devkitpro/libctru/include/
+          fi
 
       - name: Transliterate non-ASCII asset filenames and fix leading digits
         run: |
