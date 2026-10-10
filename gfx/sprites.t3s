@@ -1,5 +1,7 @@
 --atlas
+--max-size=2048x2048
 --format=rgba5551
+
 player.png
 loading-logo.png
 tiledbgmenu_sky_sprite-sheet0.png

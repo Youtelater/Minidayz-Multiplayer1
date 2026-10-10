@@ -12,7 +12,7 @@ enum SpriteIndex {
     SPRITE_PLAYER = 0,
     SPRITE_LOADING_LOGO,
     SPRITE_MENU_SKY,
-    SPRITE_MENU_SILHOUETTE,
+    SPRITE_MENU_CITY,
     SPRITE_MENU_LOGO
 };
 
@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
     // Extract individual images by atlas index
     C2D_Image imgSplashLogo = C2D_SpriteSheetGetImage(spriteSheet, SPRITE_LOADING_LOGO);
     C2D_Image imgMenuSky    = C2D_SpriteSheetGetImage(spriteSheet, SPRITE_MENU_SKY);
-    C2D_Image imgMenuSil    = C2D_SpriteSheetGetImage(spriteSheet, SPRITE_MENU_SILHOUETTE);
+    C2D_Image imgMenuCity   = C2D_SpriteSheetGetImage(spriteSheet, SPRITE_MENU_CITY);
     C2D_Image imgMenuLogo   = C2D_SpriteSheetGetImage(spriteSheet, SPRITE_MENU_LOGO);
 
     GameState state = STATE_SPLASH;
@@ -87,9 +87,9 @@ int main(int argc, char* argv[]) {
             C2D_DrawImageAt(imgMenuSky, 0.0f, 0.0f, 0.1f, NULL, scaleX, scaleY * 2.0f);
 
             // Layer 2: City Silhouette aligned to bottom edge
-            float silY = 240.0f - imgMenuSil.subtex->height;
-            float silScaleX = 400.0f / imgMenuSil.subtex->width;
-            C2D_DrawImageAt(imgMenuSil, 0.0f, silY, 0.2f, NULL, silScaleX, 1.0f);
+            float cityY = 240.0f - imgMenuCity.subtex->height;
+            float cityScaleX = 400.0f / imgMenuCity.subtex->width;
+            C2D_DrawImageAt(imgMenuCity, 0.0f, cityY, 0.2f, NULL, cityScaleX, 1.0f);
 
             // Layer 3: Mini DAYZ Logo centered horizontally
             float logoX = (400.0f - imgMenuLogo.subtex->width) / 2.0f;
