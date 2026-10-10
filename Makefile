@@ -62,7 +62,7 @@ graphics:
 			filename=$$(basename $$png .png); \
 			if [ ! -f "$(GRAPHICS)/$$filename.t3s" ]; then \
 				echo "Creating auto .t3s for $$filename"; \
-				printf "--format=rgba5551\n$$(basename $$png)\n" > "$(GRAPHICS)/$$filename.t3s"; \
+				printf -- "--format=rgba5551\n%s\n" "$$(basename $$png)" > "$(GRAPHICS)/$$filename.t3s"; \
 			fi; \
 		fi; \
 	done
