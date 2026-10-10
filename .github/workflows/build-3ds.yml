@@ -87,14 +87,14 @@ jobs:
                   # 1. Include headers using underscore-normalized names
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
-                      safe_name = raw_name.replace('-', '_')
+                      safe_name = raw_name.replace('-', '_').replace('.', '_')
                       f.write(f'#include \"{safe_name}.h\"\n')
                   
                   # 2. Build pointer array using underscore-normalized variable names
                   f.write('\nstatic const void* ALL_SPRITES[] = {\n')
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
-                      var_name = raw_name.replace('-', '_')
+                      var_name = raw_name.replace('-', '_').replace('.', '_')
                       if var_name[0].isdigit():
                           var_name = '_' + var_name
                       f.write(f'    {var_name}Tiles,\n')
@@ -106,7 +106,9 @@ jobs:
 
       - name: Compile 3DS Executable
         run: |
-          . /etc/profile.d/devkit-env.sh
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=${DEVKITPRO}/devkitARM
+          . ${DEVKITPRO}/devkit-env.sh
           make clean
           make
 
