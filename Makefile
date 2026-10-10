@@ -56,22 +56,24 @@ all: graphics $(OUTPUT).3dsx
 
 graphics:
 	@mkdir -p $(ROMFS)/gfx
-	@# Remove legacy backgrounds.t3s if left over in the repository
-	@rm -f $(GRAPHICS)/backgrounds.t3s
-	@# Automatically generate missing .t3s wrapper files for raw PNGs safely
+	@# Clean up legacy multi-input files and any previously corrupted auto-t3s files
+	@rm -f $(GRAPHICS)/backgrounds.t3s $(GRAPHICS)/*.t3s
+	@# Automatically generate missing .t3s wrapper files for raw PNGs safely without trailing blank lines
 	@for png in $(GRAPHICS)/*.png; do \
 		if [ -f "$$png" ]; then \
-			filename=$$(basename $$png .png); \
-			if [ ! -f "$(GRAPHICS)/$$filename.t3s" ]; then \
-				echo "Creating auto .t3s for $$filename"; \
-				printf -- "--format=rgba5551\n%s\n" "$$filename.png" > "$(GRAPHICS)/$$filename.t3s"; \
+			fname=$$(basename "$$png"); \
+			fbase=$${fname%.png}; \
+			t3s_file="$(GRAPHICS)/$$fbase.t3s"; \
+			if [ ! -f "$$t3s_file" ]; then \
+				echo "Creating auto .t3s for $$fbase"; \
+				printf -- "--format=rgba5551\n%s" "$$fname" > "$$t3s_file"; \
 			fi; \
 		fi; \
 	done
-	@# Compile all .t3s configs into binary .t3x texture sheets
+	@# Compile all valid single-texture .t3s configs into binary .t3x sheets
 	@for t3s in $(GRAPHICS)/*.t3s; do \
 		if [ -f "$$t3s" ]; then \
-			filename=$$(basename $$t3s .t3s); \
+			filename=$$(basename "$$t3s" .t3s); \
 			echo "Building texture sheet: $$filename.t3x"; \
 			tex3ds -i "$$t3s" -o "$(ROMFS)/gfx/$$filename.t3x" || exit 1; \
 		fi; \
