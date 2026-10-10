@@ -69,8 +69,9 @@ graphics:
 $(BUILD):
 	@mkdir -p $@
 
-$(TARGET).3dsx: $(TARGET.elf)
-	@echo 3dsxtool $< $@
+$(TARGET).3dsx: $(TARGET).elf
+	@echo 3dsxtool $(notdir $<) $(notdir $@)
+	@3dsxtool $< $@
 
 $(TARGET).elf: $(OFILES)
 	@echo LD $(notdir $@)
