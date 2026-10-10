@@ -56,21 +56,19 @@ all: graphics $(OUTPUT).3dsx
 
 graphics:
 	@mkdir -p $(ROMFS)/gfx
-	@# Clean up legacy multi-input files and any previously corrupted auto-t3s files
-	@rm -f $(GRAPHICS)/backgrounds.t3s $(GRAPHICS)/*.t3s
-	@# Automatically generate missing .t3s wrapper files for raw PNGs safely without trailing blank lines
+	@# Clear out old auto-generated wrapper files to ensure clean regeneration
+	@rm -f $(GRAPHICS)/*.t3s
+	@# Automatically generate precise, single-input .t3s wrapper files for every PNG
 	@for png in $(GRAPHICS)/*.png; do \
 		if [ -f "$$png" ]; then \
 			fname=$$(basename "$$png"); \
 			fbase=$${fname%.png}; \
 			t3s_file="$(GRAPHICS)/$$fbase.t3s"; \
-			if [ ! -f "$$t3s_file" ]; then \
-				echo "Creating auto .t3s for $$fbase"; \
-				printf -- "--format=rgba5551\n%s" "$$fname" > "$$t3s_file"; \
-			fi; \
+			echo "Creating auto .t3s for $$fbase"; \
+			printf -- "--format=rgba5551\n%s" "$$fname" > "$$t3s_file"; \
 		fi; \
 	done
-	@# Compile all valid single-texture .t3s configs into binary .t3x sheets
+	@# Compile each single-input .t3s configuration into its own independent .t3x sheet
 	@for t3s in $(GRAPHICS)/*.t3s; do \
 		if [ -f "$$t3s" ]; then \
 			filename=$$(basename "$$t3s" .t3s); \
