@@ -75,7 +75,7 @@ $(BUILD):
 	@mkdir -p $@
 
 $(OUTPUT).3dsx: $(BUILD)
-	@$(MAKE) DEVKITARM="$(DEVKITARM)" LIBPATHS="$(LIBPATHS)" --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) DEVKITARM="$(DEVKITARM)" DEVKITPRO="$(DEVKITPRO)" ARCH="$(ARCH)" LIBPATHS="$(LIBPATHS)" --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
 	@echo cleaning build artifacts...
