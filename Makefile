@@ -14,6 +14,7 @@ ROMFS       := romfs
 
 export TOPDIR
 export TARGET
+export ROMFS
 
 ifeq ($(strip $(DEVKITARM)),)
 $(error "Please set DEVKITARM in your environment.")
@@ -78,9 +79,7 @@ DEPENDS   := $(OFILES:.o=.d)
 
 all : $(OUTPUT).3dsx
 
-# Use $(ELF23DSX) provided directly by 3ds_rules
 $(OUTPUT).3dsx : $(OUTPUT).elf
-	@$(ELF23DSX) $< $@ --romfs=$(TOPDIR)/$(ROMFS)
 
 $(OUTPUT).elf : $(OFILES)
 	@echo Linking $(notdir $@)...
