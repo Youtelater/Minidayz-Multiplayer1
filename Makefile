@@ -16,6 +16,7 @@ TARGET		:= minidayz-3ds
 BUILD		:= build
 SOURCES		:= source
 DATA		:= data
+PORTLIBS	:= /opt/devkitpro/portlibs/3ds
 INCLUDES	:= include build /opt/devkitpro/libctru/include $(PORTLIBS)/include
 GRAPHICS	:= gfx
 ROMFS		:= romfs
@@ -47,8 +48,7 @@ CFLAGS		:= -g -Wall -O2 -mword-relocations \
 CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
 ASFLAGS		:= -g $(ARCH)
-LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -L/opt/devkitpro/portlibs/armv6k/lib -Wl,-Map,$(notdir $*.map)
-
+LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -L$(PORTLIBS)/lib -Wl,-Map,$(notdir $*.map)
 
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 
