@@ -1,10 +1,9 @@
 --atlas
---width=2048
---height=2048
+-w 2048
+-h 2048
 --format=rgba5551
 
 loading-logo.png
 tiledbgmenu_sky_sprite-sheet0.png
 tiledbgmenu_city_up.png
 main_menu_logo-sheet0.png
-

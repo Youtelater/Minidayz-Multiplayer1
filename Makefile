@@ -69,7 +69,7 @@ $(BUILD):
 	@mkdir -p $@
 
 $(OUTPUT).3dsx: $(BUILD)
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) DEVKITARM="$(DEVKITARM)" CTRULIB="$(CTRULIB)" --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
 	@echo cleaning build artifacts...
