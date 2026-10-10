@@ -15,8 +15,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install 3DS SDK and Libraries
+      - name: Configure Pacman User-Agent to Bypass Cloudflare 403
         run: |
+          # Force pacman to use a valid browser user-agent through curl to avoid 403 errors from Cloudflare
+          echo "XferCommand = /usr/bin/curl -C - -f -s -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64)\" %u -o %o" >> /etc/pacman.conf
           dkp-pacman -Syy --noconfirm 3ds-dev citro2d citro3d libctru
 
       - name: Transliterate non-ASCII asset filenames and fix leading digits
@@ -84,13 +86,11 @@ jobs:
               with open('include/gfx_table.h', 'w', encoding='utf-8') as f:
                   f.write('#ifndef GFX_TABLE_H\n#define GFX_TABLE_H\n\n#include <3ds.h>\n\n')
                   
-                  # 1. Include headers using underscore-normalized names
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
                       safe_name = raw_name.replace('-', '_').replace('.', '_')
                       f.write(f'#include \"{safe_name}.h\"\n')
                   
-                  # 2. Build pointer array using underscore-normalized variable names
                   f.write('\nstatic const void* ALL_SPRITES[] = {\n')
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
