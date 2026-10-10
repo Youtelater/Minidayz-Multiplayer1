@@ -15,6 +15,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Bypass Cloudflare 403 for Pacman
+        run: |
+          echo "XferCommand = /usr/bin/curl -C - -f -A \"dkp-apt\" %u > %o" >> /etc/pacman.conf
+
       - name: Install 3DS SDK and Libraries
         run: |
           dkp-pacman -Syy --noconfirm 3ds-dev citro2d citro3d libctru
@@ -84,13 +88,11 @@ jobs:
               with open('include/gfx_table.h', 'w', encoding='utf-8') as f:
                   f.write('#ifndef GFX_TABLE_H\n#define GFX_TABLE_H\n\n#include <3ds.h>\n\n')
                   
-                  # 1. Include header keeping original filename hyphens
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
                       include_name = raw_name
                       f.write(f'#include \"{include_name}.h\"\n')
                   
-                  # 2. Build master pointer array using underscore-replaced names for valid C identifiers
                   f.write('\nstatic const void* ALL_SPRITES[] = {\n')
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
