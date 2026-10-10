@@ -15,6 +15,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install 3DS SDK and Libraries
+        run: |
+          dkp-pacman -Syy --noconfirm 3ds-dev citro2d citro3d libctru
+
       - name: Transliterate non-ASCII asset filenames and fix leading digits
         run: |
           python3 -c "
@@ -68,11 +72,6 @@ jobs:
       - name: Ensure clean grit configuration
         run: |
           mkdir -p gfx
-          # -gB16: 16-bit color depth
-          # -gA1: 1-bit alpha channel (RGBA5551)
-          # -gt: tiled format required by 3DS PICA200 GPU
-          # -p!: omit palette
-          # -m!: do not output tile map
           echo "-gB16 -gA1 -gt -p! -m!" > gfx/grit.grit
 
       - name: Generate asset table for C code dynamically
@@ -89,7 +88,6 @@ jobs:
               with open('include/gfx_table.h', 'w', encoding='utf-8') as f:
                   f.write('#ifndef GFX_TABLE_H\n#define GFX_TABLE_H\n\n#include <3ds.h>\n\n')
                   
-                  # 1. Include every generated grit header
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
                       grit_name = raw_name.replace('-', '_')
@@ -97,7 +95,6 @@ jobs:
                           grit_name = '_' + grit_name
                       f.write(f'#include \"{grit_name}.h\"\n')
                   
-                  # 2. Build master pointer array using void* for full type compatibility
                   f.write('\nstatic const void* ALL_SPRITES[] = {\n')
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
@@ -107,7 +104,6 @@ jobs:
                       f.write(f'    {grit_name}Tiles,\n')
                   f.write('};\n\n')
                   
-                  # 3. Output total sprite count
                   f.write(f'#define TOTAL_SPRITES {len(png_files)}\n\n')
                   f.write('#endif\n')
           "
