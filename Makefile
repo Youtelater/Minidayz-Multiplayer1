@@ -12,8 +12,13 @@ DATA        := data
 GRAPHICS    := gfx
 ROMFS       := romfs
 
+# Pass ROMFS directory to 3dsx toolchain
+APP_TITLE   := MiniDAYZ 3DS
+3DSXFLAGS   := --romfs=$(TOPDIR)/$(ROMFS)
+
 export TOPDIR
 export TARGET
+export 3DSXFLAGS
 
 ifeq ($(strip $(DEVKITARM)),)
 $(error "Please set DEVKITARM in your environment.")
@@ -79,6 +84,7 @@ DEPENDS   := $(OFILES:.o=.d)
 all : $(OUTPUT).3dsx
 
 $(OUTPUT).3dsx : $(OUTPUT).elf
+	@elf23dsx $< $@ $(3DSXFLAGS)
 
 $(OUTPUT).elf : $(OFILES)
 	@echo Linking $(notdir $@)...
