@@ -1,5 +1,4 @@
 --atlas
---max-size=2048x2048
 --format=rgba5551
 
 player.png
