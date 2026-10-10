@@ -8,9 +8,6 @@ endif
 
 export TOPDIR ?= $(CURDIR)
 
-# Force the linker frontend to use the cross-compiler
-export LD	:=	$(DEVKITARM)/bin/arm-none-eabi-g++
-
 include $(DEVKITARM)/3ds_rules
 
 TARGET		:=	minidayz-3ds
@@ -32,16 +29,21 @@ LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 
+LIBDIRS		:= $(CTRULIB) $(PORTLIBS)
+
+ifneq ($(BUILD),$(notdir $(CURDIR)))
+
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 					$(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir))
-
 export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 
-OFILES		:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES	:= $(OFILES_SOURCES)
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
@@ -49,12 +51,9 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-T3SFILES    := $(wildcard $(GRAPHICS)/*.t3s)
-TEXFILES    := $(T3SFILES:$(GRAPHICS)/%.t3s=$(ROMFS)/gfx/%.t3x)
-
 .PHONY: all clean graphics
 
-all: graphics $(TARGET).3dsx
+all: graphics $(OUTPUT).3dsx
 
 graphics:
 	@mkdir -p $(ROMFS)/gfx
@@ -66,12 +65,38 @@ graphics:
 		fi; \
 	done
 
-$(TARGET).3dsx: $(TARGET).elf
+$(BUILD):
+	@mkdir -p $@
 
-$(TARGET).elf: $(OFILES)
+$(OUTPUT).3dsx: $(BUILD)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
 	@echo cleaning build artifacts...
 	@rm -fr $(BUILD) $(ROMFS)/gfx $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf $(TARGET).map
 
--include $(OFILES:.o=.d)
+else
+
+dependency := $(OFILES:.o=.d)
+
+-include $(dependency)
+
+$(OUTPUT).3dsx : $(OUTPUT).elf
+
+$(OUTPUT).elf : $(OFILES)
+	@echo LD $(notdir $@)
+	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+
+%.o: %.cpp
+	@echo g++ $(notdir $<)
+	@$(CXX) -c $(CXXFLAGS) $(INCLUDE) $< -o $@
+
+%.o: %.c
+	@echo gcc $(notdir $<)
+	@$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
+
+%.o: %.s
+	@echo cc -x assembler-with-cpp $(notdir $<)
+	@$(CC) -c -x assembler-with-cpp $(ASFLAGS) $(INCLUDE) $< -o $@
+
+endif
