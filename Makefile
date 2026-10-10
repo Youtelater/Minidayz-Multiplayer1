@@ -29,7 +29,6 @@ LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 
-# List directories containing libraries
 LIBDIRS		:= $(CTRULIB)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
@@ -84,7 +83,10 @@ dependency := $(OFILES:.o=.d)
 
 $(OUTPUT).3dsx : $(OUTPUT).elf
 
+# Ensure 3DS specs use the correct cross-compiler linker frontend
 $(OUTPUT).elf : $(OFILES)
+	@echo LD $(notdir $@)
+	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
 
 %.o: %.cpp
 	@echo g++ $(notdir $<)
