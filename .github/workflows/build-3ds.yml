@@ -103,19 +103,20 @@ jobs:
                   f.write('#endif\n')
           "
 
-      - name: Compile 3DS Executable
-        run: |
-          P=/opt/devkitpro
-          export DEVKITPRO=$P
-          export DEVKITARM=$P/devkitARM
-          export PATH=$P/devkitARM/bin:$P/tools/bin:$PATH
-          export CFLAGS="-I$P/libctru/include"
-          export CPPFLAGS="-I$P/libctru/include"
-          export LDFLAGS="-L$P/libctru/lib"
-          export LD_LIBRARY_PATH=$P/libctru/lib:$LD_LIBRARY_PATH
+     - name: Compile 3DS Executable
+  run: |
+    export DEVKITPRO=/opt/devkitpro
+    export DEVKITARM=/opt/devkitpro/devkitARM
+    export PATH="$DEVKITPRO/devkitARM/bin:$DEVKITPRO/tools/bin:$PATH"
 
-          make clean
-          make
+    # Load the standard devkitPro environment
+    source /etc/profile
+
+    # Sanity check: this is the file the compiler needs
+    test -f "$DEVKITPRO/libctru/include/3ds.h"
+
+    make clean
+    make
           
       - name: Upload .3dsx Executable
         uses: actions/upload-artifact@v4
