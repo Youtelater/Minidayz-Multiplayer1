@@ -12,7 +12,7 @@ DATA        := data
 GRAPHICS    := gfx
 ROMFS       := romfs
 
-# Pass ROMFS directory to 3dsx toolchain
+# Pass ROMFS directory to 3dsx toolchain automatically via 3DSXFLAGS
 APP_TITLE   := MiniDAYZ 3DS
 3DSXFLAGS   := --romfs=$(TOPDIR)/$(ROMFS)
 
@@ -84,7 +84,6 @@ DEPENDS   := $(OFILES:.o=.d)
 all : $(OUTPUT).3dsx
 
 $(OUTPUT).3dsx : $(OUTPUT).elf
-	@$(3DSXTOOL) $< $@ $(3DSXFLAGS)
 
 $(OUTPUT).elf : $(OFILES)
 	@echo Linking $(notdir $@)...
