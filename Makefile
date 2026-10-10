@@ -54,36 +54,34 @@ INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
 export VPATH	:= $(foreach dir,$(SOURCES),$(TOPDIR)/$(dir)) \
 				   $(foreach dir,$(DATA),$(TOPDIR)/$(dir))
 
-CFILES		:= $(CFILES)
-CPPFILES	:= $(CPPFILES)
-
 #-----------------------------------------------------------------
 # MAIN RULES
 #-----------------------------------------------------------------
-ifeq ($(BUILD),$(notdir $(BUILD)))
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-export TOPDIR	:=	$(CURDIR)
-
-all: graphics
-	@mkdir -p $(BUILD)
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+all: graphics $(TARGET).3dsx
 
 clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(ROMFS)/gfx
 
-else
+$(TARGET).3dsx: $(TARGET).elf
 
-DEPENDS	:=	$(OFILES:.o=.d)
+$(TARGET).elf: $(OFILES)
+	@echo linking ...
+	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
+	@picasso -q $(ROMFS)/gfx/*.t3x 2>/dev/null || true
+	@3dsxtool $@ $(TARGET).3dsx --romfs=$(ROMFS)
 
-$(OUTPUT).3dsx:	$(OUTPUT).elf
+%.o: %.cpp
+	@echo cxx $<
+	@$(CXX) -c $(CXXFLAGS) $< -o $@
 
-$(OUTPUT).elf:	$(OFILES)
+%.o: %.c
+	@echo cc $<
+	@$(CC) -c $(CFLAGS) $< -o $@
 
-# Include dependencies
--include $(DEPENDS)
-
-endif
+%.o: %.s
+	@echo as $<
+	@$(CC) -c $(ASFLAGS) $< -o $@
 
 #-----------------------------------------------------------------
 # GRAPHICS ASSET PIPELINE (With hyphen-to-underscore sanitization)
@@ -94,7 +92,7 @@ graphics:
 		if [ -f "$$png" ]; then \
 			fname=$$(basename "$$png"); \
 			fbase=$${fname%.png}; \
-			safebase=$$(echo "$$fbase" | tr '-' '_'); \
+			safebase=$$(echo "$$fbase" | tr '-' '_' | tr '.' '_'); \
 			echo "Auto-padding $$fbase to power-of-2 (512x512)..."; \
 			magick "$$png" -background transparent -gravity center -extent 512x512 "$$png" 2>/dev/null || \
 			convert "$$png" -background transparent -gravity center -extent 512x512 "$$png" || true; \

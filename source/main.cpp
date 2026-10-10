@@ -1,42 +1,119 @@
-#include <3ds.h>
-#include <citro2d.h>
-#include <citro3d.h>
-#include "gfx_table.h" // Your auto-generated header
+name: Build 3DS Executable
 
-int main(int argc, char* argv[]) {
-    // 1. Initialize core 3DS services
-    gfxInitDefault();
-    C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
-    C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
-    C2D_Prepare();
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
 
-    // 2. Initialize RomFS so it can read files from 'romfs:/'
-    Result rc = romfsInit();
-    if (R_FAILED(rc)) {
-        // If this fails, handle it or exit safely
-    }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
 
-    // 3. Now you can safely load your textures
-    // C2D_SpriteSheet sheet = C2D_SpriteSheetLoad("romfs:/gfx/loading-logo.t3x");
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    while (aptMainLoop()) {
-        hidScanInput();
-        u32 kDown = hidKeysDown();
-        if (kDown & KEY_START) break; // Press Start to exit
+      - name: Install 3DS SDK and Libraries
+        run: |
+          dkp-pacman -Syy --noconfirm 3ds-dev citro2d citro3d libctru
 
-        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        C2D_TargetClear(C2D_GetScreenTop(), C2D_Color32(30, 30, 30, 255));
-        
-        // Draw things here...
+      - name: Transliterate non-ASCII asset filenames and fix leading digits
+        run: |
+          python3 -c "
+          import os
 
-        C2D_Flush();
-        C3D_FrameEnd(0);
-    }
+          gfx_dir = 'gfx'
+          charmap = {
+              'а':'a', 'б':'b', 'в':'v', 'г':'g', 'д':'d', 'е':'e', 'ё':'yo',
+              'ж':'zh', 'з':'z', 'и':'i', 'й':'y', 'к':'k', 'л':'l', 'м':'m',
+              'н':'n', 'о':'o', 'п':'p', 'р':'r', 'с':'s', 'т':'t', 'у':'u',
+              'ф':'f', 'х':'h', 'ц':'ts', 'ч':'ch', 'ш':'sh', 'щ':'shch',
+              'ъ':'', 'ы':'y', 'ь':'', 'э':'e', 'ю':'yu', 'я':'ya',
+              'перс': 'pers', 'покой': 'pokoy', 'лево': 'levo', 'право': 'pravo',
+              'верх': 'verh', 'низ': 'niz'
+          }
 
-    // Clean up services before exiting
-    romfsExit();
-    C2D_Fini();
-    C3D_Fini();
-    gfxExit();
-    return 0;
-}
+          if os.path.exists(gfx_dir):
+              for filename in os.listdir(gfx_dir):
+                  new_name = filename
+                  for ru, en in charmap.items():
+                      new_name = new_name.replace(ru, en)
+                  
+                  if new_name[0].isdigit():
+                      new_name = '_' + new_name
+                      
+                  if new_name != filename:
+                      os.rename(os.path.join(gfx_dir, filename), os.path.join(gfx_dir, new_name))
+                      print(f'Renamed: {filename} -> {new_name}')
+          "
+
+      - name: Pad PNG canvases to power-of-two dimensions
+        run: |
+          apt-get update && apt-get install -y imagemagick
+          find gfx -type f -name "*.png" | while read img; do
+            W=$(identify -format "%w" "$img")
+            H=$(identify -format "%h" "$img")
+            
+            NEW_W=16
+            while [ $NEW_W -lt $W ]; do NEW_W=$((NEW_W * 2)); done
+            
+            NEW_H=16
+            while [ $NEW_H -lt $H ]; do NEW_H=$((NEW_H * 2)); done
+            
+            mogrify -background none -gravity NorthWest -extent ${NEW_W}x${NEW_H} "$img"
+          done
+
+      - name: Ensure clean grit configuration
+        run: |
+          mkdir -p gfx
+          echo "-gB16 -gA1 -gt -p! -m!" > gfx/grit.grit
+
+      - name: Generate asset table for C code dynamically
+        run: |
+          python3 -c "
+          import os, glob
+
+          gfx_dir = 'gfx'
+          os.makedirs('include', exist_ok=True)
+
+          if os.path.exists(gfx_dir):
+              png_files = sorted(glob.glob(f'{gfx_dir}/*.png'))
+              
+              with open('include/gfx_table.h', 'w', encoding='utf-8') as f:
+                  f.write('#ifndef GFX_TABLE_H\n#define GFX_TABLE_H\n\n#include <3ds.h>\n\n')
+                  
+                  # 1. Include headers using underscore-normalized names matching t3x/headers
+                  for filepath in png_files:
+                      raw_name = os.path.splitext(os.path.basename(filepath))[0]
+                      safe_name = raw_name.replace('-', '_').replace('.', '_')
+                      f.write(f'#include \"{safe_name}.h\"\n')
+                  
+                  # 2. Build pointer array using underscore-normalized variable names
+                  f.write('\nstatic const void* ALL_SPRITES[] = {\n')
+                  for filepath in png_files:
+                      raw_name = os.path.splitext(os.path.basename(filepath))[0]
+                      var_name = raw_name.replace('-', '_').replace('.', '_')
+                      if var_name[0].isdigit():
+                          var_name = '_' + var_name
+                      f.write(f'    {var_name}Tiles,\n')
+                  f.write('};\n\n')
+                  
+                  f.write(f'#define TOTAL_SPRITES {len(png_files)}\n\n')
+                  f.write('#endif\n')
+          "
+
+      - name: Compile 3DS Executable
+        run: |
+          . /etc/profile.d/devkit-env.sh
+          make clean
+          make
+
+      - name: Upload .3dsx Executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3DS-Executable
+          path: |
+            *.3dsx
+            *.elf
