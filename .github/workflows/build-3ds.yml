@@ -24,48 +24,34 @@ jobs:
         run: |
           echo "Inspecting and validating entire devkitPro development environment..."
           
-          # Define target paths
           DEVKIT_ROOT="/opt/devkitpro"
+          ARM_LIB="$DEVKIT_ROOT/devkitARM/arm-none-eabi/lib"
           ARM_INC="$DEVKIT_ROOT/devkitARM/arm-none-eabi/include"
-          LIBCTRU_INC="$DEVKIT_ROOT/libctru/include"
-          CITRO3D_INC="$DEVKIT_ROOT/citro3d/include"
-          CITRO2D_INC="$DEVKIT_ROOT/citro2d/include"
 
-          # Ensure directories exist
-          mkdir -p "$ARM_INC" "$LIBCTRU_INC" "$CITRO3D_INC" "$CITRO2D_INC"
-          
-          # Install git if needed for fallbacks
-          apt-get update && apt-get install -y git
+          mkdir -p "$ARM_LIB" "$ARM_INC"
+          apt-get update && apt-get install -y git make
 
-          # Check and recover libctru (3ds.h)
-          if [ ! -f "$ARM_INC/3ds.h" ] && [ ! -f "$LIBCTRU_INC/3ds.h" ]; then
-            echo "Missing libctru detected. Downloading and installing..."
+          # 1. libctru recovery
+          if [ ! -f "$ARM_INC/3ds.h" ]; then
             git clone --depth 1 https://github.com/devkitPro/libctru.git /tmp/libctru_src
             cp -r /tmp/libctru_src/libctru/include/* "$ARM_INC/"
-            cp -r /tmp/libctru_src/libctru/include/* "$LIBCTRU_INC/"
-          else
-            echo "libctru headers verified."
+            make -C /tmp/libctru_src/libctru && cp /tmp/libctru_src/libctru/lib/*.a "$ARM_LIB/" || true
           fi
 
-          # Check and recover citro3d
-          if [ ! -f "$ARM_INC/citro3d.h" ] && [ ! -f "$CITRO3D_INC/citro3d.h" ]; then
-            echo "Missing citro3d detected. Downloading and installing..."
+          # 2. citro3d recovery
+          if [ ! -f "$ARM_INC/citro3d.h" ]; then
             git clone --depth 1 https://github.com/devkitPro/citro3d.git /tmp/citro3d_src
             cp -r /tmp/citro3d_src/include/* "$ARM_INC/"
-            cp -r /tmp/citro3d_src/include/* "$CITRO3D_INC/"
-          else
-            echo "citro3d headers verified."
+            make -C /tmp/citro3d_src && cp /tmp/citro3d_src/lib/*.a "$ARM_LIB/" || true
           fi
 
-          # Check and recover citro2d
-          if [ ! -f "$ARM_INC/citro2d.h" ] && [ ! -f "$CITRO2D_INC/citro2d.h" ]; then
-            echo "Missing citro2d detected. Downloading and installing..."
+          # 3. citro2d recovery
+          if [ ! -f "$ARM_INC/citro2d.h" ]; then
             git clone --depth 1 https://github.com/devkitPro/citro2d.git /tmp/citro2d_src
             cp -r /tmp/citro2d_src/include/* "$ARM_INC/"
-            cp -r /tmp/citro2d_src/include/* "$CITRO2D_INC/"
-          else
-            echo "citro2d headers verified."
+            make -C /tmp/citro2d_src && cp /tmp/citro2d_src/lib/*.a "$ARM_LIB/" || true
           fi
+
 
       - name: Transliterate non-ASCII asset filenames and fix leading digits
         run: |
