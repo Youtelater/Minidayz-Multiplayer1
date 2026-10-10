@@ -56,13 +56,16 @@ all: graphics $(OUTPUT).3dsx
 
 graphics:
 	@mkdir -p $(ROMFS)/gfx
-	@# Purge any old wrapper scripts entirely to prevent conflicts
+	@# Purge legacy wrapper scripts entirely
 	@rm -f $(GRAPHICS)/*.t3s
-	@# Directly compile each PNG standalone without wrapper configuration files
+	@# Automatically resize/pad PNGs to a valid power-of-2 (512x512) and compile directly
 	@for png in $(GRAPHICS)/*.png; do \
 		if [ -f "$$png" ]; then \
 			fname=$$(basename "$$png"); \
 			fbase=$${fname%.png}; \
+			echo "Auto-padding $$fbase to power-of-2 (512x512)..."; \
+			magick "$$png" -background transparent -gravity center -extent 512x512 "$$png" 2>/dev/null || \
+			convert "$$png" -background transparent -gravity center -extent 512x512 "$$png" || true; \
 			echo "Building standalone texture sheet: $$fbase.t3x"; \
 			tex3ds --format=rgba5551 "$$png" -o "$(ROMFS)/gfx/$$fbase.t3x" || exit 1; \
 		fi; \
