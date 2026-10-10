@@ -30,24 +30,29 @@ LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 LIBDIRS		:= $(CTRULIB) $(PORTLIBS)
 
-INCLUDE		:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-					-I$(CURDIR)/$(BUILD)
+ifneq ($(BUILD),$(notdir $(CURDIR)))
 
-LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+					$(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir))
+export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 
-OFILES		:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
-OFILES		:=	$(addprefix $(BUILD)/,$(OFILES))
+export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES	:= $(OFILES_SOURCES)
 
-dependency	:=	$(OFILES:.o=.d)
+export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+					-I$(CURDIR)/$(BUILD)
+
+export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 .PHONY: all clean graphics
 
-all: graphics $(TARGET).3dsx
+all: graphics $(OUTPUT).3dsx
 
 graphics:
 	@mkdir -p $(ROMFS)/gfx
@@ -69,31 +74,37 @@ graphics:
 $(BUILD):
 	@mkdir -p $@
 
-$(TARGET).3dsx: $(TARGET).elf
-	@echo 3dsxtool $(notdir $<) $(notdir $@)
-	@3dsxtool $< $@
-
-$(TARGET).elf: $(OFILES)
-	@echo LD $(notdir $@)
-	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
-
--include $(dependency)
-
-$(BUILD)/%.o: $(SOURCES)/%.cpp
-	@mkdir -p $(dir $@)
-	@echo g++ $(notdir $<)
-	@$(CXX) -c $(CXXFLAGS) $(INCLUDE) $< -o $@
-
-$(BUILD)/%.o: $(SOURCES)/%.c
-	@mkdir -p $(dir $@)
-	@echo gcc $(notdir $<)
-	@$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
-
-$(BUILD)/%.o: $(SOURCES)/%.s
-	@mkdir -p $(dir $@)
-	@echo cc -x assembler-with-cpp $(notdir $<)
-	@$(CC) -c -x assembler-with-cpp $(ASFLAGS) $(INCLUDE) $< -o $@
+$(OUTPUT).3dsx: $(BUILD)
+	@export DEVKITPRO="$(DEVKITPRO)"; \
+	 export DEVKITARM="$(DEVKITARM)"; \
+	 $(MAKE) DEVKITARM="$(DEVKITARM)" DEVKITPRO="$(DEVKITPRO)" LIBPATHS="$(LIBPATHS)" --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
 	@echo cleaning build artifacts...
 	@rm -fr $(BUILD) $(ROMFS)/gfx $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf $(TARGET).map
+
+else
+
+dependency := $(OFILES:.o=.d)
+
+-include $(dependency)
+
+$(OUTPUT).3dsx : $(OUTPUT).elf
+
+$(OUTPUT).elf : $(OFILES)
+	@echo LD $(notdir $@)
+	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+
+%.o: %.cpp
+	@echo g++ $(notdir $<)
+	@$(CXX) -c $(CXXFLAGS) $(INCLUDE) $< -o $@
+
+%.o: %.c
+	@echo gcc $(notdir $<)
+	@$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
+
+%.o: %.s
+	@echo cc -x assembler-with-cpp $(notdir $<)
+	@$(CC) -c -x assembler-with-cpp $(ASFLAGS) $(INCLUDE) $< -o $@
+
+endif
