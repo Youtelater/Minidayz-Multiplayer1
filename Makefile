@@ -18,6 +18,8 @@ INCLUDES	:=	include
 ROMFS		:=	romfs
 GRAPHICS	:=	gfx
 
+ARCH		:= -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
+
 CFLAGS		:= -g -Wall -Wextra -O3 -mword-relocations \
 			   -ffunction-sections \
 			   $(ARCH)
@@ -25,7 +27,8 @@ CFLAGS		:= -g -Wall -Wextra -O3 -mword-relocations \
 CXXFLAGS	:= $(CFLAGS) -std=gnu++11
 
 ASFLAGS		:= -g $(ARCH)
-LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+# Explicitly add libctru lib path so 3dsx_crt0.o is found immediately
+LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -Wl,-Map,$(notdir $*.map)
 
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 LIBDIRS		:= $(CTRULIB) $(PORTLIBS)
@@ -77,7 +80,7 @@ $(BUILD):
 $(OUTPUT).3dsx: $(BUILD)
 	@export DEVKITPRO="$(DEVKITPRO)"; \
 	 export DEVKITARM="$(DEVKITARM)"; \
-	 $(MAKE) DEVKITARM="$(DEVKITARM)" DEVKITPRO="$(DEVKITPRO)" LIBPATHS="$(LIBPATHS)" LDFLAGS="$(LDFLAGS) $(LIBPATHS)" --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	 $(MAKE) DEVKITARM="$(DEVKITARM)" DEVKITPRO="$(DEVKITPRO)" ARCH="$(ARCH)" LIBPATHS="$(LIBPATHS)" LDFLAGS="$(LDFLAGS)" --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
 	@echo cleaning build artifacts...
