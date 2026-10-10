@@ -84,7 +84,7 @@ jobs:
               with open('include/gfx_table.h', 'w', encoding='utf-8') as f:
                   f.write('#ifndef GFX_TABLE_H\n#define GFX_TABLE_H\n\n#include <3ds.h>\n\n')
                   
-                  # 1. Include headers using underscore-normalized names matching t3x/headers
+                  # 1. Include headers using underscore-normalized names
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
                       safe_name = raw_name.replace('-', '_').replace('.', '_')
