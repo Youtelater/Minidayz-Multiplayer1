@@ -56,13 +56,15 @@ all: graphics $(OUTPUT).3dsx
 
 graphics:
 	@mkdir -p $(ROMFS)/gfx
-	@# Automatically generate missing .t3s wrapper files for raw PNGs
+	@# Remove legacy backgrounds.t3s if left over in the repository
+	@rm -f $(GRAPHICS)/backgrounds.t3s
+	@# Automatically generate missing .t3s wrapper files for raw PNGs safely
 	@for png in $(GRAPHICS)/*.png; do \
 		if [ -f "$$png" ]; then \
 			filename=$$(basename $$png .png); \
 			if [ ! -f "$(GRAPHICS)/$$filename.t3s" ]; then \
 				echo "Creating auto .t3s for $$filename"; \
-				printf -- "--format=rgba5551\n%s\n" "$$(basename $$png)" > "$(GRAPHICS)/$$filename.t3s"; \
+				printf -- "--format=rgba5551\n%s\n" "$$filename.png" > "$(GRAPHICS)/$$filename.t3s"; \
 			fi; \
 		fi; \
 	done
