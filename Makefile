@@ -28,7 +28,6 @@ ASFLAGS		:= -g $(ARCH)
 LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
-
 LIBDIRS		:= $(CTRULIB) $(PORTLIBS)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
@@ -69,7 +68,7 @@ $(BUILD):
 	@mkdir -p $@
 
 $(OUTPUT).3dsx: $(BUILD)
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) DEVKITARM="$(DEVKITARM)" LIBPATHS="$(LIBPATHS)" --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
 	@echo cleaning build artifacts...
