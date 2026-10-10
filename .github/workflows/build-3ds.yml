@@ -108,11 +108,15 @@ jobs:
           P=/opt/devkitpro
           export DEVKITPRO=$P
           export DEVKITARM=$P/devkitARM
-          export PATH=$P/devkitARM/bin:$PATH
-          
+          export PATH=$P/devkitARM/bin:$P/tools/bin:$PATH
+          export CFLAGS="-I$P/libctru/include"
+          export CPPFLAGS="-I$P/libctru/include"
+          export LDFLAGS="-L$P/libctru/lib"
+          export LD_LIBRARY_PATH=$P/libctru/lib:$LD_LIBRARY_PATH
+
           make clean
           make
-
+          
       - name: Upload .3dsx Executable
         uses: actions/upload-artifact@v4
         with:
