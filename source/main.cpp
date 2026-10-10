@@ -19,7 +19,8 @@ enum BgIndex {
     BG_MENU_LOGO
 };
 
-int main(int /*argc*/, char* /*argv*/[])  // Initialize graphics and services
+int main(int /*argc*/, char* /*argv*/[]) {
+    // Initialize graphics and services
     gfxInitDefault();
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
