@@ -7,10 +7,9 @@ $(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>dev
 endif
 
 TOPDIR ?= $(CURDIR)
-include $(DEVKITARM)/3ds_rules
 
 #-----------------------------------------------------------------
-# TARGET CONFIGURATION
+# TARGET CONFIGURATION (MUST BE DEFINED BEFORE 3DS RULES)
 #-----------------------------------------------------------------
 TARGET		:= minidayz-3ds
 BUILD		:= build
@@ -20,6 +19,9 @@ PORTLIBS	:= /opt/devkitpro/portlibs/3ds
 ROMFS		:= romfs
 INCLUDES	:= include build /opt/devkitpro/libctru/include $(PORTLIBS)/include
 GRAPHICS	:= gfx
+
+# Include 3ds_rules *after* configuration variables are set
+include $(DEVKITARM)/3ds_rules
 
 #-----------------------------------------------------------------
 # FIND SOURCE FILES & INCLUDE PATHS
@@ -48,7 +50,7 @@ CFLAGS		:= -g -Wall -O2 -mword-relocations \
 CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
 ASFLAGS		:= -g $(ARCH)
-LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -L$(PORTLIBS)/lib -Wl,-Map,$(notdir $*.map)
+LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -L/opt/devkitpro/portlibs/3ds/lib -Wl,-Map,$(notdir $*.map)
 
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 
@@ -64,14 +66,13 @@ all: graphics $(TARGET).3dsx
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS)/gfx
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS}/*.t3x $(ROMFS)/gfx
 
 $(TARGET).3dsx: $(TARGET).elf
 
 $(TARGET).elf: $(OFILES)
 	@echo linking ...
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
-	@picasso -q $(ROMFS)/gfx/*.t3x 2>/dev/null || true
 	@if [ -f icon-256.png ]; then \
 		magick icon-256.png -resize 48x48 icon_48.png 2>/dev/null || convert icon-256.png -resize 48x48 icon_48.png; \
 		smdhtool --create "Mini DAYZ 3DS" "Mini DAYZ Port" "Developer" icon_48.png $(TARGET).smdh; \
@@ -94,10 +95,10 @@ $(TARGET).elf: $(OFILES)
 	@$(CC) -c $(ASFLAGS) $< -o $@
 
 #-----------------------------------------------------------------
-# GRAPHICS ASSET PIPELINE (With hyphen-to-underscore sanitization)
+# GRAPHICS ASSET PIPELINE (Outputs directly to romfs root)
 #-----------------------------------------------------------------
 graphics:
-	@mkdir -p $(ROMFS)/gfx
+	@mkdir -p $(ROMFS)
 	@for png in $(GRAPHICS)/*.png; do \
 		if [ -f "$$png" ]; then \
 			fname=$$(basename "$$png"); \
@@ -107,6 +108,6 @@ graphics:
 			magick "$$png" -background transparent -gravity center -extent 512x512 "$$png" 2>/dev/null || \
 			convert "$$png" -background transparent -gravity center -extent 512x512 "$$png" || true; \
 			echo "Building standalone texture sheet: $$safebase.t3x"; \
-			tex3ds --format=rgba5551 "$$png" -o "$(ROMFS)/gfx/$$safebase.t3x" || exit 1; \
+			tex3ds --format=rgba5551 "$$png" -o "$(ROMFS)/$$safebase.t3x" || exit 1; \
 		fi; \
 	done
