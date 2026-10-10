@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
         C2D_SceneBegin(bottomScreen);
 
         // End the frame
-        C3D_FrameEnd();
+        C3D_FrameEnd(0);
     }
 
     // Deinitialize graphics libraries
