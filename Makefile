@@ -6,6 +6,8 @@ ifeq ($(strip $(DEVKITARM)),)
 $(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to devkitARM>")
 endif
 
+export TOPDIR ?= $(CURDIR)
+
 include $(DEVKITARM)/3ds_rules
 
 TARGET		:=	minidayz-3ds
@@ -27,21 +29,73 @@ LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 
-# Automatically compile any .t3s file found in gfx/ into romfs/gfx/
-T3SFILES    := $(wildcard $(GRAPHICS)/*.t3s)
-TEXFILES    := $(T3SFILES:$(GRAPHICS)/%.t3s=$(ROMFS)/gfx/%.t3x)
+# List directories containing libraries
+LIBDIRS		:= $(CTRULIB)
 
-# Ensure graphics build rules are evaluated
-all: $(TEXFILES)
+ifneq ($(BUILD),$(notdir $(CURDIR)))
 
-$(ROMFS)/gfx/%.t3x: $(GRAPHICS)/%.t3s
-	@mkdir -p $(dir $@)
-	tex3ds -i $< -o $@
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+					$(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir))
+export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
-# Standard devkitPro build targets follow...
-include $(DEVKITARM)/3ds_defaults
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 
-# Clean rule to clear out build artifacts
+export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES	:= $(OFILES_SOURCES)
+
+export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+					-I$(CURDIR)/$(BUILD)
+
+export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+
+.PHONY: all clean graphics
+
+all: graphics $(OUTPUT).3dsx
+
+graphics:
+	@mkdir -p $(ROMFS)/gfx
+	@for t3s in $(GRAPHICS)/*.t3s; do \
+		if [ -f "$$t3s" ]; then \
+			filename=$$(basename $$t3s .t3s); \
+			echo "Building texture sheet: $$filename.t3x"; \
+			tex3ds -i "$$t3s" -o "$(ROMFS)/gfx/$$filename.t3x"; \
+		fi; \
+	done
+
+$(BUILD):
+	@mkdir -p $@
+
+$(OUTPUT).3dsx: $(BUILD)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+
 clean:
 	@echo cleaning build artifacts...
-	@rm -fr $(BUILD) $(ROMFS)/gfx $(TARGET).3dsx $(TARGET).smdh $(TARGET).cia
+	@rm -fr $(BUILD) $(ROMFS)/gfx $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf $(TARGET).map
+
+else
+
+dependency := $(OFILES:.o=.d)
+
+-include $(dependency)
+
+$(OUTPUT).3dsx : $(OUTPUT).elf
+
+$(OUTPUT).elf : $(OFILES)
+
+%.o: %.cpp
+	@echo g++ $(notdir $<)
+	@$(CXX) -c $(CXXFLAGS) $(INCLUDE) $< -o $@
+
+%.o: %.c
+	@echo gcc $(notdir $<)
+	@$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
+
+%.o: %.s
+	@echo cc -x assembler-with-cpp $(notdir $<)
+	@$(CC) -c -x assembler-with-cpp $(ASFLAGS) $(INCLUDE) $< -o $@
+
+endif
