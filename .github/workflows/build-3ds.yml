@@ -41,7 +41,6 @@ jobs:
                   for ru, en in charmap.items():
                       new_name = new_name.replace(ru, en)
                   
-                  # Prepend underscore if filename starts with a number
                   if new_name[0].isdigit():
                       new_name = '_' + new_name
                       
@@ -57,15 +56,12 @@ jobs:
             W=$(identify -format "%w" "$img")
             H=$(identify -format "%h" "$img")
             
-            # Calculate next power of two for Width
             NEW_W=16
             while [ $NEW_W -lt $W ]; do NEW_W=$((NEW_W * 2)); done
             
-            # Calculate next power of two for Height
             NEW_H=16
             while [ $NEW_H -lt $H ]; do NEW_H=$((NEW_H * 2)); done
             
-            # Pad canvas with transparent background
             mogrify -background none -gravity NorthWest -extent ${NEW_W}x${NEW_H} "$img"
           done
 
@@ -88,20 +84,20 @@ jobs:
               with open('include/gfx_table.h', 'w', encoding='utf-8') as f:
                   f.write('#ifndef GFX_TABLE_H\n#define GFX_TABLE_H\n\n#include <3ds.h>\n\n')
                   
+                  # 1. Include header keeping original filename hyphens
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
-                      grit_name = raw_name.replace('-', '_')
-                      if grit_name[0].isdigit():
-                          grit_name = '_' + grit_name
-                      f.write(f'#include \"{grit_name}.h\"\n')
+                      include_name = raw_name
+                      f.write(f'#include \"{include_name}.h\"\n')
                   
+                  # 2. Build master pointer array using underscore-replaced names for valid C identifiers
                   f.write('\nstatic const void* ALL_SPRITES[] = {\n')
                   for filepath in png_files:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
-                      grit_name = raw_name.replace('-', '_')
-                      if grit_name[0].isdigit():
-                          grit_name = '_' + grit_name
-                      f.write(f'    {grit_name}Tiles,\n')
+                      var_name = raw_name.replace('-', '_')
+                      if var_name[0].isdigit():
+                          var_name = '_' + var_name
+                      f.write(f'    {var_name}Tiles,\n')
                   f.write('};\n\n')
                   
                   f.write(f'#define TOTAL_SPRITES {len(png_files)}\n\n')
