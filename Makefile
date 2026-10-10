@@ -27,7 +27,6 @@ CFLAGS		:= -g -Wall -Wextra -O3 -mword-relocations \
 CXXFLAGS	:= $(CFLAGS) -std=gnu++11
 
 ASFLAGS		:= -g $(ARCH)
-# Explicitly add libctru lib path so 3dsx_crt0.o is found immediately
 LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -Wl,-Map,$(notdir $*.map)
 
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
@@ -52,6 +51,7 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					-I$(CURDIR)/$(BUILD)
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+export ROMFS_DIR:=	$(CURDIR)/$(ROMFS)
 
 .PHONY: all clean graphics
 
@@ -80,7 +80,7 @@ $(BUILD):
 $(OUTPUT).3dsx: $(BUILD)
 	@export DEVKITPRO="$(DEVKITPRO)"; \
 	 export DEVKITARM="$(DEVKITARM)"; \
-	 $(MAKE) DEVKITARM="$(DEVKITARM)" DEVKITPRO="$(DEVKITPRO)" ARCH="$(ARCH)" LIBPATHS="$(LIBPATHS)" LDFLAGS="$(LDFLAGS)" --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	 $(MAKE) DEVKITARM="$(DEVKITARM)" DEVKITPRO="$(DEVKITPRO)" ARCH="$(ARCH)" LIBPATHS="$(LIBPATHS)" ROMFS_DIR="$(ROMFS_DIR)" --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
 	@echo cleaning build artifacts...
@@ -93,6 +93,8 @@ dependency := $(OFILES:.o=.d)
 -include $(dependency)
 
 $(OUTPUT).3dsx : $(OUTPUT).elf
+	@echo 3dsxtool $< $@ --romfs=$(ROMFS_DIR)
+	@3dsxtool $< $@ --romfs=$(ROMFS_DIR)
 
 $(OUTPUT).elf : $(OFILES)
 	@echo LD $(notdir $@)
