@@ -16,17 +16,32 @@ TARGET		:= minidayz-3ds
 BUILD		:= build
 SOURCES		:= source
 DATA		:= data
-INCLUDES	:= include
+INCLUDES	:= include build $(LIBCTRU)/include $(PORTLIBS)/include
 GRAPHICS	:= gfx
 ROMFS		:= romfs
+
+#-----------------------------------------------------------------
+# FIND SOURCE FILES & INCLUDE PATHS
+#-----------------------------------------------------------------
+CPPFILES	:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+CFILES		:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+SFILES		:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+
+INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
+			   $(foreach dir,$(SOURCES),-I$(TOPDIR)/$(dir)) \
+			   -I$(TOPDIR)/$(ROMFS) \
+			   -I$(LIBCTRU)/include \
+			   -I$(PORTLIBS)/include
+
+export VPATH	:= $(foreach dir,$(SOURCES),$(TOPDIR)/$(dir)) \
+				   $(foreach dir,$(DATA),$(TOPDIR)/$(dir))
 
 ARCH		:= -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=cp15
 
 CFLAGS		:= -g -Wall -O2 -mword-relocations \
 			   -ffunction-sections \
-			   $(ARCH) $(DEFINES)
-
-CFLAGS		+= $(INCLUDE) -I$(BUILD)
+			   $(ARCH) $(DEFINES) \
+			   $(INCLUDE) -I$(BUILD)
 
 CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
@@ -36,23 +51,9 @@ LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 
 #-----------------------------------------------------------------
-# FIND SOURCE FILES
-#-----------------------------------------------------------------
-CPPFILES	:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-CFILES		:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-SFILES		:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-
-#-----------------------------------------------------------------
 # OBJECT FILES & BUILDS
 #-----------------------------------------------------------------
 OFILES		:= $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
-
-INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
-			   $(foreach dir,$(SOURCES),-I$(TOPDIR)/$(dir)) \
-			   -I$(TOPDIR)/$(ROMFS)
-
-export VPATH	:= $(foreach dir,$(SOURCES),$(TOPDIR)/$(dir)) \
-				   $(foreach dir,$(DATA),$(TOPDIR)/$(dir))
 
 #-----------------------------------------------------------------
 # MAIN RULES
