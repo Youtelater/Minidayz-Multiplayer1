@@ -15,10 +15,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Bypass Cloudflare 403 for Pacman
-        run: |
-          echo "XferCommand = /usr/bin/curl -C - -f -A \"dkp-apt\" %u > %o" >> /etc/pacman.conf
-
       - name: Install 3DS SDK and Libraries
         run: |
           dkp-pacman -Syy --noconfirm 3ds-dev citro2d citro3d libctru
