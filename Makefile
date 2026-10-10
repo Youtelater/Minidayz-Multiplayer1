@@ -56,15 +56,15 @@ all: graphics $(OUTPUT).3dsx
 
 graphics:
 	@mkdir -p $(ROMFS)/gfx
-	@# Purge any leftover text wrapper files entirely
+	@# Purge any old wrapper scripts entirely to prevent conflicts
 	@rm -f $(GRAPHICS)/*.t3s
-	@# Compile individual PNGs directly to .t3x standalone sheets without wrapper files
+	@# Directly compile each PNG standalone without wrapper configuration files
 	@for png in $(GRAPHICS)/*.png; do \
 		if [ -f "$$png" ]; then \
 			fname=$$(basename "$$png"); \
 			fbase=$${fname%.png}; \
-			echo "Building texture sheet directly: $$fbase.t3x"; \
-			tex3ds --format=rgba5551 -i "$$png" -o "$(ROMFS)/gfx/$$fbase.t3x" || exit 1; \
+			echo "Building standalone texture sheet: $$fbase.t3x"; \
+			tex3ds --format=rgba5551 "$$png" -o "$(ROMFS)/gfx/$$fbase.t3x" || exit 1; \
 		fi; \
 	done
 
