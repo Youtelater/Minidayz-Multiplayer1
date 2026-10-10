@@ -17,7 +17,6 @@ BUILD		:= build
 SOURCES		:= source
 DATA		:= data
 INCLUDES	:= include build /opt/devkitpro/libctru/include $(PORTLIBS)/include
-
 GRAPHICS	:= gfx
 ROMFS		:= romfs
 
@@ -31,8 +30,9 @@ SFILES		:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
 			   $(foreach dir,$(SOURCES),-I$(TOPDIR)/$(dir)) \
 			   -I$(TOPDIR)/$(ROMFS) \
-			   -I$(LIBCTRU)/include \
-			   -I$(PORTLIBS)/include
+			   -I/opt/devkitpro/libctru/include \
+			   -I$(PORTLIBS)/include \
+			   -I$(DEVKITARM)/arm-none-eabi/include
 
 export VPATH	:= $(foreach dir,$(SOURCES),$(TOPDIR)/$(dir)) \
 				   $(foreach dir,$(DATA),$(TOPDIR)/$(dir))
