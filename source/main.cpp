@@ -1,7 +1,7 @@
 #include "player.h"
 #include "world.h"
-#include "ItemTable.h" 
-#include "ShaderMenu.h" 
+#include "ItemTable.h"
+#include "ShaderMenu.h"
 #include <3ds.h>
 #include <citro3d.h>
 #include <citro2d.h>
