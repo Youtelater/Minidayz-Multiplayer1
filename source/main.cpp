@@ -29,7 +29,6 @@ typedef struct {
 bool loadWavFile(const char* path, SoundEffect* sound) {
     FILE* f = fopen(path, "rb");
     if (!f) {
-        printf("Failed to open audio: %s\n", path);
         return false;
     }
 
@@ -81,8 +80,9 @@ int main(int argc, char* argv[]) {
 
     C2D_SpriteSheet loadingSheet = C2D_SpriteSheetLoad("romfs:/loading_logo.t3x");
     C2D_SpriteSheet menuSheet    = C2D_SpriteSheetLoad("romfs:/main_menu_logo_sheet0.t3x");
-    C2D_SpriteSheet buttonSheet  = C2D_SpriteSheetLoad("romfs:/buttons_sheet0.t3x"); // Optional check
+    C2D_SpriteSheet buttonSheet  = C2D_SpriteSheetLoad("romfs:/buttons_sheet0.t3x");
 
+    // Load background music from the wav subfolder inside romfs
     SoundEffect bgm;
     bool audioLoaded = loadWavFile("romfs:/wav/ambient-C1EE9F53.wav", &bgm);
     if (audioLoaded) {
@@ -184,12 +184,10 @@ int main(int argc, char* argv[]) {
 
         if (currentState == STATE_MENU) {
             for (int i = 0; i < totalButtons; i++) {
-                // If button texture exists, draw it. Otherwise, draw a clean fallback button box!
                 if (buttonSheet && i < C2D_SpriteSheetCount(buttonSheet)) {
                     C2D_Image btnImg = C2D_SpriteSheetGetImage(buttonSheet, i);
                     C2D_DrawImageAt(btnImg, buttonBoxes[i].x, buttonBoxes[i].y, 0.5f, NULL, 0.75f, 0.6f);
                 } else {
-                    // Fallback solid button background (changes color if selected)
                     u32 btnColor = (i == selectedButton) ? C2D_Color32(200, 50, 50, 255) : C2D_Color32(60, 60, 60, 255);
                     C2D_DrawRectSolid(buttonBoxes[i].x, buttonBoxes[i].y, 0.5f, buttonBoxes[i].w, buttonBoxes[i].h, btnColor);
                 }
