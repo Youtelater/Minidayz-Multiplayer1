@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
             if (kHeld & KEY_RIGHT) cameraX += 2.0f;
         }
 
-        // Render Frame
+                // Render Frame
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C2D_TargetClear(topScreen, C2D_Color32(30, 30, 30, 255));
         C2D_SceneBegin(topScreen);
@@ -128,8 +128,8 @@ int main(int argc, char* argv[]) {
             drawWorldMap(cameraX, cameraY);
         }
 
-        C2D_FrameEnd();
-    }
+        C3D_FrameEnd(); // End the 3D frame context instead of C2D_FrameEnd
+
 
     // Clean up resources on exit
     if (menuSheet) C2D_SpriteSheetFree(menuSheet);
