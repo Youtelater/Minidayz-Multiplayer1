@@ -1,9 +1,10 @@
-#include <citro2d.h>
+#include <3ds.
 #include <citro3d.h>
-#include <initializer_list>
+#include <citro2d.h>
 #include <cstdlib>
 #include <ctime>
 #include <stdio.h>
+
 
 #define MAP_WIDTH 32
 #define MAP_HEIGHT 32
