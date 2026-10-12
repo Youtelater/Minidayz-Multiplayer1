@@ -1,7 +1,7 @@
 #include "player.h"
 #include "world.h"
-#include "ItemTable.h" // Integrated ItemTable header
-#include "ShaderMenu.h" // Include your shader settings menu header
+#include "ItemTable.h" 
+#include "ShaderMenu.h" 
 #include <3ds.h>
 #include <citro3d.h>
 #include <citro2d.h>
