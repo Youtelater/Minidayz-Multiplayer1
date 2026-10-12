@@ -1,10 +1,12 @@
 #include "world.h"
+#include "ItemTable.h" // Integrated ItemTable header
 #include <3ds.h>
 #include <citro3d.h>
 #include <citro2d.h>
 #include <cstdlib>
 #include <ctime>
 #include <stdio.h>
+#include <iostream>
 
 #define MAP_WIDTH 32
 #define MAP_HEIGHT 32
@@ -73,6 +75,9 @@ int main(int argc, char* argv[]) {
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
+    // Initialize item database lookup tables
+    ItemTable::initialize();
+
     topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
 
     // Load initial menu assets
@@ -105,6 +110,11 @@ int main(int argc, char* argv[]) {
                 // Generate world using system time or a fixed seed
                 unsigned int randomSeed = (unsigned int)time(NULL);
                 generateWorldWithSeed(randomSeed);
+
+                // --- Verification Example ---
+                // Query texture key for Taloon Backpack (Item ID 301)
+                std::string testTexture = ItemTable::getTextureForItem(301);
+                printf("Loaded Item ID 301 Texture Key: %s\n", testTexture.c_str());
 
                 currentState = STATE_GAMEPLAY;
             }
