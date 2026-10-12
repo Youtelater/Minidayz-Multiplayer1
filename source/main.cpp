@@ -1,217 +1,143 @@
-#include <3ds.h>
-#include <citro3d.h>
 #include <citro2d.h>
-#include <tex3ds.h>
-#include <stdlib.h>
+#include <citro3d.h>
+#include <initializer_list>
+#include <cstdlib>
+#include <ctime>
 #include <stdio.h>
-#include <string.h>
 
+#define MAP_WIDTH 32
+#define MAP_HEIGHT 32
+
+// Game States
 enum GameState {
     STATE_LOADING,
     STATE_MENU,
     STATE_GAMEPLAY
 };
 
-struct ButtonBounds {
-    float x, y, w, h;
-    const char* label;
-};
+GameState currentState = STATE_LOADING;
 
-typedef struct {
-    ndspWaveBuf waveBuf;
-    u32* audioData;
-    u32 dataSize;
-    int sampleRate;
-    int channels;
-    int bitsPerSample;
-} SoundEffect;
+// World Grid and Assets
+int worldGrid[MAP_WIDTH][MAP_HEIGHT];
+C2D_SpriteSheet menuSheet = NULL;
+C2D_SpriteSheet mapSheet = NULL;
+C3D_RenderTarget* topScreen = NULL;
 
-bool loadWavFile(const char* path, SoundEffect* sound) {
-    FILE* f = fopen(path, "rb");
-    if (!f) {
-        return false;
+// Initialize Procedural Generation using a Seed
+void generateWorldWithSeed(unsigned int seed) {
+    srand(seed);
+
+    for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int y = 0; y < MAP_HEIGHT; y++) {
+            int roll = rand() % 100; // 0 to 99 roll
+
+            if (roll < 60) {
+                worldGrid[x][y] = 0; // Grass tile
+            } else if (roll < 80) {
+                worldGrid[x][y] = 1; // Dirt / Path tile
+            } else if (roll < 95) {
+                worldGrid[x][y] = 2; // Building / Wall tile
+            } else {
+                worldGrid[x][y] = 3; // Door / Special tile
+            }
+        }
     }
+}
 
-    char header[44];
-    fread(header, 1, 44, f);
+void drawWorldMap(float cameraX, float cameraY) {
+    if (!mapSheet) return;
 
-    sound->channels = header[22] | (header[23] << 8);
-    sound->sampleRate = header[24] | (header[25] << 8) | (header[26] << 16) | (header[27] << 24);
-    sound->bitsPerSample = header[34] | (header[35] << 8);
+    for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int y = 0; y < MAP_HEIGHT; y++) {
+            int tileID = worldGrid[x][y];
+            
+            // Calculate screen coordinates (assuming 16x16 pixel tiles)
+            float screenX = (x * 16.0f) - cameraX;
+            float screenY = (y * 16.0f) - cameraY;
 
-    u32 dataSize = 0;
-    fseek(f, 40, SEEK_SET);
-    fread(&dataSize, 1, 4, f);
-
-    sound->dataSize = dataSize;
-    sound->audioData = (u32*)linearAlloc(dataSize);
-    
-    if (!sound->audioData) {
-        fclose(f);
-        return false;
+            // Only draw visible tiles on the 3DS top screen (400x240)
+            if (screenX >= -16.0f && screenX < 400.0f && screenY >= -16.0f && screenY < 240.0f) {
+                C2D_Image tileImg = C2D_SpriteSheetGetImage(mapSheet, tileID);
+                C2D_DrawImageAt(tileImg, screenX, screenY, 0.5f, NULL, 1.0f, 1.0f);
+            }
+        }
     }
-
-    fread(sound->audioData, 1, dataSize, f);
-    fclose(f);
-
-    DSP_FlushDataCache(sound->audioData, dataSize);
-
-    memset(&sound->waveBuf, 0, sizeof(ndspWaveBuf));
-    sound->waveBuf.data_vaddr = sound->audioData;
-    sound->waveBuf.nsamples   = dataSize / (sound->channels * (sound->bitsPerSample / 8));
-    sound->waveBuf.looping    = true;
-    sound->waveBuf.status     = NDSP_WBUF_FREE;
-
-    return true;
 }
 
 int main(int argc, char* argv[]) {
+    // Initialize graphics and services
+    romfsInit();
     gfxInitDefault();
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
-    romfsInit();
-    ndspInit();
 
-    ndspSetOutputMode(NDSP_OUTPUT_STEREO);
+    topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
 
-    C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-    C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+    // Load initial menu assets
+    currentState = STATE_MENU;
+    menuSheet = C2D_SpriteSheetLoad("romfs:/gfx/menu_sheet.t3x"); // Adjust filename as needed
 
-    C2D_SpriteSheet loadingSheet = C2D_SpriteSheetLoad("romfs:/loading_logo.t3x");
-    C2D_SpriteSheet menuSheet    = C2D_SpriteSheetLoad("romfs:/main_menu_logo_sheet0.t3x");
-    C2D_SpriteSheet buttonSheet  = C2D_SpriteSheetLoad("romfs:/buttons_sheet0.t3x");
+    float cameraX = 0.0f;
+    float cameraY = 0.0f;
 
-    // Load background music from the wav subfolder inside romfs
-    SoundEffect bgm;
-    bool audioLoaded = loadWavFile("romfs:/wav/ambient-C1EE9F53.wav", &bgm);
-    if (audioLoaded) {
-        ndspChnReset(0);
-        ndspChnSetFormat(0, (bgm.channels == 2) ? NDSP_FORMAT_STEREO_PCM16 : NDSP_FORMAT_MONO_PCM16);
-        ndspChnSetRate(0, bgm.sampleRate);
-        
-        float mix[12] = {0};
-        mix[0] = 1.0f; 
-        mix[1] = 1.0f; 
-        ndspChnSetMix(0, mix);
-        
-        ndspChnWaveBufAdd(0, &bgm.waveBuf);
-        ndspChnSetPaused(0, false); // Unpause the audio channel so it plays
-    }
-
-    GameState currentState = STATE_LOADING;
-    int loadingTimer = 0;
-    int selectedButton = 0;
-    int totalButtons = 4;
-
-    ButtonBounds buttonBoxes[4] = {
-        { 32.0f, 30.0f,  256.0f, 35.0f, "Continue" },
-        { 32.0f, 75.0f,  256.0f, 35.0f, "New Game" },
-        { 32.0f, 120.0f, 256.0f, 35.0f, "Multiplayer" },
-        { 32.0f, 165.0f, 256.0f, 35.0f, "Options" }
-    };
-
+    // Main game loop
     while (aptMainLoop()) {
         hidScanInput();
         u32 kDown = hidKeysDown();
-        touchPosition touch;
-        hidTouchRead(&touch);
+        u32 kHeld = hidKeysHeld();
 
-        if (kDown & KEY_START) break;
+        if (kDown & KEY_START) break; // Exit game
 
-        if (currentState == STATE_LOADING) {
-            loadingTimer++;
-            if (loadingTimer > 120 || (kDown & KEY_A)) {
-                currentState = STATE_MENU;
-            }
-        } 
-        else if (currentState == STATE_MENU) {
-            if (kDown & KEY_UP) {
-                selectedButton = (selectedButton - 1 + totalButtons) % totalButtons;
-            }
-            if (kDown & KEY_DOWN) {
-                selectedButton = (selectedButton + 1) % totalButtons;
-            }
-            
+        // State Machine Handling
+        if (currentState == STATE_MENU) {
             if (kDown & KEY_A) {
-                if (selectedButton == 0 || selectedButton == 1) {
-                    currentState = STATE_GAMEPLAY;
+                // Free menu assets to save 3DS RAM
+                if (menuSheet) {
+                    C2D_SpriteSheetFree(menuSheet);
+                    menuSheet = NULL;
                 }
-            }
 
-            if (kDown & KEY_TOUCH) {
-                for (int i = 0; i < totalButtons; i++) {
-                    if (touch.px >= buttonBoxes[i].x && touch.px <= (buttonBoxes[i].x + buttonBoxes[i].w) &&
-                        touch.py >= buttonBoxes[i].y && touch.py <= (buttonBoxes[i].y + buttonBoxes[i].h)) {
-                        selectedButton = i;
-                        if (i == 0 || i == 1) {
-                            currentState = STATE_GAMEPLAY;
-                        }
-                    }
-                }
-            }
-        }
-        else if (currentState == STATE_GAMEPLAY) {
-            if (kDown & KEY_SELECT) {
-                currentState = STATE_MENU;
-            }
-        }
+                // Load map tiles sheet from RomFS (compiled from your gfx/ folder)
+                mapSheet = C2D_SpriteSheetLoad("romfs:/gfx/map_tiles.t3x");
 
-        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+                // Generate world using system time or a fixed seed
+                unsigned int randomSeed = (unsigned int)time(NULL);
+                generateWorldWithSeed(randomSeed);
 
-        // --- TOP SCREEN ---
-        C2D_SceneBegin(topScreen);
-        if (currentState == STATE_LOADING) {
-            C2D_TargetClear(topScreen, C2D_Color32(0, 0, 0, 255));
-            if (loadingSheet) {
-                C2D_Image img = C2D_SpriteSheetGetImage(loadingSheet, 0);
-                C2D_DrawImageAt(img, 75.0f, 40.0f, 0.5f, NULL, 0.65f, 0.65f);
+                currentState = STATE_GAMEPLAY;
             }
         } 
-        else if (currentState == STATE_MENU) {
-            C2D_TargetClear(topScreen, C2D_Color32(180, 25, 25, 255));
-            if (menuSheet) {
-                C2D_Image logoImg = C2D_SpriteSheetGetImage(menuSheet, 0);
-                C2D_DrawImageAt(logoImg, 80.0f, 60.0f, 0.5f, NULL, 0.5f, 0.5f);
-            }
-        }
         else if (currentState == STATE_GAMEPLAY) {
-            C2D_TargetClear(topScreen, C2D_Color32(40, 40, 40, 255));
+            // Basic camera movement via D-Pad
+            if (kHeld & KEY_UP)    cameraY -= 2.0f;
+            if (kHeld & KEY_DOWN)  cameraY += 2.0f;
+            if (kHeld & KEY_LEFT)  cameraX -= 2.0f;
+            if (kHeld & KEY_RIGHT) cameraX += 2.0f;
         }
 
-        // --- BOTTOM SCREEN ---
-        C2D_TargetClear(bottomScreen, C2D_Color32(20, 20, 20, 255));
-        C2D_SceneBegin(bottomScreen);
+        // Render Frame
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+        C2D_TargetClear(topScreen, C2D_Color32(30, 30, 30, 255));
+        C2D_SceneBegin(topScreen);
 
         if (currentState == STATE_MENU) {
-            for (int i = 0; i < totalButtons; i++) {
-                if (buttonSheet && i < C2D_SpriteSheetCount(buttonSheet)) {
-                    C2D_Image btnImg = C2D_SpriteSheetGetImage(buttonSheet, i);
-                    C2D_DrawImageAt(btnImg, buttonBoxes[i].x, buttonBoxes[i].y, 0.5f, NULL, 0.75f, 0.6f);
-                } else {
-                    u32 btnColor = (i == selectedButton) ? C2D_Color32(200, 50, 50, 255) : C2D_Color32(60, 60, 60, 255);
-                    C2D_DrawRectSolid(buttonBoxes[i].x, buttonBoxes[i].y, 0.5f, buttonBoxes[i].w, buttonBoxes[i].h, btnColor);
-                }
-            }
+            // Draw menu graphics here if loaded
+        } 
+        else if (currentState == STATE_GAMEPLAY) {
+            drawWorldMap(cameraX, cameraY);
         }
 
-        C3D_FrameEnd(0);
+        C2D_FrameEnd();
     }
 
-    if (audioLoaded) {
-        ndspChnReset(0);
-        linearFree(bgm.audioData);
-    }
-    ndspExit();
+    // Clean up resources on exit
+    if (menuSheet) C2D_SpriteSheetFree(menuSheet);
+    if (mapSheet) C2D_SpriteSheetFree(mapSheet);
 
-    if (loadingSheet) C2D_SpriteSheetFree(loadingSheet);
-    if (menuSheet)   C2D_SpriteSheetFree(menuSheet);
-    if (buttonSheet) C2D_SpriteSheetFree(buttonSheet);
-    
-    romfsExit();
     C2D_Fini();
     C3D_Fini();
     gfxExit();
-
+    romfsExit();
     return 0;
 }
