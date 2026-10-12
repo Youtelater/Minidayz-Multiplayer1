@@ -1,5 +1,6 @@
 #include "world.h"
 #include "ItemTable.h" // Integrated ItemTable header
+#include "ShaderMenu.h" // Include your shader settings menu header
 #include <3ds.h>
 #include <citro3d.h>
 #include <citro2d.h>
@@ -15,6 +16,7 @@
 enum GameState {
     STATE_LOADING,
     STATE_MENU,
+    STATE_SETTINGS, // Added settings state
     STATE_GAMEPLAY
 };
 
@@ -25,6 +27,10 @@ int worldGrid[MAP_WIDTH][MAP_HEIGHT];
 C2D_SpriteSheet menuSheet = NULL;
 C2D_SpriteSheet mapSheet = NULL;
 C3D_RenderTarget* topScreen = NULL;
+C3D_RenderTarget* bottomScreen = NULL; // Added bottom screen target for 3DS dual-screen setup
+
+// Instantiate the Shader Menu
+ShaderMenu shaderMenu;
 
 // Initialize Procedural Generation using a Seed
 void generateWorldWithSeed(unsigned int seed) {
@@ -54,11 +60,9 @@ void drawWorldMap(float cameraX, float cameraY) {
         for (int y = 0; y < MAP_HEIGHT; y++) {
             int tileID = worldGrid[x][y];
             
-            // Calculate screen coordinates (assuming 16x16 pixel tiles)
             float screenX = (x * 16.0f) - cameraX;
             float screenY = (y * 16.0f) - cameraY;
 
-            // Only draw visible tiles on the 3DS top screen (400x240)
             if (screenX >= -16.0f && screenX < 400.0f && screenY >= -16.0f && screenY < 240.0f) {
                 C2D_Image tileImg = C2D_SpriteSheetGetImage(mapSheet, tileID);
                 C2D_DrawImageAt(tileImg, screenX, screenY, 0.5f, NULL, 1.0f, 1.0f);
@@ -78,7 +82,9 @@ int main(int argc, char* argv[]) {
     // Initialize item database lookup tables
     ItemTable::initialize();
 
+    // Setup 3DS dual screens (Top for game view/menu logo, Bottom for UI/Settings)
     topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+    bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
     // Load initial menu assets
     currentState = STATE_MENU;
@@ -105,20 +111,28 @@ int main(int argc, char* argv[]) {
                 }
 
                 // Load map tiles sheet from RomFS
-                mapSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x"); // Update this to your map sheet asset name later
+                mapSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x"); 
 
-                // Generate world using system time or a fixed seed
+                // Generate world using system time
                 unsigned int randomSeed = (unsigned int)time(NULL);
                 generateWorldWithSeed(randomSeed);
 
-                // --- Verification Example ---
-                // Query texture key for Taloon Backpack (Item ID 301)
-                std::string testTexture = ItemTable::getTextureForItem(301);
-                printf("Loaded Item ID 301 Texture Key: %s\n", testTexture.c_str());
-
                 currentState = STATE_GAMEPLAY;
             }
+            // Press X to open settings menu from the main menu
+            else if (kDown & KEY_X) {
+                currentState = STATE_SETTINGS;
+            }
         } 
+        else if (currentState == STATE_SETTINGS) {
+            // Handle D-Pad and A button inputs via ShaderMenu class
+            shaderMenu.handleInput(kDown);
+
+            // Press B to go back to the main menu
+            if (kDown & KEY_B) {
+                currentState = STATE_MENU;
+            }
+        }
         else if (currentState == STATE_GAMEPLAY) {
             // Basic camera movement via D-Pad
             if (kHeld & KEY_UP)    cameraY -= 2.0f;
@@ -129,17 +143,28 @@ int main(int argc, char* argv[]) {
 
         // Render Frame
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+
+        // --- TOP SCREEN RENDERING ---
         C2D_TargetClear(topScreen, C2D_Color32(30, 30, 30, 255));
         C2D_SceneBegin(topScreen);
 
         if (currentState == STATE_MENU) {
-            // Draw menu graphics here if loaded
+            // Draw menu logo/background here
         } 
         else if (currentState == STATE_GAMEPLAY) {
             drawWorldMap(cameraX, cameraY);
         }
 
-        C3D_FrameEnd(0); // End frame context properly with flag 0
+        // --- BOTTOM SCREEN RENDERING ---
+        C2D_TargetClear(bottomScreen, C2D_Color32(20, 20, 20, 255));
+        C2D_SceneBegin(bottomScreen);
+
+        if (currentState == STATE_SETTINGS) {
+            // Call the render function inside your ShaderMenu class
+            shaderMenu.render();
+        }
+
+        C3D_FrameEnd(0); 
     }
 
     // Clean up resources on exit
