@@ -1,0 +1,20 @@
+#pragma once
+#include <citro2d.h>
+#include <string>
+
+enum Language {
+    LANG_EN = 0,
+    LANG_RU,
+    LANG_DE,
+    LANG_ES,
+    LANG_FR,
+    LANG_IT,
+    LANG_CS,
+    LANG_PT
+};
+
+struct ShaderMenuConfig {
+    int shaderQuality; // e.g., 0: Off, 1: Low, 2: High
+    bool shadowsEnabled;
+    Language currentLang;
+};
