@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
 
     // Load initial menu assets
     currentState = STATE_MENU;
-    menuSheet = C2D_SpriteSheetLoad("romfs:/gfx/menu_sheet.t3x"); // Adjust filename as needed
+    menuSheet = C2D_SpriteSheetLoad("romfs:/gfx/main_menu_logo_sheet0.t3x"); 
 
     float cameraX = 0.0f;
     float cameraY = 0.0f;
@@ -98,8 +98,8 @@ int main(int argc, char* argv[]) {
                     menuSheet = NULL;
                 }
 
-                // Load map tiles sheet from RomFS (compiled from your gfx/ folder)
-                mapSheet = C2D_SpriteSheetLoad("romfs:/gfx/map_tiles.t3x");
+                // Load map tiles sheet from RomFS
+                mapSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x"); // Update this to your map sheet asset name later
 
                 // Generate world using system time or a fixed seed
                 unsigned int randomSeed = (unsigned int)time(NULL);
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
             if (kHeld & KEY_RIGHT) cameraX += 2.0f;
         }
 
-                // Render Frame
+        // Render Frame
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C2D_TargetClear(topScreen, C2D_Color32(30, 30, 30, 255));
         C2D_SceneBegin(topScreen);
@@ -128,8 +128,8 @@ int main(int argc, char* argv[]) {
             drawWorldMap(cameraX, cameraY);
         }
 
-        C3D_FrameEnd(); // End the 3D frame context instead of C2D_FrameEnd
-
+        C3D_FrameEnd(0); // End frame context properly with flag 0
+    }
 
     // Clean up resources on exit
     if (menuSheet) C2D_SpriteSheetFree(menuSheet);
