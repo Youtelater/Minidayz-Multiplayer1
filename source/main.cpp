@@ -1,10 +1,7 @@
 #define MAP_WIDTH 225
 #define MAP_HEIGHT 74
 
-#include "player.h"
-#include "world.h"
-#include "ItemTable.h"
-#include "ShaderMenu.h"
+// 1. Always include 3DS system and graphics libraries first
 #include <3ds.h>
 #include <citro3d.h>
 #include <citro2d.h>
@@ -14,6 +11,11 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
+// 2. Then include your project headers afterwards
+#include "player.h"
+#include "world.h"
+#include "ItemTable.h"
+#include "ShaderMenu.h"
 
 // Game States
 enum GameState {
