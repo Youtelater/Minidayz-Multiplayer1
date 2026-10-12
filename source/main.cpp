@@ -96,6 +96,7 @@ int main(int argc, char* argv[]) {
         ndspChnSetMix(0, mix);
         
         ndspChnWaveBufAdd(0, &bgm.waveBuf);
+        ndspChnSetPaused(0, false); // Unpause the audio channel so it plays
     }
 
     GameState currentState = STATE_LOADING;
