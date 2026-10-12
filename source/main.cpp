@@ -5,7 +5,6 @@
 #include <ctime>
 #include <stdio.h>
 
-
 #define MAP_WIDTH 32
 #define MAP_HEIGHT 32
 
