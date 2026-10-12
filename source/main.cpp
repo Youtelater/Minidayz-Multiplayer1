@@ -14,6 +14,7 @@ enum GameState {
 
 struct ButtonBounds {
     float x, y, w, h;
+    const char* label;
 };
 
 typedef struct {
@@ -27,7 +28,10 @@ typedef struct {
 
 bool loadWavFile(const char* path, SoundEffect* sound) {
     FILE* f = fopen(path, "rb");
-    if (!f) return false;
+    if (!f) {
+        printf("Failed to open audio: %s\n", path);
+        return false;
+    }
 
     char header[44];
     fread(header, 1, 44, f);
@@ -77,19 +81,18 @@ int main(int argc, char* argv[]) {
 
     C2D_SpriteSheet loadingSheet = C2D_SpriteSheetLoad("romfs:/loading_logo.t3x");
     C2D_SpriteSheet menuSheet    = C2D_SpriteSheetLoad("romfs:/main_menu_logo_sheet0.t3x");
-    C2D_SpriteSheet buttonSheet  = C2D_SpriteSheetLoad("romfs:/buttons_sheet0.t3x");
+    C2D_SpriteSheet buttonSheet  = C2D_SpriteSheetLoad("romfs:/buttons_sheet0.t3x"); // Optional check
 
     SoundEffect bgm;
     bool audioLoaded = loadWavFile("romfs:/wav/ambient-C1EE9F53.wav", &bgm);
     if (audioLoaded) {
         ndspChnReset(0);
-        // Fixed: Use correct libctru 16-bit PCM format enums
         ndspChnSetFormat(0, (bgm.channels == 2) ? NDSP_FORMAT_STEREO_PCM16 : NDSP_FORMAT_MONO_PCM16);
         ndspChnSetRate(0, bgm.sampleRate);
         
         float mix[12] = {0};
-        mix[0] = 1.0f; // Left volume
-        mix[1] = 1.0f; // Right volume
+        mix[0] = 1.0f; 
+        mix[1] = 1.0f; 
         ndspChnSetMix(0, mix);
         
         ndspChnWaveBufAdd(0, &bgm.waveBuf);
@@ -101,10 +104,10 @@ int main(int argc, char* argv[]) {
     int totalButtons = 4;
 
     ButtonBounds buttonBoxes[4] = {
-        { 32.0f, 30.0f,  256.0f, 35.0f },
-        { 32.0f, 75.0f,  256.0f, 35.0f },
-        { 32.0f, 120.0f, 256.0f, 35.0f },
-        { 32.0f, 165.0f, 256.0f, 35.0f }
+        { 32.0f, 30.0f,  256.0f, 35.0f, "Continue" },
+        { 32.0f, 75.0f,  256.0f, 35.0f, "New Game" },
+        { 32.0f, 120.0f, 256.0f, 35.0f, "Multiplayer" },
+        { 32.0f, 165.0f, 256.0f, 35.0f, "Options" }
     };
 
     while (aptMainLoop()) {
@@ -155,6 +158,7 @@ int main(int argc, char* argv[]) {
 
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
+        // --- TOP SCREEN ---
         C2D_SceneBegin(topScreen);
         if (currentState == STATE_LOADING) {
             C2D_TargetClear(topScreen, C2D_Color32(0, 0, 0, 255));
@@ -174,13 +178,21 @@ int main(int argc, char* argv[]) {
             C2D_TargetClear(topScreen, C2D_Color32(40, 40, 40, 255));
         }
 
+        // --- BOTTOM SCREEN ---
         C2D_TargetClear(bottomScreen, C2D_Color32(20, 20, 20, 255));
         C2D_SceneBegin(bottomScreen);
 
-        if (currentState == STATE_MENU && buttonSheet) {
+        if (currentState == STATE_MENU) {
             for (int i = 0; i < totalButtons; i++) {
-                C2D_Image btnImg = C2D_SpriteSheetGetImage(buttonSheet, i);
-                C2D_DrawImageAt(btnImg, buttonBoxes[i].x, buttonBoxes[i].y, 0.5f, NULL, 0.75f, 0.6f);
+                // If button texture exists, draw it. Otherwise, draw a clean fallback button box!
+                if (buttonSheet && i < C2D_SpriteSheetCount(buttonSheet)) {
+                    C2D_Image btnImg = C2D_SpriteSheetGetImage(buttonSheet, i);
+                    C2D_DrawImageAt(btnImg, buttonBoxes[i].x, buttonBoxes[i].y, 0.5f, NULL, 0.75f, 0.6f);
+                } else {
+                    // Fallback solid button background (changes color if selected)
+                    u32 btnColor = (i == selectedButton) ? C2D_Color32(200, 50, 50, 255) : C2D_Color32(60, 60, 60, 255);
+                    C2D_DrawRectSolid(buttonBoxes[i].x, buttonBoxes[i].y, 0.5f, buttonBoxes[i].w, buttonBoxes[i].h, btnColor);
+                }
             }
         }
 
