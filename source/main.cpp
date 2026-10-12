@@ -51,7 +51,6 @@ bool loadWavFile(const char* path, SoundEffect* sound) {
     fread(sound->audioData, 1, dataSize, f);
     fclose(f);
 
-    // Fixed: Use DSP_FlushDataCache instead of GSP_FlushDataCache
     DSP_FlushDataCache(sound->audioData, dataSize);
 
     memset(&sound->waveBuf, 0, sizeof(ndspWaveBuf));
@@ -84,11 +83,10 @@ int main(int argc, char* argv[]) {
     bool audioLoaded = loadWavFile("romfs:/wav/ambient-C1EE9F53.wav", &bgm);
     if (audioLoaded) {
         ndspChnReset(0);
-        // Fixed: Use standard libctru channel format constants (1 = Mono, 2 = Stereo)
-        ndspChnSetFormat(0, (bgm.channels == 2) ? NDSP_FORMAT_STEREO_16BIT : NDSP_FORMAT_MONO_16BIT);
+        // Fixed: Use correct libctru 16-bit PCM format enums
+        ndspChnSetFormat(0, (bgm.channels == 2) ? NDSP_FORMAT_STEREO_PCM16 : NDSP_FORMAT_MONO_PCM16);
         ndspChnSetRate(0, bgm.sampleRate);
         
-        // Fixed: Use ndspChnSetMix to set volume levels for stereo channels
         float mix[12] = {0};
         mix[0] = 1.0f; // Left volume
         mix[1] = 1.0f; // Right volume
