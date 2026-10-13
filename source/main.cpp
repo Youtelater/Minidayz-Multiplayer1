@@ -88,6 +88,7 @@ int main(int argc, char* argv[]) {
 
     // Load assets immediately for direct gameplay testing
     mapSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x"); 
+    initWorldAssets("romfs:/gfx/player.t3x"); // <-- This tells world.cpp what to draw!
     loadBunkerMapData();
 
     float cameraX = 0.0f;
