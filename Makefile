@@ -18,7 +18,7 @@ DATA		:= data
 PORTLIBS	:= /opt/devkitpro/portlibs/3ds
 ROMFS		:= romfs
 INCLUDES	:= include build /opt/devkitpro/libctru/include $(PORTLIBS)/include
-GRAPHICS	:= gfx
+GRAPHICS	:= asset/gfx
 
 # Include 3ds_rules *after* configuration variables are set
 include $(DEVKITARM)/3ds_rules
@@ -98,10 +98,10 @@ $(TARGET).elf: $(OFILES)
 	@$(CC) -c $(ASFLAGS) $< -o $@
 
 #-----------------------------------------------------------------
-# GRAPHICS ASSET PIPELINE (Outputs directly to romfs root)
+# GRAPHICS ASSET PIPELINE (Outputs directly to romfs/gfx)
 #-----------------------------------------------------------------
 graphics:
-	@mkdir -p $(ROMFS)
+	@mkdir -p $(ROMFS)/gfx
 	@for png in $(GRAPHICS)/*.png; do \
 		if [ -f "$$png" ]; then \
 			fname=$$(basename "$$png"); \
@@ -111,6 +111,6 @@ graphics:
 			magick "$$png" -background transparent -gravity center -extent 512x512 "$$png" 2>/dev/null || \
 			convert "$$png" -background transparent -gravity center -extent 512x512 "$$png" || true; \
 			echo "Building standalone texture sheet: $$safebase.t3x"; \
-			tex3ds --format=rgba5551 "$$png" -o "$(ROMFS)/$$safebase.t3x" || exit 1; \
+			tex3ds --format=rgba5551 "$$png" -o "$(ROMFS)/gfx/$$safebase.t3x" || exit 1; \
 		fi; \
 	done
