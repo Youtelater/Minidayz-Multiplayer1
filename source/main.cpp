@@ -24,7 +24,7 @@ enum GameState {
     STATE_GAMEPLAY
 };
 
-GameState currentState = STATE_LOADING;
+GameState currentState = STATE_GAMEPLAY;
 
 C2D_SpriteSheet menuSheet = NULL;
 C2D_SpriteSheet mapSheet = NULL;
@@ -83,14 +83,12 @@ int main(int argc, char* argv[]) {
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
-    // If ItemTable initialization is needed:
-    // ItemTable::initialize();
-
     topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
-    currentState = STATE_MENU;
-    menuSheet = C2D_SpriteSheetLoad("romfs:/gfx/main_menu_logo_sheet0.t3x"); 
+    // Load assets immediately for direct gameplay testing
+    mapSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x"); 
+    loadBunkerMapData();
 
     float cameraX = 0.0f;
     float cameraY = 0.0f;
@@ -102,56 +100,28 @@ int main(int argc, char* argv[]) {
 
         if (kDown & KEY_START) break;
 
-        if (currentState == STATE_MENU) {
-            if (kDown & KEY_A) {
-                if (menuSheet) {
-                    C2D_SpriteSheetFree(menuSheet);
-                    menuSheet = NULL;
-                }
+        // Camera movement via D-Pad
+        if (kHeld & KEY_UP)    cameraY -= 3.0f;
+        if (kHeld & KEY_DOWN)  cameraY += 3.0f;
+        if (kHeld & KEY_LEFT)  cameraX -= 3.0f;
+        if (kHeld & KEY_RIGHT) cameraX += 3.0f;
 
-                mapSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x"); 
-                loadBunkerMapData();
-
-                currentState = STATE_GAMEPLAY;
-            }
-            else if (kDown & KEY_X) {
-                currentState = STATE_SETTINGS;
-            }
-        } 
-        else if (currentState == STATE_SETTINGS) {
-            shaderMenu.handleInput(kDown);
-
-            if (kDown & KEY_B) {
-                currentState = STATE_MENU;
-            }
-        }
-        else if (currentState == STATE_GAMEPLAY) {
-            if (kHeld & KEY_UP)    cameraY -= 3.0f;
-            if (kHeld & KEY_DOWN)  cameraY += 3.0f;
-            if (kHeld & KEY_LEFT)  cameraX -= 3.0f;
-            if (kHeld & KEY_RIGHT) cameraX += 3.0f;
-        }
-
+        // Render Frame
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
+        // --- TOP SCREEN RENDERING ---
         C2D_TargetClear(topScreen, C2D_Color32(30, 30, 30, 255));
         C2D_SceneBegin(topScreen);
 
-        if (currentState == STATE_GAMEPLAY) {
-            drawWorldMap(cameraX, cameraY);
-        }
+        drawWorldMap(cameraX, cameraY);
 
+        // --- BOTTOM SCREEN RENDERING ---
         C2D_TargetClear(bottomScreen, C2D_Color32(20, 20, 20, 255));
         C2D_SceneBegin(bottomScreen);
-
-        if (currentState == STATE_SETTINGS) {
-            shaderMenu.render();
-        }
 
         C3D_FrameEnd(0); 
     }
 
-    if (menuSheet) C2D_SpriteSheetFree(menuSheet);
     if (mapSheet) C2D_SpriteSheetFree(mapSheet);
 
     C2D_Fini();
