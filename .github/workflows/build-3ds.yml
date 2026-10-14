@@ -45,7 +45,7 @@ jobs:
                       print(f'Renamed: {filename} -> {new_name}')
           "
 
-      - name: Pad PNG canvases to power-of-two dimensions via Python
+      - name: Normalize and pad PNG canvases via Python
         run: |
           apt-get update && apt-get install -y python3-pip python3-pil
           python3 -c "
@@ -61,14 +61,16 @@ jobs:
           for img_path in glob.glob('gfx/*.png'):
               try:
                   with Image.open(img_path) as img:
+                      # Convert to RGBA to avoid palette/grayscale format bugs in tex3ds
+                      img = img.convert('RGBA')
                       w, h = img.size
                       new_w = next_power_of_2(w)
                       new_h = next_power_of_2(h)
-                      if new_w != w or new_h != h:
-                          new_img = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
-                          new_img.paste(img, (0, 0))
-                          new_img.save(img_path)
-                          print(f'Padded {img_path}: {w}x{h} -> {new_w}x{new_h}')
+                      
+                      new_img = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
+                      new_img.paste(img, (0, 0))
+                      new_img.save(img_path, 'PNG')
+                      print(f'Processed {img_path}: {w}x{h} -> {new_w}x{new_h} (RGBA)')
               except Exception as e:
                   print(f'Error processing {img_path}: {e}')
           "
