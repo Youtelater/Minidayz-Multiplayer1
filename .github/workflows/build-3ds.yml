@@ -98,7 +98,7 @@ jobs:
                   f.write('#endif\n')
           "
 
-            - name: Build Texture Atlases (.t3x)
+      - name: Build Texture Atlases (.t3x)
         run: |
           export DEVKITPRO=/opt/devkitpro
           export PATH="$DEVKITPRO/tools/bin:$PATH"
@@ -110,7 +110,6 @@ jobs:
               tex3ds -o "romfs/gfx/${name}.t3x" "$img"
             fi
           done
-
 
       - name: Compile 3DS Executable
         shell: bash
