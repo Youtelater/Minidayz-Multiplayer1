@@ -6,14 +6,12 @@
 
 #define MAP_WIDTH 225
 #define MAP_HEIGHT 74
+#define TOTAL_ATLASES 14
 
 extern int worldGrid[MAP_WIDTH][MAP_HEIGHT];
+extern C2D_SpriteSheet worldSheets[TOTAL_ATLASES];
 
-// Asset management for terrain and specific buildings
-void initWorldAssets(const char* mapSheetPath);
-void loadBuildingSheet(int buildingID, const char* sheetPath);
-void freeWorldAssets();
-void generateWorldWithSeed(unsigned int seed);
+void initWorldAssets(const char* basePath);
 void drawWorldMap(float cameraX, float cameraY);
 
 #endif
