@@ -45,21 +45,33 @@ jobs:
                       print(f'Renamed: {filename} -> {new_name}')
           "
 
-      - name: Pad PNG canvases to power-of-two dimensions
+      - name: Pad PNG canvases to power-of-two dimensions via Python
         run: |
-          apt-get update && apt-get install -y imagemagick
-          find gfx -type f -name "*.png" | while read img; do
-            W=$(identify -format "%w" "$img")
-            H=$(identify -format "%h" "$img")
-            
-            NEW_W=16
-            while [ $NEW_W -lt $W ]; do NEW_W=$((NEW_W * 2)); done
-            
-            NEW_H=16
-            while [ $NEW_H -lt $H ]; do NEW_H=$((NEW_H * 2)); done
-            
-            mogrify -background none -gravity NorthWest -extent ${NEW_W}x${NEW_H} "$img"
-          done
+          apt-get update && apt-get install -y python3-pip python3-pil
+          python3 -c "
+          import glob
+          from PIL import Image
+
+          def next_power_of_2(n):
+              p = 16
+              while p < n:
+                  p *= 2
+              return p
+
+          for img_path in glob.glob('gfx/*.png'):
+              try:
+                  with Image.open(img_path) as img:
+                      w, h = img.size
+                      new_w = next_power_of_2(w)
+                      new_h = next_power_of_2(h)
+                      if new_w != w or new_h != h:
+                          new_img = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
+                          new_img.paste(img, (0, 0))
+                          new_img.save(img_path)
+                          print(f'Padded {img_path}: {w}x{h} -> {new_w}x{new_h}')
+              except Exception as e:
+                  print(f'Error processing {img_path}: {e}')
+          "
 
       - name: Ensure clean grit configuration
         run: |
