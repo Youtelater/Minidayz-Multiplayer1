@@ -86,9 +86,9 @@ int main(int argc, char* argv[]) {
     topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
-    // Load assets immediately for direct gameplay testing
-    mapSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x"); 
-    initWorldAssets("romfs:/gfx/player.t3x"); // <-- This tells world.cpp what to draw!
+    // Load your world atlas assets (strip.t3x / strip.json)
+    mapSheet = C2D_SpriteSheetLoad("romfs:/gfx/strip.t3x"); 
+    initWorldAssets("romfs:/gfx/strip.t3x"); 
     loadBunkerMapData();
 
     float cameraX = 0.0f;
