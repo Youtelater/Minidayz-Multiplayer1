@@ -15,8 +15,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-
-
       - name: Transliterate non-ASCII asset filenames and fix leading digits
         run: |
           python3 -c "
@@ -99,6 +97,19 @@ jobs:
                   f.write(f'#define TOTAL_SPRITES {len(png_files)}\n\n')
                   f.write('#endif\n')
           "
+
+      - name: Build Texture Atlases (.t3x)
+        run: |
+          export DEVKITPRO=/opt/devkitpro
+          export PATH="$DEVKITPRO/tools/bin:$PATH"
+          mkdir -p romfs/gfx
+          for img in gfx/*.png; do
+            if [ -f "$img" ]; then
+              filename=$(basename -- "$img")
+              name="${filename%.*}"
+              tex3ds -i "$img" -o "romfs/gfx/${name}.t3x"
+            fi
+          done
 
       - name: Compile 3DS Executable
         shell: bash
