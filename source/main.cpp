@@ -1,115 +1,91 @@
 #include <3ds.h>
 #include <citro3d.h>
 #include <citro2d.h>
+#include "world.h"
 #include <cstdlib>
 #include <cstdio>
-#include <string>
 
-#include "world.h"
-#include "player.h"
+int worldGrid[MAP_WIDTH][MAP_HEIGHT];
+static C2D_SpriteSheet terrainSheet = NULL;
 
-// Define Game States
-enum GameState {
-    STATE_MENU,
-    STATE_GAMEPLAY
-};
+#define MAX_ATLASES 14
+static C2D_SpriteSheet worldAtlases[MAX_ATLASES];
 
-GameState currentState = STATE_MENU;
+void initWorldAssets(const char* mapSheetPath) {
+    terrainSheet = C2D_SpriteSheetLoad(mapSheetPath);
 
-C3D_RenderTarget* topScreen = NULL;
-C2D_SpriteSheet menuSheet = NULL;
+    for (int i = 0; i < MAX_ATLASES; i++) {
+        char path[64];
+        std::sprintf(path, "romfs:/gfx/atlas_%02d.t3x", i + 1);
+        
+        worldAtlases[i] = C2D_SpriteSheetLoad(path);
+        if (!worldAtlases[i]) {
+            std::printf("Notice: Could not load %s\n", path);
+        } else {
+            std::printf("Successfully loaded: %s\n", path);
+        }
+    }
+}
 
-int main(int argc, char* argv[]) {
-    // Initialize system hardware and romfs
-    romfsInit();
-    gfxInitDefault();
+void loadBuildingSheet(int index, const char* sheetPath) {
+    if (index >= 0 && index < MAX_ATLASES) {
+        worldAtlases[index] = C2D_SpriteSheetLoad(sheetPath);
+    }
+}
+
+void freeWorldAssets() {
+    if (terrainSheet) C2D_SpriteSheetFree(terrainSheet);
     
-    // Bottom screen text console for debug logs
-    consoleInit(GFX_BOTTOM, NULL);
-    std::printf("\n=== Mini DayZ+ 3DS Booting ===\n\n");
-
-    C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
-    C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
-    C2D_Prepare();
-
-    // Create rendering target for the top screen
-    topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-
-    // Load Menu Asset Sheet
-    std::printf("Loading menu assets...\n");
-    menuSheet = C2D_SpriteSheetLoad("romfs:/gfx/menu.t3x");
-    if (!menuSheet) {
-        std::printf("Warning: menu.t3x not found or failed to load.\n");
-    } else {
-        std::printf("Success: menu.t3x loaded.\n");
-    }
-
-    // Initialize World Assets (loads all 14 atlases and terrain)
-    std::printf("Initializing world and atlases...\n");
-    initWorldAssets("romfs:/gfx/strip.t3x");
-
-    // Generate or load your map data
-    std::printf("Generating world map...\n");
-    generateWorldWithSeed(12345); 
-    std::printf("World ready!\nPress A on the menu to start.\n");
-
-    float cameraX = 0.0f;
-    float cameraY = 0.0f;
-
-    // Main Game Loop
-    while (aptMainLoop()) {
-        hidScanInput();
-        u32 kDown = hidKeysDown();
-        u32 kHeld = hidKeysHeld();
-
-        // Exit game if START is pressed
-        if (kDown & KEY_START) break;
-
-        // --- STATE LOGIC ---
-        if (currentState == STATE_MENU) {
-            // Press A to transition from Menu to Gameplay
-            if (kDown & KEY_A) {
-                currentState = STATE_GAMEPLAY;
-                std::printf("Switched to STATE_GAMEPLAY\n");
-            }
-        } 
-        else if (currentState == STATE_GAMEPLAY) {
-            // Camera movement via D-Pad during gameplay
-            if (kHeld & KEY_UP)    cameraY -= 3.0f;
-            if (kHeld & KEY_DOWN)  cameraY += 3.0f;
-            if (kHeld & KEY_LEFT)  cameraX -= 3.0f;
-            if (kHeld & KEY_RIGHT) cameraX += 3.0f;
+    for (int i = 0; i < MAX_ATLASES; i++) {
+        if (worldAtlases[i]) {
+            C2D_SpriteSheetFree(worldAtlases[i]);
+            worldAtlases[i] = NULL;
         }
-
-        // --- RENDERING ---
-        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-
-        // Top Screen Rendering
-        C2D_SceneBegin(topScreen);
-        C2D_TargetClear(topScreen, C2D_Color32(20, 20, 20, 255));
-
-        if (currentState == STATE_MENU) {
-            // Draw menu graphic if loaded
-            if (menuSheet != NULL) {
-                C2D_Image menuImg = C2D_SpriteSheetGetImage(menuSheet, 0);
-                C2D_DrawImageAt(menuImg, 0.0f, 0.0f, 0.5f, NULL, 1.0f, 1.0f);
-            }
-        } 
-        else if (currentState == STATE_GAMEPLAY) {
-            // Draw the multi-atlas game world map
-            drawWorldMap(cameraX, cameraY);
-        }
-
-        C3D_FrameEnd(0); 
     }
+}
 
-    // Cleanup resources on exit
-    if (menuSheet) C2D_SpriteSheetFree(menuSheet);
-    freeWorldAssets();
+void generateWorldWithSeed(unsigned int seed) {
+    srand(seed);
 
-    C2D_Fini();
-    C3D_Fini();
-    gfxExit();
-    romfsExit();
-    return 0;
+    for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int y = 0; y < MAP_HEIGHT; y++) {
+            int roll = rand() % 100;
+
+            if (roll < 50) {
+                worldGrid[x][y] = 0; // Grass
+            } else if (roll < 75) {
+                worldGrid[x][y] = 1; // Dirt path
+            } else {
+                worldGrid[x][y] = 100; // Special structure identifier
+            }
+        }
+    }
+}
+
+void drawWorldMap(float cameraX, float cameraY) {
+    for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int y = 0; y < MAP_HEIGHT; y++) {
+            int tileID = worldGrid[x][y];
+            float screenX = (x * 16.0f) - cameraX;
+            float screenY = (y * 16.0f) - cameraY;
+
+            if (screenX >= -16.0f && screenX < 400.0f && screenY >= -16.0f && screenY < 240.0f) {
+                if (tileID < 100 && terrainSheet) {
+                    C2D_Image tileImg = C2D_SpriteSheetGetImage(terrainSheet, tileID);
+                    C2D_DrawImageAt(tileImg, screenX, screenY, 0.5f, NULL, 1.0f, 1.0f);
+                } 
+                else if (tileID >= 100) {
+                    int atlasIndex = (tileID / 100) - 1; 
+                    if (atlasIndex < 0) atlasIndex = 0;
+                    if (atlasIndex >= MAX_ATLASES) atlasIndex = MAX_ATLASES - 1;
+
+                    if (worldAtlases[atlasIndex]) {
+                        int localID = tileID % 100;
+                        C2D_Image bldgImg = C2D_SpriteSheetGetImage(worldAtlases[atlasIndex], localID);
+                        C2D_DrawImageAt(bldgImg, screenX, screenY, 0.4f, NULL, 1.0f, 1.0f);
+                    }
+                }
+            }
+        }
+    }
 }
