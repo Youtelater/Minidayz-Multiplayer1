@@ -45,34 +45,33 @@ jobs:
                       print(f'Renamed: {filename} -> {new_name}')
           "
 
-      - name: Normalize and pad PNG canvases via Python
+      - name: Force valid power-of-two dimensions and RGBA via Python
         run: |
           apt-get update && apt-get install -y python3-pip python3-pil
           python3 -c "
           import glob
           from PIL import Image
 
-          def next_power_of_2(n):
+          def nearest_power_of_2(n):
               p = 16
               while p < n:
                   p *= 2
-              return p
+              return max(16, p)
 
           for img_path in glob.glob('gfx/*.png'):
               try:
                   with Image.open(img_path) as img:
-                      # Convert to RGBA to avoid palette/grayscale format bugs in tex3ds
                       img = img.convert('RGBA')
                       w, h = img.size
-                      new_w = next_power_of_2(w)
-                      new_h = next_power_of_2(h)
+                      new_w = nearest_power_of_2(w)
+                      new_h = nearest_power_of_2(h)
                       
                       new_img = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
                       new_img.paste(img, (0, 0))
                       new_img.save(img_path, 'PNG')
-                      print(f'Processed {img_path}: {w}x{h} -> {new_w}x{new_h} (RGBA)')
+                      print(f'Resized {img_path}: {w}x{h} -> {new_w}x{new_h}')
               except Exception as e:
-                  print(f'Error processing {img_path}: {e}')
+                  print(f'Error with {img_path}: {e}')
           "
 
       - name: Ensure clean grit configuration
