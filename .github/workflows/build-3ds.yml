@@ -45,17 +45,20 @@ jobs:
                       print(f'Renamed: {filename} -> {new_name}')
           "
 
-      - name: Force valid power-of-two dimensions and RGBA via Python
+      - name: Sanitize and resize textures for 3DS GPU constraints via Python
         run: |
           apt-get update && apt-get install -y python3-pip python3-pil
           python3 -c "
           import glob
           from PIL import Image
 
-          def nearest_power_of_2(n):
+          def get_valid_dim(n):
+              # 3DS textures must be powers of 2, minimum 16, maximum 1024
               p = 16
-              while p < n:
+              while p < n and p < 1024:
                   p *= 2
+              if n > 1024:
+                  return 1024
               return max(16, p)
 
           for img_path in glob.glob('gfx/*.png'):
@@ -63,15 +66,22 @@ jobs:
                   with Image.open(img_path) as img:
                       img = img.convert('RGBA')
                       w, h = img.size
-                      new_w = nearest_power_of_2(w)
-                      new_h = nearest_power_of_2(h)
                       
+                      # Clamp or resize to valid 3DS hardware dimensions
+                      new_w = get_valid_dim(w)
+                      new_h = get_valid_dim(h)
+                      
+                      # If dimensions differ or exceed limits, resize cleanly
+                      if (w, h) != (new_w, new_h):
+                          img = img.resize((new_w, new_h), Image.Resampling.NEAREST)
+                      
+                      # Ensure canvas fits power of two block bounds cleanly
                       new_img = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
                       new_img.paste(img, (0, 0))
                       new_img.save(img_path, 'PNG')
-                      print(f'Resized {img_path}: {w}x{h} -> {new_w}x{new_h}')
+                      print(f'Sanitized {img_path}: {w}x{h} -> {new_w}x{new_h}')
               except Exception as e:
-                  print(f'Error with {img_path}: {e}')
+                  print(f'Error processing {img_path}: {e}')
           "
 
       - name: Ensure clean grit configuration
@@ -103,7 +113,7 @@ jobs:
                       raw_name = os.path.splitext(os.path.basename(filepath))[0]
                       var_name = raw_name.replace('-', '_').replace('.', '_')
                       if var_name[0].isdigit():
-                          var_name = '_' + var_name
+                        var_name = '_' + var_name
                       f.write(f'    {var_name}Tiles,\n')
                   f.write('};\n\n')
                   
