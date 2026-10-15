@@ -66,7 +66,7 @@ all: graphics $(TARGET).3dsx
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS}/*.t3x $(ROMFS)/gfx
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS)/*.t3x $(ROMFS)/gfx
 
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 	@echo builtin 3dsx ...
