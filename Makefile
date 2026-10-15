@@ -18,7 +18,8 @@ DATA		:= data
 PORTLIBS	:= /opt/devkitpro/portlibs/3ds
 ROMFS		:= romfs
 INCLUDES	:= include build /opt/devkitpro/libctru/include $(PORTLIBS)/include
-GRAPHICS	:= asset/gfx
+GRAPHICS	:= gfx    # <--- FIXED: points to your actual gfx directory
+
 
 # Include 3ds_rules *after* configuration variables are set
 include $(DEVKITARM)/3ds_rules
