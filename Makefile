@@ -9,16 +9,20 @@ endif
 TOPDIR ?= $(CURDIR)
 
 #-----------------------------------------------------------------
-# TARGET CONFIGURATION (MUST BE DEFINED BEFORE 3DS RULES)
+# GRAPHICS ASSET PIPELINE (Outputs directly to romfs/gfx)
 #-----------------------------------------------------------------
-TARGET		:= minidayz-3ds
-BUILD		:= build
-SOURCES		:= source
-DATA		:= data
-PORTLIBS	:= /opt/devkitpro/portlibs/3ds
-ROMFS		:= romfs
-INCLUDES	:= include build /opt/devkitpro/libctru/include $(PORTLIBS)/include
-GRAPHICS	:= gfx    # <--- FIXED: points to your actual gfx directory
+graphics:
+	@mkdir -p $(ROMFS)/gfx
+	@for png in $(GRAPHICS)/*.png; do \
+		if [ -f "$$png" ]; then \
+			fname=$$(basename "$$png"); \
+			fbase=$${fname%.png}; \
+			safebase=$$(echo "$$fbase" | tr '-' '_' | tr '.' '_'); \
+			echo "Building texture sheet: $$safebase.t3x"; \
+			tex3ds -o "$(ROMFS)/gfx/$$safebase.t3x" "$$png" || exit 1; \
+		fi; \
+	done
+
 
 
 # Include 3ds_rules *after* configuration variables are set
