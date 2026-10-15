@@ -44,9 +44,9 @@ int main(int argc, char* argv[]) {
         std::printf("Success: menu.t3x loaded.\n");
     }
 
-    // Initialize World Assets (loads all atlases and terrain)
+    // Initialize World Assets (loads all atlases and terrain using atlas_01)
     std::printf("Initializing world and atlases...\n");
-    initWorldAssets("romfs:/gfx/strip.t3x");
+    initWorldAssets("romfs:/gfx/atlas_01.t3x");
 
     // Generate world map data using world.cpp functions
     std::printf("Generating world map...\n");
