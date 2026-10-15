@@ -9,21 +9,16 @@ endif
 TOPDIR ?= $(CURDIR)
 
 #-----------------------------------------------------------------
-# GRAPHICS ASSET PIPELINE (Outputs directly to romfs/gfx)
+# TARGET CONFIGURATION (MUST BE DEFINED BEFORE 3DS RULES)
 #-----------------------------------------------------------------
-graphics:
-	@mkdir -p $(ROMFS)/gfx
-	@for png in $(GRAPHICS)/*.png; do \
-		if [ -f "$$png" ]; then \
-			fname=$$(basename "$$png"); \
-			fbase=$${fname%.png}; \
-			safebase=$$(echo "$$fbase" | tr '-' '_' | tr '.' '_'); \
-			echo "Building texture sheet: $$safebase.t3x"; \
-			tex3ds -o "$(ROMFS)/gfx/$$safebase.t3x" "$$png" || exit 1; \
-		fi; \
-	done
-
-
+TARGET		:= minidayz-3ds
+BUILD		:= build
+SOURCES		:= source
+DATA		:= data
+PORTLIBS	:= /opt/devkitpro/portlibs/3ds
+ROMFS		:= romfs
+INCLUDES	:= include build /opt/devkitpro/libctru/include $(PORTLIBS)/include
+GRAPHICS	:= gfx
 
 # Include 3ds_rules *after* configuration variables are set
 include $(DEVKITARM)/3ds_rules
@@ -112,10 +107,7 @@ graphics:
 			fname=$$(basename "$$png"); \
 			fbase=$${fname%.png}; \
 			safebase=$$(echo "$$fbase" | tr '-' '_' | tr '.' '_'); \
-			echo "Auto-padding $$fbase to power-of-2 (512x512)..."; \
-			magick "$$png" -background transparent -gravity center -extent 512x512 "$$png" 2>/dev/null || \
-			convert "$$png" -background transparent -gravity center -extent 512x512 "$$png" || true; \
-			echo "Building standalone texture sheet: $$safebase.t3x"; \
-			tex3ds --format=rgba5551 "$$png" -o "$(ROMFS)/gfx/$$safebase.t3x" || exit 1; \
+			echo "Building texture sheet: $$safebase.t3x"; \
+			tex3ds -o "$(ROMFS)/gfx/$$safebase.t3x" "$$png" || exit 1; \
 		fi; \
 	done
