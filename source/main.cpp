@@ -37,16 +37,16 @@ int main(int argc, char* argv[]) {
 
     // Load Menu Asset Sheet
     std::printf("Loading menu assets...\n");
-    menuSheet = C2D_SpriteSheetLoad("romfs:/gfx/menu.t3x");
+    menuSheet = C2D_SpriteSheetLoad("gfx/menu.t3x");
     if (!menuSheet) {
         std::printf("Warning: menu.t3x not found or failed to load.\n");
     } else {
         std::printf("Success: menu.t3x loaded.\n");
     }
 
-    // Initialize World Assets (loads all atlases and terrain using atlas_01)
-    std::printf("Initializing world and atlases...\n");
-    initWorldAssets("romfs:/gfx/atlas_01.t3x");
+    // Initialize World Assets (loads all 290 frame sheets using frame_001)
+    std::printf("Initializing world and frame assets...\n");
+    initWorldAssets("gfx/frame_001.t3x");
 
     // Generate world map data using world.cpp functions
     std::printf("Generating world map...\n");
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
             }
         } 
         else if (currentState == STATE_GAMEPLAY) {
-            // Draw the multi-atlas game world map using world.cpp functions
+            // Draw the multi-frame game world map using world.cpp functions
             drawWorldMap(cameraX, cameraY);
         }
 

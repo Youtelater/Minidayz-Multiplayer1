@@ -66,7 +66,7 @@ all: graphics $(TARGET).3dsx
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS)/*.t3x $(ROMFS)/gfx
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS)/gfx/*.t3x
 
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
 	@echo builtin 3dsx ...
@@ -98,7 +98,7 @@ $(TARGET).elf: $(OFILES)
 	@$(CC) -c $(ASFLAGS) $< -o $@
 
 #-----------------------------------------------------------------
-# GRAPHICS ASSET PIPELINE (Outputs directly to romfs/gfx)
+# GRAPHICS ASSET PIPELINE (Outputs compiled .t3x files to romfs/gfx)
 #-----------------------------------------------------------------
 graphics:
 	@mkdir -p $(ROMFS)/gfx

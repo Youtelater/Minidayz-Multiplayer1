@@ -5,18 +5,19 @@
 int worldGrid[MAP_WIDTH][MAP_HEIGHT];
 static C2D_SpriteSheet terrainSheet = NULL;
 
-// Expanded to hold more atlas sheets (e.g., up to 14 atlases)
-#define MAX_ATLASES 14
+// Expanded to hold all 290 individual frame sheets
+#define MAX_ATLASES 290
 static C2D_SpriteSheet worldAtlases[MAX_ATLASES];
 
 void initWorldAssets(const char* mapSheetPath) {
     // Load the base terrain sheet
     terrainSheet = C2D_SpriteSheetLoad(mapSheetPath);
 
-    // Automatically load all your numbered atlases (atlas_01.t3x through atlas_14.t3x)
+    // Automatically load all numbered frame assets from the gfx folder
     for (int i = 0; i < MAX_ATLASES; i++) {
         char path[64];
-        std::sprintf(path, "romfs:/gfx/atlas_%02d.t3x", i + 1);
+        // Updated path to point directly to gfx/ instead of romfs:/gfx/
+        std::sprintf(path, "gfx/frame_%03d.t3x", i + 1);
         
         worldAtlases[i] = C2D_SpriteSheetLoad(path);
         if (!worldAtlases[i]) {
@@ -77,9 +78,8 @@ void drawWorldMap(float cameraX, float cameraY) {
                     C2D_Image tileImg = C2D_SpriteSheetGetImage(terrainSheet, tileID);
                     C2D_DrawImageAt(tileImg, screenX, screenY, 0.5f, NULL, 1.0f, 1.0f);
                 } 
-                // If it's a structure/building, pick the correct atlas sheet based on ID ranges
+                // If it's a structure/building, pick the correct frame sheet based on ID ranges
                 else if (tileID >= 100) {
-                    // Example: map tile IDs 100-199 to atlas 0, 200-299 to atlas 1, etc.
                     int atlasIndex = (tileID / 100) - 1; 
                     if (atlasIndex < 0) atlasIndex = 0;
                     if (atlasIndex >= MAX_ATLASES) atlasIndex = MAX_ATLASES - 1;
