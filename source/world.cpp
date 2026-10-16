@@ -13,11 +13,11 @@ void initWorldAssets(const char* mapSheetPath) {
     // Load the base terrain sheet
     terrainSheet = C2D_SpriteSheetLoad(mapSheetPath);
 
-    // Automatically load all numbered frame assets from the gfx folder
+    // Automatically load all numbered frame assets from romfs:/gfx/
     for (int i = 0; i < MAX_ATLASES; i++) {
         char path[64];
-        // Updated path to point directly to gfx/ instead of romfs:/gfx/
-        std::sprintf(path, "gfx/frame_%03d.t3x", i + 1);
+        // Added "romfs:/" back so the 3DS file system locates the packaged .t3x files
+        std::sprintf(path, "romfs:/gfx/frame_%03d.t3x", i + 1);
         
         worldAtlases[i] = C2D_SpriteSheetLoad(path);
         if (!worldAtlases[i]) {
