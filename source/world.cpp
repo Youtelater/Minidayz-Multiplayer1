@@ -2,21 +2,17 @@
 #include <cstdlib>
 #include <cstdio>
 
-int worldGrid[MAP_WIDTH][MAP_HEIGHT];
-static C2D_SpriteSheet terrainSheet = NULL;
+// Separate grids for Ground (Floor) and Overhead Objects (Buildings)
+int groundGrid[MAP_WIDTH][MAP_HEIGHT];
+int buildingGrid[MAP_WIDTH][MAP_HEIGHT];
 
-// Expanded to hold all 290 individual frame sheets
 #define MAX_ATLASES 290
 static C2D_SpriteSheet worldAtlases[MAX_ATLASES];
 
 void initWorldAssets(const char* mapSheetPath) {
-    // Load the base terrain sheet
-    terrainSheet = C2D_SpriteSheetLoad(mapSheetPath);
-
     // Automatically load all numbered frame assets from romfs:/gfx/
     for (int i = 0; i < MAX_ATLASES; i++) {
         char path[64];
-        // Added "romfs:/" back so the 3DS file system locates the packaged .t3x files
         std::sprintf(path, "romfs:/gfx/frame_%03d.t3x", i + 1);
         
         worldAtlases[i] = C2D_SpriteSheetLoad(path);
@@ -35,8 +31,6 @@ void loadBuildingSheet(int index, const char* sheetPath) {
 }
 
 void freeWorldAssets() {
-    if (terrainSheet) C2D_SpriteSheetFree(terrainSheet);
-    
     for (int i = 0; i < MAX_ATLASES; i++) {
         if (worldAtlases[i]) {
             C2D_SpriteSheetFree(worldAtlases[i]);
@@ -50,45 +44,58 @@ void generateWorldWithSeed(unsigned int seed) {
 
     for (int x = 0; x < MAP_WIDTH; x++) {
         for (int y = 0; y < MAP_HEIGHT; y++) {
-            int roll = rand() % 100;
-
-            if (roll < 50) {
-                worldGrid[x][y] = 0; // Grass
-            } else if (roll < 75) {
-                worldGrid[x][y] = 1; // Dirt path
+            // LAYER 1: Ground/Floor (Assign tile indexes that correspond to ground_lvl tilemaps)
+            int groundRoll = rand() % 100;
+            if (groundRoll < 70) {
+                groundGrid[x][y] = 63; // Index for ground_lvl1_tilemap
+            } else if (groundRoll < 90) {
+                groundGrid[x][y] = 111; // Index for ground_lvl2_tilemap
             } else {
-                worldGrid[x][y] = 100; // Special structure identifier
+                groundGrid[x][y] = 85; // Index for tilemap_sand
+            }
+
+            // LAYER 2: Buildings & Objects (Placed on top of ground)
+            int objectRoll = rand() % 100;
+            if (objectRoll > 85) {
+                // Assign an index corresponding to a building/structure (e.g., b_police_station, b_hospital)
+                buildingGrid[x][y] = (rand() % 200) + 1; 
+            } else {
+                buildingGrid[x][y] = -1; // Empty / No building on this tile
             }
         }
     }
 }
 
 void drawWorldMap(float cameraX, float cameraY) {
+    // PASS 1: Render Ground / Floor Layer FIRST across the whole view
     for (int x = 0; x < MAP_WIDTH; x++) {
         for (int y = 0; y < MAP_HEIGHT; y++) {
-            int tileID = worldGrid[x][y];
             float screenX = (x * 16.0f) - cameraX;
             float screenY = (y * 16.0f) - cameraY;
 
-            // Frustum culling check (only draw if visible on screen)
-            if (screenX >= -16.0f && screenX < 400.0f && screenY >= -16.0f && screenY < 240.0f) {
-                
-                // If standard terrain, draw from terrainSheet
-                if (tileID < 100 && terrainSheet) {
-                    C2D_Image tileImg = C2D_SpriteSheetGetImage(terrainSheet, tileID);
-                    C2D_DrawImageAt(tileImg, screenX, screenY, 0.5f, NULL, 1.0f, 1.0f);
-                } 
-                // If it's a structure/building, pick the correct frame sheet based on ID ranges
-                else if (tileID >= 100) {
-                    int atlasIndex = (tileID / 100) - 1; 
-                    if (atlasIndex < 0) atlasIndex = 0;
-                    if (atlasIndex >= MAX_ATLASES) atlasIndex = MAX_ATLASES - 1;
+            if (screenX >= -32.0f && screenX < 400.0f && screenY >= -32.0f && screenY < 240.0f) {
+                int groundID = groundGrid[x][y];
+                if (groundID >= 0 && groundID < MAX_ATLASES && worldAtlases[groundID]) {
+                    C2D_Image groundImg = C2D_SpriteSheetGetImage(worldAtlases[groundID], 0);
+                    // Draw ground at depth z = 0.1f
+                    C2D_DrawImageAt(groundImg, screenX, screenY, 0.1f, NULL, 1.0f, 1.0f);
+                }
+            }
+        }
+    }
 
-                    if (worldAtlases[atlasIndex]) {
-                        int localID = tileID % 100; // local sprite index inside that sheet
-                        C2D_Image bldgImg = C2D_SpriteSheetGetImage(worldAtlases[atlasIndex], localID);
-                        C2D_DrawImageAt(bldgImg, screenX, screenY, 0.4f, NULL, 1.0f, 1.0f);
-                    }
+    // PASS 2: Render Buildings & Structures SECOND on top of the ground
+    for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int y = 0; y < MAP_HEIGHT; y++) {
+            float screenX = (x * 16.0f) - cameraX;
+            float screenY = (y * 16.0f) - cameraY;
+
+            if (screenX >= -128.0f && screenX < 400.0f && screenY >= -128.0f && screenY < 240.0f) {
+                int bldgID = buildingGrid[x][y];
+                if (bldgID >= 0 && bldgID < MAX_ATLASES && worldAtlases[bldgID]) {
+                    C2D_Image bldgImg = C2D_SpriteSheetGetImage(worldAtlases[bldgID], 0);
+                    // Draw building at depth z = 0.5f (above ground)
+                    C2D_DrawImageAt(bldgImg, screenX, screenY, 0.5f, NULL, 1.0f, 1.0f);
                 }
             }
         }
