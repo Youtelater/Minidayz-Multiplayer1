@@ -6,6 +6,7 @@
 int groundGrid[MAP_WIDTH][MAP_HEIGHT];
 int buildingGrid[MAP_WIDTH][MAP_HEIGHT];
 
+// Adjust MAX_ATLASES to match your actual total file count (e.g., 265 or up to 290)
 #define MAX_ATLASES 290
 static C2D_SpriteSheet worldAtlases[MAX_ATLASES];
 
@@ -44,21 +45,24 @@ void generateWorldWithSeed(unsigned int seed) {
 
     for (int x = 0; x < MAP_WIDTH; x++) {
         for (int y = 0; y < MAP_HEIGHT; y++) {
-            // LAYER 1: Ground/Floor (Assign tile indexes that correspond to ground_lvl tilemaps)
-            int groundRoll = rand() % 100;
-            if (groundRoll < 70) {
-                groundGrid[x][y] = 63; // Index for ground_lvl1_tilemap
-            } else if (groundRoll < 90) {
-                groundGrid[x][y] = 111; // Index for ground_lvl2_tilemap
+            // Replace these index numbers with the exact numerical position 
+            // of your ground/water files in your gfx/ folder sequence (e.g., tilemap_water, tilemap_sand, ground_lvl1_tilemap)
+            int waterTileIndex = 50;  // Example index for water coastline
+            int sandTileIndex = 120;  // Example index for sand tilemap
+            int grassTileIndex = 10;  // Example index for ground level tilemap
+
+            int roll = rand() % 100;
+            if (roll < 30) {
+                groundGrid[x][y] = waterTileIndex; 
+            } else if (roll < 50) {
+                groundGrid[x][y] = sandTileIndex;  
             } else {
-                groundGrid[x][y] = 85; // Index for tilemap_sand
+                groundGrid[x][y] = grassTileIndex; 
             }
 
-            // LAYER 2: Buildings & Objects (Placed on top of ground)
-            int objectRoll = rand() % 100;
-            if (objectRoll > 85) {
-                // Assign an index corresponding to a building/structure (e.g., b_police_station, b_hospital)
-                buildingGrid[x][y] = (rand() % 200) + 1; 
+            // LAYER 2: Buildings & Objects (Only place structures on non-water tiles)
+            if (roll > 80 && roll >= 50) {
+                buildingGrid[x][y] = (rand() % 50) + 200; // Example building index range
             } else {
                 buildingGrid[x][y] = -1; // Empty / No building on this tile
             }
@@ -94,7 +98,7 @@ void drawWorldMap(float cameraX, float cameraY) {
                 int bldgID = buildingGrid[x][y];
                 if (bldgID >= 0 && bldgID < MAX_ATLASES && worldAtlases[bldgID]) {
                     C2D_Image bldgImg = C2D_SpriteSheetGetImage(worldAtlases[bldgID], 0);
-                    // Draw building at depth z = 0.5f (above ground)
+                    // Draw building at depth z = 0.5f (above ground) with an optional scale factor if needed
                     C2D_DrawImageAt(bldgImg, screenX, screenY, 0.5f, NULL, 1.0f, 1.0f);
                 }
             }
