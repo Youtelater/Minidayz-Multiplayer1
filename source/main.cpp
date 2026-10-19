@@ -20,7 +20,7 @@ GameState currentState = STATE_MENU;
 C3D_RenderTarget* topScreen = NULL;
 C2D_SpriteSheet menuSheet = NULL;
 
-// Function to load extracted JSON assets from romfs at startup
+// Function to load and parse extracted JSON assets from romfs at startup
 void loadExtractedAssets() {
     std::printf("Loading extracted JSON assets from romfs...\n");
 
@@ -33,18 +33,16 @@ void loadExtractedAssets() {
         weaponFile.close();
     }
 
-    // 2. Read Map Data
-    std::ifstream mapFile("romfs:/extracted_maps.json");
-    if (!mapFile.is_open()) {
-        std::printf("Warning: extracted_maps.json not found in romfs!\n");
-    } else {
-        std::printf("Success: Loaded extracted_maps.json\n");
-        mapFile.close();
-    }
+    // 2. Parse Split Map Data Parts into globalLoadedTiles
+    std::printf("Parsing map part 1...\n");
+    parseMapFile("romfs:/extracted_maps_part1.json");
+
+    std::printf("Parsing map part 2...\n");
+    parseMapFile("romfs:/extracted_maps_part2.json");
 }
 
 int main(int argc, char* argv[]) {
-    // Initialize system hardware and romfs
+    // Initialize system hardware and romfs FIRST
     romfsInit();
     gfxInitDefault();
     
@@ -52,7 +50,7 @@ int main(int argc, char* argv[]) {
     consoleInit(GFX_BOTTOM, NULL);
     std::printf("\n=== Mini DayZ+ 3DS Booting ===\n\n");
 
-    // Load extracted JSON assets right after initialization
+    // Load and parse extracted JSON assets right after initialization
     loadExtractedAssets();
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -71,7 +69,7 @@ int main(int argc, char* argv[]) {
         std::printf("Success: menu.t3x loaded.\n");
     }
 
-    // Initialize World Assets (loads all 290 frame sheets using frame_001)
+    // Initialize World Assets (loads frame sheets)
     std::printf("Initializing world and frame assets...\n");
     initWorldAssets("gfx/frame_001.t3x");
 
