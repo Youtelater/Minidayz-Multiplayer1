@@ -1,0 +1,113 @@
+#-----------------------------------------------------------------
+.SUFFIXES:
+#-----------------------------------------------------------------
+
+ifeq ($(strip $(DEVKITARM)),)
+$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
+endif
+
+TOPDIR ?= $(CURDIR)
+
+#-----------------------------------------------------------------
+# TARGET CONFIGURATION (MUST BE DEFINED BEFORE 3DS RULES)
+#-----------------------------------------------------------------
+TARGET		:= minidayz-3ds
+BUILD		:= build
+SOURCES		:= source
+DATA		:= data
+PORTLIBS	:= /opt/devkitpro/portlibs/3ds
+ROMFS		:= romfs
+INCLUDES	:= include build /opt/devkitpro/libctru/include $(PORTLIBS)/include
+GRAPHICS	:= gfx
+
+# Include 3ds_rules *after* configuration variables are set
+include $(DEVKITARM)/3ds_rules
+
+#-----------------------------------------------------------------
+# FIND SOURCE FILES & INCLUDE PATHS
+#-----------------------------------------------------------------
+CPPFILES	:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+CFILES		:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+SFILES		:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+
+INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
+			   $(foreach dir,$(SOURCES),-I$(TOPDIR)/$(dir)) \
+			   -I$(TOPDIR)/$(ROMFS) \
+			   -I/opt/devkitpro/libctru/include \
+			   -I$(PORTLIBS)/include \
+			   -I$(DEVKITARM)/arm-none-eabi/include
+
+export VPATH	:= $(foreach dir,$(SOURCES),$(TOPDIR)/$(dir)) \
+				   $(foreach dir,$(DATA),$(TOPDIR)/$(dir))
+
+ARCH		:= -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=cp15
+
+CFLAGS		:= -g -Wall -O2 -mword-relocations \
+			   -ffunction-sections \
+			   $(ARCH) $(DEFINES) \
+			   $(INCLUDE) -I$(BUILD)
+
+CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
+
+ASFLAGS		:= -g $(ARCH)
+LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -L/opt/devkitpro/portlibs/3ds/lib -Wl,-Map,$(notdir $*.map)
+
+LIBS		:= -lcitro2d -lcitro3d -lctru -lm
+
+#-----------------------------------------------------------------
+# OBJECT FILES & BUILDS
+#-----------------------------------------------------------------
+OFILES		:= $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+
+#-----------------------------------------------------------------
+# MAIN RULES
+#-----------------------------------------------------------------
+all: graphics $(TARGET).3dsx
+
+clean:
+	@echo clean ...
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS)/gfx/*.t3x
+
+$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
+	@echo builtin 3dsx ...
+	@3dsxtool $(TARGET).elf $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS)
+
+$(TARGET).smdh:
+	@if [ -f icon-256.png ]; then \
+		magick icon-256.png -resize 48x48 icon_48.png 2>/dev/null || convert icon-256.png -resize 48x48 icon_48.png; \
+		smdhtool --create "Mini DAYZ 3DS" "Mini DAYZ Port" "Developer" icon_48.png $@; \
+		rm -f icon_48.png; \
+	else \
+		touch $@; \
+	fi
+
+$(TARGET).elf: $(OFILES)
+	@echo linking ...
+	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
+
+%.o: %.cpp
+	@echo cxx $<
+	@$(CXX) -c $(CXXFLAGS) $< -o $@
+
+%.o: %.c
+	@echo cc $<
+	@$(CC) -c $(CFLAGS) $< -o $@
+
+%.o: %.s
+	@echo as $<
+	@$(CC) -c $(ASFLAGS) $< -o $@
+
+#-----------------------------------------------------------------
+# GRAPHICS ASSET PIPELINE (Outputs compiled .t3x files to romfs/gfx)
+#-----------------------------------------------------------------
+graphics:
+	@mkdir -p $(ROMFS)/gfx
+	@for png in $(GRAPHICS)/*.png; do \
+		if [ -f "$$png" ]; then \
+			fname=$$(basename "$$png"); \
+			fbase=$${fname%.png}; \
+			safebase=$$(echo "$$fbase" | tr '-' '_' | tr '.' '_'); \
+			echo "Building texture sheet: $$safebase.t3x"; \
+			tex3ds -o "$(ROMFS)/gfx/$$safebase.t3x" "$$png" || exit 1; \
+		fi; \
+	done

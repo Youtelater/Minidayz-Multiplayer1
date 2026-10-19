@@ -1,0 +1,49 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Prepare Web Directory & Install Dependencies
+        run: |
+          mkdir -p www
+          rsync -av --exclude='www' --exclude='ios' --exclude='.git' --exclude='.github' . www/
+          npm install
+          npx cap add ios
+          npx cap copy ios
+
+      - name: Build Unsigned App with Xcode
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+                     -scheme App \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -derivedDataPath $HOME/build/DerivedData \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO
+
+      - name: Package App into IPA
+        run: |
+          mkdir -p $HOME/build/Payload
+          cp -R $HOME/build/DerivedData/Build/Products/Release-iphoneos/App.app $HOME/build/Payload/
+          cd $HOME/build
+          zip -r MiniDAYZ.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiniDAYZ-iOS-IPA
+          path: /Users/runner/build/MiniDAYZ.ipa
