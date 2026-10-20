@@ -1,0 +1,40 @@
+import json
+import re
+
+def extract_game_data(js_filepath):
+    print(f"Reading {js_filepath}...")
+    
+    with open(js_filepath, 'r', encoding='utf-8', errors='ignore') as f:
+        content = f.read()
+
+    # Find audio references (Construct 2 stores audio as file strings or sound tags)
+    # Looking for common patterns like "sound_name.ogg", "music_track.m4a", or audio action blocks
+    audio_files = set(re.findall(r'["\']([\w\-]+?\.(?:ogg|m4a|wav|mp3))["\']', content, re.IGNORECASE))
+    
+    # Alternatively search for sound action tags if files are extensionless strings
+    audio_tags = set(re.findall(r'["\'](sfx_[\w\-]+|bgm_[\w\-]+|sound_[\w\-]+|music_[\w\-]+)["\']', content, re.IGNORECASE))
+
+    # Search for coordinate arrays or positions (e.g., [x, y] patterns or map spawn coordinates)
+    # Looks for JSON array patterns like [128, 256] or {"x": 100, "y": 200}
+    coord_patterns = re.findall(r'\{["\']x["\']\s*:\s*(\d+),\s*["\']y["\']\s*:\s*(\d+)\}', content)
+
+    extracted_data = {
+        "audio_files": sorted(list(audio_files)),
+        "audio_tags": sorted(list(audio_tags)),
+        "found_coordinates_count": len(coord_patterns),
+        "sample_coordinates": coord_patterns[:50] # First 50 coordinates for inspection
+    }
+
+    # Save results to JSON
+    output_filepath = "extracted_audio_and_coords.json"
+    with open(output_filepath, "w", encoding="utf-8") as f:
+        json.dump(extracted_data, f, indent=4)
+
+    print(f"Extraction complete! Saved to '{output_filepath}'.")
+    print(f"-> Found {len(audio_files)} audio file references.")
+    print(f"-> Found {len(audio_tags)} audio sound tags.")
+    print(f"-> Found {len(coord_patterns)} coordinate pairs.")
+
+if __name__ == "__main__":
+    # Run against your original data.js file
+    extract_game_data("data.js")

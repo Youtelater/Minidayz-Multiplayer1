@@ -1,140 +1,88 @@
-#include <3ds.h>
-#include <citro3d.h>
 #include <citro2d.h>
-#include <cstdlib>
-#include <cstdio>
 #include <string>
+#include <vector>
 #include <fstream>
+#include <nlohmann/json.hpp>
+#include <cstdio>
 
-#include "world.h"
-#include "player.h"
+// Global vector to store our loaded JSON strings
+std::vector<std::string> g_gameStrings;
 
-// Define Game States
-enum GameState {
-    STATE_MENU,
-    STATE_GAMEPLAY
-};
-
-GameState currentState = STATE_MENU;
-
-C3D_RenderTarget* topScreen = NULL;
-C2D_SpriteSheet menuSheet = NULL;
-
-// Function to load and parse extracted JSON assets from romfs at startup
-void loadExtractedAssets() {
-    std::printf("Loading extracted JSON assets from romfs...\n");
-
-    // 1. Read Weapon Data
-    std::ifstream weaponFile("romfs:/extracted_weapons.json");
-    if (!weaponFile.is_open()) {
-        std::printf("Warning: extracted_weapons.json not found in romfs!\n");
-    } else {
-        std::printf("Success: Loaded extracted_weapons.json\n");
-        weaponFile.close();
+// Function to load and cache the decoded strings from RomFS
+bool loadAndCacheStrings() {
+    // RomFS files are accessed using the "romfs:/" prefix
+    std::ifstream file("romfs:/data/decoded_strings.json");
+    if (!file.is_open()) {
+        std::printf("Failed to open decoded_strings.json from RomFS!\n");
+        return false;
     }
 
-    // 2. Parse Split Map Data Parts into globalLoadedTiles
-    std::printf("Parsing map part 1...\n");
-    parseMapFile("romfs:/extracted_maps_part1.json");
+    nlohmann::json j;
+    file >> j;
 
-    std::printf("Parsing map part 2...\n");
-    parseMapFile("romfs:/extracted_maps_part2.json");
+    if (j.is_discarded() || !j.is_array()) {
+        std::printf("Failed to parse JSON!\n");
+        return false;
+    }
+
+    g_gameStrings.clear();
+    for (const auto& item : j) {
+        if (item.is_string()) {
+            g_gameStrings.push_back(item.get<std::string>());
+        }
+    }
+
+    std::printf("Successfully loaded %zu strings into 3DS memory!\n", g_gameStrings.size());
+    return true;
 }
 
 int main(int argc, char* argv[]) {
-    // Initialize system hardware and romfs FIRST
-    romfsInit();
+    // 1. Initialize 3DS hardware and RomFS
     gfxInitDefault();
-    
-    // Bottom screen text console for debug logs
-    consoleInit(GFX_BOTTOM, NULL);
-    std::printf("\n=== Mini DayZ+ 3DS Booting ===\n\n");
-
-    // Load and parse extracted JSON assets right after initialization
-    loadExtractedAssets();
-
+    romfsInit(); // Crucial: Enables reading files from romfs:/
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
-    // Create rendering target for the top screen
-    topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+    // Create render targets for both screens (or just the bottom one)
+C3D_RenderTarget* topScreen = C2D_CreateTarget(GFX_TOP, GFX_LEFT);
+C3D_RenderTarget* bottomScreen = C2D_CreateTarget(GFX_BOTTOM, GFX_LEFT);
+C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+// Draw on bottom screen
+C2D_TargetClear(bottomScreen, C2D_Color32(40, 40, 40, 255));
+C2D_SceneBegin(bottomScreen);
 
-    // Load Menu Asset Sheet
-    std::printf("Loading menu assets...\n");
-    menuSheet = C2D_SpriteSheetLoad("gfx/menu.t3x");
-    if (!menuSheet) {
-        std::printf("Warning: menu.t3x not found or failed to load.\n");
-    } else {
-        std::printf("Success: menu.t3x loaded.\n");
-    }
+// TODO: Draw your menu buttons and text here!
 
-    // Initialize World Assets (loads frame sheets)
-    std::printf("Initializing world and frame assets...\n");
-    initWorldAssets("gfx/frame_001.t3x");
+C3D_FrameEnd(0);
 
-    // Generate world map data using world.cpp functions
-    std::printf("Generating world map...\n");
-    generateWorldWithSeed(12345); 
-    std::printf("World ready!\nPress A on the menu to start.\n");
 
-    float cameraX = 0.0f;
-    float cameraY = 0.0f;
+    // 2. Load our extracted JSON strings into memory
+    loadAndCacheStrings();
 
-    // Main Game Loop
+    // Main game loop
     while (aptMainLoop()) {
+        // Scan gamepad inputs
         hidScanInput();
         u32 kDown = hidKeysDown();
-        u32 kHeld = hidKeysHeld();
 
-        // Exit game if START is pressed
+        // Press START to exit the homebrew application
         if (kDown & KEY_START) break;
 
-        // --- STATE LOGIC ---
-        if (currentState == STATE_MENU) {
-            // Press A to transition from Menu to Gameplay
-            if (kDown & KEY_A) {
-                currentState = STATE_GAMEPLAY;
-                std::printf("Switched to STATE_GAMEPLAY\n");
-            }
-        } 
-        else if (currentState == STATE_GAMEPLAY) {
-            // Camera movement via D-Pad during gameplay
-            if (kHeld & KEY_UP)    cameraY -= 3.0f;
-            if (kHeld & KEY_DOWN)  cameraY += 3.0f;
-            if (kHeld & KEY_LEFT)  cameraX -= 3.0f;
-            if (kHeld & KEY_RIGHT) cameraX += 3.0f;
-        }
-
-        // --- RENDERING ---
+        // Render frame
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-
-        // Top Screen Rendering
+        C2D_TargetClear(topScreen, C2D_Color32(30, 30, 30, 255)); // Dark grey background
         C2D_SceneBegin(topScreen);
-        C2D_TargetClear(topScreen, C2D_Color32(20, 20, 20, 255));
 
-        if (currentState == STATE_MENU) {
-            // Draw menu graphic if loaded
-            if (menuSheet != NULL) {
-                C2D_Image menuImg = C2D_SpriteSheetGetImage(menuSheet, 0);
-                C2D_DrawImageAt(menuImg, 0.0f, 0.0f, 0.5f, NULL, 1.0f, 1.0f);
-            }
-        } 
-        else if (currentState == STATE_GAMEPLAY) {
-            // Draw the multi-frame game world map using world.cpp functions
-            drawWorldMap(cameraX, cameraY);
-        }
+        // TODO: Render your menu or gameplay using Citro2D here!
 
-        C3D_FrameEnd(0); 
+        C3D_FrameEnd(0);
     }
 
-    // Cleanup resources on exit
-    if (menuSheet) C2D_SpriteSheetFree(menuSheet);
-    freeWorldAssets();
-
+    // 3. Clean up resources on exit
     C2D_Fini();
     C3D_Fini();
-    gfxExit();
     romfsExit();
+    gfxExit();
     return 0;
 }
