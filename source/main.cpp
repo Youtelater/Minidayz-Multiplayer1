@@ -1,88 +1,134 @@
 #include <citro2d.h>
+#include <3ds.h>
 #include <string>
 #include <vector>
+#include <map>
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include <cstdio>
 
-// Global vector to store our loaded JSON strings
-std::vector<std::string> g_gameStrings;
+// Struct for map objects / coordinates
+struct MapObject {
+    int x;
+    int y;
+};
 
-// Function to load and cache the decoded strings from RomFS
-bool loadAndCacheStrings() {
-    // RomFS files are accessed using the "romfs:/" prefix
-    std::ifstream file("romfs:/data/decoded_strings.json");
-    if (!file.is_open()) {
-        std::printf("Failed to open decoded_strings.json from RomFS!\n");
-        return false;
+// Global Data Storage
+std::vector<MapObject> g_mapObjects;
+std::vector<std::string> g_audioFiles;
+std::map<std::string, std::string> g_localizedStrings; // From your decoded strings JSON
+// Note: SoundEffect struct or type depends on your audio implementation (e.g., ndsp-based)
+
+// Helper function to swap .ogg/.m4a extensions to .wav
+std::string getWavFilename(const std::string& originalName) {
+    std::string name = originalName;
+    size_t dotPos = name.find_last_of('.');
+    if (dotPos != std::string::npos) {
+        name = name.substr(0, dotPos) + ".wav";
     }
+    return name;
+}
+
+// Function to load all audio files listed in your extracted JSON
+void loadAllGameAudio() {
+    std::ifstream file("romfs:/data/extracted_audio_and_coords.json");
+    if (!file.is_open()) return;
 
     nlohmann::json j;
     file >> j;
 
-    if (j.is_discarded() || !j.is_array()) {
-        std::printf("Failed to parse JSON!\n");
-        return false;
-    }
-
-    g_gameStrings.clear();
-    for (const auto& item : j) {
-        if (item.is_string()) {
-            g_gameStrings.push_back(item.get<std::string>());
+    // 1. Load Audio File References
+    if (j.contains("audio_files") && j["audio_files"].is_array()) {
+        g_audioFiles = j["audio_files"].get<std::vector<std::string>>();
+        
+        for (const auto& audioName : g_audioFiles) {
+            std::string wavName = getWavFilename(audioName);
+            std::string fullPath = "romfs:/audio/" + wavName;
+            
+            // Example hook: loadWavFromRomfs(fullPath.c_str());
         }
     }
 
-    std::printf("Successfully loaded %zu strings into 3DS memory!\n", g_gameStrings.size());
-    return true;
+    // 2. Load Coordinates
+    if (j.contains("sample_coordinates") && j["sample_coordinates"].is_array()) {
+        for (const auto& coord : j["sample_coordinates"]) {
+            if (coord.is_array() && coord.size() >= 2) {
+                MapObject obj;
+                obj.x = std::stoi(coord[0].get<std::string>());
+                obj.y = std::stoi(coord[1].get<std::string>());
+                g_mapObjects.push_back(obj);
+            }
+        }
+    }
+}
+
+// Function to load decoded strings
+void loadAndCacheStrings() {
+    std::ifstream file("romfs:/data/decoded_strings.json");
+    if (!file.is_open()) return;
+
+    nlohmann::json j;
+    file >> j;
+    // Parse strings into g_localizedStrings if needed
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Initialize 3DS hardware and RomFS
+    // 1. Initialize 3DS hardware systems
     gfxInitDefault();
-    romfsInit(); // Crucial: Enables reading files from romfs:/
+    romfsInit();
+    ndspInit();
+    consoleInit(GFX_BOTTOM, NULL); // Optional debug console if needed
+
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
-    // Create render targets for both screens (or just the bottom one)
-C3D_RenderTarget* topScreen = C2D_CreateTarget(GFX_TOP, GFX_LEFT);
-C3D_RenderTarget* bottomScreen = C2D_CreateTarget(GFX_BOTTOM, GFX_LEFT);
-C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-// Draw on bottom screen
-C2D_TargetClear(bottomScreen, C2D_Color32(40, 40, 40, 255));
-C2D_SceneBegin(bottomScreen);
+    // Setup Render Targets for Top and Bottom Screens
+    C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+    C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
-// TODO: Draw your menu buttons and text here!
-
-C3D_FrameEnd(0);
-
-
-    // 2. Load our extracted JSON strings into memory
+    // 2. Load Game Data (Strings, Coordinates, and Audio manifests)
     loadAndCacheStrings();
+    loadAllGameAudio();
 
-    // Main game loop
+    // Game state tracking
+    touchPosition touch;
+
+    // 3. Main game loop
     while (aptMainLoop()) {
-        // Scan gamepad inputs
+        // Handle User Input / Touch
         hidScanInput();
         u32 kDown = hidKeysDown();
+        
+        if (kDown & KEY_START) break; // Exit to Homebrew menu on START
 
-        // Press START to exit the homebrew application
-        if (kDown & KEY_START) break;
+        hidTouchRead(&touch);
+        if (kDown & KEY_TOUCH) {
+            // Check if touch coordinates hit any custom UI buttons on the bottom screen
+            // e.g., if (touch.px >= x && touch.px <= x + w ...)
+        }
 
-        // Render frame
+        // Render Frame
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        C2D_TargetClear(topScreen, C2D_Color32(30, 30, 30, 255)); // Dark grey background
-        C2D_SceneBegin(topScreen);
 
-        // TODO: Render your menu or gameplay using Citro2D here!
+        // --- Render Top Screen (Gameplay / World) ---
+        C2D_TargetClear(topScreen, C2D_Color32(30, 30, 30, 255));
+        C2D_SceneBegin(topScreen);
+        // TODO: Render map coordinates (g_mapObjects) here
+
+        // --- Render Bottom Screen (Touch Menu / UI) ---
+        C2D_TargetClear(bottomScreen, C2D_Color32(50, 50, 50, 255));
+        C2D_SceneBegin(bottomScreen);
+        // TODO: Render touch buttons and menu items here
 
         C3D_FrameEnd(0);
     }
 
-    // 3. Clean up resources on exit
+    // 4. Clean up subsystems
     C2D_Fini();
     C3D_Fini();
+    ndspExit();
     romfsExit();
     gfxExit();
+
     return 0;
 }
