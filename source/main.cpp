@@ -1,5 +1,6 @@
 #include <3ds.h>
 #include <citro2d.h>
+#include <ndsp.h>
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -23,8 +24,10 @@ std::vector<MapObject> g_mapObjects;
 std::unordered_map<std::string, std::string> g_uiStrings;
 std::unordered_map<std::string, std::string> g_gameLogs;
 
-// Global Text Buffer for Citro2D
+// Global Text Buffer and Graphics Assets for Citro2D
 C2D_TextBuf g_dynamicTextBuf;
+C2D_SpriteSheet g_spriteSheet;
+C2D_Sprite g_playerSprite;
 
 // Helper to parse JSON string maps
 bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::string>& targetMap) {
@@ -61,9 +64,10 @@ void loadMapData() {
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Initialize 3DS Services
+    // 1. Initialize 3DS Services & Audio
     gfxInitDefault();
     romfsInit();
+    ndspInit();
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
@@ -75,10 +79,17 @@ int main(int argc, char* argv[]) {
     // Initialize Citro2D Dynamic Text Buffer
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Load RomFS Assets
+    // 2. Load RomFS Assets & Sprites
     loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
     loadJsonStrings("romfs:/data/game_logs.json", g_gameLogs);
     loadMapData();
+
+    // Load compiled .t3x sprite sheet from RomFS
+    g_spriteSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x");
+    if (g_spriteSheet) {
+        C2D_SpriteFromSheet(&g_playerSprite, g_spriteSheet, 0);
+        C2D_SpriteSetCenter(&g_playerSprite, 0.5f, 0.5f);
+    }
 
     // Set fallback strings if keys are missing
     std::string newGameText = g_uiStrings.count("1") ? g_uiStrings["1"] : "New Game";
@@ -157,11 +168,18 @@ int main(int argc, char* argv[]) {
             C2D_TargetClear(topScreen, C2D_Color32(10, 40, 10, 255));
             C2D_SceneBegin(topScreen);
 
-            // Draw Map Objects
+            // Draw Map Objects/Coordinates
             for (const auto& obj : g_mapObjects) {
                 C2D_DrawRectangle(obj.x, obj.y, 0, 4.0f, 4.0f,
                                   C2D_Color32(0, 220, 0, 255), C2D_Color32(0, 220, 0, 255),
                                   C2D_Color32(0, 200, 0, 255), C2D_Color32(0, 200, 0, 255));
+            }
+
+            // Draw Player Sprite on Top Screen Map
+            if (g_spriteSheet) {
+                g_playerSprite.params.pos.x = 160.0f;
+                g_playerSprite.params.pos.y = 120.0f;
+                C2D_DrawSprite(&g_playerSprite);
             }
 
             // Display Active In-Game Log Overlay
@@ -180,9 +198,11 @@ int main(int argc, char* argv[]) {
     }
 
     // Deinitialize and Cleanup
+    if (g_spriteSheet) C2D_SpriteSheetFree(g_spriteSheet);
     C2D_TextBufDelete(g_dynamicTextBuf);
     C2D_Fini();
     C3D_Fini();
+    ndspExit();
     romfsExit();
     gfxExit();
     return 0;
