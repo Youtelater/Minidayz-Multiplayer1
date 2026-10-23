@@ -20,21 +20,17 @@ std::unordered_map<std::string, std::string> g_gameLogs;
 // Global Text Buffer for Citro2D
 C2D_TextBuf g_dynamicTextBuf;
 
-// Helper to parse JSON string maps
+// Helper to parse JSON string maps (No exceptions used)
 bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::string>& targetMap) {
     std::ifstream file(filePath);
     if (!file.is_open()) return false;
 
     nlohmann::json j;
-    try {
-        file >> j;
-        for (auto& [key, val] : j.items()) {
-            if (val.is_string()) {
-                targetMap[key] = val.get<std::string>();
-            }
+    file >> j;
+    for (auto& [key, val] : j.items()) {
+        if (val.is_string()) {
+            targetMap[key] = val.get<std::string>();
         }
-    } catch (...) {
-        return false;
     }
     return true;
 }
@@ -45,19 +41,17 @@ void loadMapData() {
     if (!file.is_open()) return;
 
     nlohmann::json j;
-    try {
-        file >> j;
-        if (j.contains("sample_coordinates") && j["sample_coordinates"].is_array()) {
-            for (const auto& coord : j["sample_coordinates"]) {
-                if (coord.is_array() && coord.size() >= 2) {
-                    MapObject obj;
-                    obj.x = coord[0].get<float>();
-                    obj.y = coord[1].get<float>();
-                    g_mapObjects.push_back(obj);
-                }
+    file >> j;
+    if (j.contains("sample_coordinates") && j["sample_coordinates"].is_array()) {
+        for (const auto& coord : j["sample_coordinates"]) {
+            if (coord.is_array() && coord.size() >= 2) {
+                MapObject obj;
+                obj.x = coord[0].get<float>();
+                obj.y = coord[1].get<float>();
+                g_mapObjects.push_back(obj);
             }
         }
-    } catch (...) {}
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -158,7 +152,7 @@ int main(int argc, char* argv[]) {
         C2D_DrawText(&btn2Text, C2D_AtBaseline | C2D_WithColor, b2X + 20.0f, b2Y + 28.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
 
         // End the 3DS frame rendering sequence
-        C3D_FrameEnd();
+        C3D_FrameEnd(0);
     }
 
     // Deinitialize and Cleanup
