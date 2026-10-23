@@ -1,17 +1,12 @@
 #include <3ds.h>
 #include <citro2d.h>
 #include <ndsp.h>
-#include <vector>
+#include <fstream>
 #include <string>
 #include <unordered_map>
-#include <fstream>
 #include <nlohmann/json.hpp>
-
-// --- Data Structures ---
-struct MapObject {
-    float x;
-    float y;
-};
+#include "player.h"
+#include "world.h"
 
 // Game States
 enum GameState {
@@ -19,12 +14,9 @@ enum GameState {
     STATE_PLAYING
 };
 
-// Global Data Storage
-std::vector<MapObject> g_mapObjects;
+// Global UI and Storage
 std::unordered_map<std::string, std::string> g_uiStrings;
 std::unordered_map<std::string, std::string> g_gameLogs;
-
-// Global Text Buffer and Graphics Assets for Citro2D
 C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
@@ -44,25 +36,6 @@ bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::
     return true;
 }
 
-// Load coordinates from game data
-void loadMapData() {
-    std::ifstream file("romfs:/data/extracted_audio_and_coords.json");
-    if (!file.is_open()) return;
-
-    nlohmann::json j;
-    file >> j;
-    if (j.contains("sample_coordinates") && j["sample_coordinates"].is_array()) {
-        for (const auto& coord : j["sample_coordinates"]) {
-            if (coord.is_array() && coord.size() >= 2) {
-                MapObject obj;
-                obj.x = coord[0].get<float>();
-                obj.y = coord[1].get<float>();
-                g_mapObjects.push_back(obj);
-            }
-        }
-    }
-}
-
 int main(int argc, char* argv[]) {
     // 1. Initialize 3DS Services & Audio
     gfxInitDefault();
@@ -79,10 +52,12 @@ int main(int argc, char* argv[]) {
     // Initialize Citro2D Dynamic Text Buffer
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Load RomFS Assets & Sprites
+    // 2. Load RomFS Assets & Data via Modules
     loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
     loadJsonStrings("romfs:/data/game_logs.json", g_gameLogs);
-    loadMapData();
+    
+    World_LoadData();
+    Player_Init();
 
     // Load compiled .t3x sprite sheet from RomFS
     g_spriteSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x");
@@ -165,22 +140,25 @@ int main(int argc, char* argv[]) {
             // ==========================================
             // 2. RENDER GAMEPLAY SCREENS
             // ==========================================
+            
+            // Read Circle Pad Input and Update Player via Module
+            circlePosition circlePad;
+            hidCircleRead(&circlePad);
+            Player_Update(circlePad);
+
             C2D_TargetClear(topScreen, C2D_Color32(10, 40, 10, 255));
             C2D_SceneBegin(topScreen);
 
-            // Draw Map Objects/Coordinates
-            for (const auto& obj : g_mapObjects) {
+            // Draw Map Objects from World Module
+            const auto& mapObjects = World_GetObjects();
+            for (const auto& obj : mapObjects) {
                 C2D_DrawRectangle(obj.x, obj.y, 0, 4.0f, 4.0f,
                                   C2D_Color32(0, 220, 0, 255), C2D_Color32(0, 220, 0, 255),
                                   C2D_Color32(0, 200, 0, 255), C2D_Color32(0, 200, 0, 255));
             }
 
-            // Draw Player Sprite on Top Screen Map
-            if (g_spriteSheet) {
-                g_playerSprite.params.pos.x = 160.0f;
-                g_playerSprite.params.pos.y = 120.0f;
-                C2D_DrawSprite(&g_playerSprite);
-            }
+            // Draw Player Sprite via Player Module
+            Player_Draw(g_spriteSheet, g_playerSprite);
 
             // Display Active In-Game Log Overlay
             std::string gameplayLog = g_gameLogs.count("2") ? g_gameLogs["2"] : "I feel healthy.";

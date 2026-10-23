@@ -1,18 +1,13 @@
-#ifndef PLAYER_H
-#define PLAYER_H
-
+#pragma once
 #include <3ds.h>
 #include <citro2d.h>
 
 struct Player {
-    float x, y;     // World coordinates
-    float speed;    // Movement speed
+    float x;
+    float y;
+    float health;
 };
 
-extern Player player;
-
-void initPlayer(float startX, float startY);
-void updatePlayer(u32 kHeld);
-void drawPlayer(float cameraX, float cameraY, C2D_SpriteSheet playerSheet);
-
-#endif
+void Player_Init();
+void Player_Update(const circlePosition& circlePad);
+void Player_Draw(C2D_SpriteSheet spriteSheet, C2D_Sprite& sprite);
