@@ -5,8 +5,12 @@
 #include <string>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
+
+// Include your custom project modules
 #include "player.h"
 #include "world.h"
+#include "ItemTable.h"
+#include "ShaderMenu.h"
 
 // Game States
 enum GameState {
@@ -21,7 +25,7 @@ C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// Helper to parse JSON string maps
+// Helper function to parse JSON string maps
 bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::string>& targetMap) {
     std::ifstream file(filePath);
     if (!file.is_open()) return false;
@@ -37,7 +41,7 @@ bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Initialize 3DS Services & Audio
+    // 1. Initialize 3DS Hardware Services & Audio
     gfxInitDefault();
     romfsInit();
     ndspInit();
@@ -52,62 +56,63 @@ int main(int argc, char* argv[]) {
     // Initialize Citro2D Dynamic Text Buffer
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Load RomFS Assets & Data via Modules
+    // 2. Initialize Game Modules & Load RomFS Data
     loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
     loadJsonStrings("romfs:/data/game_logs.json", g_gameLogs);
     
     World_LoadData();
     Player_Init();
+    ItemTable_Load();
+    ShaderMenu_Init();
 
-    // Load compiled .t3x sprite sheet from RomFS
+    // Load compiled sprite sheet from RomFS
     g_spriteSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x");
     if (g_spriteSheet) {
         C2D_SpriteFromSheet(&g_playerSprite, g_spriteSheet, 0);
         C2D_SpriteSetCenter(&g_playerSprite, 0.5f, 0.5f);
     }
 
-    // Set fallback strings if keys are missing
+    // Set menu button fallback strings
     std::string newGameText = g_uiStrings.count("1") ? g_uiStrings["1"] : "New Game";
     std::string continueText = g_uiStrings.count("2") ? g_uiStrings["2"] : "Continue";
     std::string activeLog = g_gameLogs.count("4") ? g_gameLogs["4"] : "I'm freezing!";
 
     GameState currentState = STATE_MENU;
 
-    // Main Game Loop
+    // Main Loop
     while (aptMainLoop()) {
-        // Scan User Input
+        // Scan Input
         hidScanInput();
         u32 kDown = hidKeysDown();
         touchPosition touch;
         hidTouchRead(&touch);
 
-        // Press START to Exit App
+        // Press START to Exit
         if (kDown & KEY_START) break;
 
-        // Clear dynamic text buffer every frame before drawing new text
+        // Clear dynamic text buffer every frame
         C2D_TextBufClear(g_dynamicTextBuf);
 
-        // --- Touch Logic for Menu Buttons ---
+        // --- Touch Input Logic for Menu ---
         if (currentState == STATE_MENU && (kDown & KEY_TOUCH)) {
-            // Button 1: "New Game" bounds (x: 40-280, y: 50-90)
+            // "New Game" Button bounds (x: 40-280, y: 50-90)
             if (touch.px >= 40.0f && touch.px <= 280.0f && touch.py >= 50.0f && touch.py <= 90.0f) {
                 currentState = STATE_PLAYING;
             }
-            // Button 2: "Continue" bounds (x: 40-280, y: 110-150)
+            // "Continue" Button bounds (x: 40-280, y: 110-150)
             else if (touch.px >= 40.0f && touch.px <= 280.0f && touch.py >= 110.0f && touch.py <= 150.0f) {
                 currentState = STATE_PLAYING;
             }
         }
 
-        // Begin the 3DS frame rendering sequence
+        // Begin Rendering Frame
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
         if (currentState == STATE_MENU) {
             // ==========================================
-            // 1. RENDER MENU SCREENS
+            // 1. RENDER MENU SCREEN (ShaderMenu Module)
             // ==========================================
-            C2D_TargetClear(topScreen, C2D_Color32(20, 20, 20, 255));
-            C2D_SceneBegin(topScreen);
+            ShaderMenu_DrawBackground(topScreen);
 
             // Draw status log text on top screen
             C2D_Text logText;
@@ -118,7 +123,7 @@ int main(int argc, char* argv[]) {
             C2D_TargetClear(bottomScreen, C2D_Color32(40, 40, 40, 255));
             C2D_SceneBegin(bottomScreen);
 
-            // Draw Button 1 ("New Game")
+            // Draw "New Game" Button
             C2D_DrawRectangle(40.0f, 50.0f, 0, 240.0f, 40.0f, 
                               C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
                               C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255));
@@ -127,7 +132,7 @@ int main(int argc, char* argv[]) {
             C2D_TextOptimize(&btn1Text);
             C2D_DrawText(&btn1Text, C2D_AtBaseline | C2D_WithColor, 60.0f, 78.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
 
-            // Draw Button 2 ("Continue")
+            // Draw "Continue" Button
             C2D_DrawRectangle(40.0f, 110.0f, 0, 240.0f, 40.0f, 
                               C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
                               C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255));
@@ -138,10 +143,8 @@ int main(int argc, char* argv[]) {
 
         } else if (currentState == STATE_PLAYING) {
             // ==========================================
-            // 2. RENDER GAMEPLAY SCREENS
+            // 2. RENDER GAMEPLAY SCREEN (Player & World)
             // ==========================================
-            
-            // Read Circle Pad Input and Update Player via Module
             circlePosition circlePad;
             hidCircleRead(&circlePad);
             Player_Update(circlePad);
@@ -149,7 +152,7 @@ int main(int argc, char* argv[]) {
             C2D_TargetClear(topScreen, C2D_Color32(10, 40, 10, 255));
             C2D_SceneBegin(topScreen);
 
-            // Draw Map Objects from World Module
+            // Render Map Objects from World Module
             const auto& mapObjects = World_GetObjects();
             for (const auto& obj : mapObjects) {
                 C2D_DrawRectangle(obj.x, obj.y, 0, 4.0f, 4.0f,
@@ -157,7 +160,7 @@ int main(int argc, char* argv[]) {
                                   C2D_Color32(0, 200, 0, 255), C2D_Color32(0, 200, 0, 255));
             }
 
-            // Draw Player Sprite via Player Module
+            // Render Player Sprite
             Player_Draw(g_spriteSheet, g_playerSprite);
 
             // Display Active In-Game Log Overlay
@@ -171,11 +174,11 @@ int main(int argc, char* argv[]) {
             C2D_SceneBegin(bottomScreen);
         }
 
-        // End the 3DS frame rendering sequence
+        // End Frame
         C3D_FrameEnd(0);
     }
 
-    // Deinitialize and Cleanup
+    // Cleanup Services
     if (g_spriteSheet) C2D_SpriteSheetFree(g_spriteSheet);
     C2D_TextBufDelete(g_dynamicTextBuf);
     C2D_Fini();

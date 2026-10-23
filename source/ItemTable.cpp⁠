@@ -1,57 +1,25 @@
 #include "ItemTable.h"
+#include <fstream>
+#include <nlohmann/json.hpp>
 
-std::unordered_map<int, std::string> ItemTable::itemTable;
-std::unordered_map<int, std::string> ItemTable::playerDropTable;
-std::unordered_map<std::string, std::string> ItemTable::itemVariants;
+static std::unordered_map<std::string, std::string> g_itemTable;
 
-void ItemTable::initialize() {
-    // 1. Initialize Item Table Mappings
-    itemTable = {
-        {1, "t37"},   {2, "t38"},   {3, "t195"},  {4, "t201"},  {5, "t202"},
-        {6, "t32"},   {7, "t34"},   {8, "t46"},   {9, "t200"},  {10, "t68"},
-        {11, "t30"},  {12, "t29"},  {13, "t31"},  {14, "t58"},  {15, "t57"},
-        {16, "t59"},  {17, "t28"},  {18, "t35"},  {19, "t36"},  {20, "t264"},
-        {301, "t87"}, // Taloon Backpack mapping
-        {350, "t84"}, {400, "t65"}, {450, "t95"}, {700, "t1128"}
-        // Add additional mappings as needed
-    };
+void ItemTable_Load() {
+    std::ifstream file("romfs:/data/player_data.json"); // Or your item JSON file path
+    if (!file.is_open()) return;
 
-    // 2. Initialize Player Drop Table Mappings
-    playerDropTable = {
-        {64, "t71"},   {65, "t56"},   {118, "t1011"}, {119, "t1012"},
-        {124, "t1017"},{125, "t1018"},{126, "t1027"}, {132, "t1080"},
-        {703, "t1131"},{706, "t1173"},{707, "t1174"}, {714, "t1200"}
-    };
-
-    // 3. Initialize Item Variants
-    itemVariants = {
-        {"t1081", "t61"},
-        {"t1082", "t74"},
-        {"t1090", "t1088"},
-        {"t1091", "t1089"}
-    };
+    nlohmann::json j;
+    file >> j;
+    for (auto& [key, val] : j.items()) {
+        if (val.is_string()) {
+            g_itemTable[key] = val.get<std::string>();
+        }
+    }
 }
 
-std::string ItemTable::getTextureForItem(int itemId) {
-    auto it = itemTable.find(itemId);
-    if (it != itemTable.end()) {
-        return it->second;
+std::string ItemTable_GetItemName(const std::string& itemId) {
+    if (g_itemTable.count(itemId)) {
+        return g_itemTable[itemId];
     }
-    return ""; // Return empty string if ID not found
-}
-
-std::string ItemTable::getTextureForDrop(int dropId) {
-    auto it = playerDropTable.find(dropId);
-    if (it != playerDropTable.end()) {
-        return it->second;
-    }
-    return "";
-}
-
-std::string ItemTable::getBaseVariantTexture(const std::string& variantId) {
-    auto it = itemVariants.find(variantId);
-    if (it != itemVariants.end()) {
-        return it->second;
-    }
-    return variantId; // Return input if no variant mapping exists
+    return "Unknown Item";
 }
