@@ -1,134 +1,169 @@
-#include <citro2d.h>
 #include <3ds.h>
-#include <string>
+#include <citro2d.h>
 #include <vector>
-#include <map>
+#include <string>
+#include <unordered_map>
 #include <fstream>
 #include <nlohmann/json.hpp>
 
-// Struct for map objects / coordinates
+// --- Data Structures ---
 struct MapObject {
-    int x;
-    int y;
+    float x;
+    float y;
 };
 
 // Global Data Storage
 std::vector<MapObject> g_mapObjects;
-std::vector<std::string> g_audioFiles;
-std::map<std::string, std::string> g_localizedStrings; // From your decoded strings JSON
-// Note: SoundEffect struct or type depends on your audio implementation (e.g., ndsp-based)
+std::unordered_map<std::string, std::string> g_uiStrings;
+std::unordered_map<std::string, std::string> g_gameLogs;
 
-// Helper function to swap .ogg/.m4a extensions to .wav
-std::string getWavFilename(const std::string& originalName) {
-    std::string name = originalName;
-    size_t dotPos = name.find_last_of('.');
-    if (dotPos != std::string::npos) {
-        name = name.substr(0, dotPos) + ".wav";
+// Global Text Buffer for Citro2D
+C2D_TextBuf g_dynamicTextBuf;
+
+// Helper to parse JSON string maps
+bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::string>& targetMap) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) return false;
+
+    nlohmann::json j;
+    try {
+        file >> j;
+        for (auto& [key, val] : j.items()) {
+            if (val.is_string()) {
+                targetMap[key] = val.get<std::string>();
+            }
+        }
+    } catch (...) {
+        return false;
     }
-    return name;
+    return true;
 }
 
-// Function to load all audio files listed in your extracted JSON
-void loadAllGameAudio() {
+// Load coordinates from game data
+void loadMapData() {
     std::ifstream file("romfs:/data/extracted_audio_and_coords.json");
     if (!file.is_open()) return;
 
     nlohmann::json j;
-    file >> j;
-
-    // 1. Load Audio File References
-    if (j.contains("audio_files") && j["audio_files"].is_array()) {
-        g_audioFiles = j["audio_files"].get<std::vector<std::string>>();
-        
-        for (const auto& audioName : g_audioFiles) {
-            std::string wavName = getWavFilename(audioName);
-            std::string fullPath = "romfs:/audio/" + wavName;
-            
-            // Example hook: loadWavFromRomfs(fullPath.c_str());
-        }
-    }
-
-    // 2. Load Coordinates
-    if (j.contains("sample_coordinates") && j["sample_coordinates"].is_array()) {
-        for (const auto& coord : j["sample_coordinates"]) {
-            if (coord.is_array() && coord.size() >= 2) {
-                MapObject obj;
-                obj.x = std::stoi(coord[0].get<std::string>());
-                obj.y = std::stoi(coord[1].get<std::string>());
-                g_mapObjects.push_back(obj);
+    try {
+        file >> j;
+        if (j.contains("sample_coordinates") && j["sample_coordinates"].is_array()) {
+            for (const auto& coord : j["sample_coordinates"]) {
+                if (coord.is_array() && coord.size() >= 2) {
+                    MapObject obj;
+                    obj.x = coord[0].get<float>();
+                    obj.y = coord[1].get<float>();
+                    g_mapObjects.push_back(obj);
+                }
             }
         }
-    }
-}
-
-// Function to load decoded strings
-void loadAndCacheStrings() {
-    std::ifstream file("romfs:/data/decoded_strings.json");
-    if (!file.is_open()) return;
-
-    nlohmann::json j;
-    file >> j;
-    // Parse strings into g_localizedStrings if needed
+    } catch (...) {}
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Initialize 3DS hardware systems
+    // 1. Initialize 3DS Services
     gfxInitDefault();
     romfsInit();
-    ndspInit();
-    consoleInit(GFX_BOTTOM, NULL); // Optional debug console if needed
-
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
-    // Setup Render Targets for Top and Bottom Screens
+    // Create render targets for Top and Bottom screens
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
-    // 2. Load Game Data (Strings, Coordinates, and Audio manifests)
-    loadAndCacheStrings();
-    loadAllGameAudio();
+    // Initialize Citro2D Dynamic Text Buffer ( capacity: 1024 characters )
+    g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // Game state tracking
-    touchPosition touch;
+    // 2. Load RomFS Assets
+    loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
+    loadJsonStrings("romfs:/data/game_logs.json", g_gameLogs);
+    loadMapData();
 
-    // 3. Main game loop
+    // Set fallback strings if keys are missing
+    std::string newGameText = g_uiStrings.count("1") ? g_uiStrings["1"] : "New Game";
+    std::string continueText = g_uiStrings.count("2") ? g_uiStrings["2"] : "Continue";
+    std::string activeLog = g_gameLogs.count("4") ? g_gameLogs["4"] : "I'm freezing!";
+
+    // Main Game Loop
     while (aptMainLoop()) {
-        // Handle User Input / Touch
+        // Scan User Input
         hidScanInput();
         u32 kDown = hidKeysDown();
-        
-        if (kDown & KEY_START) break; // Exit to Homebrew menu on START
-
+        u32 kHeld = hidKeysHeld();
+        touchPosition touch;
         hidTouchRead(&touch);
-        if (kDown & KEY_TOUCH) {
-            // Check if touch coordinates hit any custom UI buttons on the bottom screen
-            // e.g., if (touch.px >= x && touch.px <= x + w ...)
+
+        // Press START to Exit App
+        if (kDown & KEY_START) break;
+
+        // Clear dynamic text buffer every frame before drawing new text
+        C2D_TextBufClear(g_dynamicTextBuf);
+
+        // ==========================================
+        // 1. RENDER TOP SCREEN (Map & Status Log)
+        // ==========================================
+        C2D_TargetClear(topScreen, C2D_Color32(20, 20, 20, 255));
+        C2D_SceneBegin(topScreen);
+
+        // Draw Map Objects
+        for (const auto& obj : g_mapObjects) {
+            C2D_DrawRectangle(obj.x, obj.y, 0, 4.0f, 4.0f,
+                              C2D_Color32(0, 220, 0, 255),
+                              C2D_Color32(0, 220, 0, 255),
+                              C2D_Color32(0, 200, 0, 255),
+                              C2D_Color32(0, 200, 0, 255));
         }
 
-        // Render Frame
-        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+        // Draw Player Status Log Overlay (Top Left)
+        C2D_Text logText;
+        C2D_TextParse(&logText, g_dynamicTextBuf, activeLog.c_str());
+        C2D_TextOptimize(&logText);
+        C2D_DrawText(&logText, C2D_AtBaseline | C2D_WithColor, 10.0f, 30.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 80, 80, 255));
 
-        // --- Render Top Screen (Gameplay / World) ---
-        C2D_TargetClear(topScreen, C2D_Color32(30, 30, 30, 255));
-        C2D_SceneBegin(topScreen);
-        // TODO: Render map coordinates (g_mapObjects) here
-
-        // --- Render Bottom Screen (Touch Menu / UI) ---
-        C2D_TargetClear(bottomScreen, C2D_Color32(50, 50, 50, 255));
+        // ==========================================
+        // 2. RENDER BOTTOM SCREEN (Touch Menu UI)
+        // ==========================================
+        C2D_TargetClear(bottomScreen, C2D_Color32(40, 40, 40, 255));
         C2D_SceneBegin(bottomScreen);
-        // TODO: Render touch buttons and menu items here
 
-        C3D_FrameEnd(0);
+        // --- Button 1: "New Game" ---
+        float b1X = 40.0f, b1Y = 50.0f, b1W = 240.0f, b1H = 40.0f;
+        bool b1Touched = (kDown & KEY_TOUCH) &&
+                         (touch.px >= b1X && touch.px <= b1X + b1W &&
+                          touch.py >= b1Y && touch.py <= b1Y + b1H);
+
+        u32 b1Color = b1Touched ? C2D_Color32(100, 180, 100, 255) : C2D_Color32(70, 70, 70, 255);
+        C2D_DrawRectangle(b1X, b1Y, 0, b1W, b1H, b1Color, b1Color, b1Color, b1Color);
+
+        C2D_Text btn1Text;
+        C2D_TextParse(&btn1Text, g_dynamicTextBuf, newGameText.c_str());
+        C2D_TextOptimize(&btn1Text);
+        C2D_DrawText(&btn1Text, C2D_AtBaseline | C2D_WithColor, b1X + 20.0f, b1Y + 28.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
+
+        // --- Button 2: "Continue" ---
+        float b2X = 40.0f, b2Y = 110.0f, b2W = 240.0f, b2H = 40.0f;
+        bool b2Touched = (kDown & KEY_TOUCH) &&
+                         (touch.px >= b2X && touch.px <= b2X + b2W &&
+                          touch.py >= b2Y && touch.py <= b2Y + b2H);
+
+        u32 b2Color = b2Touched ? C2D_Color32(100, 180, 100, 255) : C2D_Color32(70, 70, 70, 255);
+        C2D_DrawRectangle(b2X, b2Y, 0, b2W, b2H, b2Color, b2Color, b2Color, b2Color);
+
+        C2D_Text btn2Text;
+        C2D_TextParse(&btn2Text, g_dynamicTextBuf, continueText.c_str());
+        C2D_TextOptimize(&btn2Text);
+        C2D_DrawText(&btn2Text, C2D_AtBaseline | C2D_WithColor, b2X + 20.0f, b2Y + 28.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
+
+        // Render Frame
+        C3D_FrameRender();
     }
 
-    // 4. Clean up subsystems
+    // Deinitialize and Cleanup
+    C2D_TextBufDelete(g_dynamicTextBuf);
     C2D_Fini();
     C3D_Fini();
-    ndspExit();
     romfsExit();
     gfxExit();
-
     return 0;
 }
