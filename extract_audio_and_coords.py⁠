@@ -1,36 +1,30 @@
 import json
 import re
-import os
 
-def extract_game_data(js_filepath):
-    if not os.path.exists(js_filepath):
-        print(f"ERROR: Could not find '{js_filepath}' in this directory!")
-        print(f"Current directory files: {os.listdir('.')}")
-        return
+# Load your original data.js file
+with open("data.js", "r", encoding="utf-8") as f:
+    content = f.read()
 
-    print(f"Reading {js_filepath}...")
-    
-    with open(js_filepath, 'r', encoding='utf-8', errors='ignore') as f:
-        content = f.read()
+# Dictionary to hold everything we extract
+extracted_data = {
+    "audio_files": [],
+    "sample_coordinates": [],
+    "map_grid": [] # New section for full map data
+}
 
-    audio_files = set(re.findall(r'["\']([\w\-]+?\.(?:ogg|m4a|wav|mp3))["\']', content, re.IGNORECASE))
-    audio_tags = set(re.findall(r'["\'](sfx_[\w\-]+|bgm_[\w\-]+|sound_[\w\-]+|music_[\w\-]+)["\']', content, re.IGNORECASE))
-    coord_patterns = re.findall(r'\{["\']x["\']\s*:\s*(\d+),\s*["\']y["\']\s*:\s*(\d+)\}', content)
+# 1. Extract audio file names (matches .ogg and .m4a references)
+audio_matches = re.findall(r'["\']([^"\']+\.(?:ogg|m4a))["\']', content)
+extracted_data["audio_files"] = list(set(audio_matches))
 
-    extracted_data = {
-        "audio_files": sorted(list(audio_files)),
-        "audio_tags": sorted(list(audio_tags)),
-        "found_coordinates_count": len(coord_patterns),
-        "sample_coordinates": coord_patterns[:50]
-    }
+# 2. Search for map layout arrays or generation grids in the obfuscated code
+# (Depending on Construct 2's structure, look for large number arrays or specific map variables)
+# Example pattern looking for coordinate-like rows or grid arrays:
+grid_matches = re.findall(r'\[\s*(?:\d+,\s*)*\d+\s*\]', content)
+if grid_matches:
+    extracted_data["map_grid"] = grid_matches[:100] # Grab initial grid samples to inspect
 
-    output_filepath = "extracted_audio_and_coords.json"
-    with open(output_filepath, "w", encoding="utf-8") as f:
-        json.dump(extracted_data, f, indent=4)
+# Save out to your unified JSON file
+with open("extracted_audio_and_coords.json", "w", encoding="utf-8") as out:
+    json.dump(extracted_data, out, indent=4)
 
-    print(f"Success! Saved to '{output_filepath}'.")
-    print(f"-> Found {len(audio_files)} audio file references.")
-    print(f"-> Found {len(audio_tags)} audio sound tags.")
-
-if __name__ == "__main__":
-    extract_game_data("data.js")
+print("Extraction complete! Check extracted_audio_and_coords.json for your new map grid data.")
