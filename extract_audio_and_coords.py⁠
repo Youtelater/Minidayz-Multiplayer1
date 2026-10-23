@@ -1,30 +1,35 @@
 import json
 import re
 
-# Load your original data.js file
 with open("data.js", "r", encoding="utf-8") as f:
     content = f.read()
 
-# Dictionary to hold everything we extract
 extracted_data = {
     "audio_files": [],
     "sample_coordinates": [],
-    "map_grid": [] # New section for full map data
+    "map_grid": []
 }
 
-# 1. Extract audio file names (matches .ogg and .m4a references)
+# 1. Extract audio file names
 audio_matches = re.findall(r'["\']([^"\']+\.(?:ogg|m4a))["\']', content)
 extracted_data["audio_files"] = list(set(audio_matches))
 
-# 2. Search for map layout arrays or generation grids in the obfuscated code
-# (Depending on Construct 2's structure, look for large number arrays or specific map variables)
-# Example pattern looking for coordinate-like rows or grid arrays:
-grid_matches = re.findall(r'\[\s*(?:\d+,\s*)*\d+\s*\]', content)
-if grid_matches:
-    extracted_data["map_grid"] = grid_matches[:100] # Grab initial grid samples to inspect
+# 2. Extract and parse coordinate pairs more cleanly
+# Look for instances containing pairs of numbers that look like coordinates
+raw_coords = re.findall(r'([\d.]+)\s*,\s*([\d.]+)', content)
 
-# Save out to your unified JSON file
+# Take a clean subset of valid coordinate pairs (filtering out extreme high-precision IDs if needed)
+for x_str, y_str in raw_coords[:500]: # Grab first 500 points to test
+    try:
+        x_val = float(x_str)
+        y_val = float(y_str)
+        # Keep values within a reasonable map bounds range if necessary
+        if 0 < x_val < 5000 and 0 < y_val < 5000:
+            extracted_data["sample_coordinates"].append([x_val, y_val])
+    except ValueError:
+        continue
+
 with open("extracted_audio_and_coords.json", "w", encoding="utf-8") as out:
     json.dump(extracted_data, out, indent=4)
 
-print("Extraction complete! Check extracted_audio_and_coords.json for your new map grid data.")
+print("Cleaned coordinate extraction complete!")
