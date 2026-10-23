@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
-    // Initialize Citro2D Dynamic Text Buffer ( capacity: 1024 characters )
+    // Initialize Citro2D Dynamic Text Buffer
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
     // 2. Load RomFS Assets
@@ -90,7 +90,6 @@ int main(int argc, char* argv[]) {
         // Scan User Input
         hidScanInput();
         u32 kDown = hidKeysDown();
-        u32 kHeld = hidKeysHeld();
         touchPosition touch;
         hidTouchRead(&touch);
 
@@ -99,6 +98,9 @@ int main(int argc, char* argv[]) {
 
         // Clear dynamic text buffer every frame before drawing new text
         C2D_TextBufClear(g_dynamicTextBuf);
+
+        // Begin the 3DS frame rendering sequence
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
         // ==========================================
         // 1. RENDER TOP SCREEN (Map & Status Log)
@@ -155,8 +157,8 @@ int main(int argc, char* argv[]) {
         C2D_TextOptimize(&btn2Text);
         C2D_DrawText(&btn2Text, C2D_AtBaseline | C2D_WithColor, b2X + 20.0f, b2Y + 28.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
 
-        // Render Frame
-        C3D_FrameRender();
+        // End the 3DS frame rendering sequence
+        C3D_FrameEnd();
     }
 
     // Deinitialize and Cleanup
