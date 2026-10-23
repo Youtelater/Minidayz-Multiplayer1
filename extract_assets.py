@@ -1,22 +1,29 @@
 import os
-import py7zr
 
-def extract_game_assets():
-    archive_name = "www.7z"
-    output_folder = "extracted_game_files"
-
-    if not os.path.exists(archive_name):
-        print(f"Error: Could not find {archive_name} in this directory!")
+def extract_all_player_data():
+    file_path = "mp_players.js"
+    
+    if not os.path.exists(file_path):
+        print(f"Error: Could not find '{file_path}' in the root directory!")
         return
 
-    print(f"Found {archive_name}. Extracting contents...")
+    print(f"Scanning '{file_path}' for all player properties and stats...\n")
     
-    # Extract the 7z archive automatically
-    with py7zr.SevenZipFile(archive_name, mode='r') as archive:
-        archive.extractall(path=output_folder)
-        
-    print(f"Successfully extracted all files into the '{output_folder}' directory!")
-    print("You can now browse the unpacked sprites, audio files, and scripts.")
+    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        lines = f.readlines()
+
+    # Keywords to look for to catch stats, inventory, movement, and configuration
+    keywords = ["health", "blood", "speed", "inventory", "stamina", "position", "damage", "armor", "food", "water"]
+
+    match_count = 0
+    for line_num, line in enumerate(lines, 1):
+        stripped = line.strip()
+        # Print lines that contain any of the player keywords or variable declarations
+        if any(kw in stripped.lower() for kw in keywords) or "player" in stripped.lower():
+            print(f"[Line {line_num}] {stripped}")
+            match_count += 1
+
+    print(f"\nScan complete! Found {match_count} lines matching player data.")
 
 if __name__ == "__main__":
-    extract_game_assets()
+    extract_all_player_data()
