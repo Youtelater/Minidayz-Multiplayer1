@@ -9,7 +9,7 @@ endif
 TOPDIR ?= $(CURDIR)
 
 #-----------------------------------------------------------------
-# TARGET CONFIGURATION (MUST BE DEFINED BEFORE 3DS RULES)
+# TARGET CONFIGURATION
 #-----------------------------------------------------------------
 TARGET		:= minidayz-3ds
 BUILD		:= build
@@ -24,11 +24,15 @@ GRAPHICS	:= gfx
 include $(DEVKITARM)/3ds_rules
 
 #-----------------------------------------------------------------
-# FIND SOURCE FILES & INCLUDE PATHS
+# FIND SOURCE FILES & OBJECTS
 #-----------------------------------------------------------------
-CPPFILES	:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-CFILES		:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-SFILES		:= $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+CPPFILES	:= $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.cpp))
+CFILES		:= $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
+SFILES		:= $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.s))
+
+OFILES		:= $(patsubst $(SOURCES)/%.cpp,$(BUILD)/%.o,$(CPPFILES)) \
+			   $(patsubst $(SOURCES)/%.c,$(BUILD)/%.o,$(CFILES)) \
+			   $(patsubst $(SOURCES)/%.s,$(BUILD)/%.o,$(SFILES))
 
 INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
 			   $(foreach dir,$(SOURCES),-I$(TOPDIR)/$(dir)) \
@@ -37,15 +41,12 @@ INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
 			   -I$(PORTLIBS)/include \
 			   -I$(DEVKITARM)/arm-none-eabi/include
 
-export VPATH	:= $(foreach dir,$(SOURCES),$(TOPDIR)/$(dir)) \
-				   $(foreach dir,$(DATA),$(TOPDIR)/$(dir))
-
 ARCH		:= -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=cp15
 
 CFLAGS		:= -g -Wall -O2 -mword-relocations \
 			   -ffunction-sections \
 			   $(ARCH) $(DEFINES) \
-			   $(INCLUDE) -I$(BUILD)
+			   $(INCLUDE)
 
 CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
@@ -55,14 +56,12 @@ LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -L/opt/dev
 LIBS		:= -lcitro2d -lcitro3d -lctru -lm
 
 #-----------------------------------------------------------------
-# OBJECT FILES & BUILDS
-#-----------------------------------------------------------------
-OFILES		:= $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
-
-#-----------------------------------------------------------------
 # MAIN RULES
 #-----------------------------------------------------------------
-all: graphics $(TARGET).3dsx
+all: graphics $(BUILD) $(TARGET).3dsx
+
+$(BUILD):
+	@mkdir -p $(BUILD)
 
 clean:
 	@echo clean ...
@@ -85,20 +84,20 @@ $(TARGET).elf: $(OFILES)
 	@echo linking ...
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
 
-%.o: %.cpp
+$(BUILD)/%.o: $(SOURCES)/%.cpp
 	@echo cxx $<
 	@$(CXX) -c $(CXXFLAGS) $< -o $@
 
-%.o: %.c
+$(BUILD)/%.o: $(SOURCES)/%.c
 	@echo cc $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
-%.o: %.s
+$(BUILD)/%.o: $(SOURCES)/%.s
 	@echo as $<
 	@$(CC) -c $(ASFLAGS) $< -o $@
 
 #-----------------------------------------------------------------
-# GRAPHICS ASSET PIPELINE (Outputs compiled .t3x files to romfs/gfx)
+# GRAPHICS ASSET PIPELINE
 #-----------------------------------------------------------------
 graphics:
 	@mkdir -p $(ROMFS)/gfx
