@@ -1,4 +1,6 @@
-#include "ShaderMenu.h"
+#include <3ds.h>
+#include <citro2d.h>
+#include <citro3d.h>
 
 void ShaderMenu_Init() {
     // Initialize menu shader configurations or graphical effects if needed
