@@ -130,11 +130,6 @@ jobs:
             fi
           done
 
-      - name: Install 3DS SDK and Libraries
-        run: |
-          dkp-pacman -Syu --noconfirm
-          dkp-pacman -S --noconfirm 3ds-dev 3ds-libctru 3ds-citro2d 3ds-citro3d 3ds-portlibs
-
       - name: Compile 3DS Executable
         shell: bash
         run: |
