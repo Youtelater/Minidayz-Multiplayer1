@@ -9,18 +9,25 @@ extern "C" void ItemTable_Load(void) {
     std::ifstream file("romfs:/data/player_data.json");
     if (!file.is_open()) return;
 
-    nlohmann::json j;
-    file >> j;
-    for (auto& [key, val] : j.items()) {
-        if (val.is_string()) {
-            g_itemTable[key] = val.get<std::string>();
+    try {
+        nlohmann::json j;
+        file >> j;
+        if (j.is_object()) {
+            for (auto it = j.begin(); it != j.end(); ++it) {
+                if (it.value().is_string()) {
+                    g_itemTable[it.key()] = it.value().get<std::string>();
+                }
+            }
         }
+    } catch (...) {
+        // Fallback if JSON parsing fails
     }
 }
 
 std::string ItemTable_GetItemName(const std::string& itemId) {
-    if (g_itemTable.count(itemId)) {
-        return g_itemTable[itemId];
+    auto it = g_itemTable.find(itemId);
+    if (it != g_itemTable.end()) {
+        return it->second;
     }
     return "Unknown Item";
 }
