@@ -17,25 +17,25 @@ SOURCES		:= source
 DATA		:= data
 PORTLIBS	:= /opt/devkitpro/portlibs/3ds
 ROMFS		:= romfs
-INCLUDES	:= include build /opt/devkitpro/libctru/include $(PORTLIBS)/include
+INCLUDES	:= include source /opt/devkitpro/libctru/include $(PORTLIBS)/include
 GRAPHICS	:= gfx
 
 # Include 3ds_rules *after* configuration variables are set
 include $(DEVKITARM)/3ds_rules
 
 #-----------------------------------------------------------------
-# FIND SOURCE FILES & OBJECTS
+# FIND SOURCE FILES & INCLUDE PATHS
 #-----------------------------------------------------------------
-CPPFILES	:= $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.cpp))
-CFILES		:= $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
-SFILES		:= $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.s))
+CPPFILES	:= $(notdir $(wildcard $(SOURCES)/*.cpp))
+CFILES		:= $(notdir $(wildcard $(SOURCES)/*.c))
+SFILES		:= $(notdir $(wildcard $(SOURCES)/*.s))
 
-OFILES		:= $(patsubst $(SOURCES)/%.cpp,$(BUILD)/%.o,$(CPPFILES)) \
-			   $(patsubst $(SOURCES)/%.c,$(BUILD)/%.o,$(CFILES)) \
-			   $(patsubst $(SOURCES)/%.s,$(BUILD)/%.o,$(SFILES))
+export VPATH	:= $(foreach dir,$(SOURCES),$(TOPDIR)/$(dir)) \
+				   $(foreach dir,$(DATA),$(TOPDIR)/$(dir))
+
+OFILES		:= $(addprefix $(BUILD)/, $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o))
 
 INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
-			   $(foreach dir,$(SOURCES),-I$(TOPDIR)/$(dir)) \
 			   -I$(TOPDIR)/$(ROMFS) \
 			   -I/opt/devkitpro/libctru/include \
 			   -I$(PORTLIBS)/include \
@@ -84,15 +84,15 @@ $(TARGET).elf: $(OFILES)
 	@echo linking ...
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
 
-$(BUILD)/%.o: $(SOURCES)/%.cpp
+$(BUILD)/%.o: %.cpp
 	@echo cxx $<
 	@$(CXX) -c $(CXXFLAGS) $< -o $@
 
-$(BUILD)/%.o: $(SOURCES)/%.c
+$(BUILD)/%.o: %.c
 	@echo cc $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD)/%.o: $(SOURCES)/%.s
+$(BUILD)/%.o: %.s
 	@echo as $<
 	@$(CC) -c $(ASFLAGS) $< -o $@
 
