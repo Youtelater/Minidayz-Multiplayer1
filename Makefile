@@ -24,13 +24,18 @@ GRAPHICS	:= gfx
 include $(DEVKITARM)/3ds_rules
 
 #-----------------------------------------------------------------
-# EXPLICIT SOURCE & OBJECT MAPPING
+# SOURCE & OBJECT MAPPING WITH VPATH SUPPORT
 #-----------------------------------------------------------------
 CPPFILES	:= main.cpp ItemTable.cpp ShaderMenu.cpp player.cpp world.cpp
 CFILES		:= 
 SFILES		:= 
 
 OFILES		:= $(BUILD)/main.o $(BUILD)/ItemTable.o $(BUILD)/ShaderMenu.o $(BUILD)/player.o $(BUILD)/world.o
+
+# Search paths for source files (checks source/ and root directory)
+vpath %.cpp source .
+vpath %.c source .
+vpath %.s source .
 
 INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
 			   -I$(TOPDIR)/$(ROMFS) \
@@ -81,25 +86,17 @@ $(TARGET).elf: $(OFILES)
 	@echo linking ...
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
 
-$(BUILD)/main.o: source/main.cpp
-	@echo cxx main.cpp
+$(BUILD)/%.o: %.cpp
+	@echo cxx $<
 	@$(CXX) -c $(CXXFLAGS) $< -o $@
 
-$(BUILD)/ItemTable.o: source/ItemTable.cpp
-	@echo cxx ItemTable.cpp
-	@$(CXX) -c $(CXXFLAGS) $< -o $@
+$(BUILD)/%.o: %.c
+	@echo cc $<
+	@$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD)/ShaderMenu.o: source/ShaderMenu.cpp
-	@echo cxx ShaderMenu.cpp
-	@$(CXX) -c $(CXXFLAGS) $< -o $@
-
-$(BUILD)/player.o: source/player.cpp
-	@echo cxx player.cpp
-	@$(CXX) -c $(CXXFLAGS) $< -o $@
-
-$(BUILD)/world.o: source/world.cpp
-	@echo cxx world.cpp
-	@$(CXX) -c $(CXXFLAGS) $< -o $@
+$(BUILD)/%.o: %.s
+	@echo as $<
+	@$(CC) -c $(ASFLAGS) $< -o $@
 
 #-----------------------------------------------------------------
 # GRAPHICS ASSET PIPELINE
