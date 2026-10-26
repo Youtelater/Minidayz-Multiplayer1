@@ -1,6 +1,5 @@
 #include <3ds.h>
 #include <citro2d.h>
-#include <ndsp.h>
 #include <fstream>
 #include <string>
 #include <unordered_map>
@@ -41,10 +40,9 @@ bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Initialize 3DS Hardware Services & Audio
+    // 1. Initialize 3DS Hardware Services
     gfxInitDefault();
     romfsInit();
-    ndspInit();
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
@@ -183,7 +181,6 @@ int main(int argc, char* argv[]) {
     C2D_TextBufDelete(g_dynamicTextBuf);
     C2D_Fini();
     C3D_Fini();
-    ndspExit();
     romfsExit();
     gfxExit();
     return 0;
