@@ -130,6 +130,12 @@ jobs:
             fi
           done
 
+      - name: Update 3DS Libraries via dkp-pacman
+        run: |
+          dirmngr < /dev/null || true
+          apt-get update && apt-get install -y --no-install-recommends ca-certificates
+          dkp-pacman -S --noconfirm 3ds-dev 3ds-libctru 3ds-citro2d 3ds-citro3d 3ds-portlibs || true
+
       - name: Compile 3DS Executable
         shell: bash
         run: |
