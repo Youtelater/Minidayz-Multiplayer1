@@ -24,16 +24,13 @@ GRAPHICS	:= gfx
 include $(DEVKITARM)/3ds_rules
 
 #-----------------------------------------------------------------
-# FIND SOURCE FILES & INCLUDE PATHS
+# EXPLICIT SOURCE & OBJECT MAPPING (Prevents missing files)
 #-----------------------------------------------------------------
-CPPFILES	:= $(notdir $(wildcard $(SOURCES)/*.cpp))
-CFILES		:= $(notdir $(wildcard $(SOURCES)/*.c))
-SFILES		:= $(notdir $(wildcard $(SOURCES)/*.s))
+CPPFILES	:= main.cpp ItemTable.cpp ShaderMenu.cpp
+CFILES		:= 
+SFILES		:= 
 
-export VPATH	:= $(foreach dir,$(SOURCES),$(TOPDIR)/$(dir)) \
-				   $(foreach dir,$(DATA),$(TOPDIR)/$(dir))
-
-OFILES		:= $(addprefix $(BUILD)/, $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o))
+OFILES		:= $(BUILD)/main.o $(BUILD)/ItemTable.o $(BUILD)/ShaderMenu.o
 
 INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
 			   -I$(TOPDIR)/$(ROMFS) \
@@ -84,17 +81,17 @@ $(TARGET).elf: $(OFILES)
 	@echo linking ...
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
 
-$(BUILD)/%.o: %.cpp
-	@echo cxx $<
+$(BUILD)/main.o: source/main.cpp
+	@echo cxx main.cpp
 	@$(CXX) -c $(CXXFLAGS) $< -o $@
 
-$(BUILD)/%.o: %.c
-	@echo cc $<
-	@$(CC) -c $(CFLAGS) $< -o $@
+$(BUILD)/ItemTable.o: source/ItemTable.cpp
+	@echo cxx ItemTable.cpp
+	@$(CXX) -c $(CXXFLAGS) $< -o $@
 
-$(BUILD)/%.o: %.s
-	@echo as $<
-	@$(CC) -c $(ASFLAGS) $< -o $@
+$(BUILD)/ShaderMenu.o: source/ShaderMenu.cpp
+	@echo cxx ShaderMenu.cpp
+	@$(CXX) -c $(CXXFLAGS) $< -o $@
 
 #-----------------------------------------------------------------
 # GRAPHICS ASSET PIPELINE
