@@ -1,4 +1,4 @@
-Name: Build 3DS Executable
+name: Build 3DS Executable
 
 on:
   push:
@@ -53,7 +53,6 @@ jobs:
           from PIL import Image
 
           def get_valid_dim(n):
-              # 3DS textures must be powers of 2, minimum 16, maximum 1024
               p = 16
               while p < n and p < 1024:
                   p *= 2
@@ -67,15 +66,12 @@ jobs:
                       img = img.convert('RGBA')
                       w, h = img.size
                       
-                      # Clamp or resize to valid 3DS hardware dimensions
                       new_w = get_valid_dim(w)
                       new_h = get_valid_dim(h)
                       
-                      # If dimensions differ or exceed limits, resize cleanly
                       if (w, h) != (new_w, new_h):
                           img = img.resize((new_w, new_h), Image.Resampling.NEAREST)
                       
-                      # Ensure canvas fits power of two block bounds cleanly
                       new_img = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
                       new_img.paste(img, (0, 0))
                       new_img.save(img_path, 'PNG')
@@ -134,7 +130,7 @@ jobs:
             fi
           done
 
-      - name: Install 3DS SDK and Libraries (Fix missing ndsp.h / libctru)
+      - name: Install 3DS SDK and Libraries
         run: |
           dkp-pacman -Syu --noconfirm
           dkp-pacman -S --noconfirm 3ds-dev 3ds-libctru 3ds-citro2d 3ds-citro3d 3ds-portlibs
