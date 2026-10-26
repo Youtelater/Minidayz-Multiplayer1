@@ -1,11 +1,12 @@
 #include "ItemTable.h"
 #include <fstream>
+#include <unordered_map>
 #include <nlohmann/json.hpp>
 
 static std::unordered_map<std::string, std::string> g_itemTable;
 
-void ItemTable_Load() {
-    std::ifstream file("romfs:/data/player_data.json"); // Or your item JSON file path
+extern "C" void ItemTable_Load(void) {
+    std::ifstream file("romfs:/data/player_data.json");
     if (!file.is_open()) return;
 
     nlohmann::json j;
