@@ -4,6 +4,8 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <algorithm>
+#include <cstring>
 #include <nlohmann/json.hpp>
 #include <cstdio>
 
@@ -28,47 +30,58 @@ C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// Optimized high-speed binary reader with percentage progress logs
-bool loadMergedGameData(nlohmann::json& targetJson) {
-    printf("[25%] Opening data_part_1.json...\n");
-    fflush(stdout);
+// Helper function to read a file in chunks and show live percentage progress
+bool loadFileWithProgress(const std::string& filepath, std::string& dest, int basePercent, int maxPercent) {
+    std::ifstream file(filepath, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) return false;
     
-    std::FILE* f1 = std::fopen("romfs:/data_part_1.json", "rb");
-    if (!f1) {
+    size_t fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    dest.resize(fileSize);
+    size_t bytesRead = 0;
+    char buffer[65536]; // 64KB chunks
+
+    while (bytesRead < fileSize && file) {
+        size_t toRead = std::min(sizeof(buffer), fileSize - bytesRead);
+        file.read(buffer, toRead);
+        std::memcpy(&dest[bytesRead], buffer, toRead);
+        bytesRead += toRead;
+
+        // Calculate smooth live percentage between base and max bounds
+        int progress = basePercent + ((maxPercent - basePercent) * bytesRead / fileSize);
+        printf("\r[%3d%%] Loading file...      ", progress);
+        fflush(stdout);
+    }
+    printf("\n");
+    fflush(stdout);
+    return true;
+}
+
+// Merged game data loader using the live chunk progress tracker
+bool loadMergedGameData(nlohmann::json& targetJson) {
+    std::string part1, part2;
+
+    // Load Part 1 (scales smoothly from 0% to 45%)
+    if (!loadFileWithProgress("romfs:/data_part_1.json", part1, 0, 45)) {
         printf("[ERROR] Failed to open data_part_1.json!\n");
         fflush(stdout);
         return false;
     }
-    std::fseek(f1, 0, SEEK_END);
-    size_t size1 = std::ftell(f1);
-    std::rewind(f1);
 
-    std::string mergedJsonString;
-    mergedJsonString.resize(size1);
-    std::fread(&mergedJsonString[0], 1, size1, f1);
-    std::fclose(f1);
-    
-    printf("[50%] Part 1 loaded (%zu bytes). Reading Part 2...\n", size1);
-    fflush(stdout);
-
-    std::FILE* f2 = std::fopen("romfs:/data_part_2.json", "rb");
-    if (!f2) {
+    // Load Part 2 (scales smoothly from 45% to 90%)
+    if (!loadFileWithProgress("romfs:/data_part_2.json", part2, 45, 90)) {
         printf("[ERROR] Failed to open data_part_2.json!\n");
         fflush(stdout);
         return false;
     }
-    std::fseek(f2, 0, SEEK_END);
-    size_t size2 = std::ftell(f2);
-    std::rewind(f2);
 
-    size_t oldSize = mergedJsonString.size();
-    mergedJsonString.resize(oldSize + size2);
-    std::fread(&mergedJsonString[oldSize], 1, size2, f2);
-    std::fclose(f2);
-
-    printf("[75%] Part 2 loaded (%zu bytes). Parsing JSON...\n", size2);
+    printf("[95%] Merging & Parsing JSON data...\n");
     fflush(stdout);
+
+    std::string mergedJsonString = part1 + part2;
     
+    // Parse safely with allow_exceptions = false (compatible with 3DS devkitPro settings)
     targetJson = nlohmann::json::parse(mergedJsonString, nullptr, false);
 
     if (targetJson.is_discarded()) {
@@ -77,7 +90,7 @@ bool loadMergedGameData(nlohmann::json& targetJson) {
         return false; 
     }
 
-    printf("[100%] Game data parsed successfully!\n");
+    printf("[100%] Game data loaded and parsed successfully!\n");
     fflush(stdout);
     return true;
 }
@@ -106,7 +119,7 @@ int main(int argc, char* argv[]) {
     
     printf("=== MiniDayZ 3DS Booting ===\n\n");
 
-    printf("[0%] Initializing RomFS...\n");
+    printf("[INIT] Initializing RomFS...\n");
     fflush(stdout);
     if (romfsInit() != 0) {
         printf("[ERROR] romfsInit() failed! Are assets packed?\n");
@@ -127,7 +140,7 @@ int main(int argc, char* argv[]) {
     // Initialize Citro2D Dynamic Text Buffer
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Load Split Main Game Data Chunks with percentage logs
+    // 2. Load Split Main Game Data Chunks with live percentage tracking
     bool dataLoaded = loadMergedGameData(g_mainGameData);
 
     // Load Secondary UI and Game Log Data
