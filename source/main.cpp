@@ -30,33 +30,33 @@ C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// High-speed C-style binary loader with live percentage progress tracking
+// Stream-based chunk reader with live percentage progress tracking
 bool loadFileWithProgress(const std::string& filepath, std::string& dest, int basePercent, int maxPercent) {
-    std::FILE* f = std::fopen(filepath.c_str(), "rb");
-    if (!f) return false;
+    std::ifstream file(filepath, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) return false;
     
-    std::fseek(f, 0, SEEK_END);
-    size_t fileSize = std::ftell(f);
-    std::rewind(f);
+    size_t fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
 
     dest.resize(fileSize);
     size_t bytesRead = 0;
     char buffer[65536]; // 64KB chunks
 
-    while (bytesRead < fileSize) {
+    while (bytesRead < fileSize && file) {
         size_t toRead = std::min(sizeof(buffer), fileSize - bytesRead);
-        size_t readCount = std::fread(buffer, 1, toRead, f);
-        if (readCount == 0) break;
-        
+        file.read(buffer, toRead);
+        std::streamsize readCount = file.gcount();
+        if (readCount <= 0) break;
+
         std::memcpy(&dest[bytesRead], buffer, readCount);
         bytesRead += readCount;
 
         // Calculate smooth live percentage between base and max bounds
-        int progress = basePercent + ((maxPercent - basePercent) * bytesRead / fileSize);
+        int progress = basePercent + static_cast<int>((maxPercent - basePercent) * bytesRead / fileSize);
         printf("\r[%3d%%] Loading %s...", progress, filepath.c_str());
         fflush(stdout);
     }
-    std::fclose(f);
+    file.close();
     printf("\n");
     fflush(stdout);
     return true;
