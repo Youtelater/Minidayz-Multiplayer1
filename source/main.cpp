@@ -28,12 +28,15 @@ C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// Optimized high-speed binary reader to load and concatenate data_part_1.json and data_part_2.json instantly
+// Optimized high-speed binary reader with percentage progress logs
 bool loadMergedGameData(nlohmann::json& targetJson) {
-    printf("[INFO] Opening data_part_1.json...\n");
+    printf("[25%] Opening data_part_1.json...\n");
+    fflush(stdout);
+    
     std::FILE* f1 = std::fopen("romfs:/data_part_1.json", "rb");
     if (!f1) {
         printf("[ERROR] Failed to open data_part_1.json!\n");
+        fflush(stdout);
         return false;
     }
     std::fseek(f1, 0, SEEK_END);
@@ -44,11 +47,14 @@ bool loadMergedGameData(nlohmann::json& targetJson) {
     mergedJsonString.resize(size1);
     std::fread(&mergedJsonString[0], 1, size1, f1);
     std::fclose(f1);
-    printf("[INFO] Part 1 loaded (%zu bytes). Reading Part 2...\n", size1);
+    
+    printf("[50%] Part 1 loaded (%zu bytes). Reading Part 2...\n", size1);
+    fflush(stdout);
 
     std::FILE* f2 = std::fopen("romfs:/data_part_2.json", "rb");
     if (!f2) {
         printf("[ERROR] Failed to open data_part_2.json!\n");
+        fflush(stdout);
         return false;
     }
     std::fseek(f2, 0, SEEK_END);
@@ -60,17 +66,19 @@ bool loadMergedGameData(nlohmann::json& targetJson) {
     std::fread(&mergedJsonString[oldSize], 1, size2, f2);
     std::fclose(f2);
 
-    printf("[INFO] Part 2 loaded (%zu bytes). Total size: %zu bytes. Parsing JSON...\n", size2, mergedJsonString.size());
+    printf("[75%] Part 2 loaded (%zu bytes). Parsing JSON...\n", size2);
+    fflush(stdout);
     
-    // Parse safely with allow_exceptions = false (compatible with 3DS devkitPro settings)
     targetJson = nlohmann::json::parse(mergedJsonString, nullptr, false);
 
     if (targetJson.is_discarded()) {
         printf("[ERROR] JSON parse failed (discarded)!\n");
+        fflush(stdout);
         return false; 
     }
 
-    printf("[SUCCESS] Game data parsed successfully!\n");
+    printf("[100%] Game data parsed successfully!\n");
+    fflush(stdout);
     return true;
 }
 
@@ -98,11 +106,14 @@ int main(int argc, char* argv[]) {
     
     printf("=== MiniDayZ 3DS Booting ===\n\n");
 
-    printf("[INIT] Initializing RomFS...\n");
+    printf("[0%] Initializing RomFS...\n");
+    fflush(stdout);
     if (romfsInit() != 0) {
         printf("[ERROR] romfsInit() failed! Are assets packed?\n");
+        fflush(stdout);
     } else {
         printf("[SUCCESS] RomFS initialized.\n");
+        fflush(stdout);
     }
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -116,7 +127,7 @@ int main(int argc, char* argv[]) {
     // Initialize Citro2D Dynamic Text Buffer
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Load Split Main Game Data Chunks using fast binary IO
+    // 2. Load Split Main Game Data Chunks with percentage logs
     bool dataLoaded = loadMergedGameData(g_mainGameData);
 
     // Load Secondary UI and Game Log Data
@@ -132,11 +143,13 @@ int main(int argc, char* argv[]) {
     // Load compiled sprite sheet from RomFS
     g_spriteSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x");
     if (g_spriteSheet) {
-        printf("[SUCCESS] Loaded player.t3x sprite sheet.\n");
+        printf("[LOAD] Loaded player.t3x sprite sheet.\n");
+        fflush(stdout);
         C2D_SpriteFromSheet(&g_playerSprite, g_spriteSheet, 0);
         C2D_SpriteSetCenter(&g_playerSprite, 0.5f, 0.5f);
     } else {
         printf("[WARNING] Failed to load player.t3x sprite sheet!\n");
+        fflush(stdout);
     }
 
     // Set menu button fallback strings
@@ -146,6 +159,7 @@ int main(int argc, char* argv[]) {
 
     printf("\nInitialization complete!\n");
     printf("Press START to launch game.\n");
+    fflush(stdout);
 
     GameState currentState = STATE_CONSOLE_DEBUG;
 
