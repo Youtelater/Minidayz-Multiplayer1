@@ -282,4 +282,3 @@ int main(int argc, char* argv[]) {
     gfxExit();
     return 0;
 }
-g
