@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
+#include <cstdio>
 
 // Include your custom project modules
 #include "player.h"
@@ -14,6 +15,7 @@
 
 // Game States
 enum GameState {
+    STATE_CONSOLE_DEBUG,
     STATE_MENU,
     STATE_PLAYING
 };
@@ -21,22 +23,30 @@ enum GameState {
 // Global UI and Storage
 std::unordered_map<std::string, std::string> g_uiStrings;
 std::unordered_map<std::string, std::string> g_gameLogs;
-nlohmann::json g_mainGameData; // Global merged game data JSON structure
+nlohmann::json g_mainGameData; 
 C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
 // Reads and concatenates data_part_1.json and data_part_2.json safely without exceptions
 bool loadMergedGameData(nlohmann::json& targetJson) {
+    printf("[INFO] Opening data_part_1.json...\n");
     std::ifstream file1("romfs:/data_part_1.json", std::ios::binary);
-    if (!file1.is_open()) return false;
+    if (!file1.is_open()) {
+        printf("[ERROR] Failed to open data_part_1.json!\n");
+        return false;
+    }
 
     std::stringstream buffer1;
     buffer1 << file1.rdbuf();
     file1.close();
 
+    printf("[INFO] Opening data_part_2.json...\n");
     std::ifstream file2("romfs:/data_part_2.json", std::ios::binary);
-    if (!file2.is_open()) return false;
+    if (!file2.is_open()) {
+        printf("[ERROR] Failed to open data_part_2.json!\n");
+        return false;
+    }
 
     std::stringstream buffer2;
     buffer2 << file2.rdbuf();
@@ -44,14 +54,17 @@ bool loadMergedGameData(nlohmann::json& targetJson) {
 
     // Concatenate raw string buffers
     std::string mergedJsonString = buffer1.str() + buffer2.str();
+    printf("[INFO] Merged data size: %zu bytes. Parsing JSON...\n", mergedJsonString.size());
     
     // Parse safely with allow_exceptions = false (compatible with 3DS devkitPro settings)
     targetJson = nlohmann::json::parse(mergedJsonString, nullptr, false);
 
     if (targetJson.is_discarded()) {
-        return false; // JSON structure was invalid or failed parsing
+        printf("[ERROR] JSON parse failed (discarded)!\n");
+        return false; 
     }
 
+    printf("[SUCCESS] Game data merged and parsed successfully!\n");
     return true;
 }
 
@@ -71,9 +84,21 @@ bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Initialize 3DS Hardware Services
+    // 1. Initialize 3DS Hardware Services & Console
     gfxInitDefault();
-    romfsInit();
+    
+    PrintConsole bottomConsole;
+    consoleInit(GFX_BOTTOM, &bottomConsole); // Initialize debug text on bottom screen
+    
+    printf("=== MiniDayZ 3DS Booting ===\n\n");
+
+    printf("[INIT] Initializing RomFS...\n");
+    if (romfsInit() != 0) {
+        printf("[ERROR] romfsInit() failed! Are assets packed?\n");
+    } else {
+        printf("[SUCCESS] RomFS initialized.\n");
+    }
+
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
@@ -86,7 +111,7 @@ int main(int argc, char* argv[]) {
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
     // 2. Load Split Main Game Data Chunks
-    loadMergedGameData(g_mainGameData);
+    bool dataLoaded = loadMergedGameData(g_mainGameData);
 
     // Load Secondary UI and Game Log Data
     loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
@@ -101,8 +126,11 @@ int main(int argc, char* argv[]) {
     // Load compiled sprite sheet from RomFS
     g_spriteSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x");
     if (g_spriteSheet) {
+        printf("[SUCCESS] Loaded player.t3x sprite sheet.\n");
         C2D_SpriteFromSheet(&g_playerSprite, g_spriteSheet, 0);
         C2D_SpriteSetCenter(&g_playerSprite, 0.5f, 0.5f);
+    } else {
+        printf("[WARNING] Failed to load player.t3x sprite sheet!\n");
     }
 
     // Set menu button fallback strings
@@ -110,7 +138,10 @@ int main(int argc, char* argv[]) {
     std::string continueText = g_uiStrings.count("2") ? g_uiStrings["2"] : "Continue";
     std::string activeLog = g_gameLogs.count("4") ? g_gameLogs["4"] : "I'm freezing!";
 
-    GameState currentState = STATE_MENU;
+    printf("\nInitialization complete!\n");
+    printf("Press START to launch game.\n");
+
+    GameState currentState = STATE_CONSOLE_DEBUG;
 
     // Main Loop
     while (aptMainLoop()) {
@@ -120,8 +151,20 @@ int main(int argc, char* argv[]) {
         touchPosition touch;
         hidTouchRead(&touch);
 
-        // Press START to Exit
-        if (kDown & KEY_START) break;
+        // Press START to Exit or transition from debug console
+        if (kDown & KEY_START) {
+            if (currentState == STATE_CONSOLE_DEBUG) {
+                currentState = STATE_MENU; // Switch to graphical menu on button press
+            } else {
+                break; // Exit app entirely
+            }
+        }
+
+        if (currentState == STATE_CONSOLE_DEBUG) {
+            // Keep rendering the text console on the bottom screen until user presses START
+            gspWaitForVBlank();
+            continue;
+        }
 
         // Clear dynamic text buffer every frame
         C2D_TextBufClear(g_dynamicTextBuf);
