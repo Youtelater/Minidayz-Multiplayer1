@@ -1,6 +1,7 @@
 #include <3ds.h>
 #include <citro2d.h>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
@@ -20,9 +21,38 @@ enum GameState {
 // Global UI and Storage
 std::unordered_map<std::string, std::string> g_uiStrings;
 std::unordered_map<std::string, std::string> g_gameLogs;
+nlohmann::json g_mainGameData; // Global merged game data JSON structure
 C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
+
+// Reads and concatenates data_part_1.json and data_part_2.json into a single JSON object
+bool loadMergedGameData(nlohmann::json& targetJson) {
+    std::ifstream file1("romfs:/data_part_1.json", std::ios::binary);
+    if (!file1.is_open()) return false;
+
+    std::stringstream buffer1;
+    buffer1 << file1.rdbuf();
+    file1.close();
+
+    std::ifstream file2("romfs:/data_part_2.json", std::ios::binary);
+    if (!file2.is_open()) return false;
+
+    std::stringstream buffer2;
+    buffer2 << file2.rdbuf();
+    file2.close();
+
+    // Concatenate raw string buffers and parse as JSON
+    std::string mergedJsonString = buffer1.str() + buffer2.str();
+    
+    try {
+        targetJson = nlohmann::json::parse(mergedJsonString);
+    } catch (const nlohmann::json::parse_error& e) {
+        return false;
+    }
+
+    return true;
+}
 
 // Helper function to parse JSON string maps
 bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::string>& targetMap) {
@@ -54,10 +84,14 @@ int main(int argc, char* argv[]) {
     // Initialize Citro2D Dynamic Text Buffer
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Initialize Game Modules & Load RomFS Data
+    // 2. Load Split Main Game Data Chunks
+    loadMergedGameData(g_mainGameData);
+
+    // Load Secondary UI and Game Log Data
     loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
     loadJsonStrings("romfs:/data/game_logs.json", g_gameLogs);
     
+    // Initialize Game Modules
     World_LoadData();
     Player_Init();
     ItemTable_Load();
