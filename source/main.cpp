@@ -26,7 +26,7 @@ C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// Reads and concatenates data_part_1.json and data_part_2.json into a single JSON object
+// Reads and concatenates data_part_1.json and data_part_2.json safely without exceptions
 bool loadMergedGameData(nlohmann::json& targetJson) {
     std::ifstream file1("romfs:/data_part_1.json", std::ios::binary);
     if (!file1.is_open()) return false;
@@ -42,13 +42,14 @@ bool loadMergedGameData(nlohmann::json& targetJson) {
     buffer2 << file2.rdbuf();
     file2.close();
 
-    // Concatenate raw string buffers and parse as JSON
+    // Concatenate raw string buffers
     std::string mergedJsonString = buffer1.str() + buffer2.str();
     
-    try {
-        targetJson = nlohmann::json::parse(mergedJsonString);
-    } catch (const nlohmann::json::parse_error& e) {
-        return false;
+    // Parse safely with allow_exceptions = false (compatible with 3DS devkitPro settings)
+    targetJson = nlohmann::json::parse(mergedJsonString, nullptr, false);
+
+    if (targetJson.is_discarded()) {
+        return false; // JSON structure was invalid or failed parsing
     }
 
     return true;
