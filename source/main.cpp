@@ -1,4 +1,4 @@
-m#include <3ds.h>
+#include <3ds.h>
 #include <citro2d.h>
 #include <fstream>
 #include <sstream>
