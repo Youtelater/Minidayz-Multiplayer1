@@ -28,33 +28,39 @@ C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// Reads and concatenates data_part_1.json and data_part_2.json safely without exceptions
+// Optimized high-speed binary reader to load and concatenate data_part_1.json and data_part_2.json instantly
 bool loadMergedGameData(nlohmann::json& targetJson) {
     printf("[INFO] Opening data_part_1.json...\n");
-    std::ifstream file1("romfs:/data_part_1.json", std::ios::binary);
-    if (!file1.is_open()) {
+    std::FILE* f1 = std::fopen("romfs:/data_part_1.json", "rb");
+    if (!f1) {
         printf("[ERROR] Failed to open data_part_1.json!\n");
         return false;
     }
+    std::fseek(f1, 0, SEEK_END);
+    size_t size1 = std::ftell(f1);
+    std::rewind(f1);
 
-    std::stringstream buffer1;
-    buffer1 << file1.rdbuf();
-    file1.close();
+    std::string mergedJsonString;
+    mergedJsonString.resize(size1);
+    std::fread(&mergedJsonString[0], 1, size1, f1);
+    std::fclose(f1);
+    printf("[INFO] Part 1 loaded (%zu bytes). Reading Part 2...\n", size1);
 
-    printf("[INFO] Opening data_part_2.json...\n");
-    std::ifstream file2("romfs:/data_part_2.json", std::ios::binary);
-    if (!file2.is_open()) {
+    std::FILE* f2 = std::fopen("romfs:/data_part_2.json", "rb");
+    if (!f2) {
         printf("[ERROR] Failed to open data_part_2.json!\n");
         return false;
     }
+    std::fseek(f2, 0, SEEK_END);
+    size_t size2 = std::ftell(f2);
+    std::rewind(f2);
 
-    std::stringstream buffer2;
-    buffer2 << file2.rdbuf();
-    file2.close();
+    size_t oldSize = mergedJsonString.size();
+    mergedJsonString.resize(oldSize + size2);
+    std::fread(&mergedJsonString[oldSize], 1, size2, f2);
+    std::fclose(f2);
 
-    // Concatenate raw string buffers
-    std::string mergedJsonString = buffer1.str() + buffer2.str();
-    printf("[INFO] Merged data size: %zu bytes. Parsing JSON...\n", mergedJsonString.size());
+    printf("[INFO] Part 2 loaded (%zu bytes). Total size: %zu bytes. Parsing JSON...\n", size2, mergedJsonString.size());
     
     // Parse safely with allow_exceptions = false (compatible with 3DS devkitPro settings)
     targetJson = nlohmann::json::parse(mergedJsonString, nullptr, false);
@@ -64,7 +70,7 @@ bool loadMergedGameData(nlohmann::json& targetJson) {
         return false; 
     }
 
-    printf("[SUCCESS] Game data merged and parsed successfully!\n");
+    printf("[SUCCESS] Game data parsed successfully!\n");
     return true;
 }
 
@@ -110,7 +116,7 @@ int main(int argc, char* argv[]) {
     // Initialize Citro2D Dynamic Text Buffer
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Load Split Main Game Data Chunks
+    // 2. Load Split Main Game Data Chunks using fast binary IO
     bool dataLoaded = loadMergedGameData(g_mainGameData);
 
     // Load Secondary UI and Game Log Data
