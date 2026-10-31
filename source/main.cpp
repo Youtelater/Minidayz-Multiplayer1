@@ -1,4 +1,4 @@
-#include <3ds.h>
+m#include <3ds.h>
 #include <citro2d.h>
 #include <fstream>
 #include <sstream>
@@ -30,62 +30,77 @@ C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// Stream-based chunk reader with live percentage progress tracking
-bool loadFileWithProgress(const std::string& filepath, std::string& dest, int basePercent, int maxPercent) {
-    std::ifstream file(filepath, std::ios::binary | std::ios::ate);
-    if (!file.is_open()) return false;
-    
-    size_t fileSize = file.tellg();
-    file.seekg(0, std::ios::beg);
+// Robust C-style chunk reader with live percentage progress tracking
+bool loadFileWithProgress(const char* filepath, std::string& dest, int basePercent, int maxPercent) {
+    printf("[INIT] Opening %s...\n", filepath);
+    fflush(stdout);
+
+    std::FILE* f = std::fopen(filepath, "rb");
+    if (!f) {
+        printf("[ERROR] Failed to open %s!\n", filepath);
+        fflush(stdout);
+        return false;
+    }
+
+    std::fseek(f, 0, SEEK_END);
+    size_t fileSize = std::ftell(f);
+    std::rewind(f);
+
+    if (fileSize == 0) {
+        std::fclose(f);
+        printf("[ERROR] File %s is empty!\n", filepath);
+        fflush(stdout);
+        return false;
+    }
 
     dest.resize(fileSize);
     size_t bytesRead = 0;
-    char buffer[65536]; // 64KB chunks
+    const size_t chunkSize = 65536; // 64KB chunks
 
-    while (bytesRead < fileSize && file) {
-        size_t toRead = std::min(sizeof(buffer), fileSize - bytesRead);
-        file.read(buffer, toRead);
-        std::streamsize readCount = file.gcount();
-        if (readCount <= 0) break;
+    while (bytesRead < fileSize) {
+        size_t toRead = std::min(chunkSize, fileSize - bytesRead);
+        size_t readNow = std::fread(&dest[bytesRead], 1, toRead, f);
+        
+        if (readNow == 0) break;
+        bytesRead += readNow;
 
-        std::memcpy(&dest[bytesRead], buffer, readCount);
-        bytesRead += readCount;
-
-        // Calculate smooth live percentage between base and max bounds
         int progress = basePercent + static_cast<int>((maxPercent - basePercent) * bytesRead / fileSize);
-        printf("\r[%3d%%] Loading %s...", progress, filepath.c_str());
+        printf("\r[%3d%%] Reading %s (%zu/%zu)...", progress, filepath, bytesRead, fileSize);
         fflush(stdout);
     }
-    file.close();
-    printf("\n");
+
+    std::fclose(f);
+    printf("\n[SUCCESS] Loaded %s (%zu bytes).\n", filepath, bytesRead);
     fflush(stdout);
-    return true;
+    return bytesRead == fileSize;
 }
 
 // Merged game data loader using the live chunk progress tracker
 bool loadMergedGameData(nlohmann::json& targetJson) {
     std::string part1, part2;
 
-    // Load Part 1 (scales smoothly from 0% to 45%)
+    // Part 1: smooth progress from 0% to 45%
     if (!loadFileWithProgress("romfs:/data_part_1.json", part1, 0, 45)) {
-        printf("[ERROR] Failed to open data_part_1.json!\n");
-        fflush(stdout);
         return false;
     }
 
-    // Load Part 2 (scales smoothly from 45% to 90%)
+    // Part 2: smooth progress from 45% to 90%
     if (!loadFileWithProgress("romfs:/data_part_2.json", part2, 45, 90)) {
-        printf("[ERROR] Failed to open data_part_2.json!\n");
-        fflush(stdout);
         return false;
     }
 
-    printf("[95%] Merging & Parsing JSON data...\n");
+    printf("[95%] Merging string buffers & parsing JSON...\n");
     fflush(stdout);
 
     std::string mergedJsonString = part1 + part2;
     
-    // Parse safely with allow_exceptions = false
+    // Clear individual part strings to release RAM before parsing
+    part1.clear();
+    part1.shrink_to_fit();
+    part2.clear();
+    part2.shrink_to_fit();
+
+    // Parse safely with allow_exceptions = false (essential on 3DS toolchains)
     targetJson = nlohmann::json::parse(mergedJsonString, nullptr, false);
 
     if (targetJson.is_discarded()) {
