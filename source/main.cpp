@@ -75,41 +75,35 @@ bool loadFileWithProgress(const char* filepath, std::string& dest, int basePerce
     return bytesRead == fileSize;
 }
 
-// Merged game data loader using the live chunk progress tracker
+// DIAGNOSTIC TEST: Isolate Part 2 to check RomFS visibility
 bool loadMergedGameData(nlohmann::json& targetJson) {
-    std::string part1, part2;
+    std::string buffer;
 
-    // Part 1: smooth progress from 0% to 45%
-    if (!loadFileWithProgress("romfs:/data_part_1.json", part1, 0, 45)) {
-        return false;
-    }
-
-    // Part 2: smooth progress from 45% to 90%
-    if (!loadFileWithProgress("romfs:/data_part_2.json", part2, 45, 90)) {
-        return false;
-    }
-
-    printf("[95%] Merging string buffers & parsing JSON...\n");
+    printf("[TEST] Bypassing Part 1 to test Part 2 isolation...\n");
     fflush(stdout);
 
-    std::string mergedJsonString = part1 + part2;
-    
-    // Clear individual part strings to release RAM before parsing
-    part1.clear();
-    part1.shrink_to_fit();
-    part2.clear();
-    part2.shrink_to_fit();
-
-    // Parse safely with allow_exceptions = false (essential on 3DS toolchains)
-    targetJson = nlohmann::json::parse(mergedJsonString, nullptr, false);
-
-    if (targetJson.is_discarded()) {
-        printf("[ERROR] JSON parse failed (discarded)!\n");
+    if (!loadFileWithProgress("romfs:/data_part_2.json", buffer, 0, 100)) {
+        printf("[CRITICAL ERROR] RomFS cannot see or open data_part_2.json at all!\n");
+        printf("[HINT] Check your Makefile or verify the file is packed in romfs/.\n");
         fflush(stdout);
-        return false; 
+        return false;
     }
 
-    printf("[100%] Game data loaded and parsed successfully!\n");
+    printf("[SUCCESS] Part 2 opened and read successfully on its own!\n");
+    fflush(stdout);
+
+    // Parse it just to make sure it's valid JSON
+    targetJson = nlohmann::json::parse(buffer, nullptr, false);
+    buffer.clear();
+    buffer.shrink_to_fit();
+
+    if (targetJson.is_discarded()) {
+        printf("[ERROR] Part 2 JSON parse failed!\n");
+        fflush(stdout);
+        return false;
+    }
+
+    printf("[100%] Part 2 standalone test passed successfully!\n");
     fflush(stdout);
     return true;
 }
@@ -157,7 +151,7 @@ int main(int argc, char* argv[]) {
 
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Load Split Main Game Data Chunks with live percentage tracking
+    // 2. Run diagnostic test loader
     bool dataLoaded = loadMergedGameData(g_mainGameData);
 
     // Load Secondary UI and Game Log Data
@@ -288,3 +282,4 @@ int main(int argc, char* argv[]) {
     gfxExit();
     return 0;
 }
+g
