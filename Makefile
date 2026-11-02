@@ -50,12 +50,13 @@ CFLAGS		:= -g -Wall -O2 -mword-relocations \
 			   $(ARCH) $(DEFINES) \
 			   $(INCLUDE)
 
-CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
+# Removed -fno-exceptions so msgpack unpacker exceptions work properly
+CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti
 
 ASFLAGS		:= -g $(ARCH)
 LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -L/opt/devkitpro/portlibs/3ds/lib -Wl,-Map,$(notdir $*.map)
 
-# Added -lz for zlib decompression support
+# -lz handles zlib stream decompression
 LIBS		:= -lcitro2d -lcitro3d -lctru -lz -lm
 
 #-----------------------------------------------------------------

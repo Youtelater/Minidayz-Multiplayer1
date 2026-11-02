@@ -6,10 +6,12 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cstring>
-#include <nlohmann/json.hpp>
 #include <cstdio>
 #include <cstdlib>
+#include <vector>
 #include <zlib.h>
+#include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 
 // Include your custom project modules
 #include "player.h"
@@ -27,34 +29,35 @@ enum GameState {
 // Global UI and Storage
 std::unordered_map<std::string, std::string> g_uiStrings;
 std::unordered_map<std::string, std::string> g_gameLogs;
-nlohmann::json g_mainGameData; 
+
+// MessagePack storage handles (keeps the unpacked memory alive during runtime)
+msgpack::object_handle g_gameDataHandle; 
+msgpack::object g_mainGameData; 
+
 C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// Reads, decompresses zlib payload from game_merged_compressed.bin, and parses JSON
-bool loadMergedGameData(nlohmann::json& targetJson) {
-    const char* filepath = "romfs:/game_merged_compressed.bin";
+// Reads, decompresses zlib payload from game.bin, and unpacks MessagePack binary data
+bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& targetObj) {
+    const char* filepath = "romfs:/game.bin";
     printf("[INIT] Opening %s...\n", filepath);
     fflush(stdout);
 
     std::FILE* f = std::fopen(filepath, "rb");
     if (!f) {
         printf("[CRITICAL ERROR] RomFS cannot open %s!\n", filepath);
-        printf("[HINT] Ensure game_merged_compressed.bin is inside romfs/ folder.\n");
+        printf("[HINT] Ensure game.bin is inside romfs/ folder.\n");
         fflush(stdout);
         return false;
     }
 
-    // 1. Read 4-byte compressed size header
-    uint32_t compressedSize = 0;
-    if (std::fread(&compressedSize, sizeof(uint32_t), 1, f) != 1) {
-        printf("[ERROR] Failed to read size header!\n");
-        std::fclose(f);
-        return false;
-    }
+    // 1. Get file size of game.bin
+    std::fseek(f, 0, SEEK_END);
+    long compressedSize = std::ftell(f);
+    std::fseek(f, 0, SEEK_SET);
 
-    printf("[LOAD] Compressed payload size: %u bytes\n", compressedSize);
+    printf("[LOAD] Compressed payload size: %ld bytes\n", compressedSize);
     fflush(stdout);
 
     // 2. Read compressed payload into memory
@@ -68,8 +71,8 @@ bool loadMergedGameData(nlohmann::json& targetJson) {
     size_t readBytes = std::fread(compressedBuf, 1, compressedSize, f);
     std::fclose(f);
 
-    if (readBytes != compressedSize) {
-        printf("[ERROR] File read incomplete (%zu/%u bytes)!\n", readBytes, compressedSize);
+    if (readBytes != (size_t)compressedSize) {
+        printf("[ERROR] File read incomplete!\n");
         std::free(compressedBuf);
         return false;
     }
@@ -78,7 +81,7 @@ bool loadMergedGameData(nlohmann::json& targetJson) {
     printf("[DECOMPRESS] Unpacking zlib payload...\n");
     fflush(stdout);
 
-    std::string uncompressedStr;
+    std::vector<char> uncompressedData;
     const size_t CHUNK_SIZE = 65536; // 64KB chunk buffer
     unsigned char outChunk[CHUNK_SIZE];
 
@@ -107,30 +110,29 @@ bool loadMergedGameData(nlohmann::json& targetJson) {
         }
 
         size_t have = CHUNK_SIZE - strm.avail_out;
-        uncompressedStr.append((char*)outChunk, have);
+        uncompressedData.insert(uncompressedData.end(), outChunk, outChunk + have);
     }
 
     inflateEnd(&strm);
     std::free(compressedBuf);
 
-    printf("[SUCCESS] Decompressed %zu bytes total!\n", uncompressedStr.size());
+    printf("[SUCCESS] Decompressed %zu bytes total!\n", uncompressedData.size());
     fflush(stdout);
 
-    // 4. Parse combined JSON data
-    printf("[PARSE] Parsing JSON structure...\n");
+    // 4. Unpack MessagePack binary payload
+    printf("[UNPACK] Unpacking MessagePack data...\n");
     fflush(stdout);
 
-    targetJson = nlohmann::json::parse(uncompressedStr, nullptr, false);
-    uncompressedStr.clear();
-    uncompressedStr.shrink_to_fit();
-
-    if (targetJson.is_discarded()) {
-        printf("[ERROR] JSON parse failed on decompressed buffer!\n");
+    try {
+        targetHandle = msgpack::unpack(uncompressedData.data(), uncompressedData.size());
+        targetObj = targetHandle.get();
+    } catch (const std::exception& e) {
+        printf("[ERROR] MessagePack unpack failed: %s\n", e.what());
         fflush(stdout);
         return false;
     }
 
-    printf("[SUCCESS] Game data fully loaded and parsed into memory!\n");
+    printf("[SUCCESS] Game binary data fully loaded and unpacked into memory!\n");
     fflush(stdout);
     return true;
 }
@@ -178,8 +180,8 @@ int main(int argc, char* argv[]) {
 
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Load merged binary dataset
-    bool dataLoaded = loadMergedGameData(g_mainGameData);
+    // 2. Load merged binary dataset (game.bin)
+    bool dataLoaded = loadMergedGameData(g_gameDataHandle, g_mainGameData);
     if (!dataLoaded) {
         printf("[WARNING] Failed to load main game data!\n");
         fflush(stdout);
