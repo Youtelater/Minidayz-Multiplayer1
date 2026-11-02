@@ -45,12 +45,12 @@ INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
 
 ARCH		:= -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=cp15
 
+# Added -DMSGPACK_NO_BOOST to prevent looking for external boost headers
 CFLAGS		:= -g -Wall -O2 -mword-relocations \
 			   -ffunction-sections \
-			   $(ARCH) $(DEFINES) \
+			   $(ARCH) $(DEFINES) -DMSGPACK_NO_BOOST \
 			   $(INCLUDE)
 
-# Removed -fno-exceptions so msgpack unpacker exceptions work properly
 CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti
 
 ASFLAGS		:= -g $(ARCH)
