@@ -8,6 +8,8 @@
 #include <cstring>
 #include <nlohmann/json.hpp>
 #include <cstdio>
+#include <cstdlib>
+#include <zlib.h>
 
 // Include your custom project modules
 #include "player.h"
@@ -30,80 +32,105 @@ C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// Robust C-style chunk reader with live percentage progress tracking
-bool loadFileWithProgress(const char* filepath, std::string& dest, int basePercent, int maxPercent) {
+// Reads, decompresses zlib payload from game_merged_compressed.bin, and parses JSON
+bool loadMergedGameData(nlohmann::json& targetJson) {
+    const char* filepath = "romfs:/game_merged_compressed.bin";
     printf("[INIT] Opening %s...\n", filepath);
     fflush(stdout);
 
     std::FILE* f = std::fopen(filepath, "rb");
     if (!f) {
-        printf("[ERROR] Failed to open %s!\n", filepath);
+        printf("[CRITICAL ERROR] RomFS cannot open %s!\n", filepath);
+        printf("[HINT] Ensure game_merged_compressed.bin is inside romfs/ folder.\n");
         fflush(stdout);
         return false;
     }
 
-    std::fseek(f, 0, SEEK_END);
-    size_t fileSize = std::ftell(f);
-    std::rewind(f);
-
-    if (fileSize == 0) {
+    // 1. Read 4-byte compressed size header
+    uint32_t compressedSize = 0;
+    if (std::fread(&compressedSize, sizeof(uint32_t), 1, f) != 1) {
+        printf("[ERROR] Failed to read size header!\n");
         std::fclose(f);
-        printf("[ERROR] File %s is empty!\n", filepath);
-        fflush(stdout);
         return false;
     }
 
-    dest.resize(fileSize);
-    size_t bytesRead = 0;
-    const size_t chunkSize = 65536; // 64KB chunks
+    printf("[LOAD] Compressed payload size: %u bytes\n", compressedSize);
+    fflush(stdout);
 
-    while (bytesRead < fileSize) {
-        size_t toRead = std::min(chunkSize, fileSize - bytesRead);
-        size_t readNow = std::fread(&dest[bytesRead], 1, toRead, f);
-        
-        if (readNow == 0) break;
-        bytesRead += readNow;
-
-        int progress = basePercent + static_cast<int>((maxPercent - basePercent) * bytesRead / fileSize);
-        printf("\r[%3d%%] Reading %s (%zu/%zu)...", progress, filepath, bytesRead, fileSize);
-        fflush(stdout);
+    // 2. Read compressed payload into memory
+    unsigned char* compressedBuf = (unsigned char*)std::malloc(compressedSize);
+    if (!compressedBuf) {
+        printf("[ERROR] Failed to allocate compressed buffer memory!\n");
+        std::fclose(f);
+        return false;
     }
 
+    size_t readBytes = std::fread(compressedBuf, 1, compressedSize, f);
     std::fclose(f);
-    printf("\n[SUCCESS] Loaded %s (%zu bytes).\n", filepath, bytesRead);
-    fflush(stdout);
-    return bytesRead == fileSize;
-}
 
-// DIAGNOSTIC TEST: Isolate Part 2 to check RomFS visibility
-bool loadMergedGameData(nlohmann::json& targetJson) {
-    std::string buffer;
-
-    printf("[TEST] Bypassing Part 1 to test Part 2 isolation...\n");
-    fflush(stdout);
-
-    if (!loadFileWithProgress("romfs:/data_part_2.json", buffer, 0, 100)) {
-        printf("[CRITICAL ERROR] RomFS cannot see or open data_part_2.json at all!\n");
-        printf("[HINT] Check your Makefile or verify the file is packed in romfs/.\n");
-        fflush(stdout);
+    if (readBytes != compressedSize) {
+        printf("[ERROR] File read incomplete (%zu/%u bytes)!\n", readBytes, compressedSize);
+        std::free(compressedBuf);
         return false;
     }
 
-    printf("[SUCCESS] Part 2 opened and read successfully on its own!\n");
+    // 3. Decompress zlib stream using chunked / streaming inflate to optimize RAM
+    printf("[DECOMPRESS] Unpacking zlib payload...\n");
     fflush(stdout);
 
-    // Parse it just to make sure it's valid JSON
-    targetJson = nlohmann::json::parse(buffer, nullptr, false);
-    buffer.clear();
-    buffer.shrink_to_fit();
+    std::string uncompressedStr;
+    const size_t CHUNK_SIZE = 65536; // 64KB chunk buffer
+    unsigned char outChunk[CHUNK_SIZE];
+
+    z_stream strm;
+    std::memset(&strm, 0, sizeof(strm));
+    strm.next_in = compressedBuf;
+    strm.avail_in = compressedSize;
+
+    if (inflateInit(&strm) != Z_OK) {
+        printf("[ERROR] inflateInit failed!\n");
+        std::free(compressedBuf);
+        return false;
+    }
+
+    int ret = Z_OK;
+    while (ret == Z_OK) {
+        strm.next_out = outChunk;
+        strm.avail_out = CHUNK_SIZE;
+
+        ret = inflate(&strm, Z_NO_FLUSH);
+        if (ret != Z_OK && ret != Z_STREAM_END) {
+            printf("[ERROR] Decompression failed with zlib error: %d\n", ret);
+            inflateEnd(&strm);
+            std::free(compressedBuf);
+            return false;
+        }
+
+        size_t have = CHUNK_SIZE - strm.avail_out;
+        uncompressedStr.append((char*)outChunk, have);
+    }
+
+    inflateEnd(&strm);
+    std::free(compressedBuf);
+
+    printf("[SUCCESS] Decompressed %zu bytes total!\n", uncompressedStr.size());
+    fflush(stdout);
+
+    // 4. Parse combined JSON data
+    printf("[PARSE] Parsing JSON structure...\n");
+    fflush(stdout);
+
+    targetJson = nlohmann::json::parse(uncompressedStr, nullptr, false);
+    uncompressedStr.clear();
+    uncompressedStr.shrink_to_fit();
 
     if (targetJson.is_discarded()) {
-        printf("[ERROR] Part 2 JSON parse failed!\n");
+        printf("[ERROR] JSON parse failed on decompressed buffer!\n");
         fflush(stdout);
         return false;
     }
 
-    printf("[100%] Part 2 standalone test passed successfully!\n");
+    printf("[SUCCESS] Game data fully loaded and parsed into memory!\n");
     fflush(stdout);
     return true;
 }
@@ -151,8 +178,12 @@ int main(int argc, char* argv[]) {
 
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Run diagnostic test loader
+    // 2. Load merged binary dataset
     bool dataLoaded = loadMergedGameData(g_mainGameData);
+    if (!dataLoaded) {
+        printf("[WARNING] Failed to load main game data!\n");
+        fflush(stdout);
+    }
 
     // Load Secondary UI and Game Log Data
     loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);

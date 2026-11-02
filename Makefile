@@ -55,7 +55,8 @@ CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 ASFLAGS		:= -g $(ARCH)
 LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -L/opt/devkitpro/portlibs/3ds/lib -Wl,-Map,$(notdir $*.map)
 
-LIBS		:= -lcitro2d -lcitro3d -lctru -lm
+# Added -lz for zlib decompression support
+LIBS		:= -lcitro2d -lcitro3d -lctru -lz -lm
 
 #-----------------------------------------------------------------
 # MAIN RULES
