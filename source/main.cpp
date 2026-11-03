@@ -19,8 +19,13 @@
 #include "ItemTable.h"
 #include "ShaderMenu.h"
 
-// Emergency logger that writes directly to the SD card root
+// Dual-logger: prints to the emulator screen AND saves to the virtual SD card
 void logCrash(const char* message) {
+    // Print to the 3DS console screen in Manic Emu
+    printf("%s\n", message);
+    fflush(stdout);
+
+    // Also write to the virtual SD card crash log
     std::ofstream crashFile("sdmc:/minidayz_crash.txt", std::ios::app);
     if (crashFile.is_open()) {
         crashFile << message << "\n";
@@ -48,16 +53,79 @@ C2D_Sprite g_playerSprite;
 
 bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& targetObj) {
     logCrash("[loadMergedGameData] Entering function");
-    const char* filepath = "romfs:/nonexistent.bin"; // Tested path to verify error-handling
+    const char* filepath = "romfs:/game.bin"; // Back to the real game data!
     
-    logCrash("[loadMergedGameData] Opening file...");
+    logCrash("[loadMergedGameData] Opening game.bin...");
     FILE* f = fopen(filepath, "rb");
     if (!f) {
-        logCrash("[loadMergedGameData] SUCCESS: Caught expected missing file error.");
+        logCrash("[ERROR] Failed to open game.bin!");
         return false;
     }
 
+    logCrash("[loadMergedGameData] File opened! Getting size...");
+    fseek(f, 0, SEEK_END);
+    long compressedSize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (compressedSize <= 0) {
+        logCrash("[ERROR] game.bin size is 0 or invalid!");
+        fclose(f);
+        return false;
+    }
+
+    logCrash("[loadMergedGameData] Reading compressed buffer...");
+    std::vector<unsigned char> compressedBuf(compressedSize);
+    size_t readBytes = fread(compressedBuf.data(), 1, compressedSize, f);
     fclose(f);
+
+    if (readBytes != (size_t)compressedSize) {
+        logCrash("[ERROR] Read size mismatch!");
+        return false;
+    }
+
+    logCrash("[loadMergedGameData] Read complete. Initializing zlib inflate...");
+    std::vector<char> uncompressedData;
+    const size_t CHUNK_SIZE = 65536; 
+    unsigned char outChunk[CHUNK_SIZE];
+
+    z_stream strm;
+    std::memset(&strm, 0, sizeof(strm));
+    strm.next_in = compressedBuf.data();
+    strm.avail_in = compressedSize;
+
+    if (inflateInit(&strm) != Z_OK) {
+        logCrash("[ERROR] inflateInit failed!");
+        return false;
+    }
+
+    int ret = Z_OK;
+    while (ret == Z_OK) {
+        strm.next_out = outChunk;
+        strm.avail_out = CHUNK_SIZE;
+
+        ret = inflate(&strm, Z_NO_FLUSH);
+        if (ret != Z_OK && ret != Z_STREAM_END) {
+            logCrash("[ERROR] Decompression error encountered!");
+            inflateEnd(&strm);
+            return false;
+        }
+
+        size_t have = CHUNK_SIZE - strm.avail_out;
+        uncompressedData.insert(uncompressedData.end(), outChunk, outChunk + have);
+    }
+
+    inflateEnd(&strm);
+    logCrash("[loadMergedGameData] Decompression successful! Unpacking MessagePack...");
+
+    try {
+        targetHandle = msgpack::unpack(uncompressedData.data(), uncompressedData.size());
+        targetObj = targetHandle.get();
+    } catch (const std::exception& e) {
+        logCrash("[ERROR] MessagePack unpack failed!");
+        return false;
+    }
+
+    logCrash("[SUCCESS] Game data fully loaded and unpacked!");
     return true;
 }
 
@@ -89,9 +157,6 @@ int main(int argc, char* argv[]) {
     consoleInit(GFX_BOTTOM, &bottomConsole); 
     logCrash("Checkpoint: consoleInit passed.");
     
-    printf("=== MiniDayZ 3DS Booting ===\n\n");
-    fflush(stdout);
-
     logCrash("Checkpoint: About to call romfsInit()...");
     if (romfsInit() != 0) {
         logCrash("Checkpoint ERROR: romfsInit() failed!");
@@ -99,24 +164,20 @@ int main(int argc, char* argv[]) {
         logCrash("Checkpoint: romfsInit() succeeded.");
     }
 
-    logCrash("Checkpoint: Initializing C3D...");
+    logCrash("Checkpoint: Initializing C3D & C2D...");
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
-
-    logCrash("Checkpoint: Initializing C2D...");
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
-    logCrash("Checkpoint: Creating render targets...");
+    logCrash("Checkpoint: Creating render targets & text buffer...");
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
-
-    logCrash("Checkpoint: Allocating text buffer...");
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    logCrash("Checkpoint: About to call loadMergedGameData...");
+    logCrash("Checkpoint: About to load merged game data...");
     bool dataLoaded = loadMergedGameData(g_gameDataHandle, g_mainGameData);
     if (!dataLoaded) {
-        logCrash("Checkpoint: loadMergedGameData returned false (expected with test path).");
+        logCrash("Checkpoint WARNING: loadMergedGameData returned false.");
     }
 
     logCrash("Checkpoint: Loading UI JSON strings...");
@@ -221,7 +282,7 @@ int main(int argc, char* argv[]) {
                                   C2D_Color32(0, 200, 0, 255), C2D_Color32(0, 200, 0, 255));
             }
 
-            Player_Draw(g_spriteSheet, g_playerSprite);
+(Player_Draw(g_spriteSheet, g_playerSprite);
 
             std::string gameplayLog = g_gameLogs.count("2") ? g_gameLogs["2"] : "I feel healthy.";
             C2D_Text liveLogText;
