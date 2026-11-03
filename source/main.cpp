@@ -38,63 +38,59 @@ C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// Reads, decompresses zlib payload from game.bin, and unpacks MessagePack binary data
+// Reads, decompresses zlib payload from game.bin, and unpacks MessagePack binary data safely
 bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& targetObj) {
     const char* filepath = "romfs:/game.bin";
-    printf("[DEBUG] About to open file path: %s\n", filepath);
+    printf("[DEBUG] Checking file status...\n");
     fflush(stdout);
 
-    std::FILE* f = std::fopen(filepath, "rb");
+    FILE* f = fopen(filepath, "rb");
     if (!f) {
-        printf("[CRITICAL ERROR] RomFS cannot open %s!\n", filepath);
-        printf("[HINT] Ensure game.bin is inside romfs/ folder.\n");
+        printf("[ERROR] Failed to open %s\n", filepath);
         fflush(stdout);
         return false;
     }
-    printf("[DEBUG] File opened successfully!\n");
+
+    printf("[DEBUG] File opened successfully! Getting size...\n");
     fflush(stdout);
 
-    // 1. Get file size of game.bin
-    std::fseek(f, 0, SEEK_END);
-    long compressedSize = std::ftell(f);
-    std::fseek(f, 0, SEEK_SET);
+    fseek(f, 0, SEEK_END);
+    long compressedSize = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-    printf("[LOAD] Compressed payload size: %ld bytes\n", compressedSize);
-    fflush(stdout);
-
-    // 2. Read compressed payload into memory
-    unsigned char* compressedBuf = (unsigned char*)std::malloc(compressedSize);
-    if (!compressedBuf) {
-        printf("[ERROR] Failed to allocate compressed buffer memory!\n");
-        std::fclose(f);
+    if (compressedSize <= 0) {
+        printf("[ERROR] game.bin size is 0 or invalid!\n");
+        fclose(f);
         return false;
     }
 
-    size_t readBytes = std::fread(compressedBuf, 1, compressedSize, f);
-    std::fclose(f);
+    printf("[LOAD] Size: %ld bytes. Reading into memory...\n", compressedSize);
+    fflush(stdout);
+
+    std::vector<unsigned char> compressedBuf(compressedSize);
+    size_t readBytes = fread(compressedBuf.data(), 1, compressedSize, f);
+    fclose(f);
 
     if (readBytes != (size_t)compressedSize) {
-        printf("[ERROR] File read incomplete!\n");
-        std::free(compressedBuf);
+        printf("[ERROR] Read mismatch!\n");
         return false;
     }
 
-    // 3. Decompress zlib stream using chunked / streaming inflate to optimize RAM
-    printf("[DECOMPRESS] Unpacking zlib payload...\n");
+    printf("[SUCCESS] Read complete. Decompressing...\n");
     fflush(stdout);
 
+    // Decompress zlib stream using chunked / streaming inflate
     std::vector<char> uncompressedData;
-    const size_t CHUNK_SIZE = 65536; // 64KB chunk buffer
+    const size_t CHUNK_SIZE = 65536; 
     unsigned char outChunk[CHUNK_SIZE];
 
     z_stream strm;
     std::memset(&strm, 0, sizeof(strm));
-    strm.next_in = compressedBuf;
+    strm.next_in = compressedBuf.data();
     strm.avail_in = compressedSize;
 
     if (inflateInit(&strm) != Z_OK) {
         printf("[ERROR] inflateInit failed!\n");
-        std::free(compressedBuf);
         return false;
     }
 
@@ -105,9 +101,8 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
 
         ret = inflate(&strm, Z_NO_FLUSH);
         if (ret != Z_OK && ret != Z_STREAM_END) {
-            printf("[ERROR] Decompression failed with zlib error: %d\n", ret);
+            printf("[ERROR] Decompression error: %d\n", ret);
             inflateEnd(&strm);
-            std::free(compressedBuf);
             return false;
         }
 
@@ -116,13 +111,8 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
     }
 
     inflateEnd(&strm);
-    std::free(compressedBuf);
 
-    printf("[SUCCESS] Decompressed %zu bytes total!\n", uncompressedData.size());
-    fflush(stdout);
-
-    // 4. Unpack MessagePack binary payload
-    printf("[UNPACK] Unpacking MessagePack data...\n");
+    printf("[SUCCESS] Decompressed %zu bytes! Unpacking MessagePack...\n", uncompressedData.size());
     fflush(stdout);
 
     try {
@@ -134,7 +124,7 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
         return false;
     }
 
-    printf("[SUCCESS] Game binary data fully loaded and unpacked into memory!\n");
+    printf("[SUCCESS] Game data fully loaded!\n");
     fflush(stdout);
     return true;
 }
