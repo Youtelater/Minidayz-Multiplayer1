@@ -40,7 +40,7 @@ C2D_Sprite g_playerSprite;
 
 // Reads, decompresses zlib payload from game.bin, and unpacks MessagePack binary data safely
 bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& targetObj) {
-    const char* filepath = "romfs:/game.bin";
+   const char* filepath = "romfs:/nonexistent.bin";
     printf("[DEBUG] Checking file status...\n");
     fflush(stdout);
 
