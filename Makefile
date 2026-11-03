@@ -72,19 +72,11 @@ clean:
 	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS)/gfx/*.t3x
 
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
-	@echo building romfs binary image ...
-	@build_romfs $(ROMFS) $(BUILD)/romfs.bin
 	@echo building 3dsx ...
-	@3dsxtool $(TARGET).elf $@ --smdh=$(TARGET).smdh --romfs=$(BUILD)/romfs.bin
+	@3dsxtool $(TARGET).elf $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS)
 
 $(TARGET).smdh:
-	@if [ -f icon-256.png ]; then \
-		magick icon-256.png -resize 48x48 icon_48.png 2>/dev/null || convert icon-256.png -resize 48x48 icon_48.png; \
-		smdhtool --create "Mini DAYZ 3DS" "Mini DAYZ Port" "Developer" icon_48.png $@; \
-		rm -f icon_48.png; \
-	else \
-		touch $@; \
-	fi
+	@smdhtool --create "Mini DAYZ 3DS" "Mini DAYZ Port" "Developer" "" $@ 2>/dev/null || touch $@
 
 $(TARGET).elf: $(OFILES)
 	@echo linking ...
