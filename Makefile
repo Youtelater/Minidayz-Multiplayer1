@@ -72,8 +72,10 @@ clean:
 	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS)/gfx/*.t3x
 
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
-	@echo builtin 3dsx ...
-	@3dsxtool $(TARGET).elf $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS)
+	@echo building romfs binary image ...
+	@build_romfs $(ROMFS) $(BUILD)/romfs.bin
+	@echo building 3dsx ...
+	@3dsxtool $(TARGET).elf $@ --smdh=$(TARGET).smdh --romfs=$(BUILD)/romfs.bin
 
 $(TARGET).smdh:
 	@if [ -f icon-256.png ]; then \
