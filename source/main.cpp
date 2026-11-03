@@ -19,6 +19,15 @@
 #include "ItemTable.h"
 #include "ShaderMenu.h"
 
+// Emergency logger that writes directly to the SD card root
+void logCrash(const char* message) {
+    std::ofstream crashFile("sdmc:/minidayz_crash.txt", std::ios::app);
+    if (crashFile.is_open()) {
+        crashFile << message << "\n";
+        crashFile.close();
+    }
+}
+
 // Game States
 enum GameState {
     STATE_CONSOLE_DEBUG,
@@ -30,7 +39,6 @@ enum GameState {
 std::unordered_map<std::string, std::string> g_uiStrings;
 std::unordered_map<std::string, std::string> g_gameLogs;
 
-// MessagePack storage handles (keeps the unpacked memory alive during runtime)
 msgpack::object_handle g_gameDataHandle; 
 msgpack::object g_mainGameData; 
 
@@ -38,98 +46,21 @@ C2D_TextBuf g_dynamicTextBuf;
 C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
-// Reads, decompresses zlib payload from game.bin, and unpacks MessagePack binary data safely
 bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& targetObj) {
-   const char* filepath = "romfs:/nonexistent.bin";
-    printf("[DEBUG] Checking file status...\n");
-    fflush(stdout);
-
+    logCrash("[loadMergedGameData] Entering function");
+    const char* filepath = "romfs:/nonexistent.bin"; // Tested path to verify error-handling
+    
+    logCrash("[loadMergedGameData] Opening file...");
     FILE* f = fopen(filepath, "rb");
     if (!f) {
-        printf("[ERROR] Failed to open %s\n", filepath);
-        fflush(stdout);
+        logCrash("[loadMergedGameData] SUCCESS: Caught expected missing file error.");
         return false;
     }
 
-    printf("[DEBUG] File opened successfully! Getting size...\n");
-    fflush(stdout);
-
-    fseek(f, 0, SEEK_END);
-    long compressedSize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    if (compressedSize <= 0) {
-        printf("[ERROR] game.bin size is 0 or invalid!\n");
-        fclose(f);
-        return false;
-    }
-
-    printf("[LOAD] Size: %ld bytes. Reading into memory...\n", compressedSize);
-    fflush(stdout);
-
-    std::vector<unsigned char> compressedBuf(compressedSize);
-    size_t readBytes = fread(compressedBuf.data(), 1, compressedSize, f);
     fclose(f);
-
-    if (readBytes != (size_t)compressedSize) {
-        printf("[ERROR] Read mismatch!\n");
-        return false;
-    }
-
-    printf("[SUCCESS] Read complete. Decompressing...\n");
-    fflush(stdout);
-
-    // Decompress zlib stream using chunked / streaming inflate
-    std::vector<char> uncompressedData;
-    const size_t CHUNK_SIZE = 65536; 
-    unsigned char outChunk[CHUNK_SIZE];
-
-    z_stream strm;
-    std::memset(&strm, 0, sizeof(strm));
-    strm.next_in = compressedBuf.data();
-    strm.avail_in = compressedSize;
-
-    if (inflateInit(&strm) != Z_OK) {
-        printf("[ERROR] inflateInit failed!\n");
-        return false;
-    }
-
-    int ret = Z_OK;
-    while (ret == Z_OK) {
-        strm.next_out = outChunk;
-        strm.avail_out = CHUNK_SIZE;
-
-        ret = inflate(&strm, Z_NO_FLUSH);
-        if (ret != Z_OK && ret != Z_STREAM_END) {
-            printf("[ERROR] Decompression error: %d\n", ret);
-            inflateEnd(&strm);
-            return false;
-        }
-
-        size_t have = CHUNK_SIZE - strm.avail_out;
-        uncompressedData.insert(uncompressedData.end(), outChunk, outChunk + have);
-    }
-
-    inflateEnd(&strm);
-
-    printf("[SUCCESS] Decompressed %zu bytes! Unpacking MessagePack...\n", uncompressedData.size());
-    fflush(stdout);
-
-    try {
-        targetHandle = msgpack::unpack(uncompressedData.data(), uncompressedData.size());
-        targetObj = targetHandle.get();
-    } catch (const std::exception& e) {
-        printf("[ERROR] MessagePack unpack failed: %s\n", e.what());
-        fflush(stdout);
-        return false;
-    }
-
-    printf("[SUCCESS] Game data fully loaded!\n");
-    fflush(stdout);
     return true;
 }
 
-// Helper function to parse JSON string maps (for smaller UI files)
 bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::string>& targetMap) {
     std::ifstream file(filePath);
     if (!file.is_open()) return false;
@@ -145,86 +76,74 @@ bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Initialize 3DS Hardware Services & Console
+    // Clear old crash log at boot
+    {
+        std::ofstream clearFile("sdmc:/minidayz_crash.txt", std::ios::trunc);
+        clearFile << "=== Booting New Session ===\n";
+    }
+
     gfxInitDefault();
+    logCrash("Checkpoint: gfxInitDefault passed.");
     
     PrintConsole bottomConsole;
     consoleInit(GFX_BOTTOM, &bottomConsole); 
+    logCrash("Checkpoint: consoleInit passed.");
     
     printf("=== MiniDayZ 3DS Booting ===\n\n");
     fflush(stdout);
 
-    printf("[INIT] Initializing RomFS...\n");
-    fflush(stdout);
+    logCrash("Checkpoint: About to call romfsInit()...");
     if (romfsInit() != 0) {
-        printf("[ERROR] romfsInit() failed! Are assets packed?\n");
-        fflush(stdout);
+        logCrash("Checkpoint ERROR: romfsInit() failed!");
     } else {
-        printf("[SUCCESS] RomFS initialized.\n");
-        fflush(stdout);
+        logCrash("Checkpoint: romfsInit() succeeded.");
     }
 
-    printf("[DEBUG] Initializing C3D...\n");
-    fflush(stdout);
+    logCrash("Checkpoint: Initializing C3D...");
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
 
-    printf("[DEBUG] Initializing C2D...\n");
-    fflush(stdout);
+    logCrash("Checkpoint: Initializing C2D...");
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
-    printf("[DEBUG] Creating render targets...\n");
-    fflush(stdout);
+    logCrash("Checkpoint: Creating render targets...");
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
-    printf("[DEBUG] Allocating text buffer...\n");
-    fflush(stdout);
+    logCrash("Checkpoint: Allocating text buffer...");
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    // 2. Load merged binary dataset (game.bin)
-    printf("[DEBUG] About to load merged game data...\n");
-    fflush(stdout);
+    logCrash("Checkpoint: About to call loadMergedGameData...");
     bool dataLoaded = loadMergedGameData(g_gameDataHandle, g_mainGameData);
     if (!dataLoaded) {
-        printf("[WARNING] Failed to load main game data!\n");
-        fflush(stdout);
+        logCrash("Checkpoint: loadMergedGameData returned false (expected with test path).");
     }
 
-    // Load Secondary UI and Game Log Data
-    printf("[DEBUG] Loading UI JSON strings...\n");
-    fflush(stdout);
+    logCrash("Checkpoint: Loading UI JSON strings...");
     loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
     loadJsonStrings("romfs:/data/game_logs.json", g_gameLogs);
     
-    // Initialize Game Modules
-    printf("[DEBUG] Initializing game modules...\n");
-    fflush(stdout);
+    logCrash("Checkpoint: Initializing game modules...");
     World_LoadData();
     Player_Init();
     ItemTable_Load();
     ShaderMenu_Init();
 
-    printf("[DEBUG] Loading sprite sheet...\n");
-    fflush(stdout);
+    logCrash("Checkpoint: Loading sprite sheet...");
     g_spriteSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x");
     if (g_spriteSheet) {
-        printf("[LOAD] Loaded player.t3x sprite sheet.\n");
-        fflush(stdout);
+        logCrash("Checkpoint: player.t3x loaded successfully.");
         C2D_SpriteFromSheet(&g_playerSprite, g_spriteSheet, 0);
         C2D_SpriteSetCenter(&g_playerSprite, 0.5f, 0.5f);
     } else {
-        printf("[WARNING] Failed to load player.t3x sprite sheet!\n");
-        fflush(stdout);
+        logCrash("Checkpoint WARNING: Failed to load player.t3x sprite sheet!");
     }
+
+    logCrash("Checkpoint: Initialization sequence fully complete!");
 
     std::string newGameText = g_uiStrings.count("1") ? g_uiStrings["1"] : "New Game";
     std::string continueText = g_uiStrings.count("2") ? g_uiStrings["2"] : "Continue";
     std::string activeLog = g_gameLogs.count("4") ? g_gameLogs["4"] : "I'm freezing!";
-
-    printf("\nInitialization complete!\n");
-    printf("Press START to launch game.\n");
-    fflush(stdout);
 
     GameState currentState = STATE_CONSOLE_DEBUG;
 
