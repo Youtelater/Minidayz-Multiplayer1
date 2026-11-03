@@ -41,7 +41,7 @@ C2D_Sprite g_playerSprite;
 // Reads, decompresses zlib payload from game.bin, and unpacks MessagePack binary data
 bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& targetObj) {
     const char* filepath = "romfs:/game.bin";
-    printf("[INIT] Opening %s...\n", filepath);
+    printf("[DEBUG] About to open file path: %s\n", filepath);
     fflush(stdout);
 
     std::FILE* f = std::fopen(filepath, "rb");
@@ -51,6 +51,8 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
         fflush(stdout);
         return false;
     }
+    printf("[DEBUG] File opened successfully!\n");
+    fflush(stdout);
 
     // 1. Get file size of game.bin
     std::fseek(f, 0, SEEK_END);
