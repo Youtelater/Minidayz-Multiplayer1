@@ -160,6 +160,7 @@ int main(int argc, char* argv[]) {
     consoleInit(GFX_BOTTOM, &bottomConsole); 
     
     printf("=== MiniDayZ 3DS Booting ===\n\n");
+    fflush(stdout);
 
     printf("[INIT] Initializing RomFS...\n");
     fflush(stdout);
@@ -171,16 +172,27 @@ int main(int argc, char* argv[]) {
         fflush(stdout);
     }
 
+    printf("[DEBUG] Initializing C3D...\n");
+    fflush(stdout);
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
+
+    printf("[DEBUG] Initializing C2D...\n");
+    fflush(stdout);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
+    printf("[DEBUG] Creating render targets...\n");
+    fflush(stdout);
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
+    printf("[DEBUG] Allocating text buffer...\n");
+    fflush(stdout);
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
     // 2. Load merged binary dataset (game.bin)
+    printf("[DEBUG] About to load merged game data...\n");
+    fflush(stdout);
     bool dataLoaded = loadMergedGameData(g_gameDataHandle, g_mainGameData);
     if (!dataLoaded) {
         printf("[WARNING] Failed to load main game data!\n");
@@ -188,15 +200,21 @@ int main(int argc, char* argv[]) {
     }
 
     // Load Secondary UI and Game Log Data
+    printf("[DEBUG] Loading UI JSON strings...\n");
+    fflush(stdout);
     loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
     loadJsonStrings("romfs:/data/game_logs.json", g_gameLogs);
     
     // Initialize Game Modules
+    printf("[DEBUG] Initializing game modules...\n");
+    fflush(stdout);
     World_LoadData();
     Player_Init();
     ItemTable_Load();
     ShaderMenu_Init();
 
+    printf("[DEBUG] Loading sprite sheet...\n");
+    fflush(stdout);
     g_spriteSheet = C2D_SpriteSheetLoad("romfs:/gfx/player.t3x");
     if (g_spriteSheet) {
         printf("[LOAD] Loaded player.t3x sprite sheet.\n");
