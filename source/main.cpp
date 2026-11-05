@@ -282,7 +282,7 @@ int main(int argc, char* argv[]) {
                                   C2D_Color32(0, 200, 0, 255), C2D_Color32(0, 200, 0, 255));
             }
 
-(Player_Draw(g_spriteSheet, g_playerSprite);
+Player_Draw(g_spriteSheet, g_playerSprite);
 
             std::string gameplayLog = g_gameLogs.count("2") ? g_gameLogs["2"] : "I feel healthy.";
             C2D_Text liveLogText;
