@@ -52,13 +52,17 @@ C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
 bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& targetObj) {
-    logCrash("[loadMergedGameData] Entering function");
-    const char* filepath = "romfs:/game.bin"; // Back to the real game data!
+    logCrash("[loadMergedGameData] FUNCTION START REACHED!");
     
-    logCrash("[loadMergedGameData] Opening game.bin...");
+    // Give the emulator a moment to breathe
+    gspWaitForVBlank();
+
+    const char* filepath = "romfs:/game.bin";
+    logCrash("[loadMergedGameData] About to call fopen...");
+    
     FILE* f = fopen(filepath, "rb");
     if (!f) {
-        logCrash("[ERROR] Failed to open game.bin!");
+        logCrash("[ERROR] fopen returned nullptr!");
         return false;
     }
 
