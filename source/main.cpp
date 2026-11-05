@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
 
     logCrash("Checkpoint: Creating render targets & text buffer...");
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-    C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+    C3D_RenderTarget* bottomScreen = nullptr; // Defer bottom screen target creation so console can print logs safely!
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
     logCrash("Checkpoint: About to trigger file load sequence...");
@@ -201,6 +201,7 @@ int main(int argc, char* argv[]) {
     }
 
     logCrash("Checkpoint: Initialization sequence fully complete!");
+    logCrash("Press START to enter the game menu.");
 
     std::string newGameText = g_uiStrings.count("1") ? g_uiStrings["1"] : "New Game";
     std::string continueText = g_uiStrings.count("2") ? g_uiStrings["2"] : "Continue";
@@ -217,6 +218,10 @@ int main(int argc, char* argv[]) {
         if (kDown & KEY_START) {
             if (currentState == STATE_CONSOLE_DEBUG) {
                 currentState = STATE_MENU; 
+                // Initialize bottom screen render target now that we are exiting the debug console
+                if (!bottomScreen) {
+                    bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+                }
             } else {
                 break; 
             }
@@ -248,24 +253,26 @@ int main(int argc, char* argv[]) {
             C2D_TextOptimize(&logText);
             C2D_DrawText(&logText, C2D_AtBaseline | C2D_WithColor, 10.0f, 30.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 80, 80, 255));
 
-            C2D_TargetClear(bottomScreen, C2D_Color32(40, 40, 40, 255));
-            C2D_SceneBegin(bottomScreen);
+            if (bottomScreen) {
+                C2D_TargetClear(bottomScreen, C2D_Color32(40, 40, 40, 255));
+                C2D_SceneBegin(bottomScreen);
 
-            C2D_DrawRectangle(40.0f, 50.0f, 0, 240.0f, 40.0f, 
-                              C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
-                              C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255));
-            C2D_Text btn1Text;
-            C2D_TextParse(&btn1Text, g_dynamicTextBuf, newGameText.c_str());
-            C2D_TextOptimize(&btn1Text);
-            C2D_DrawText(&btn1Text, C2D_AtBaseline | C2D_WithColor, 60.0f, 78.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
+                C2D_DrawRectangle(40.0f, 50.0f, 0, 240.0f, 40.0f, 
+                                  C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
+                                  C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255));
+                C2D_Text btn1Text;
+                C2D_TextParse(&btn1Text, g_dynamicTextBuf, newGameText.c_str());
+                C2D_TextOptimize(&btn1Text);
+                C2D_DrawText(&btn1Text, C2D_AtBaseline | C2D_WithColor, 60.0f, 78.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
 
-            C2D_DrawRectangle(40.0f, 110.0f, 0, 240.0f, 40.0f, 
-                              C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
-                              C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255));
-            C2D_Text btn2Text;
-            C2D_TextParse(&btn2Text, g_dynamicTextBuf, continueText.c_str());
-            C2D_TextOptimize(&btn2Text);
-            C2D_DrawText(&btn2Text, C2D_AtBaseline | C2D_WithColor, 60.0f, 138.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
+                C2D_DrawRectangle(40.0f, 110.0f, 0, 240.0f, 40.0f, 
+                                  C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
+                                  C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255));
+                C2D_Text btn2Text;
+                C2D_TextParse(&btn2Text, g_dynamicTextBuf, continueText.c_str());
+                C2D_TextOptimize(&btn2Text);
+                C2D_DrawText(&btn2Text, C2D_AtBaseline | C2D_WithColor, 60.0f, 138.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
+            }
 
         } else if (currentState == STATE_PLAYING) {
             circlePosition circlePad;
@@ -290,8 +297,10 @@ int main(int argc, char* argv[]) {
             C2D_TextOptimize(&liveLogText);
             C2D_DrawText(&liveLogText, C2D_AtBaseline | C2D_WithColor, 10.0f, 30.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
 
-            C2D_TargetClear(bottomScreen, C2D_Color32(20, 20, 20, 255));
-            C2D_SceneBegin(bottomScreen);
+            if (bottomScreen) {
+                C2D_TargetClear(bottomScreen, C2D_Color32(20, 20, 20, 255));
+                C2D_SceneBegin(bottomScreen);
+            }
         }
 
         C3D_FrameEnd(0);
