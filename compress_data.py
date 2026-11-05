@@ -1,36 +1,23 @@
 import json
-import os
-import zlib
 import msgpack
+import zlib
 
-# Define paths to your split fragments inside romfs
-p1_path = os.path.join('romfs', 'data_part_1.json')
-p2_path = os.path.join('romfs', 'data_part_2.json')
+# Path to your original, un-separated JSON file
+input_json_path = "path_to_your_original_data.json" 
+output_bin_path = "romfs/game.bin"
 
-print("Reading JSON parts...")
-with open(p1_path, 'r', encoding='utf-8') as f:
-    part1_str = f.read()
-with open(p2_path, 'r', encoding='utf-8') as f:
-    part2_str = f.read()
+print("Reading original JSON file...")
+with open(input_json_path, "r", encoding="utf-8") as f:
+    raw_data = json.load(f)
 
-# 1. Combine the JSON string fragments
-full_json_str = part1_str + part2_str
-
-print("Parsing combined JSON...")
-# 2. Parse into a standard Python data structure
-data_obj = json.loads(full_json_str)
-
-print("Packing into MessagePack format...")
-# 3. Convert Python object to MessagePack binary format (matches C++ msgpack::unpack)
-packed_data = msgpack.packb(data_obj)
+print("Packing into MessagePack binary...")
+packed_data = msgpack.packb(raw_data)
 
 print("Compressing with zlib...")
-# 4. Compress the binary payload using zlib
-compressed_data = zlib.compress(packed_data)
+compressed_data = zlib.compress(packed_data, level=9)
 
-# 5. Write out the final game.bin file into romfs
-output_path = os.path.join('romfs', 'game.bin')
-with open(output_path, 'wb') as f:
+print(f"Writing compressed binary to {output_bin_path}...")
+with open(output_bin_path, "wb") as f:
     f.write(compressed_data)
 
-print(f"Successfully generated {output_path} ({len(compressed_data)} bytes)!")
+print(f"Done! Original size: {len(packed_data)} bytes | Compressed size: {len(compressed_data)} bytes")
