@@ -59,6 +59,9 @@ LDFLAGS		:= -specs=3dsx.specs -g $(ARCH) -L/opt/devkitpro/libctru/lib -L/opt/dev
 # -lz handles zlib stream decompression
 LIBS		:= -lcitro2d -lcitro3d -lctru -lz -lm
 
+# Collect all files inside romfs to track dependencies accurately
+ROMFS_FILES := $(shell find $(ROMFS) -type f 2>/dev/null)
+
 #-----------------------------------------------------------------
 # MAIN RULES
 #-----------------------------------------------------------------
@@ -71,8 +74,9 @@ clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS)/gfx/*.t3x
 
-$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh
-	@echo building 3dsx ...
+# Explicitly depend on graphics and ROMFS contents to force rebuilding .3dsx when romfs changes
+$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh graphics $(ROMFS_FILES)
+	@echo building 3dsx with romfs ...
 	@3dsxtool $(TARGET).elf $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS)
 
 $(TARGET).smdh:
@@ -88,7 +92,7 @@ $(BUILD)/%.o: %.cpp
 
 $(BUILD)/%.o: %.c
 	@echo cc $<
-	@$(CC) -c $(CFLAGS) $< -o $@
+	@$(CXX) -c $(CFLAGS) $< -o $@
 
 $(BUILD)/%.o: %.s
 	@echo as $<
