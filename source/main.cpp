@@ -1,6 +1,5 @@
 #include <3ds.h>
 #include <citro2d.h>
-#include <fat.h>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -20,18 +19,10 @@
 #include "ItemTable.h"
 #include "ShaderMenu.h"
 
-// Dual-logger: prints to the emulator screen AND saves to the virtual SD card
+// Screen logger: prints directly to the emulator console
 void logCrash(const char* message) {
-    // Print to the 3DS console screen in Manic Emu
     printf("%s\n", message);
     fflush(stdout);
-
-    // Also write to the virtual SD card crash log
-    std::ofstream crashFile("sdmc:/minidayz_crash.txt", std::ios::app);
-    if (crashFile.is_open()) {
-        crashFile << message << "\n";
-        crashFile.close();
-    }
 }
 
 // Game States
@@ -54,8 +45,6 @@ C2D_Sprite g_playerSprite;
 
 bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& targetObj) {
     logCrash("[loadMergedGameData] FUNCTION START REACHED!");
-    
-    // Give the emulator a moment to breathe
     gspWaitForVBlank();
 
     const char* filepath = "romfs:/game.bin";
@@ -150,17 +139,9 @@ bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::
 
 int main(int argc, char* argv[]) {
     gfxInitDefault();
-    
-    // Initialize the SD card filesystem so sdmc:/ writes work properly
-    fatInitDefault();
 
-    // Clear old crash log at boot
-    {
-        std::ofstream clearFile("sdmc:/minidayz_crash.txt", std::ios::trunc);
-        clearFile << "=== Booting New Session ===\n";
-    }
-
-    logCrash("Checkpoint: gfxInitDefault & fatInitDefault passed.");
+    logCrash("=== Booting New Session ===");
+    logCrash("Checkpoint: gfxInitDefault passed.");
     
     PrintConsole bottomConsole;
     consoleInit(GFX_BOTTOM, &bottomConsole); 
