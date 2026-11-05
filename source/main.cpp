@@ -1,5 +1,6 @@
 #include <3ds.h>
 #include <citro2d.h>
+#include <fat.h>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -148,14 +149,18 @@ bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::
 }
 
 int main(int argc, char* argv[]) {
+    gfxInitDefault();
+    
+    // Initialize the SD card filesystem so sdmc:/ writes work properly
+    fatInitDefault();
+
     // Clear old crash log at boot
     {
         std::ofstream clearFile("sdmc:/minidayz_crash.txt", std::ios::trunc);
         clearFile << "=== Booting New Session ===\n";
     }
 
-    gfxInitDefault();
-    logCrash("Checkpoint: gfxInitDefault passed.");
+    logCrash("Checkpoint: gfxInitDefault & fatInitDefault passed.");
     
     PrintConsole bottomConsole;
     consoleInit(GFX_BOTTOM, &bottomConsole); 
