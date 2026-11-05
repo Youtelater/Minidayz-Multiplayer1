@@ -3,7 +3,7 @@ import msgpack
 import zlib
 
 # Path to your original, un-separated JSON file
-input_json_path = "path_to_your_original_data.json" 
+input_json_path = "data.deobfuscated.js" 
 output_bin_path = "romfs/game.bin"
 
 print("Reading original JSON file...")
