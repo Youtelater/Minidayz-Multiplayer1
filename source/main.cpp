@@ -19,7 +19,7 @@
 #include "ItemTable.h"
 #include "ShaderMenu.h"
 
-// Screen logger: prints directly to the emulator console
+// Screen logger: prints directly to the bottom screen console
 void logCrash(const char* message) {
     printf("%s\n", message);
     fflush(stdout);
@@ -154,6 +154,7 @@ int main(int argc, char* argv[]) {
     logCrash("=== Booting New Session ===");
     logCrash("Checkpoint: gfxInitDefault passed.");
     
+    // Bottom screen locked as text console for debug logs
     PrintConsole bottomConsole;
     consoleInit(GFX_BOTTOM, &bottomConsole); 
     logCrash("Checkpoint: consoleInit passed.");
@@ -211,14 +212,12 @@ int main(int argc, char* argv[]) {
     }
 
     logCrash("Checkpoint: Initialization sequence fully complete!");
-    logCrash("Launching straight into the game menu...");
+    logCrash("Launching game menu on top screen...");
 
     std::string newGameText = g_uiStrings.count("1") ? g_uiStrings["1"] : "New Game";
     std::string continueText = g_uiStrings.count("2") ? g_uiStrings["2"] : "Continue";
     std::string activeLog = g_gameLogs.count("4") ? g_gameLogs["4"] : "I'm freezing!";
 
-    // Automatically initialize bottom screen render target and enter menu mode
-    C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
     GameState currentState = STATE_MENU;
 
     while (aptMainLoop()) {
@@ -233,6 +232,7 @@ int main(int argc, char* argv[]) {
 
         C2D_TextBufClear(g_dynamicTextBuf);
 
+        // Touch coordinates adjusted for top screen interaction if needed
         if (currentState == STATE_MENU && (kDown & KEY_TOUCH)) {
             if (touch.px >= 40.0f && touch.px <= 280.0f && touch.py >= 50.0f && touch.py <= 90.0f) {
                 currentState = STATE_PLAYING;
@@ -245,15 +245,13 @@ int main(int argc, char* argv[]) {
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
         if (currentState == STATE_MENU) {
+            // Render menu visuals entirely on the TOP screen
             ShaderMenu_DrawBackground(topScreen);
 
             C2D_Text logText;
             C2D_TextParse(&logText, g_dynamicTextBuf, activeLog.c_str());
             C2D_TextOptimize(&logText);
             C2D_DrawText(&logText, C2D_AtBaseline | C2D_WithColor, 10.0f, 30.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 80, 80, 255));
-
-            C2D_TargetClear(bottomScreen, C2D_Color32(40, 40, 40, 255));
-            C2D_SceneBegin(bottomScreen);
 
             C2D_DrawRectangle(40.0f, 50.0f, 0, 240.0f, 40.0f, 
                               C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
@@ -276,6 +274,7 @@ int main(int argc, char* argv[]) {
             hidCircleRead(&circlePad);
             Player_Update(circlePad);
 
+            // Render gameplay entirely on the TOP screen
             C2D_TargetClear(topScreen, C2D_Color32(10, 40, 10, 255));
             C2D_SceneBegin(topScreen);
 
@@ -293,9 +292,6 @@ int main(int argc, char* argv[]) {
             C2D_TextParse(&liveLogText, g_dynamicTextBuf, gameplayLog.c_str());
             C2D_TextOptimize(&liveLogText);
             C2D_DrawText(&liveLogText, C2D_AtBaseline | C2D_WithColor, 10.0f, 30.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
-
-            C2D_TargetClear(bottomScreen, C2D_Color32(20, 20, 20, 255));
-            C2D_SceneBegin(bottomScreen);
         }
 
         C3D_FrameEnd(0);
