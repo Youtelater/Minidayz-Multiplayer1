@@ -174,8 +174,18 @@ int main(int argc, char* argv[]) {
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    logCrash("Checkpoint: About to load merged game data...");
-    bool dataLoaded = loadMergedGameData(g_gameDataHandle, g_mainGameData);
+    logCrash("Checkpoint: About to trigger file load sequence...");
+    
+    gfxFlushBuffers();
+    gspWaitForVBlank();
+
+    bool dataLoaded = false;
+    try {
+        dataLoaded = loadMergedGameData(g_gameDataHandle, g_mainGameData);
+    } catch (...) {
+        logCrash("Checkpoint ERROR: Caught severe exception during loadMergedGameData!");
+    }
+
     if (!dataLoaded) {
         logCrash("Checkpoint WARNING: loadMergedGameData returned false.");
     }
@@ -282,7 +292,7 @@ int main(int argc, char* argv[]) {
                                   C2D_Color32(0, 200, 0, 255), C2D_Color32(0, 200, 0, 255));
             }
 
-Player_Draw(g_spriteSheet, g_playerSprite);
+            Player_Draw(g_spriteSheet, g_playerSprite);
 
             std::string gameplayLog = g_gameLogs.count("2") ? g_gameLogs["2"] : "I feel healthy.";
             C2D_Text liveLogText;
