@@ -19,7 +19,7 @@
 #include "ItemTable.h"
 #include "ShaderMenu.h"
 
-// Screen logger: prints directly to the bottom screen console
+// Screen logger: prints directly to the bottom screen console and flushes instantly
 void logCrash(const char* message) {
     printf("%s\n", message);
     gfxFlushBuffers();
@@ -44,32 +44,34 @@ C2D_SpriteSheet g_spriteSheet;
 C2D_Sprite g_playerSprite;
 
 bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& targetObj) {
-    logCrash("[Load] 0% - Entering load sequence...");
+    logCrash("[Load] Step 1: Entering function...");
 
     const char* filepath = "romfs:/game.bin";
-    logCrash("[Load] 5% - Opening game.bin...");
+    logCrash("[Load] Step 2: About to call fopen()...");
     
     FILE* f = fopen(filepath, "rb");
     if (!f) {
-        logCrash("[ERROR] 5% - fopen returned nullptr! File missing from RomFS?");
+        logCrash("[ERROR] fopen failed! game.bin not found in RomFS.");
         return false;
     }
 
-    logCrash("[Load] 10% - Reading file size...");
+    logCrash("[Load] Step 3: File opened! Finding size...");
     fseek(f, 0, SEEK_END);
     long compressedSize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
+    char sizeMsg[64];
+    std::snprintf(sizeMsg, sizeof(sizeMsg), "[Load] Step 4: Size is %ld bytes", compressedSize);
+    logCrash(sizeMsg);
+
     if (compressedSize <= 0) {
-        logCrash("[ERROR] 10% - game.bin size is 0 or invalid!");
+        logCrash("[ERROR] game.bin size is 0!");
         fclose(f);
         return false;
     }
 
-    logCrash("[Load] 15% - Allocating memory for compressed buffer...");
     std::vector<unsigned char> compressedBuf(compressedSize);
-    
-    logCrash("[Load] 20% - Reading data into buffer...");
+    logCrash("[Load] Step 5: Reading file into RAM...");
     size_t readBytes = fread(compressedBuf.data(), 1, compressedSize, f);
     fclose(f);
 
@@ -78,7 +80,7 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
         return false;
     }
 
-    logCrash("[Load] 30% - Initializing zlib stream...");
+    logCrash("[Load] Step 6: Decompressing zlib data...");
     std::vector<char> uncompressedData;
     const size_t CHUNK_SIZE = 65536; 
     unsigned char outChunk[CHUNK_SIZE];
@@ -93,45 +95,34 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
         return false;
     }
 
-    logCrash("[Load] 40% - Beginning zlib chunk decompression...");
     int ret = Z_OK;
-    int chunkCount = 0;
     while (ret == Z_OK) {
         strm.next_out = outChunk;
         strm.avail_out = CHUNK_SIZE;
 
         ret = inflate(&strm, Z_NO_FLUSH);
         if (ret != Z_OK && ret != Z_STREAM_END) {
-            logCrash("[ERROR] Decompression error during inflate loop!");
+            logCrash("[ERROR] Decompression failed!");
             inflateEnd(&strm);
             return false;
         }
 
         size_t have = CHUNK_SIZE - strm.avail_out;
         uncompressedData.insert(uncompressedData.end(), outChunk, outChunk + have);
-        
-        chunkCount++;
-        if (chunkCount % 5 == 0) {
-            printf("[Load] Decompressing chunk %d...\n", chunkCount);
-            gfxFlushBuffers();
-            gspWaitForVBlank();
-        }
     }
 
     inflateEnd(&strm);
-    logCrash("[Load] 70% - Decompression successful! Preparing MessagePack...");
+    logCrash("[Load] Step 7: Unpacking MessagePack...");
 
     try {
-        logCrash("[Load] 80% - Unpacking MessagePack binary data...");
         targetHandle = msgpack::unpack(uncompressedData.data(), uncompressedData.size());
-        logCrash("[Load] 90% - Getting MessagePack object handle...");
         targetObj = targetHandle.get();
-    } catch (const std::exception& e) {
-        logCrash("[ERROR] MessagePack unpack threw an exception!");
+    } catch (...) {
+        logCrash("[ERROR] MessagePack exception!");
         return false;
     }
 
-    logCrash("[Load] 100% - Game data fully loaded and unpacked!");
+    logCrash("[Load] Step 8: Success!");
     return true;
 }
 
