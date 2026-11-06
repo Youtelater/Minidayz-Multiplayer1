@@ -19,11 +19,10 @@
 #include "ItemTable.h"
 #include "ShaderMenu.h"
 
-// Screen logger: prints directly to the bottom screen console and flushes instantly
+// Safe logger: flushes text instantly to console without waiting for rendering hardware sync
 void logCrash(const char* message) {
     printf("%s\n", message);
-    gfxFlushBuffers();
-    gspWaitForVBlank();
+    fflush(stdout);
 }
 
 // Game States
@@ -47,15 +46,15 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
     logCrash("[Load] Step 1: Entering function...");
 
     const char* filepath = "romfs:/game.bin";
-    logCrash("[Load] Step 2: About to call fopen()...");
+    logCrash("[Load] Step 2: Opening game.bin...");
     
     FILE* f = fopen(filepath, "rb");
     if (!f) {
-        logCrash("[ERROR] fopen failed! game.bin not found in RomFS.");
+        logCrash("[ERROR] fopen failed! game.bin missing from RomFS.");
         return false;
     }
 
-    logCrash("[Load] Step 3: File opened! Finding size...");
+    logCrash("[Load] Step 3: File opened! Checking file size...");
     fseek(f, 0, SEEK_END);
     long compressedSize = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -65,13 +64,13 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
     logCrash(sizeMsg);
 
     if (compressedSize <= 0) {
-        logCrash("[ERROR] game.bin size is 0!");
+        logCrash("[ERROR] game.bin size is invalid or 0!");
         fclose(f);
         return false;
     }
 
+    logCrash("[Load] Step 5: Allocating buffer & reading into RAM...");
     std::vector<unsigned char> compressedBuf(compressedSize);
-    logCrash("[Load] Step 5: Reading file into RAM...");
     size_t readBytes = fread(compressedBuf.data(), 1, compressedSize, f);
     fclose(f);
 
@@ -80,7 +79,7 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
         return false;
     }
 
-    logCrash("[Load] Step 6: Decompressing zlib data...");
+    logCrash("[Load] Step 6: Initializing zlib decompression...");
     std::vector<char> uncompressedData;
     const size_t CHUNK_SIZE = 65536; 
     unsigned char outChunk[CHUNK_SIZE];
@@ -102,7 +101,7 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
 
         ret = inflate(&strm, Z_NO_FLUSH);
         if (ret != Z_OK && ret != Z_STREAM_END) {
-            logCrash("[ERROR] Decompression failed!");
+            logCrash("[ERROR] Decompression error during inflate!");
             inflateEnd(&strm);
             return false;
         }
@@ -112,17 +111,17 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
     }
 
     inflateEnd(&strm);
-    logCrash("[Load] Step 7: Unpacking MessagePack...");
+    logCrash("[Load] Step 7: Unpacking MessagePack data...");
 
     try {
         targetHandle = msgpack::unpack(uncompressedData.data(), uncompressedData.size());
         targetObj = targetHandle.get();
     } catch (...) {
-        logCrash("[ERROR] MessagePack exception!");
+        logCrash("[ERROR] Exception caught during MessagePack unpack!");
         return false;
     }
 
-    logCrash("[Load] Step 8: Success!");
+    logCrash("[Load] Step 8: Game data loaded successfully!");
     return true;
 }
 
@@ -141,14 +140,14 @@ bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Core 3DS & Console Init First
+    // 1. Core 3DS & Console Setup First
     gfxInitDefault();
 
     PrintConsole bottomConsole;
     consoleInit(GFX_BOTTOM, &bottomConsole); 
     
     logCrash("=== Booting New Session ===");
-    logCrash("Checkpoint: Console & GFX initialized.");
+    logCrash("Checkpoint: Console initialized.");
     
     if (romfsInit() != 0) {
         logCrash("Checkpoint ERROR: romfsInit() failed!");
@@ -156,22 +155,20 @@ int main(int argc, char* argv[]) {
         logCrash("Checkpoint: romfsInit() succeeded.");
     }
 
-    // =========================================================================
-    // PRIORITY STEP: Load game.bin immediately before allocating engines/renderers
-    // =========================================================================
+    // 2. Load game.bin BEFORE initializing graphics loops / shaders
     logCrash("[PRIORITY] Triggering game.bin data load first...");
     bool dataLoaded = false;
     try {
         dataLoaded = loadMergedGameData(g_gameDataHandle, g_mainGameData);
     } catch (...) {
-        logCrash("Checkpoint ERROR: Caught severe exception during loadMergedGameData!");
+        logCrash("Checkpoint ERROR: Severe exception during loadMergedGameData!");
     }
 
     if (!dataLoaded) {
         logCrash("Checkpoint WARNING: loadMergedGameData returned false.");
     }
 
-    // 2. Secondary Subsystems & Rendering (Initialized AFTER data is safe in RAM)
+    // 3. Initialize rendering engine AFTER data is loaded in RAM
     logCrash("Checkpoint: Initializing C3D & C2D engine...");
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
@@ -217,7 +214,7 @@ int main(int argc, char* argv[]) {
         hidTouchRead(&touch);
 
         if (kDown & KEY_START) {
-            break; // Press START to quit
+            break; // Press START to exit
         }
 
         C2D_TextBufClear(g_dynamicTextBuf);
