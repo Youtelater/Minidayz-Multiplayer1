@@ -19,7 +19,7 @@
 #include "ItemTable.h"
 #include "ShaderMenu.h"
 
-// Safe console logger
+// Safe console logger (flushes instantly without blocking on video frames)
 void logCrash(const char* message) {
     printf("%s\n", message);
     fflush(stdout);
@@ -76,7 +76,9 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
     logCrash("[Load] 30% - Initializing zlib decompression stream...");
     std::vector<char> uncompressedData;
     const size_t CHUNK_SIZE = 65536; 
-    unsigned char outChunk[CHUNK_SIZE];
+    
+    // HEAP ALLOCATION FIX: Using std::vector instead of a stack array to prevent stack overflow
+    std::vector<unsigned char> outChunk(CHUNK_SIZE);
 
     z_stream strm;
     std::memset(&strm, 0, sizeof(strm));
@@ -91,7 +93,7 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
     logCrash("[Load] 40% - Uncompressing data chunks...");
     int ret = Z_OK;
     while (ret == Z_OK) {
-        strm.next_out = outChunk;
+        strm.next_out = outChunk.data();
         strm.avail_out = CHUNK_SIZE;
 
         ret = inflate(&strm, Z_NO_FLUSH);
@@ -102,7 +104,7 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
         }
 
         size_t have = CHUNK_SIZE - strm.avail_out;
-        uncompressedData.insert(uncompressedData.end(), outChunk, outChunk + have);
+        uncompressedData.insert(uncompressedData.end(), outChunk.data(), outChunk.data() + have);
         
         long progressPercent = 40 + (int)(35.0 * ((double)strm.total_in / (double)compressedSize));
         if (progressPercent > 75) progressPercent = 75;
@@ -158,7 +160,7 @@ int main(int argc, char* argv[]) {
         logCrash("Checkpoint: romfsInit() succeeded.");
     }
 
-    // PRIORITY LOAD SEQUENCE USING VERIFIED FILE ACCESS
+    // PRIORITY LOAD SEQUENCE
     logCrash("[PRIORITY] Triggering game.bin load pipeline...");
     bool dataLoaded = false;
     try {
