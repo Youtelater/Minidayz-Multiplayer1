@@ -19,7 +19,7 @@
 #include "ItemTable.h"
 #include "ShaderMenu.h"
 
-// Safe console logger (flushes instantly without blocking on video frames)
+// Safe console logger
 void logCrash(const char* message) {
     printf("%s\n", message);
     fflush(stdout);
@@ -34,6 +34,7 @@ enum GameState {
 // Global UI and Storage
 std::unordered_map<std::string, std::string> g_uiStrings;
 std::unordered_map<std::string, std::string> g_gameLogs;
+std::unordered_map<std::string, std::string> g_gameBinData; // Direct from game.bin
 
 msgpack::object_handle g_gameDataHandle; 
 msgpack::object g_mainGameData; 
@@ -76,9 +77,7 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
     logCrash("[Load] 30% - Initializing zlib decompression stream...");
     std::vector<char> uncompressedData;
     const size_t CHUNK_SIZE = 65536; 
-    
-    // HEAP ALLOCATION FIX: Using std::vector instead of a stack array to prevent stack overflow
-    std::vector<unsigned char> outChunk(CHUNK_SIZE);
+    std::vector<unsigned char> outChunk(CHUNK_SIZE); // Heap allocated buffer
 
     z_stream strm;
     std::memset(&strm, 0, sizeof(strm));
@@ -169,7 +168,14 @@ int main(int argc, char* argv[]) {
         logCrash("Checkpoint ERROR: Severe exception during loadMergedGameData!");
     }
 
-    if (!dataLoaded) {
+    if (dataLoaded) {
+        try {
+            g_mainGameData.convert(g_gameBinData);
+            logCrash("Checkpoint: game.bin mapped to memory successfully!");
+        } catch (...) {
+            logCrash("Checkpoint WARNING: Failed to convert MessagePack object to map.");
+        }
+    } else {
         logCrash("Checkpoint WARNING: loadMergedGameData returned false.");
     }
 
@@ -182,10 +188,6 @@ int main(int argc, char* argv[]) {
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    logCrash("Checkpoint: Loading secondary JSON strings...");
-    loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
-    loadJsonStrings("romfs:/data/game_logs.json", g_gameLogs);
-    
     logCrash("Checkpoint: Initializing game modules...");
     World_LoadData();
     Player_Init();
@@ -203,11 +205,12 @@ int main(int argc, char* argv[]) {
     }
 
     logCrash("Checkpoint: Initialization sequence fully complete!");
-    logCrash("Launching game menu on top screen...");
+    logCrash("Launching game menu from game.bin data...");
 
-    std::string newGameText = g_uiStrings.count("1") ? g_uiStrings["1"] : "New Game";
-    std::string continueText = g_uiStrings.count("2") ? g_uiStrings["2"] : "Continue";
-    std::string activeLog = g_gameLogs.count("4") ? g_gameLogs["4"] : "I'm freezing!";
+    // DYNAMIC STRINGS PULLED STRAIGHT FROM game.bin
+    std::string promptText = g_gameBinData.count("prompt") ? g_gameBinData["prompt"] : "Place item or select action:";
+    std::string option1    = g_gameBinData.count("option1") ? g_gameBinData["option1"] : "Place Object";
+    std::string option2    = g_gameBinData.count("option2") ? g_gameBinData["option2"] : "Start Action";
 
     GameState currentState = STATE_MENU;
 
@@ -237,24 +240,27 @@ int main(int argc, char* argv[]) {
         if (currentState == STATE_MENU) {
             ShaderMenu_DrawBackground(topScreen);
 
-            C2D_Text logText;
-            C2D_TextParse(&logText, g_dynamicTextBuf, activeLog.c_str());
-            C2D_TextOptimize(&logText);
-            C2D_DrawText(&logText, C2D_AtBaseline | C2D_WithColor, 10.0f, 30.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 80, 80, 255));
+            // Render prompt instruction text from game.bin
+            C2D_Text promptTextObj;
+            C2D_TextParse(&promptTextObj, g_dynamicTextBuf, promptText.c_str());
+            C2D_TextOptimize(&promptTextObj);
+            C2D_DrawText(&promptTextObj, C2D_AtBaseline | C2D_WithColor, 10.0f, 30.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 220, 100, 255));
 
+            // Button 1 (Driven by game.bin option1)
             C2D_DrawRectangle(40.0f, 50.0f, 0, 240.0f, 40.0f, 
                               C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
                               C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255));
             C2D_Text btn1Text;
-            C2D_TextParse(&btn1Text, g_dynamicTextBuf, newGameText.c_str());
+            C2D_TextParse(&btn1Text, g_dynamicTextBuf, option1.c_str());
             C2D_TextOptimize(&btn1Text);
             C2D_DrawText(&btn1Text, C2D_AtBaseline | C2D_WithColor, 60.0f, 78.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
 
+            // Button 2 (Driven by game.bin option2)
             C2D_DrawRectangle(40.0f, 110.0f, 0, 240.0f, 40.0f, 
                               C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
                               C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255));
             C2D_Text btn2Text;
-            C2D_TextParse(&btn2Text, g_dynamicTextBuf, continueText.c_str());
+            C2D_TextParse(&btn2Text, g_dynamicTextBuf, option2.c_str());
             C2D_TextOptimize(&btn2Text);
             C2D_DrawText(&btn2Text, C2D_AtBaseline | C2D_WithColor, 60.0f, 138.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
 
@@ -275,7 +281,7 @@ int main(int argc, char* argv[]) {
 
             Player_Draw(g_spriteSheet, g_playerSprite);
 
-            std::string gameplayLog = g_gameLogs.count("2") ? g_gameLogs["2"] : "I feel healthy.";
+            std::string gameplayLog = g_gameBinData.count("gameplay_log") ? g_gameBinData["gameplay_log"] : "Playing live from game.bin data.";
             C2D_Text liveLogText;
             C2D_TextParse(&liveLogText, g_dynamicTextBuf, gameplayLog.c_str());
             C2D_TextOptimize(&liveLogText);
