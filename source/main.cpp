@@ -22,7 +22,8 @@
 // Screen logger: prints directly to the bottom screen console
 void logCrash(const char* message) {
     printf("%s\n", message);
-    fflush(stdout);
+    gfxFlushBuffers();
+    gspWaitForVBlank();
 }
 
 // Game States
@@ -44,7 +45,6 @@ C2D_Sprite g_playerSprite;
 
 bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& targetObj) {
     logCrash("[Load] 0% - Entering load sequence...");
-    gspWaitForVBlank();
 
     const char* filepath = "romfs:/game.bin";
     logCrash("[Load] 5% - Opening game.bin...");
@@ -114,6 +114,7 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
         if (chunkCount % 5 == 0) {
             printf("[Load] Decompressing chunk %d...\n", chunkCount);
             gfxFlushBuffers();
+            gspWaitForVBlank();
         }
     }
 
@@ -149,37 +150,25 @@ bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::
 }
 
 int main(int argc, char* argv[]) {
+    // 1. Core 3DS & Console Init First
     gfxInitDefault();
 
-    logCrash("=== Booting New Session ===");
-    logCrash("Checkpoint: gfxInitDefault passed.");
-    
-    // Bottom screen locked as text console for debug logs
     PrintConsole bottomConsole;
     consoleInit(GFX_BOTTOM, &bottomConsole); 
-    logCrash("Checkpoint: consoleInit passed.");
     
-    logCrash("Checkpoint: About to call romfsInit()...");
+    logCrash("=== Booting New Session ===");
+    logCrash("Checkpoint: Console & GFX initialized.");
+    
     if (romfsInit() != 0) {
         logCrash("Checkpoint ERROR: romfsInit() failed!");
     } else {
         logCrash("Checkpoint: romfsInit() succeeded.");
     }
 
-    logCrash("Checkpoint: Initializing C3D & C2D...");
-    C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
-    C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
-    C2D_Prepare();
-
-    logCrash("Checkpoint: Creating top render target & text buffer...");
-    C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-    g_dynamicTextBuf = C2D_TextBufNew(1024);
-
-    logCrash("Checkpoint: About to trigger file load sequence...");
-    
-    gfxFlushBuffers();
-    gspWaitForVBlank();
-
+    // =========================================================================
+    // PRIORITY STEP: Load game.bin immediately before allocating engines/renderers
+    // =========================================================================
+    logCrash("[PRIORITY] Triggering game.bin data load first...");
     bool dataLoaded = false;
     try {
         dataLoaded = loadMergedGameData(g_gameDataHandle, g_mainGameData);
@@ -191,7 +180,17 @@ int main(int argc, char* argv[]) {
         logCrash("Checkpoint WARNING: loadMergedGameData returned false.");
     }
 
-    logCrash("Checkpoint: Loading UI JSON strings...");
+    // 2. Secondary Subsystems & Rendering (Initialized AFTER data is safe in RAM)
+    logCrash("Checkpoint: Initializing C3D & C2D engine...");
+    C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
+    C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
+    C2D_Prepare();
+
+    logCrash("Checkpoint: Creating top render target & text buffer...");
+    C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+    g_dynamicTextBuf = C2D_TextBufNew(1024);
+
+    logCrash("Checkpoint: Loading secondary JSON strings...");
     loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
     loadJsonStrings("romfs:/data/game_logs.json", g_gameLogs);
     
@@ -227,12 +226,11 @@ int main(int argc, char* argv[]) {
         hidTouchRead(&touch);
 
         if (kDown & KEY_START) {
-            break; // Press START to quit the app
+            break; // Press START to quit
         }
 
         C2D_TextBufClear(g_dynamicTextBuf);
 
-        // Touch coordinates adjusted for top screen interaction if needed
         if (currentState == STATE_MENU && (kDown & KEY_TOUCH)) {
             if (touch.px >= 40.0f && touch.px <= 280.0f && touch.py >= 50.0f && touch.py <= 90.0f) {
                 currentState = STATE_PLAYING;
@@ -245,7 +243,6 @@ int main(int argc, char* argv[]) {
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
         if (currentState == STATE_MENU) {
-            // Render menu visuals entirely on the TOP screen
             ShaderMenu_DrawBackground(topScreen);
 
             C2D_Text logText;
@@ -274,7 +271,6 @@ int main(int argc, char* argv[]) {
             hidCircleRead(&circlePad);
             Player_Update(circlePad);
 
-            // Render gameplay entirely on the TOP screen
             C2D_TargetClear(topScreen, C2D_Color32(10, 40, 10, 255));
             C2D_SceneBegin(topScreen);
 
