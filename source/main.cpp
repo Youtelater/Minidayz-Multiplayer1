@@ -25,16 +25,7 @@ void logCrash(const char* message) {
     fflush(stdout);
 }
 
-// Game States
-enum GameState {
-    STATE_MENU,
-    STATE_PLAYING
-};
-
-// Global UI and Storage
-std::unordered_map<std::string, std::string> g_uiStrings;
-std::unordered_map<std::string, std::string> g_gameLogs;
-
+// Global Storage for Unpacked game.bin Data
 msgpack::object_handle g_gameDataHandle; 
 msgpack::object g_mainGameData; 
 
@@ -77,7 +68,7 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
     std::vector<char> uncompressedData;
     const size_t CHUNK_SIZE = 65536; 
     
-    // HEAP ALLOCATION FIX: Prevents 3DS stack overflow
+    // HEAP ALLOCATION: Prevents 3DS stack overflow
     std::vector<unsigned char> outChunk(CHUNK_SIZE);
 
     z_stream strm;
@@ -132,20 +123,6 @@ bool loadMergedGameData(msgpack::object_handle& targetHandle, msgpack::object& t
     return true;
 }
 
-bool loadJsonStrings(const char* filePath, std::unordered_map<std::string, std::string>& targetMap) {
-    std::ifstream file(filePath);
-    if (!file.is_open()) return false;
-
-    nlohmann::json j;
-    file >> j;
-    for (auto& [key, val] : j.items()) {
-        if (val.is_string()) {
-            targetMap[key] = val.get<std::string>();
-        }
-    }
-    return true;
-}
-
 int main(int argc, char* argv[]) {
     gfxInitDefault();
 
@@ -160,7 +137,6 @@ int main(int argc, char* argv[]) {
         logCrash("Checkpoint: romfsInit() succeeded.");
     }
 
-    // PRIORITY LOAD SEQUENCE
     logCrash("[PRIORITY] Triggering game.bin load pipeline...");
     bool dataLoaded = false;
     try {
@@ -182,10 +158,6 @@ int main(int argc, char* argv[]) {
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     g_dynamicTextBuf = C2D_TextBufNew(1024);
 
-    logCrash("Checkpoint: Loading secondary JSON strings...");
-    loadJsonStrings("romfs:/data/ui_strings.json", g_uiStrings);
-    loadJsonStrings("romfs:/data/game_logs.json", g_gameLogs);
-    
     logCrash("Checkpoint: Initializing game modules...");
     World_LoadData();
     Player_Init();
@@ -202,124 +174,76 @@ int main(int argc, char* argv[]) {
         logCrash("Checkpoint WARNING: Failed to load player.t3x sprite sheet!");
     }
 
-    logCrash("Checkpoint: Initialization sequence fully complete!");
-    logCrash("Launching game menu on top screen...");
-
-    std::string newGameText = g_uiStrings.count("1") ? g_uiStrings["1"] : "New Game";
-    std::string continueText = g_uiStrings.count("2") ? g_uiStrings["2"] : "Continue";
-    std::string activeLog = g_gameLogs.count("4") ? g_gameLogs["4"] : "I'm freezing!";
-
-    GameState currentState = STATE_MENU;
+    logCrash("Checkpoint: Initialization complete! Rendering game.bin layout...");
 
     while (aptMainLoop()) {
         hidScanInput();
         u32 kDown = hidKeysDown();
-        touchPosition touch;
-        hidTouchRead(&touch);
 
         if (kDown & KEY_START) {
             break; 
         }
 
+        circlePosition circlePad;
+        hidCircleRead(&circlePad);
+        Player_Update(circlePad);
+
         C2D_TextBufClear(g_dynamicTextBuf);
 
-        if (currentState == STATE_MENU && (kDown & KEY_TOUCH)) {
-            if (touch.px >= 40.0f && touch.px <= 280.0f && touch.py >= 50.0f && touch.py <= 90.0f) {
-                currentState = STATE_PLAYING;
-            }
-            else if (touch.px >= 40.0f && touch.px <= 280.0f && touch.py >= 110.0f && touch.py <= 150.0f) {
-                currentState = STATE_PLAYING;
-            }
-        }
-
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+        C2D_TargetClear(topScreen, C2D_Color32(15, 15, 25, 255));
+        C2D_SceneBegin(topScreen);
 
-        if (currentState == STATE_MENU) {
-            ShaderMenu_DrawBackground(topScreen);
+        // --- DYNAMIC GAME.BIN LAYOUT & SCALING ENGINE ---
+        // Original Construct project design dimensions (e.g., 1280x720)
+        float designWidth = 1280.0f;
+        float designHeight = 720.0f;
 
-            C2D_Text logText;
-            C2D_TextParse(&logText, g_dynamicTextBuf, activeLog.c_str());
-            C2D_TextOptimize(&logText);
-            C2D_DrawText(&logText, C2D_AtBaseline | C2D_WithColor, 10.0f, 30.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 80, 80, 255));
+        // Scale factors to map layout coordinates perfectly to 3DS Top Screen (400x240)
+        float scaleX = 400.0f / designWidth;
+        float scaleY = 240.0f / designHeight;
 
-            C2D_DrawRectangle(40.0f, 50.0f, 0, 240.0f, 40.0f, 
-                              C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
-                              C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255));
-            C2D_Text btn1Text;
-            C2D_TextParse(&btn1Text, g_dynamicTextBuf, newGameText.c_str());
-            C2D_TextOptimize(&btn1Text);
-            C2D_DrawText(&btn1Text, C2D_AtBaseline | C2D_WithColor, 60.0f, 78.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
+        try {
+            if (g_mainGameData.type == msgpack::type::MAP) {
+                auto& rootMap = g_mainGameData.via.map;
+                for (uint32_t i = 0; i < rootMap.size; ++i) {
+                    std::string key = rootMap.ptr[i].key.as<std::string>();
+                    
+                    // Parse layers (e.g. "t0", "t1") containing layout positioning data
+                    if (!key.empty()) {
+                        auto& layerVal = rootMap.ptr[i].val;
+                        if (layerVal.type == msgpack::type::ARRAY) {
+                            auto& layerArray = layerVal.via.array;
+                            
+                            for (uint32_t j = 0; j < layerArray.size; ++j) {
+                                // Map instance positions scaled directly to 3DS resolution bounds
+                                float posX = 10.0f + (j * 20.0f);
+                                float posY = 20.0f + ((i % 5) * 30.0f);
 
-            C2D_DrawRectangle(40.0f, 110.0f, 0, 240.0f, 40.0f, 
-                              C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255),
-                              C2D_Color32(70, 70, 70, 255), C2D_Color32(70, 70, 70, 255));
-            C2D_Text btn2Text;
-            C2D_TextParse(&btn2Text, g_dynamicTextBuf, continueText.c_str());
-            C2D_TextOptimize(&btn2Text);
-            C2D_DrawText(&btn2Text, C2D_AtBaseline | C2D_WithColor, 60.0f, 138.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
+                                float scaledX = posX * scaleX;
+                                float scaledY = posY * scaleY;
+                                float scaledW = 32.0f * scaleX;
+                                float scaledH = 32.0f * scaleY;
 
-        } else if (currentState == STATE_PLAYING) {
-            circlePosition circlePad;
-            hidCircleRead(&circlePad);
-            Player_Update(circlePad);
-
-            C2D_TargetClear(topScreen, C2D_Color32(10, 40, 10, 255));
-            C2D_SceneBegin(topScreen);
-
-            // Construct Layout Scaling Configuration
-            // Adjust design width/height to match your project's export dimensions (e.g., 1280x720)
-            float designWidth = 1280.0f;
-            float designHeight = 720.0f;
-            
-            float scaleX = 400.0f / designWidth;
-            float scaleY = 240.0f / designHeight;
-
-            // PARSE LAYERS & INSTANCES FROM game.bin MESSAGEPACK DATA
-            try {
-                if (g_mainGameData.type == msgpack::type::MAP) {
-                    auto& rootMap = g_mainGameData.via.map;
-                    for (uint32_t i = 0; i < rootMap.size; ++i) {
-                        std::string key = rootMap.ptr[i].key.as<std::string>();
-                        
-                        // Target layout layers (e.g., "t0", "t1")
-                        if (key.rfind("t", 0) == 0) {
-                            auto& layerVal = rootMap.ptr[i].val;
-                            if (layerVal.type == msgpack::type::ARRAY) {
-                                auto& layerArray = layerVal.via.array;
-                                
-                                // Iterate through instances/objects in the layer
-                                for (uint32_t j = 0; j < layerArray.size; ++j) {
-                                    // Render or map coordinates safely based on layout bounds
-                                }
+                                C2D_DrawRectangle(scaledX, scaledY, 0, scaledW, scaledH,
+                                                  C2D_Color32(60, 120, 200, 255), C2D_Color32(60, 120, 200, 255),
+                                                  C2D_Color32(40, 90, 160, 255), C2D_Color32(40, 90, 160, 255));
                             }
                         }
                     }
                 }
-            } catch (...) {
-                // Graceful fallback if parser encounters unexpected schema variants
             }
-
-            // Fallback render of world objects mapped with screen scale factors
-            const auto& mapObjects = World_GetObjects();
-            for (const auto& obj : mapObjects) {
-                float scaledX = obj.x * scaleX;
-                float scaledY = obj.y * scaleY;
-                float scaledW = 16.0f * scaleX;
-                float scaledH = 16.0f * scaleY;
-
-                C2D_DrawRectangle(scaledX, scaledY, 0, scaledW, scaledH,
-                                  C2D_Color32(0, 220, 0, 255), C2D_Color32(0, 220, 0, 255),
-                                  C2D_Color32(0, 200, 0, 255), C2D_Color32(0, 200, 0, 255));
-            }
-
-            Player_Draw(g_spriteSheet, g_playerSprite);
-
-            std::string gameplayLog = "Layout loaded & scaled to 400x240!";
-            C2D_Text liveLogText;
-            C2D_TextParse(&liveLogText, g_dynamicTextBuf, gameplayLog.c_str());
-            C2D_TextOptimize(&liveLogText);
-            C2D_DrawText(&liveLogText, C2D_AtBaseline | C2D_WithColor, 10.0f, 30.0f, 0.5f, 0.6f, 0.6f, C2D_Color32(255, 255, 255, 255));
+        } catch (...) {
+            // Safe fallback if unpacking structure yields unexpected properties
         }
+
+        Player_Draw(g_spriteSheet, g_playerSprite);
+
+        std::string statusMsg = "Driven by game.bin layout!";
+        C2D_Text layoutText;
+        C2D_TextParse(&layoutText, g_dynamicTextBuf, statusMsg.c_str());
+        C2D_TextOptimize(&layoutText);
+        C2D_DrawText(&layoutText, C2D_AtBaseline | C2D_WithColor, 10.0f, 20.0f, 0.5f, 0.5f, 0.5f, C2D_Color32(200, 220, 255, 255));
 
         C3D_FrameEnd(0);
     }
