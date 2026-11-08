@@ -13,7 +13,6 @@ public:
     }
 
     bool loadKitBinary(const std::string& filename = "romfs:/mp_kits.bin") {
-        // Open file in binary mode
         std::ifstream file(filename, std::ios::binary | std::ios::ate);
         if (!file.is_open()) {
             std::cerr << "[KitManager] Failed to open " << filename << ". Using default kit." << std::endl;
@@ -35,11 +34,11 @@ public:
         return false;
     }
 
-    KitLoadout& getHostKit() { return currentKit; }
+    // Using DefaultKitData matching your KitData.hpp
+    DefaultKitData& getHostKit() { return currentKit; }
 
 private:
     KitManager() {
-        // Try loading mp_kits.bin on startup, fallback to defaults if it fails
         loadKitBinary("romfs:/mp_kits.bin");
     }
 
@@ -49,18 +48,14 @@ private:
             853097, // body
             286635, // legs
             854659, // melee
-            {726543, 416968, 114514, 542341}, // items
+            {726543, 416968, 114514, 542341}, // pocketItems
             true    // onRespawn
         };
     }
 
     void parseKitData(const std::vector<char>& buffer) {
-        // If mp_kits.bin has a custom binary layout, parse the bytes here.
-        // For example, if the first few bytes represent IDs or flags:
-        // if (buffer.size() >= sizeof(KitLoadout)) {
-        //     std::memcpy(&currentKit, buffer.data(), sizeof(KitLoadout));
-        // }
+        // Handle binary parsing here if needed
     }
 
-    KitLoadout currentKit;
+    DefaultKitData currentKit;
 };
