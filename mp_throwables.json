@@ -1,0 +1,69 @@
+{
+  "file": "mp_throwables.js",
+  "throwable_definitions": {
+    "t267": { "name": "grenade", "sprite": "t919" },
+    "t265": { "name": "flare", "sprite": "t924", "light": true },
+    "t899": { "name": "molotov", "sprite": "t925", "neverLands": true },
+    "t1023": { "name": "smoke", "sprite": "t1022" },
+    "t928": { "name": "flare shell", "sprite": "t929", "particles": 10, "light": 150 },
+    "t711": { "name": "airdrop crate", "hostOnly": true, "freeFall": true, "leave": "t725" }
+  },
+  "constants_and_initial_variables": {
+    "_x2": "t987",
+    "_xae": {},
+    "_xdee": {},
+    "_x9d90e": "Buildings_base_top",
+    "_xb95fd": "Buildings",
+    "_xadc9f": [],
+    "_x655fa": {},
+    "_x90061a": {},
+    "_x1567a": {
+      "thrown": 0,
+      "ended": 0,
+      "copies": 0,
+      "copyEnds": 0,
+      "relayed": 0,
+      "lostCopies": 0
+    }
+  },
+  "core_functions": {
+    "_x78aeae": "Get Construct 2 runtime instance",
+    "_x43eba": "Find type by name in runtime types_by_index",
+    "_x23ead": "Find layer by name in running layout",
+    "_x5": "Check if instance is in type instances",
+    "_x0325ab": "Check if running layout name is 'Map'",
+    "_xb46b": "Safely invoke sender callback",
+    "_x6": "Round scaled number",
+    "_x0d": "Get non-visual, non-hurtbox player/entity instance from 't181'",
+    "_x7010ac": "Find Bullet behavior instance and prototype",
+    "_xf2c1c": "Extract angle and motion/speed from Bullet behavior",
+    "_x06de": "Set bullet speed and motion parameters",
+    "_xc2fbcf": "Find nearest sprite or sibling instance matching sprite name",
+    "_xc7e": "Clean up remote visual flags on instances",
+    "_x66be7c": "Process outgoing throwable throws and expirations",
+    "_x0bfcdf": "Create instance from init in layout",
+    "_x8146bd": "Destroy instance safely",
+    "_xbac9fc": "Spawn remote throwable copy and apply effects/lights",
+    "_xfaa6ea": "Apply fade behavior time to light/effect instances",
+    "_xf": "Cleanup and remove throwable copy, trigger secondary effects/explosions",
+    "_xb8e": "Handle explosion/leave entities or audio effects on throwable end",
+    "_x87dd6c": "Update and track active flying throwable copies and timeouts",
+    "_x40d": "Track local airdrop instances for client mode",
+    "_xef28cd": "Process airdrop timer and sync to host",
+    "_x7ce0a": "Verify and validate host-side airdrop spawn requests",
+    "_xfbf56a": "Main inbound packet handler for throwables and airdrops",
+    "_x8bc3e": "Log throwable rejection reason",
+    "_x4603b": "Validate inbound throwable requests (position, distance, rate limits)",
+    "_x280b": "Check duplicate tracking map",
+    "_x299fed": "Hook Construct 2 createInstanceFromInit runtime method"
+  },
+  "window_MPThrowables_export": {
+    "setRole": "function(_x9c73e)",
+    "setSender": "function(_x245db)",
+    "handle": "_xfbf56a",
+    "owns": "function(_xe235b)",
+    "reset": "function()",
+    "stats": "function()",
+    "copies": "function(_xdf925c)"
+  }
+}
