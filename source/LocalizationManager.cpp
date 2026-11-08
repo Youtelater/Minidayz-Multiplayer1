@@ -1,3 +1,4 @@
+#include <nlohmann/json.hpp>
 #include "LocalizationManager.hpp"
 #include <algorithm>
 #include <3ds.h>

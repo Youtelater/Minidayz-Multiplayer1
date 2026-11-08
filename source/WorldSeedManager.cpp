@@ -1,3 +1,4 @@
+#include <nlohmann/json.hpp>
 #include "WorldSeedManager.hpp"
 #include <functional>
 #include <numeric>

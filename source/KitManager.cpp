@@ -1,3 +1,4 @@
+#include <nlohmann/json.hpp>
 #include "KitData.hpp"
 #include <fstream>
 #include <vector>
