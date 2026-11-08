@@ -1,5 +1,4 @@
 #include <3ds.h>
-
 #include <nlohmann/json.hpp>
 #include "MenuManager.hpp"
 #include <iostream>
