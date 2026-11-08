@@ -1,3 +1,4 @@
+#include <3ds.h>
 #include <nlohmann/json.hpp>
 #include "world.h"
 #include <msgpack.hpp>

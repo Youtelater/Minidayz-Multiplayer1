@@ -1,3 +1,5 @@
+#include <3ds.h>
+
 #include <nlohmann/json.hpp>
 #include "WorldSeedManager.hpp"
 #include <functional>

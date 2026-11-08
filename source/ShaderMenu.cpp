@@ -1,5 +1,5 @@
-#include <nlohmann/json.hpp>
 #include <3ds.h>
+#include <nlohmann/json.hpp>
 #include <citro2d.h>
 #include <citro3d.h>
 

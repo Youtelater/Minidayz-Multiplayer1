@@ -1,9 +1,11 @@
+#include <3ds.h>     
 #include <nlohmann/json.hpp>
 #include <citro2d.h>
 #include <vector>
 #include <string>
 #include <unordered_map>
 #include <iostream>
+
 
 // 1. Define Structure Types
 enum class StructureType {

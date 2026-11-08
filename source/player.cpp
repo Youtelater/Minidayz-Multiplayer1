@@ -1,4 +1,4 @@
-
+#include <3ds.h>
 #include "player.h"
 
 static Player g_player;

@@ -1,3 +1,4 @@
+#include <3ds.h>
 #include "ItemTable.h"
 #include <fstream>
 #include <unordered_map>
