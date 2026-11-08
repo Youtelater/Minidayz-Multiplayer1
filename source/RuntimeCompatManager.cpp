@@ -1,3 +1,4 @@
+#include <nlohmann/json.hpp>
 #include "RuntimeCompatManager.hpp"
 #include <fstream>
 #include <iostream>

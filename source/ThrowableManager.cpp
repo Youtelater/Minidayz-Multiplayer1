@@ -1,3 +1,4 @@
+#include <nlohmann/json.hpp>
 #include "ThrowableManager.hpp"
 #include <fstream>
 #include <iostream>

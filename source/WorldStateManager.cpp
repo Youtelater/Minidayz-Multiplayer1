@@ -1,3 +1,4 @@
+#include <nlohmann/json.hpp>
 #include "WorldStateManager.hpp"
 #include <cmath>
 #include <sstream>

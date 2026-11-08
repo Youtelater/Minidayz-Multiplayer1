@@ -1,3 +1,4 @@
+#include <nlohmann/json.hpp>
 #include <citro2d.h>
 #include <vector>
 #include <string>

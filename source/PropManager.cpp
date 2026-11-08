@@ -1,3 +1,4 @@
+#include <nlohmann/json.hpp>
 #include "PropManager.hpp"
 #include <fstream>
 #include <iostream>
