@@ -1,0 +1,152 @@
+{
+  "mdzKit": {
+    "arrays": {
+      "maskFilters": [584729, 599308, 430342, 180014],
+      "bodyFilters": [767498, 317593, 269527, 126035, 665111, 628430, 633030, 816861],
+      "pistolIds": [
+        862801, 835447, 989331, 738065, 607766, 681002, 877751, 952740, 
+        775695, 271674, 819792, 909348, 679999, 578662, 415262, 217553
+      ]
+    },
+    "defaultKit": {
+      "firearm": 235856,
+      "body": 853097,
+      "legs": 286635,
+      "melee": 854659,
+      "items": [726543, 416968, 114514, 542341],
+      "onRespawn": true
+    },
+    "slots": [
+      {
+        "key": "head",
+        "t": "kit.head",
+        "en": "Headgear",
+        "ids_range": [249156, 204919],
+        "exclude": "maskFilters"
+      },
+      {
+        "key": "mask",
+        "t": "kit.mask",
+        "en": "Mask",
+        "use": true,
+        "ids_source": "maskFilters"
+      },
+      {
+        "key": "body",
+        "t": "kit.body",
+        "en": "Top",
+        "ids_range": [458135, 919472],
+        "exclude": "bodyFilters"
+      },
+      {
+        "key": "legs",
+        "t": "kit.legs",
+        "en": "Pants",
+        "ids_range": [949818, 329777]
+      },
+      {
+        "key": "vest",
+        "t": "kit.vest",
+        "en": "Vest",
+        "ids_range": [595313, 609939]
+      },
+      {
+        "key": "backpack",
+        "t": "kit.backpack",
+        "en": "Backpack",
+        "ids_range": [506449, 649228],
+        "exclude": "bodyFilters"
+      },
+      {
+        "key": "gloves",
+        "t": "kit.gloves",
+        "en": "Gloves",
+        "use": true,
+        "ids": [113967, 871681, 690358]
+      },
+      {
+        "key": "boots",
+        "t": "kit.boots",
+        "en": "Boots",
+        "use": true,
+        "ids": [379039, 850691, 710952, 322932]
+      },
+      {
+        "key": "belt",
+        "t": "kit.belt",
+        "en": "Belt",
+        "use": true,
+        "ids": [745232]
+      },
+      {
+        "key": "holster",
+        "t": "kit.holster",
+        "en": "Holster",
+        "use": true,
+        "ids": [636281]
+      },
+      {
+        "key": "sling",
+        "t": "kit.sling",
+        "en": "Rifle sling",
+        "use": true,
+        "ids": [627474]
+      },
+      {
+        "key": "satchel",
+        "t": "kit.satchel",
+        "en": "Satchel",
+        "ids": [481664, 365329, 243134]
+      },
+      {
+        "key": "firearm",
+        "t": "kit.firearm",
+        "en": "Firearm",
+        "ids_range": [826461, 396324],
+        "exclude_sources": ["pistolIds", "bodyFilters"],
+        "extra_range": [535296, 445730]
+      },
+      {
+        "key": "pistol",
+        "t": "kit.pistol",
+        "en": "Handgun",
+        "ids_source": "pistolIds"
+      },
+      {
+        "key": "melee",
+        "t": "kit.melee",
+        "en": "Melee",
+        "ids_range": [230209, 417644],
+        "exclude": "bodyFilters"
+      }
+    ],
+    "slotOrder": [
+      "backpack",
+      "body",
+      "legs",
+      "vest",
+      "head",
+      "firearm",
+      "pistol",
+      "melee",
+      "mask",
+      "gloves",
+      "boots",
+      "belt",
+      "holster",
+      "sling",
+      "satchel"
+    ],
+    "itemLimit": 8,
+    "languageFiles": {
+      "EN": "l_eng_items.xml",
+      "RU": "l_ru_items.xml",
+      "DE": "l_de_items.xml",
+      "ES": "l_es_items.xml",
+      "FR": "l_fr_items.xml",
+      "IT": "l_it_items.xml",
+      "CZ": "l_cz_items.xml",
+      "PT": "l_pt_items.xml"
+    }
+  }
+}

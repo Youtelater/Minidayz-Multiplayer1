@@ -1,0 +1,82 @@
+{
+  "file": "mp_worldseed.js",
+  "constants_and_initial_arrays": {
+    "_x28e45e": [
+      "generate_array_locations",
+      "generate_array_roads_1",
+      "generate_array_roads_2",
+      "generate_array_tomap",
+      "generate_mapgen_toelements",
+      "generate_helicrashes",
+      "generate_bunker_entrance",
+      "generate_location",
+      "generate_minimap",
+      "car_respawn_uaz",
+      "car_respawn_volga",
+      "car_respawn_hammer",
+      "car_respawn_btr"
+    ],
+    "_x0789e_concatenated_addition": [
+      "floor_spawn",
+      "wall_spawn",
+      "trigger_spawn",
+      "load_loot",
+      "bunker_generate",
+      "bunker_spawn",
+      "generate_location",
+      "spawn_bandit_camp",
+      "spawn_team_camp",
+      "spawn_attack_wave",
+      "load_bridge_level",
+      "spawn_npc",
+      "spawn_truck"
+    ],
+    "_xba": [
+      "generate_array_locations",
+      "generate_array_roads_1",
+      "generate_array_roads_2",
+      "generate_array_tomap",
+      "generate_mapgen_toelements",
+      "generate_minimap",
+      "generate_helicrashes",
+      "generate_bunker_entrance"
+    ],
+    "_x715ce_layers": [
+      "Buildings",
+      "Buildings_base",
+      "Buildings_base_top",
+      "Buildings_bg",
+      "Buildings_shadows",
+      "Forests",
+      "Trees",
+      "Obstacle_enviroment",
+      "asphalt",
+      "swamp",
+      "Water",
+      "grnd_til",
+      "ground_enviroment",
+      "bg"
+    ],
+    "global_vars_keys": [
+      "Map_size_X",
+      "Map_size_Y",
+      "cities",
+      "villages",
+      "militaries",
+      "hospitals",
+      "firestations",
+      "gas_stations",
+      "Roadside_cafes",
+      "river_X",
+      "river_Y",
+      "river_R",
+      "secret_location",
+      "main_tile",
+      "Difficulty"
+    ]
+  },
+  "full_functions_unfiltered": {
+    "_x1ee9cb": "function(_xa7c){return function(){_xa7c|=710972^710972;_xa7c=_xa7c+(1830995348^638049)|272810^272810;var _x7cd=Math[\"imul\"](_xa7c^_xa7c>>>(499109^499114),514809^514808|_xa7c);_x7cd=_x7cd+Math[\"imul\"](_x7cd^_x7cd>>>(317524^317523),215509^215528|_x7cd)^_x7cd;return((_x7cd^_x7cd>>>(286456^286454))>>>(486748^486748))/4294967296;if(false){[\"unused\"];}};if(false){[\"unused\"];}}",
+    "_xaa": "function(_xecaff){var _x615f=0x811c9dc5;for(var _x8c9e=172428^172428;_x8c9e<_xecaff[\"length\"];_x8c9e++){_x615f^=_xecaff[\"charCodeAt\"](_x8c9e);_x615f=_x615f+((_x615f<<(522389^522388))+(_x615f<<(540355^540359))+(_x615f<<(342870^342865))+(_x615f<<(163535^163527))+(_x615f<<(725064^725072)))>>>(545442^545442);}return(\"0000000\"+_x615f[\"toString\"](892101^892117))[\"slice\"](-(601426^601434));if(false){[\"unused\"];}}",
+    "_x095ec": "function(_x111b,_xd7cfe,_x4){return _xaa(_x111b+\"|\"+_xd7cfe+\"|\"+_x4)[\"split\"](\"\")[\"reduce\"](function(_x53c25c,_xbbf5d){return _x53c25c*(324516^324485)+_xbbf5d[\"charCodeAt\"](687201^687201)>>>(751012^751012);if(false){[\"unused\"];}},583512^586333)>>>(755284^755284);if(false){[\"unused\"];}}",
+    "_xeb9ff": "function(){if(_x96f6d)clearTimeout(_x96f6d);_x96f6d=setTimeout(function(_x15c){_x96f6d=null;_x15c=_xeaef();try{localStorage[\"setItem\"](\"MDZ_last\",JSON[\"stringify\"](_x15c));}catch(_xce1ff){}if(window[\"console\"]&&console[\"log\"]){console[\"log\"](\"%c[MDZ] world generated --- seed \"+_x15c[\"seed\"],\"background:#2f6b70;color:#fff;padding:2px 6px\");console[\"log\"](\"  arrayHash \"+_x15c[\"arrayHash\"]+\"   (\"+_x15c[\"arrayCells\"]+\" cells)\");console[\"log\"](\"  mapHash   \"+_x15c[\"mapHash\"]+\"   map \"+_x15c[\"mapSize\"]);console[\"log\"](\"  countHash \"+_x15c[\"countHash\"]+\"   \"+_x15c[\"instTotal\"]+\" instances\");console[\"log\"](\"  gen calls \"+_x15c[\"traceLen\"]+\"  [\"+_xc[\"join\"](\" \")+\"]\");console[\"log\"](\"  compare across runs: arrayHash + mapHash + countHash\");}try{var _xc9ab=\"SAMPLE_A seed=\"+_x15c[\"seed\"]+\" staticHash=\"+_x15c[\"staticHash\"]+\" statics=\"+_x15c[\"staticCount\"]+\" statLayers=\"+_x15c[\"staticLayers\"]+\" tileMaps=\"+_x15c[\"tileMaps\"]+\" tileHash=\"+_x15c[\"tileHash\"]+\" tileChars=\"+_x15c[\"tileChars\"]+\" arrCells=\"+_x15c[\"arrayCells\"]+\" arrayHash=\"+_x15

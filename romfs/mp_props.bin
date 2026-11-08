@@ -1,0 +1,59 @@
+{
+  "file": "mp_props.js",
+  "description": "Multiplayer props/objects synchronization layer and Construct 2 runtime property hooking for MiniDayZ multiplayer mod",
+  "constants_and_variables": {
+    "_x43a70e": "Role configuration string ('host' or 'client')",
+    "_xf321c": "Sender callback function pointer",
+    "_x": "Connected boolean status flag",
+    "_xc0eaa": "Hooked/initialized status boolean",
+    "_xef": "Internal creation guard flag",
+    "_x9ab6c": "Active synchronized props map",
+    "_x7fb96a": "Incremental prop ID counter",
+    "_x6ef": {
+      "announced": 0,
+      "built": 0,
+      "updatesSent": 0,
+      "updatesApplied": 0,
+      "removed": 0,
+      "removalsApplied": 0,
+      "unknownType": 0,
+      "noLayer": 0,
+      "rateLimited": 0
+    },
+    "_x99eee": 142,
+    "_xc2ccc": 2,
+    "_xfb90ad": 0,
+    "_x4d": "Supported prop types lookup registry"
+  },
+  "core_functions": {
+    "_x13249a": "Log prop subsystem diagnostic message with color formatting",
+    "_xe8fa": "Get Construct 2 runtime instance safely from global window scope",
+    "_x91fd": "Find runtime type definition by name, resolving via MDZTypeName if available",
+    "_x0ffa": "Find layer instance by name within running layout",
+    "_x22da": "Safely invoke sender callback with packet data",
+    "_x22ab": "Check if instance is currently active in its type's instances collection",
+    "_x0b3ff": "Extract instance variables (numbers, strings, booleans) into array format",
+    "_xf5e00f": "Apply variable values back to an instance's instance_vars array",
+    "_x4e0ae": "Serialize prop instance properties (id, type, layer, position, angle, dimensions, animation, frame, variables)",
+    "_x0421c": "Hook and announce new registered prop instances after delay if tracked",
+    "_xd": "Clean up prop tracking and notify peers of prop removal",
+    "_x5d501b": "Periodic tick loop to broadcast owned prop movement updates",
+    "_x88cf4e": "Handle incoming prop addition packet, instantiate locally, and trigger redraw",
+    "_x5d696f": "Set sprite animation and frame safely with fallback handling",
+    "_xb78e": "Apply incoming position/angle updates to remote synchronized props",
+    "_xfe1dae": "Handle incoming prop deletion packet and destroy instance locally",
+    "_xc7730a": "Hook Construct 2 runtime createInstanceFromInit and DestroyInstance prototypes",
+    "_xc40b": "Initialize periodic tick interval for prop movement updates"
+  },
+  "window_MPProps_export": {
+    "setRole": "function(_x7b0be)",
+    "setSender": "function(_x0c0ed)",
+    "setConnected": "function(_x5e2f)",
+    "handle": "function(_x6a52f)",
+    "tick": "_x5d501b",
+    "addPropTypes": "function(_xb9859d)",
+    "propTypes": "function(_xbd32e)",
+    "stats": "function(_x1abe2d)",
+    "reset": "function()"
+  }
+}

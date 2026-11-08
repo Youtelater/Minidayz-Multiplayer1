@@ -1,0 +1,56 @@
+{
+  "file": "mp_worldstate.js",
+  "constants_and_initial_arrays": {
+    "_x283d_world_state_keys": [
+      "Day_survived",
+      "Timer_ALL",
+      "Timer_Hours",
+      "Timer_Hours_Z",
+      "Timer_Minutes",
+      "Timer_Minutes_Z",
+      "Day_mode",
+      "Night_light_addition",
+      "Day_Night_speed",
+      "Rain",
+      "rains_level",
+      "Rain_speed",
+      "Weather_temperature",
+      "Weathercold_current",
+      "Rain_cold",
+      "Night_cold",
+      "Day_cold"
+    ]
+  },
+  "full_functions_unfiltered": {
+    "_x85ef9d": "function(_x48f0f){if(window[\"console\"])console[\"log\"](\"[WorldState] \"+_x48f0f);if(false){[\"unused\"];}}",
+    "_x71d": "function(){if(_x394d&&_x394d[\"all_global_vars\"])return _x394d;if(window[\"cr_getC2Runtime\"]){try{_x394d=window[\"cr_getC2Runtime\"]();}catch(_x9cd29e){}}if(!_x394d&&window[\"c2runtime\"])_x394d=window[\"c2runtime\"];return _x394d;if(false){[\"unused\"];}}",
+    "_x66269b": "function(_x7f2){_x7f2=_x71d();return!!(_x7f2&&_x7f2[\"running_layout\"]&&_x7f2[\"running_layout\"][\"name\"]===\"Map\");if(false){[\"unused\"];}}",
+    "_x9f0e": "function(_xbf16cb,_x81d5a){_xbf16cb={};_x81d5a=_x71d();if(!_x81d5a||!_x81d5a[\"all_global_vars\"])return _xbf16cb;for(var _xe07c=460498^460498;_xe07c<_x81d5a[\"all_global_vars\"][\"length\"];_xe07c++){var _xbea0e=_x81d5a[\"all_global_vars"][_xe07c];if(_xbea0e&&_x5e0db[_xbea0e[\"name\"]])_xbf16cb[_xbea0e[\"name\"]]=_xbea0e;}return _xbf16cb;if(false){[\"unused\"];}}",
+    "_xa6bcbe": "function(_xcf){if(_xc9e2d)return!![];_xcf=_x9f0e();if(!_xcf[\"Timer_ALL\"])return![];_x192e8b=[];for(var _x78d=262100^262100;_x78d<_x283d[\"length\"];_x78d++){var _x8da=_x283d[_x78d],_x1129e=_xcf[_x8da];if(!_x1129e||!Object[\"prototype\"][\"hasOwnProperty\"][\"call\"](_x1129e,\"data\"))continue;(function(_x062bd,_xb6eada){var _x93b9c=_x062bd[\"data\"];try{Object[\"defineProperty\"](_x062bd,\"data\",{\"configurable\":!![],\"get\":function(){return _x93b9c;if(false){[\"unused\"];}},\"set\":function(_xe187de){if(_x70e===\"client\"&&_xd1cdd&&_x78a11d===(204069^204069)){_x98c++;return;}_x93b9c=_xe187de;if(false){[\"unused\"];}}});_x192e8b[\"push\"](_x062bd);}catch(_x3a){}if(false){[\"unused\"];}})(_x1129e,_x8da);}if(!_x192e8b[\"length\"])return![];_xc9e2d=!![];return!![];if(false){[\"unused\"];}}",
+    "_xa1820c": "function(){if(!_xc9e2d)return;for(var _xb7d72c=803745^803745;_xb7d72c<_x192e8b[\"length\"];_xb7d72c++){var _xfae=_x192e8b[_xb7d72c];try{var _x3d=_xfae[\"data\"];delete _xfae[\"data\"];_xfae[\"data\"]=_x3d;}catch(_x0b){}}_x192e8b=[];_xc9e2d=![];if(false){[\"unused\"];}}",
+    "_x892f": "function(_x2,_x1a){_x2=_x9f0e();_x1a={};for(var _x2dfbdd=435759^435759;_x2dfbdd<_x283d[\"length\"];_x2dfbdd++){var _x68c8cd=_x283d[_x2dfbdd],_xfa6d=_x2[_x68c8cd];if(!_xfa6d)continue;try{_x1a[_x68c8cd]=_xfa6d[\"getValue\"]();}catch(_xde4ce){_x1a[_x68c8cd]=_xfa6d[\"data\"];}}return _x1a;if(false){[\"unused\"];}}",
+    "_xa": "function(_x1fb9a,_x139cb){_x139cb=[];for(var _x2f=652447^652447;_x2f<_x283d[\"length\"];_x2f++){var _xea643b=_x283d[_x2f];_x139cb[\"push\"]([_xea643b,_x1fb9a&&_x1fb9a[\"hasOwnProperty\"](_xea643b)?_x1fb9a[_xea643b]:null]);}return JSON[\"stringify\"](_x139cb);if(false){[\"unused\"];}}",
+    "_x0c1ff": "function(_xdbcb,_xe10f){_xe10f=_xa(_xdbcb);var _x50aecf=2166136261;for(var _xd=882709^882709;_xd<_xe10f[\"length\"];_xd++){_x50aecf^=_xe10f[\"charCodeAt\"](_xd);_x50aecf=Math[\"imul\"](_x50aecf,17394822^617749);}return(_x50aecf>>>(303451^303451))[\"toString\"](602156^602172)[\"padStart\"](482417^482425,\"0\");if(false){[\"unused\"];}}",
+    "_xa5ebd": "function(_x9a424b){if(!_x1c)return![];try{_x1c(_x9a424b);return!![];}catch(_x44392a){return![];}if(false){[\"unused\"];}}",
+    "_x268d": "function(_x6f814e,_x450ce,_x1f5bd){if(!_x6f814e||typeof _x6f814e!==\"object\")return null;_x450ce=_x9f0e();_x1f5bd={};var _x06369c=369545^369545;for(var _x9ad=310950^310950;_x9ad<_x283d[\"length\"];_x9ad++){var _x321f=_x283d[_x9ad];if(!_x6f814e[\"hasOwnProperty\"](_x321f)||!_x450ce[_x321f])continue;var _x9ecca=_x6f814e[_x321f];if(_x450ce[_x321f][\"vartype\"]===(932318^932318)){_x9ecca=Number(_x9ecca);if(!isFinite(_x9ecca))continue;}else{_x9ecca=String(_x9ecca);}_x1f5bd[_x321f]=_x9ecca;_x06369c++;}return _x06369c?_x1f5bd:null;if(false){[\"unused\"];}}",
+    "_x1726ca": "function(_x4a){return Number(_x4a)<(264422^264428)?\"0\":\"\";if(false){[\"unused\"];}}",
+    "_x554f": "function(_x86a0f,_x3){if(_x78caa!==null&&_x3>_xa7eefe){var _x4=_x86a0f-_x78caa,_xf3dfdd=_x3-_xa7eefe;if(_x4>(154518^154518)&&_x4<(144054^144040)&&_xf3dfdd>(992923^992851)){var _x645ce=_x4/_xf3dfdd;_x98ee=_x98ee?_x98ee*0.7+_x645ce*0.3:_x645ce;}}_x78caa=_x86a0f;_xa7eefe=_x3;_x7fac6a=556943^556943;if(false){[\"unused\"];}}",
+    "_xd052f": "function(_xb64d,_x6719a,_xf,_x55097a){if(_x70e!==\"client\"||!_xd1cdd||_x78caa===null)return;if(!_x98ee||!_x66269b())return;var _x169e=Date[\"now\"]()-_xa7eefe;if(_x169e<=(270560^270560))return;if(_x169e>_xb0799c)_x169e=_xb0799c;var _x64fd=_x78caa+_x98ee*_x169e;if(_x64fd>=(868217^867033))_x64fd-=718346^717738;_x7fac6a=_x64fd-_x78caa;_xb64d=_x9f0e();_x6719a=Math[\"floor\"](_x64fd);_xf=Math[\"floor\"](_x6719a/(655515^655527));_x55097a=_x6719a%(640988^640992);_x78a11d++;try{if(_xb64d[\"Timer_ALL\"])_xb64d[\"Timer_ALL\"][\"data\"]=_x6719a;if(_xb64d[\"Timer_Hours\"])_xb64d[\"Timer_Hours\"][\"data\"]=_xf;if(_xb64d[\"Timer_Minutes\"])_xb64d[\"Timer_Minutes\"][\"data\"]=_x55097a;if(_xb64d[\"Timer_Hours_Z\"])_xb64d[\"Timer_Hours_Z\"][\"data\"]=_x1726ca(_xf);if(_xb64d[\"Timer_Minutes_Z\"])_xb64d[\"Timer_Minutes_Z\"][\"data\"]=_x1726ca(_x55097a);}finally{_x78a11d--;}if(false){[\"unused\"];}}",
+    "_x6a": "function(_xdd,_xce5d,_x4f,_xf852d,_x7ac8ae,_x9b3da,_x0aa2b){if(_x70e!==\"client\"||!_xdd||!_x66269b()||!_x780ba)return![];if(typeof _xdd[\"seq\"]===\"number\"&&_xdd[\"seq\"]<=_x42aa)return![];_xce5d=_x268d(_xdd[\"values\"]);if(!_xce5d)return![];_x4f=_x0c1ff(_xce5d);if(_xdd[\"hash\"]&&_xdd[\"hash\"]!==_x4f){_x85ef9d(\"rejected a world-state packet with an invalid hash\");return![];}_xf852d=_xff80b;_x7ac8ae=_x9f0e();_x78a11d++;try{for(var _xa2fe5a=179652^179652;_xa2fe5a<_x283d[\"length\"];_xa2fe5a++){var _xd4ba7c=_x283d[_xa2fe5a];if(_xce5d[\"hasOwnProperty\"](_xd4ba7c)&&_x7ac8ae[_xd4ba7c])_x7ac8ae[_xd4ba7c][\"data\"]=_xce5d[_xd4ba7c];}}finally{_x78a11d--;}_xa6bcbe();_x9b3da=!_xd1cdd;_xd1cdd=!![];if(_xce5d[\"hasOwnProperty\"](\"Timer_ALL\"))_x554f(Number(_xce5d[\"Timer_ALL\"]),Date[\"now\"]());_x42aa=typeof _xdd[\"seq\"]===\"number\"?_xdd[\"seq\"]:_x42aa+(291029^291028);_xf56c5f=Date[\"now\"]();_x65d0d=_xf56c5f;_xff80b=_x4f;_xda038b++;_x68d=null;_x0aa2b=_x4f!==_xf852d;if(_x0aa2b||_x9b3da||_xf56c5f-_x535a>=_x0ee2f){_x535a=_xf56c5f;_x168cf++;_xa5ebd({\"type\":\"mp_world_state_ack\",\"seq\":_x42aa,\"hash\":_xff80b,\"receivedAt\":_xf56c5f});}if(_x9b3da)_x85ef9d(\"client clock and weather now follow the host\");return!![];if(false){[\"unused\"];}}",
+    "_x": "function(_xde0bb,_xe94fb,_x47dec,_x43158b,_x0ec,_xcb183f,_x2acd9e){if(_x70e!==\"host\"||!_x1c||!_x66269b())return![];_x780ba=!![];_xe94fb=_x892f();_x47dec=_x0c1ff(_xe94fb);_x43158b=Date[\"now\"]();_x0ec=_x47dec!==_x155ef;_xcb183f=_x43158b-_xbac0ef>=_x24dada;if(!_xde0bb&&!_x0ec&&!_xcb183f){_x717f++;return![];}if(!_x0ec&&!_xde0bb)_xeca96d++;_x7f++;_x2acd9e=++_xaea7bd;_xbac0ef=Date[\"now\"]();_x155ef=_x47dec;_xcc3a[_x2acd9e]=_x47dec;for(var _x13c73c in _xcc3a){if(_xcc3a[\"hasOwnProperty\"](_x13c73c)&&Number(_x13c73c)<_x2acd9e-(352371^352347))delete _xcc3a[_x13c73c];}return _xa5ebd({\"type\":\"mp_world_state\",\"seq\":_x2acd9e,\"sentAt\":_xbac0ef,\"hash\":_x47dec,\"values\":_xe94fb});if(false){[\"unused\"];}}",
+    "_x11d5ac": "function(_x5aabd){if(!_x5aabd||typeof _x5aabd[\"type\"]!==\"string\"||_x5aabd[\"type\"][\"indexOf\"](\"mp_world_state\")!==(640821^640821))return![];if(_x5aabd[\"type\"]===\"mp_world_state\"){if(_x70e===\"client\"){if(!_x780ba||!_x66269b()){if(!_x68d||Number(_x5aabd[\"seq\"])>Number(_x68d[\"seq\"]))_x68d=_x5aabd;}else{_x6a(_x5aabd);}}return!![];}if(_x5aabd[\"type\"]===\"mp_world_state_request\"){if(_x70e===\"host\")_x(!![]);return!![];}if(_x5aabd[\"type\"]===\"mp_world_state_ack\"){if(_x70e===\"host\"){var _xa1112f=_xcc3a[_x5aabd[\"seq\"]];_x71f7c={\"seq\":_x5aabd[\"seq\"],\"hash\":_x5aabd[\"hash\"]||null,\"expectedHash\":_xa1112f||null,\"match\":!!_xa1112f&&_xa1112f===_x5aabd[\"hash\"],\"receivedAt\":Date[\"now\"]()};}return!![];}return![];if(false){[\"unused\"];}}",
+    "_x62ad6b": "function(_x3b69f){_x70e=_x3b69f;_x78caa=null;_x98ee=784467^784467;_x7fac6a=832808^832808;_x535a=148817^148817;_xd1cdd=![];_x780ba=_x3b69f===\"host\"&&_x66269b();_x68d=null;_x42aa=-(709889^709888);_x71f7c=null;_xa6bcbe();return _x70e;if(false){[\"unused\"];}}",
+    "_x92318d": "function(){_x78caa=null;_xa7eefe=233295^233295;_x98ee=775235^775235;_x7fac6a=319277^319277;_x7f=428309^428309;_xeca96d=194206^194206;_x717f=574836^574836;_x168cf=839162^839162;_x535a=667397^667397;_x70e=null;_x1c=null;_xd1cdd=![];_x780ba=![];_x68d=null;_xaea7bd=592442^592442;_x42aa=-(164618^164619);_xbac0ef=505450^505450;_xf56c5f=320470^320470;_x65d0d=586071^586071;_xff80b=null;_x155ef=null;_x71f7c=null;_xcc3a={};_x98c=778371^778371;_xda038b=839567^839567;if(false){[\"unused\"];}}"
+  },
+  "window_MPWorldState_export": {
+    "setRole": "_x62ad6b",
+    "setSender": "function(_x1d){_x1c=typeof _x1d===\"function\"?_x1d:null;if(_x70e===\"host\")_x(!![]);else if(_x70e===\"client\")_xa5ebd({\"type\":\"mp_world_state_request\"});if(false){[\"unused\"];}}",
+    "handle": "_x11d5ac",
+    "sendNow": "function(){if(_x70e===\"host\")return _x(!![]);if(_x70e===\"client\")return _xa5ebd({\"type\":\"mp_world_state_request\"});return![];if(false){[\"unused\"];}}",
+    "capture": "_x892f",
+    "hash": "function(){return _x0c1ff(_x892f());if(false){[\"unused\"];}}",
+    "role": "function(){return _x70e;if(false){[\"unused\"];}}",
+    "stats": "function(){return{\"role\":_x70e,\"layout\":_x71d()&&_x71d()[\"running_layout\"]?_x71d()[\"running_layout\"][\"name\"]:null,\"worldReady\":_x780ba,\"locked\":_xd1cdd,\"sequence\":_x70e===\"host\"?_xaea7bd:_x42aa,\"lastSentAt\":_xbac0ef,\"lastReceivedAt\":_xf56c5f,\"lastAppliedAt\":_x65d0d,\"currentHash\":_x0c1ff(_x892f()),\"lastAppliedHash\":_xff80b,\"lastSentHash\":_x155ef,\"lastAck\":_x71f7c,\"suppressedWrites\":_x98c,\"appliedPackets\":_xda038b,\"packetsSent\":_x7f,\"heartbeatsSent\":_xeca96d,\"sendsSkipped\":_x717f,\"acksSent\":_x168cf,\"minutesPerMs\":_x98ee,\"minutesPerSecond\":_x98ee*(219644^219668),\"freeRunMinutes\":_x7fac6a,\"clockAgeMs\":_xa7eefe?Date[\"now\"]()-_xa7eefe:null,\"pending\":!!_x68d};if(false){[\"unused\"];}}",
+    "reset": "_x92318d"
+  }
+}
