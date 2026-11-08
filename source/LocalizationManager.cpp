@@ -22,7 +22,7 @@ void LocalizationManager::detectSystemLanguage() {
     u8 sysLanguage = 0;
     if (R_SUCCEEDED(cfguInit())) {
         CFGU_GetSystemLanguage(&sysLanguage);
-        cfgExit();
+        cfugExit();
     }
 
     // Map 3DS system languages to our supported enum
