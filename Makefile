@@ -20,23 +20,28 @@ ROMFS		:= romfs
 INCLUDES	:= include source /opt/devkitpro/libctru/include $(PORTLIBS)/include
 GRAPHICS	:= gfx
 
-# Include 3ds_rules *after* configuration variables are set
+#-----------------------------------------------------------------
+# SOURCE & OBJECT MAPPING (Dynamic & Reliable)
+#-----------------------------------------------------------------
+# Automatically find all source files in the source directory
+CPPFILES	:= $(notdir $(wildcard $(SOURCES)/*.cpp))
+CFILES		:= $(notdir $(wildcard $(SOURCES)/*.c))
+SFILES		:= $(notdir $(wildcard $(SOURCES)/*.s))
+
+# Automatically generate corresponding object files inside the build directory
+OFILES		:= $(addprefix $(BUILD)/, $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o))
+
+# Search paths for source files
+vpath %.cpp source
+vpath %.c source
+vpath %.s source
+
+# Include 3ds_rules AFTER configuration and object mapping variables are set
 include $(DEVKITARM)/3ds_rules
 
 #-----------------------------------------------------------------
-# SOURCE & OBJECT MAPPING WITH VPATH SUPPORT
+# COMPILATION FLAGS
 #-----------------------------------------------------------------
-CPPFILES	:= main.cpp ItemTable.cpp ShaderMenu.cpp player.cpp world.cpp
-CFILES		:= 
-SFILES		:= 
-
-OFILES		:= $(BUILD)/main.o $(BUILD)/ItemTable.o $(BUILD)/ShaderMenu.o $(BUILD)/player.o $(BUILD)/world.o
-
-# Search paths for source files (checks source/ and root directory)
-vpath %.cpp source .
-vpath %.c source .
-vpath %.s source .
-
 INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
 			   -I$(TOPDIR)/$(ROMFS) \
 			   -I/opt/devkitpro/libctru/include \
