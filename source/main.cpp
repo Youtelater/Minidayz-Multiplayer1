@@ -135,7 +135,7 @@ void drawBottomScreen(C3D_RenderTarget* bottom)
     C2D_DrawRectSolid(0.0f, 0.0f, 0.01f, BOTTOM_W, 3.0f,
                       C2D_Color32(151, 123, 75, 255));
 
-    gTextBuffer && C2D_TextBufClear(gTextBuffer);
+    if (gTextBuffer)\n        C2D_TextBufClear(gTextBuffer);
 
     if (gPage == Page::Info) {
         drawText(gInfoTitle, 18.0f, 24.0f, 0.55f,
@@ -156,7 +156,7 @@ void drawBottomScreen(C3D_RenderTarget* bottom)
     int count = 0;
     const MenuItem* items = currentItems(count);
     const float startY = gPage == Page::MainMenu ? 28.0f : 48.0f;
-    const float rowH = gPage == Page::MainMenu ? 23.0f : 32.0f;
+    const float rowH = gPage == Page::MainMenu ? 20.0f : 32.0f;
     const float gap = gPage == Page::MainMenu ? 3.0f : 8.0f;
 
     for (int i = 0; i < count; ++i) {
@@ -310,7 +310,7 @@ int main(int argc, char* argv[])
                 int count = 0;
                 currentItems(count);
                 const float startY = gPage == Page::MainMenu ? 28.0f : 48.0f;
-                const float rowH = gPage == Page::MainMenu ? 23.0f : 32.0f;
+                const float rowH = gPage == Page::MainMenu ? 20.0f : 32.0f;
                 const float gap = gPage == Page::MainMenu ? 3.0f : 8.0f;
                 const float pitch = rowH + gap;
 
