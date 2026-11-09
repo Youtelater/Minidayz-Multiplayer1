@@ -14,6 +14,7 @@ struct InventoryItem {
 
 struct PlayerData {
     uint32_t version = 2;
+    uint64_t capturedAt = 0;
     std::string playerId;
     std::string room = "default";
     std::string worldKey;
@@ -65,5 +66,5 @@ private:
     uint64_t lastTickTime = 0;
 
     PlayerData currentCheckpoint;
-    std::unordered_map<string, uint64_t> peerLastPacketTimes;
+    std::unordered_map<std::string, uint64_t> peerLastPacketTimes;
 };
