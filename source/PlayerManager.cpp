@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 
 PlayerManager::PlayerManager() {
     currentCheckpoint = PlayerData{};
