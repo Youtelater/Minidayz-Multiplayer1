@@ -135,7 +135,8 @@ void drawBottomScreen(C3D_RenderTarget* bottom)
     C2D_DrawRectSolid(0.0f, 0.0f, 0.01f, BOTTOM_W, 3.0f,
                       C2D_Color32(151, 123, 75, 255));
 
-    if (gTextBuffer)\n        C2D_TextBufClear(gTextBuffer);
+    if (gTextBuffer)
+        C2D_TextBufClear(gTextBuffer);
 
     if (gPage == Page::Info) {
         drawText(gInfoTitle, 18.0f, 24.0f, 0.55f,
