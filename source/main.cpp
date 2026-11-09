@@ -264,9 +264,6 @@ int main(int argc, char* argv[])
     if (gLogoSheet && C2D_SpriteSheetCount(gLogoSheet) > 0)
         gLogo = C2D_SpriteSheetGetImage(gLogoSheet, 0);
 
-    int lastSelection = -1;
-    Page lastPage = static_cast<Page>(-1);
-
     while (aptMainLoop()) {
         hidScanInput();
         const u32 down = hidKeysDown();
@@ -330,10 +327,6 @@ int main(int argc, char* argv[])
         drawBottomScreen(bottom);
         C3D_FrameEnd(0);
 
-        lastSelection = gSelection;
-        lastPage = gPage;
-        (void)lastSelection;
-        (void)lastPage;
     }
 
     if (gTextBuffer)
