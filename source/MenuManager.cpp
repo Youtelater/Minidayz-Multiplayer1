@@ -7,8 +7,6 @@
 MenuManager::MenuManager() 
     : currentTab(MenuTab::Main),
       selectedButtonIndex(0),
-      joinRoomNameInput(""),
-      joinPasswordInput(""),
       statusMessage("READY") {}
 
 MenuManager::~MenuManager() {}
