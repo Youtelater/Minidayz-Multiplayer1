@@ -39,7 +39,33 @@ public:
                                 &WorldPreviewScene::blocked, this);
     }
 
-    void render_bottom(minidayz::Renderer& renderer) noexcept override {\n        // The lower 3DS screen is the touch inventory, not a debug panel.\n        renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f, C2D_Color32(20, 25, 23, 255));\n        renderer.draw_solid_rect(6.0f, 6.0f, 308.0f, 25.0f, C2D_Color32(54, 68, 55, 255));\n        // Equipment / quick-access row. Empty slots stay empty until the\n        // item and equipment systems are connected to source definitions.\n        for (int i = 0; i < 4; ++i) {\n            const float x = 10.0f + i * 77.0f;\n            renderer.draw_solid_rect(x, 38.0f, 70.0f, 43.0f, C2D_Color32(8, 11, 10, 255));\n            renderer.draw_solid_rect(x + 2.0f, 40.0f, 66.0f, 39.0f, C2D_Color32(47, 54, 48, 255));\n        }\n        // 5 x 3 backpack grid, sized for the 320 x 240 touch screen.\n        for (int row = 0; row < 3; ++row) {\n            for (int col = 0; col < 5; ++col) {\n                const int index = row * 5 + col;\n                const float x = 10.0f + col * 60.0f;\n                const float y = 92.0f + row * 43.0f;\n                const bool selected = index == selected_inventory_slot_;\n                renderer.draw_solid_rect(x, y, 56.0f, 39.0f,\n                    selected ? C2D_Color32(225, 190, 105, 255) : C2D_Color32(5, 8, 7, 255));\n                renderer.draw_solid_rect(x + 2.0f, y + 2.0f, 52.0f, 35.0f,\n                    selected ? C2D_Color32(76, 76, 54, 255) : C2D_Color32(43, 49, 44, 255));\n            }\n        }\n        renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 3.0f, C2D_Color32(75, 91, 70, 255));\n    }\n\n    void render(minidayz::Renderer& renderer) noexcept override {
+    void render_bottom(minidayz::Renderer& renderer) noexcept override {
+        // The lower 3DS screen is the touch inventory, not a debug panel.
+        renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f, C2D_Color32(20, 25, 23, 255));
+        renderer.draw_solid_rect(6.0f, 6.0f, 308.0f, 25.0f, C2D_Color32(54, 68, 55, 255));
+        // Equipment / quick-access row. Empty slots stay empty until the
+        // item and equipment systems are connected to source definitions.
+        for (int i = 0; i < 4; ++i) {
+            const float x = 10.0f + i * 77.0f;
+            renderer.draw_solid_rect(x, 38.0f, 70.0f, 43.0f, C2D_Color32(8, 11, 10, 255));
+            renderer.draw_solid_rect(x + 2.0f, 40.0f, 66.0f, 39.0f, C2D_Color32(47, 54, 48, 255));
+        }
+        // 5 x 3 backpack grid, sized for the 320 x 240 touch screen.
+        for (int row = 0; row < 3; ++row) {
+            for (int col = 0; col < 5; ++col) {
+                const int index = row * 5 + col;
+                const float x = 10.0f + col * 60.0f;
+                const float y = 92.0f + row * 43.0f;
+                const bool selected = index == selected_inventory_slot_;
+                renderer.draw_solid_rect(x, y, 56.0f, 39.0f,
+                    selected ? C2D_Color32(225, 190, 105, 255) : C2D_Color32(5, 8, 7, 255));
+                renderer.draw_solid_rect(x + 2.0f, y + 2.0f, 52.0f, 35.0f,
+                    selected ? C2D_Color32(76, 76, 54, 255) : C2D_Color32(43, 49, 44, 255));
+            }
+        }
+        renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 3.0f, C2D_Color32(75, 91, 70, 255));
+    }
+\n    void render(minidayz::Renderer& renderer) noexcept override {
         // Render the source Map layout as a scaled overview. This deliberately
         // visualizes source placements; it does not pretend that placeholder
         // rectangles are the final original sprite/tile renderer.
@@ -151,7 +177,8 @@ private:
     minidayz::WorldSystem world_{};
     bool world_ready_{};
     minidayz::PlayerSystem player_;
-    minidayz::PlayerRules preview_rules_{};\n    int selected_inventory_slot_{};
+    minidayz::PlayerRules preview_rules_{};
+    int selected_inventory_slot_{};
 };
 
 } // namespace
