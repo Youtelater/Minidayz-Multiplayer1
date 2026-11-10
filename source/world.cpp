@@ -107,6 +107,39 @@ void generate_source_roads(WorldGrid& grid, std::uint8_t level) {
     if (level >= 4) add_vertical_roads(17);
 }
 
+template <std::size_t N>
+std::uint16_t choose_marker(const std::uint16_t (&values)[N], std::mt19937& rng) {
+    std::uniform_int_distribution<std::size_t> pick(0, N - 1);
+    return values[pick(rng)];
+}
+
+std::uint16_t source_marker_type(std::uint16_t code, std::uint8_t level,
+                                 std::mt19937& rng) {
+    static constexpr std::uint16_t kDefaultMarkers[] =
+        {3,1,2,8,10,1,2,8,10,52,52};
+    static constexpr std::uint16_t kLevelFourMarkers[] =
+        {1,2,8,10,1,2,8,10,52,52};
+    static constexpr std::uint16_t kVillageMarkers[] = {9,4,16,17};
+    static constexpr std::uint16_t kCityMarkers[] = {6,21};
+    static constexpr std::uint16_t kCodeTwoMarkers[] =
+        {23,24,25,26,27,28,29,40,42,43,44,45,46,47,48,49,60,61,62,63,64};
+
+    switch (code) {
+    case 0: return level >= 4 ? choose_marker(kLevelFourMarkers, rng)
+                              : choose_marker(kDefaultMarkers, rng);
+    case 9: return choose_marker(kVillageMarkers, rng);
+    case 6: return choose_marker(kCityMarkers, rng);
+    case 5: return 22;
+    case 14: case 15: case 13: case 12: case 11: case 50: case 51: case 52:
+    case 53: case 54: case 55: case 56: case 57: case 99: case 100: case 101:
+    case 102: case 103: case 104: case 105: return code;
+    case 17: return 51;
+    case 1: return 20;
+    case 2: return choose_marker(kCodeTwoMarkers, rng);
+    default: return code;
+    }
+}
+
 bool place_poi_count(WorldGrid& grid, std::uint8_t count, std::uint16_t code,
                      std::mt19937& rng) {
     if (count == 0) return true;
@@ -253,7 +286,23 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     return true;
 }
 
-bool WorldSystem::load_source_layout(std::string_view name) {
+
+bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
+    if (!initialized_ || grid_.width() == 0 || grid_.height() == 0) return false;
+    map_markers_.clear();
+    map_markers_.reserve(static_cast<std::size_t>(grid_.width()) * grid_.height());
+    std::mt19937 rng(seed ^ 0x9e3779b9u);
+    for (std::uint8_t y = 0; y < grid_.height(); ++y) {
+        for (std::uint8_t x = 0; x < grid_.width(); ++x) {
+            const std::uint16_t source_code = grid_.at(x, y);
+            map_markers_.push_back({
+                x, y, source_code, source_marker_type(source_code, level, rng)
+            });
+        }
+    }
+    return true;
+}
+\nbool WorldSystem::load_source_layout(std::string_view name) {
     const auto* layout = stage1::find_layout(name);
     if (!layout) return false;
     const auto index = static_cast<std::uint16_t>(layout - stage1::kLayoutTable);
@@ -330,7 +379,7 @@ bool WorldSystem::add_feature(const WorldFeature& f) {
     return true;
 }
 
-const WorldFeature* WorldSystem::feature(std::size_t i) const noexcept {
+const WorldMapMarker* WorldSystem::map_marker(std::size_t i) const noexcept {\n    return i < map_markers_.size() ? &map_markers_[i] : nullptr;\n}\n\nconst WorldFeature* WorldSystem::feature(std::size_t i) const noexcept {
     return i < features_.size() ? &features_[i] : nullptr;
 }
 
