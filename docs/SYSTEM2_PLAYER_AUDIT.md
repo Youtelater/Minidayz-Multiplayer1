@@ -1,67 +1,30 @@
-# System 2 — Player system source audit
+# System 2 — Player system implementation
 
-## Source inspected
+## Implemented native module
 
-The authoritative source is the preserved Construct project snapshot under
-`data/stage1/source_snapshot/`, specifically the `Game_events` event sheet.
+- `include/minidayz/player.hpp` defines player state, directional facing, locomotion animation state, movement input, configurable rules, collision callback and survival tick results.
+- `source/player.cpp` implements normalized 8-way movement, axis-separated collision checks (wall sliding), facing and idle/walk/run/dead state transitions.
+- Survival ticking applies configurable hunger/thirst drain, starvation/dehydration damage, bleeding/infection damage, health regeneration and temperature change. Damage is clamped at zero and transitions the player to dead.
+- Healing and consumable-stat adjustments are bounded by caller-supplied caps.
+- The collision callback is the seam for the World system; the player module does not invent world geometry.
 
-- The top-level `Player stats` group has UID `7463747062628312` and 196 direct child entries.
-- It contains the `colchecker` subgroup (UID `2317094210126576`, 3 direct children).
-- It contains the `States` subgroup (UID `6096691100830449`, 22 direct children).
-- The group contains hundreds of condition/action references. Their numeric IDs remain unresolved until the exact Construct 2 ACE metadata is available; see `docs/STAGE1_COMMAND_ID_MAPPING.md`.
+## Source fidelity and unresolved values
 
-## Source-backed player data
+The source audit identifies the Construct `Game_events` sheet's `Player stats` group (UID `7463747062628312`), its `colchecker` and `States` subgroups, and variables including `Player_temperature`, `Weather_temperature`, `Rain_cold`, `Night_cold`, `Day_cold`, `Starving_current`, `Thirsty_current`, and `Regeneration_current`.
 
-The Game_events sheet declares these player/survival variables (initial values shown in the source export):
+The source audit also records difficulty modifiers:
+- Starvation: Veteran 1, Regular 0.75, Novice 0.5.
+- Thirst: Veteran 1, Regular 0.75, Novice 0.5.
+- Regeneration: Veteran 1.5, Regular 1.75, Novice 2.
+- Weather-cold modifiers: all three recorded as 0 in the export.
 
-| Variable | Initial value | Use indicated by source name |
-|---|---:|---|
-| `Player_temperature` | 0 | Player body temperature |
-| `Weather_temperature` | 0 | Ambient temperature |
-| `Rain_cold` | 0 | Rain cooling modifier |
-| `Night_cold` | 0 | Night cooling modifier |
-| `Day_cold` | 0 | Day cooling modifier |
-| `Rain` | 0 | Rain state |
-| `Starving_current` | 0 | Difficulty-adjusted starvation rate |
-| `Thirsty_current` | 0 | Difficulty-adjusted thirst rate |
-| `Regeneration_current` | 0 | Difficulty-adjusted regeneration rate |
-| `Weathercold_current` | 0 | Difficulty-adjusted cold rate |
-| `Veteran_starving` / `Regular_starving` / `Novice_starving` | 1 / 0.75 / 0.5 | Difficulty modifiers |
-| `Veteran_thirsty` / `Regular_thirsty` / `Novice_thirsty` | 1 / 0.75 / 0.5 | Difficulty modifiers |
-| `Veteran_weathercold` / `Regular_weathercold` / `Novice_weathercold` | 0 / 0 / 0 | Difficulty modifiers |
-| `Veteran_regeneration` / `Regular_regeneration` / `Novice_regeneration` | 1.5 / 1.75 / 2 | Difficulty modifiers |
-| `Stats_food_eaten` | 0 | Food statistic |
-| `Stats_water_drinked` | 0 | Water statistic |
-| `Stats_blood_lost` | 0 | Blood-loss statistic |
-| `Death_log_reason` | `None` | Death cause |
-| `GUI_control_type` | 0 | Control mode |
-| `GUI_dpad_onscreen` | 0 | On-screen directional pad |
-| `run_touch_id`, `stick_touch_id`, `force_stick`, `stick_on`, `stick_pos_X`, `stick_pos_Y` | 0 | Touch movement controls |
+The exact ACE command semantics and event timing are not yet resolved. Accordingly, this module does **not** hard-code guessed Mini DAYZ speeds, stat maxima, drain rates, temperature thresholds, damage rates, or regeneration values. Populate `PlayerRules` only from the completed event/ACE trace. The temperature rate is an injected net rate; the World/weather layer must calculate it from source-equivalent weather, time-of-day and equipment rules.
 
-The source also has player-related objects/layers for the player body, clothing,
-vests, helmets, backpacks, weapons and the survivor sprite sets.
+## Integration boundary
 
-## C++ work in this commit
+The module is compiled automatically by the repository Makefile because `source/player.cpp` is in `source/`. It is currently a standalone gameplay subsystem; the engine still has no active gameplay scene, so this commit does not claim a playable character on screen. The next integration pass connects the player to the World collision provider, game scene, HUD and source-mapped sprite animations.
 
-- Adds `PlayerState` for position, health, hunger, thirst, temperature, bleeding,
-  infection, facing and alive/dead state.
-- Adds configurable movement with diagonal normalization and a collision-query
-  callback, so the exact collision geometry can be supplied by the world system.
-- Adds explicit operations for damage, healing and survival-stat changes.
-- Keeps game-specific speeds, maxima and rates configurable rather than
-  inventing values that are not yet resolved from the original event logic.
+## Verification status
 
-## Not yet source-equivalent
-
-This is the first native player-system foundation, not a completed player port.
-The following still require ACE resolution and event-by-event translation:
-
-1. Exact movement modes, acceleration/speed values, animation transitions and touch-control behavior.
-2. Exact collision shapes, solid-object filtering, collision response and interaction with vehicles/buildings.
-3. Health limits, damage sources, regeneration and death transitions.
-4. Hunger/thirst drain timing, consumption effects and difficulty/perk modifiers.
-5. Temperature calculation from weather, rain, day/night, clothing and equipment.
-6. Bleeding severity, blood loss, bandage/healing rules and infection mechanics.
-7. Source-to-C++ UID traceability and regression tests against the original.
-
-No multiplayer JSON is used. Original media assets are not modified.
+- C++ source is written for the repository's C++17 / `-fno-rtti` build.
+- Target build and hardware/emulator behavior must be confirmed by the GitHub Actions build and a 3DS runtime test; this document does not claim either has passed.
