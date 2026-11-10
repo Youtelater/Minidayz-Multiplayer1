@@ -152,7 +152,7 @@ void Engine::render() noexcept {
  // The bottom screen is reserved for diagnostics and touch UI; never
  // redraw the top-screen world here.
  renderer_.begin_screen(GFX_BOTTOM);
- renderer_.draw_debug_overlay();
+ if(scene_) scene_->render_bottom(renderer_);
  renderer_.end_frame();
 }
 void Engine::run() noexcept {
