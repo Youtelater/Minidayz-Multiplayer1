@@ -10,7 +10,7 @@ struct AnimationDef{std::uint16_t object;const char* name;std::uint32_t frames;f
 struct AudioDef{const char* filename;std::uint64_t bytes;};
 struct EventSheetDef{const char* name;std::uint32_t first,count,variables;};
 struct CommandCount{std::uint16_t id;std::uint32_t count;};
-inline constexpr std::size_t kObjectCount=1429,kLayoutCount=8,kLayerCount=360,kInstanceCount=5256,kAnimationCount=6338,kAudioCount=489,kEventSheetCount=6,kEventCount=22343,kVariableCount=610,kGroupCount=220;
+inline constexpr std::size_t kObjectCount=1429,kLayoutCount=8,kLayerCount=360,kInstanceCount=5256,kAnimationCount=6338,kAudioCount=489,kEventSheetCount=6,kEventCount=22343,kVariableCount=1017,kGroupCount=220;
 inline constexpr ObjectDef kObjects[]={
 {0,18,"t0"},
 {1,18,"t1"},

@@ -20,7 +20,7 @@
 - 1,429 object definitions across 20 plugin/type IDs.
 - 8 layouts, 360 layers, and 5,256 placed instances.
 - 6 event sheets; 22,343 nested event nodes.
-- 610 event-variable declarations and 220 named event groups.
+- 1,017 event-variable declarations and 220 named event groups.
 - 6,338 animation definitions and 14,505 image-frame references.
 - 489 audio resource entries.
 - The extraction script normalizes spaced negative numeric literals and emits the parsed project, event index, manifest, CSV inventories, and a generated C++17 header under `include/minidayz/generated/stage1_data.hpp`.

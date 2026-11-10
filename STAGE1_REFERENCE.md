@@ -37,7 +37,7 @@ XML record totals include empty ID-zero records where present. Duplicate English
 - 1,429 object definitions across 20 plugin/type IDs.
 - 8 layouts, 360 layers and 5,256 placed instances.
 - 6 event sheets and 22,343 recursively counted event nodes.
-- 610 variable declarations and 220 named event groups.
+- 1,017 variable declarations and 220 named event groups.
 - 6,338 animation definitions and 14,505 image-frame references.
 - 489 audio resource entries.
 - 115 distinct condition command IDs and 206 distinct action command IDs.

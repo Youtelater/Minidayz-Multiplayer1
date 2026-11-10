@@ -6,13 +6,13 @@ Source: complete supplied `data.deobfuscated.js` Construct project export (14,55
 
 | Sheet | Top-level entries | Nested event nodes | Variable declarations |
 |---|---:|---:|---:|
-| Game_events | 518 | 21,348 | 484 |
-| Menu_Events | 153 | 923 | 97 |
+| Game_events | 518 | 21,348 | 888 |
+| Menu_Events | 153 | 923 | 100 |
 | Login_events | 27 | 60 | 8 |
 | Loading_events | 15 | 8 | 9 |
 | Everywere | 4 | 4 | 1 |
 | Tutorial_events | 13 | 0 | 11 |
-| **Total** | **730** | **22,343** | **610** |
+| **Total** | **730** | **22,343** | **1,017** |
 
 Construct event nodes contain nested conditions, actions and subevents; top-level entry counts alone understate the logic. Tutorial_events contains variable declarations and event-sheet include entries, hence zero locally defined event nodes in this traversal.
 

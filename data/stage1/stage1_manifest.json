@@ -2269,7 +2269,7 @@
       "name": "Game_events",
       "top_level_entries": 518,
       "event_nodes": 21348,
-      "variables": 484,
+      "variables": 888,
       "first_event": 0
     },
     {
@@ -2277,7 +2277,7 @@
       "name": "Menu_Events",
       "top_level_entries": 153,
       "event_nodes": 923,
-      "variables": 97,
+      "variables": 100,
       "first_event": 21348
     },
     {
@@ -2314,7 +2314,7 @@
     }
   ],
   "event_nodes": 22343,
-  "variables": 610,
+  "variables": 1017,
   "groups": 220,
   "condition_command_types": 115,
   "action_command_types": 206,
