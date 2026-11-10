@@ -110,6 +110,9 @@ $(BUILD)/%.o: %.s
 # Python handles arbitrary original filenames safely and converts only changed PNGs.
 graphics:
 	@mkdir -p $(ROMFS)/gfx
+	@python3 tools/stage1/reassemble_snapshot.py
+	@python3 tools/stage1/extract_construct.py data/stage1/construct_project_parsed.json --out data/stage1
+	@python3 tools/stage1/build_sprite_catalog.py
 	@python3 tools/build_textures.py "$(GRAPHICS)" "$(ROMFS)/gfx"
 
 
