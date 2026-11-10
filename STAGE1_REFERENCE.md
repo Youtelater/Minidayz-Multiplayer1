@@ -70,3 +70,35 @@ Generated outputs are available as a downloadable extraction bundle in the conve
 **Status correction:** the supplied Construct export has now been structurally extracted into C++-usable data. Stage 1's *semantic gameplay specification* is still in progress: every condition/action in the event sheets must be traced into player, AI, combat, loot, survival, world-generation, UI, save/load, and audio systems; sprite crops and media files must also be cross-checked. Do not claim all gameplay mechanics have been translated or mark the Stage 1 gate complete yet.
 
 All scope exclusions remain in force: no `romfs/`, `raw/`, `c2injt.js`, or MP JSON files. Non-JSON MP files remain reserved for multiplayer later.
+
+
+## Full nested event-tree extraction — 2026-11-10
+
+The uploaded `data.deobfuscated.js` was reparsed recursively. Corrected structural counts (replacing earlier undercounts):
+
+| Sheet | Top-level entries | Nested event nodes | Variable declarations |
+|---|---:|---:|---:|
+| Game_events | 518 | 21,348 | 888 |
+| Menu_Events | 153 | 923 | 100 |
+| Login_events | 27 | 60 | 8 |
+| Loading_events | 15 | 8 | 9 |
+| Everywere | 4 | 4 | 1 |
+| Tutorial_events | 13 | 0 local nodes (11 variables; 2 include records) | 11 |
+| **Total** | **730** | **22,343** | **1,017** |
+
+The traversal identified 220 named group declarations, 115 distinct condition command IDs, and 206 distinct action command IDs. Image-frame references are 14,505 (the earlier 2,194 figure was an incomplete object-level count, not the complete frame-reference count).
+
+`docs/STAGE1_EVENT_AUDIT.md` documents the verified subsystem group names. `src/generated/stage1/stage1_summary.hpp` contains compile-tested C++ constants for these counts.
+
+The repository extractor `tools/stage1/extract_construct.py` now normalizes spaced negative literals correctly and emits:
+- `stage1_data.hpp`: C++ tables for object definitions, layouts, layers, placed instance transforms/UIDs, animations, audio resources, event-sheet boundaries and condition/action command-ID frequency tables.
+- `event_sheet_index.json`: nested event index, variable declarations, named groups, condition/action arrays and command ID counts.
+- `construct_project_parsed.json`: complete parsed original project.
+- CSV inventories and `stage1_manifest.json`.
+
+Run from repository root after placing the supplied source export at the root:
+```sh
+python tools/stage1/extract_construct.py data.deobfuscated.js --out src/generated/stage1
+```
+
+**Important:** structural extraction is now reproducible and the event tree is indexed. Native C++ behavior translation for every Construct condition/action, media trigger cross-reference and behavior-equivalence testing are not yet complete; Stage 1 is not signed off.
