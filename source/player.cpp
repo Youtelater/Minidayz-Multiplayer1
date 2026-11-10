@@ -5,8 +5,20 @@
 
 namespace minidayz {
 
+PlayerSystem::PlayerSystem(const PlayerState& initial) noexcept : state_(initial) {
+    update_life_state();
+}
+
 float PlayerSystem::clamp(float value, float low, float high) noexcept {
     return std::max(low, std::min(value, high));
+}
+
+void PlayerSystem::update_life_state() noexcept {
+    if (state_.health <= 0.0f) {
+        state_.health = 0.0f;
+        state_.alive = false;
+        state_.animation = PlayerAnimation::dead;
+    }
 }
 
 PlayerMoveResult PlayerSystem::update_movement(
@@ -27,17 +39,22 @@ PlayerMoveResult PlayerSystem::update_movement(
         iy /= magnitude;
     }
 
-    if (std::fabs(ix) > 0.001f || std::fabs(iy) > 0.001f) {
-        if (std::fabs(ix) > std::fabs(iy))
-            state_.facing = ix < 0.0f ? PlayerFacing::left : PlayerFacing::right;
-        else
-            state_.facing = iy < 0.0f ? PlayerFacing::up : PlayerFacing::down;
+    const bool moving = std::fabs(ix) > 0.001f || std::fabs(iy) > 0.001f;
+    if (!moving) {
+        state_.animation = PlayerAnimation::idle;
+        return result;
     }
 
-    const float speed = input.run ? rules.run_speed : rules.walk_speed;
-    const float wanted_x = ix * speed * dt;
-    const float wanted_y = iy * speed * dt;
+    if (std::fabs(ix) > std::fabs(iy))
+        state_.facing = ix < 0.0f ? PlayerFacing::left : PlayerFacing::right;
+    else
+        state_.facing = iy < 0.0f ? PlayerFacing::up : PlayerFacing::down;
 
+    const float speed = input.run ? rules.run_speed : rules.walk_speed;
+    const float wanted_x = ix * std::max(0.0f, speed) * dt;
+    const float wanted_y = iy * std::max(0.0f, speed) * dt;
+
+    // Resolve each axis independently to preserve wall sliding.
     const float next_x = state_.x + wanted_x;
     if (!is_blocked || !is_blocked(collision_context, next_x, state_.y)) {
         state_.x = next_x;
@@ -53,13 +70,67 @@ PlayerMoveResult PlayerSystem::update_movement(
     } else {
         result.blocked_y = true;
     }
+
+    state_.animation = input.run ? PlayerAnimation::run : PlayerAnimation::walk;
+    return result;
+}
+
+PlayerSurvivalResult PlayerSystem::update_survival(
+    float delta_seconds, const PlayerRules& rules) noexcept {
+    PlayerSurvivalResult result{};
+    if (!state_.alive || delta_seconds <= 0.0f) return result;
+
+    const float dt = clamp(delta_seconds, 0.0f, 0.25f);
+    const float old_health = state_.health;
+    const float old_hunger = state_.hunger;
+    const float old_thirst = state_.thirst;
+
+    state_.hunger = clamp(state_.hunger -
+        std::max(0.0f, rules.hunger_drain_per_second) * dt,
+        0.0f, std::max(0.0f, rules.max_hunger));
+    state_.thirst = clamp(state_.thirst -
+        std::max(0.0f, rules.thirst_drain_per_second) * dt,
+        0.0f, std::max(0.0f, rules.max_thirst));
+
+    // Damage from depleted food/water reserves is applied only when the
+    // caller supplies source-audited damage rates.
+    if (state_.hunger <= 0.0f)
+        apply_damage(std::max(0.0f, rules.starvation_damage_per_second) * dt);
+    if (state_.thirst <= 0.0f)
+        apply_damage(std::max(0.0f, rules.dehydration_damage_per_second) * dt);
+
+    if (state_.bleeding > 0.0f)
+        apply_damage(state_.bleeding *
+            std::max(0.0f, rules.bleeding_damage_per_severity_second) * dt);
+    if (state_.infection > 0.0f)
+        apply_damage(state_.infection *
+            std::max(0.0f, rules.infection_damage_per_severity_second) * dt);
+
+    if (state_.alive && rules.regeneration_per_second > 0.0f &&
+        rules.max_health > 0.0f) {
+        state_.health = clamp(state_.health +
+            rules.regeneration_per_second * dt, 0.0f, rules.max_health);
+    }
+
+    if (rules.temperature_change_per_second != 0.0f) {
+        const float low = std::min(rules.min_temperature, rules.max_temperature);
+        const float high = std::max(rules.min_temperature, rules.max_temperature);
+        state_.temperature = clamp(state_.temperature +
+            rules.temperature_change_per_second * dt, low, high);
+    }
+
+    update_life_state();
+    result.health_lost = std::max(0.0f, old_health - state_.health);
+    result.hunger_lost = std::max(0.0f, old_hunger - state_.hunger);
+    result.thirst_lost = std::max(0.0f, old_thirst - state_.thirst);
+    result.died = !state_.alive;
     return result;
 }
 
 void PlayerSystem::apply_damage(float amount) noexcept {
     if (!state_.alive || amount <= 0.0f) return;
     state_.health = std::max(0.0f, state_.health - amount);
-    if (state_.health <= 0.0f) state_.alive = false;
+    update_life_state();
 }
 
 void PlayerSystem::heal(float amount, float max_health) noexcept {
@@ -77,16 +148,19 @@ void PlayerSystem::adjust_thirst(float amount, float max_thirst) noexcept {
     state_.thirst = clamp(state_.thirst + amount, 0.0f, max_thirst);
 }
 
-void PlayerSystem::adjust_temperature(float amount) noexcept {
-    state_.temperature += amount;
+void PlayerSystem::adjust_temperature(float amount, float min_temperature,
+                                      float max_temperature) noexcept {
+    const float low = std::min(min_temperature, max_temperature);
+    const float high = std::max(min_temperature, max_temperature);
+    state_.temperature = clamp(state_.temperature + amount, low, high);
 }
 
-void PlayerSystem::set_bleeding(float severity) noexcept {
-    state_.bleeding = std::max(0.0f, severity);
+void PlayerSystem::set_bleeding(float severity, float max_severity) noexcept {
+    state_.bleeding = clamp(severity, 0.0f, std::max(0.0f, max_severity));
 }
 
-void PlayerSystem::set_infection(float severity) noexcept {
-    state_.infection = std::max(0.0f, severity);
+void PlayerSystem::set_infection(float severity, float max_severity) noexcept {
+    state_.infection = clamp(severity, 0.0f, std::max(0.0f, max_severity));
 }
 
 } // namespace minidayz
