@@ -124,6 +124,6 @@ def main():
     h+=["};","inline constexpr CommandCount kActionTypes[]={"]
     for i,n in sorted(acts.items()):h.append(f"{{{i},{n}}},")
     h+=["};","} // namespace minidayz::stage1",""]
-    (out/"stage1_data.hpp").write_text("\n".join(h),encoding="utf-8")
+    header.write_text("\\n".join(h),encoding="utf-8")
     print(json.dumps({k:manifest[k] for k in ("objects","layers","instances","animations","image_frame_references","audio_resources","event_nodes","variables","groups")},indent=2))
 if __name__=="__main__":main()
