@@ -1,7 +1,10 @@
-#include "minidayz/engine.hpp"\n#include "minidayz/generated/sprite_catalog.hpp"
+#include "minidayz/engine.hpp"
+#include "minidayz/generated/sprite_catalog.hpp"
 
 #include <algorithm>
-#include <cstdio>\n#include <cstring>\n#include <tuple>
+#include <cstdio>
+#include <cstring>
+#include <tuple>
 
 namespace minidayz {
 bool Renderer::initialize() noexcept {
@@ -40,17 +43,28 @@ void Renderer::load_debug_overlay(std::uint64_t frame,float delta,const InputSta
  C2D_TextBufClear(debug_buffer_);
  char lines[512];
  std::snprintf(lines,sizeof(lines),
-  "MINI DAYZ+  |  ENGINE DEBUG\n"
-  "--------------------------------\n"
-  "Status: RUNNING\n"
-  "Frame: %llu\n"
-  "Delta: %.2f ms\n"
-  "Scene: %s\n"
-  "Keys held: 0x%08lX\n"
-  "Keys pressed: 0x%08lX\n"
-  "Circle: X %d  Y %d\n"
-  "Touch: %s  X %u  Y %u\n"
-  "--------------------------------\n"
+  "MINI DAYZ+  |  ENGINE DEBUG
+"
+  "--------------------------------
+"
+  "Status: RUNNING
+"
+  "Frame: %llu
+"
+  "Delta: %.2f ms
+"
+  "Scene: %s
+"
+  "Keys held: 0x%08lX
+"
+  "Keys pressed: 0x%08lX
+"
+  "Circle: X %d  Y %d
+"
+  "Touch: %s  X %u  Y %u
+"
+  "--------------------------------
+"
   "Bottom screen debug overlay",
   static_cast<unsigned long long>(frame),delta*1000.0f,
   scene_active?"attached":"none",
