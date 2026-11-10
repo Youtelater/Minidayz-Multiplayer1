@@ -131,7 +131,8 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  }
  const float draw_x=x-selected->origin_x*selected->width*sx;
  const float draw_y=y-selected->origin_y*selected->height*sy;
- return draw_sprite(slot,selected->image,draw_x,draw_y,sx,sy,0.0f,depth);
+ return draw_sprite(slot,selected->image,draw_x,draw_y,
+                     sx*selected->texture_scale_x,sy*selected->texture_scale_y,0.0f,depth);
 }
 bool Engine::initialize() noexcept {
  gfxInitDefault();
