@@ -53,22 +53,26 @@ def main() -> int:
                 atlas_index = by_frame.setdefault(key, len(by_frame))
                 page = atlas_index // MAX_FRAMES_PER_ATLAS
                 page_image = atlas_index % MAX_FRAMES_PER_ATLAS
+                scale = min(1.0, 1024.0 / max(key[2], key[3]))
+                packed_w = max(1, round(key[2] * scale))
+                packed_h = max(1, round(key[3] * scale))
                 records.append((oi, ai, fi, source_path, page, page_image, key[2], key[3],
                                 float(fr[7]) if len(fr)>7 else 0.5,
-                                float(fr[8]) if len(fr)>8 else 0.5))
+                                float(fr[8]) if len(fr)>8 else 0.5,
+                                key[2] / packed_w, key[3] / packed_h))
     OUT.mkdir(parents=True, exist_ok=True)
     HEADER.parent.mkdir(parents=True, exist_ok=True)
     header = [
         "#pragma once", "#include <cstdint>", "#include <cstddef>",
         "namespace minidayz::stage1 {",
-        "struct SpriteFrameDef { std::uint16_t object, animation; std::uint32_t frame, image; const char* sheet; float width,height,origin_x,origin_y; };",
+        "struct SpriteFrameDef { std::uint16_t object, animation; std::uint32_t frame, image; const char* sheet; float width,height,origin_x,origin_y,texture_scale_x,texture_scale_y; };",
         "struct SpriteAnimationDef { std::uint16_t object, animation; const char* name; std::uint32_t frame_count; float source_speed; bool loop; };",
         f"inline constexpr std::size_t kSpriteFrameCount={len(records)};",
         f"inline constexpr std::size_t kSpriteAnimationCount={len(animations)};",
         "inline constexpr SpriteFrameDef kSpriteFrames[] = {"
     ]
-    for oi, ai, fi, path, page, idx, w, h, ox, oy in records:
-        header.append(f'{{{oi},{ai},{fi},{idx},"{ident(path)}_p{page:03d}",{cf(w)},{cf(h)},{cf(ox)},{cf(oy)}}},')
+    for oi, ai, fi, path, page, idx, w, h, ox, oy, tx, ty in records:
+        header.append(f'{{{oi},{ai},{fi},{idx},"{ident(path)}_p{page:03d}",{cf(w)},{cf(h)},{cf(ox)},{cf(oy)},{cf(tx)},{cf(ty)}}},')
     header += ["};", "inline constexpr SpriteAnimationDef kSpriteAnimations[] = {"]
     for oi, ai, name, count, speed, loop in animations:
         safe = name.replace("\\", "\\\\").replace('"', '\\"')
@@ -134,6 +138,13 @@ def main() -> int:
                         frame_image = Image.new("RGBA", (w, h), (0, 0, 0, 0))
                         visible = image.convert("RGBA").crop((left, top, right, bottom))
                         frame_image.paste(visible, (left - x, top - y))
+                        # 3DS textures are limited to 1024x1024. Resize only
+                        # this temporary extracted frame; source artwork and
+                        # logical Construct dimensions remain unchanged.
+                        scale = min(1.0, 1024.0 / max(w, h))
+                        if scale < 1.0:
+                            packed_size = (max(1, round(w * scale)), max(1, round(h * scale)))
+                            frame_image = frame_image.resize(packed_size, Image.Resampling.LANCZOS)
                         frame_image.save(crop, format="PNG")
                         entries.append(crop.name)
                 manifest = page_dir / "atlas.t3s"
