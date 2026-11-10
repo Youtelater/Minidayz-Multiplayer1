@@ -20,6 +20,10 @@ The original `Game_events` sheet declares player-related variables including `Pl
 
 These are observations of serialized event expressions and variable references, **not yet per-second rates**. Trigger cadence, command semantics, caps, and full branch context must be resolved before using constants in C++.
 
+## Verified C++ behavior added
+
+`source/player.cpp` now preserves the source death cause when the injected starvation or dehydration damage is the damage that reduces health to zero: it records `PlayerDeathReason::hunger` or `PlayerDeathReason::thirst` respectively. This is a narrow implementation of the original event tree's explicit `Death_log_reason` paths. It does not invent drain rates or thresholds; those remain caller-supplied until event cadence and command semantics are verified. Cold death is not inferred from temperature alone and remains unimplemented until its damage condition is resolved.
+
 ## Current C++ comparison
 
 `include/minidayz/player.hpp` and `source/player.cpp` provide a generic player/survival scaffold. Numeric `PlayerRules` values default to zero and are injected by callers. The scaffold does not yet implement this original event tree. This avoids inventing drain rates, thresholds, damage, or temperature rules.
