@@ -56,6 +56,9 @@ private:
         minidayz::PlayerState state{};
         state.x = 160.0f;
         state.y = 120.0f;
+        // PlayerSystem marks a zero-health state as dead on construction.
+        // Give this temporary preview actor nonzero health so input can move it.
+        state.health = 100.0f;
         state.alive = true;
         return state;
     }
