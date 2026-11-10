@@ -55,7 +55,7 @@ def main():
             for fi,fr in enumerate(frames):
                 if isinstance(fr,list) and fr and isinstance(fr[0],str):
                     image_refs.append(dict(object=oi,animation=an[0],frame=fi,path=fr[0],sheet_id=fr[1] if len(fr)>1 else None,x=fr[2] if len(fr)>2 else None,y=fr[3] if len(fr)>3 else None,width=fr[4] if len(fr)>4 else None,height=fr[5] if len(fr)>5 else None,origin_x=fr[7] if len(fr)>7 else None,origin_y=fr[8] if len(fr)>8 else None,collision=fr[10] if len(fr)>10 else None))
-    sheets=[]; events=[]; variables=[]; groups=[]; cond=Counter(); acts=Counter(); cond_refs=Counter(); act_refs=Counter()
+    sheets=[]; events=[]; variables=[]; groups=[]; ace_calls=[]; cond=Counter(); acts=Counter(); cond_refs=Counter(); act_refs=Counter()
     def walk(items,si,name,parent=-1,depth=0):
         for e in items:
             if not isinstance(e,list) or not e: continue
@@ -67,13 +67,21 @@ def main():
             sub=e[7] if len(e)>7 and isinstance(e[7],list) else []
             if isinstance(e[1],list) and len(e[1])>1 and isinstance(e[1][1],str):
                 groups.append(dict(sheet=si,name=e[1][1],uid=e[4] if len(e)>4 else 0))
-            for x in cs:
-                if isinstance(x,list) and len(x)>1 and isinstance(x[1],int):
-                    cond[x[1]]+=1; cond_refs[(x[0],x[1])]+=1
-            for x in ac:
-                if isinstance(x,list) and len(x)>1 and isinstance(x[1],int):
-                    acts[x[1]]+=1; act_refs[(x[0],x[1])]+=1
-            idx=len(events);events.append(dict(index=idx,sheet=si,parent=parent,depth=depth,
+            idx=len(events)
+            for kind,calls in (("condition",cs),("action",ac)):
+                for call_index,x in enumerate(calls):
+                    if isinstance(x,list) and len(x)>1 and isinstance(x[1],int):
+                        object_index=x[0]
+                        if kind=="condition":
+                            cond[x[1]]+=1; cond_refs[(object_index,x[1])]+=1
+                        else:
+                            acts[x[1]]+=1; act_refs[(object_index,x[1])]+=1
+                        obj=objects[object_index] if isinstance(object_index,int) and 0<=object_index<len(objects) else None
+                        ace_calls.append(dict(kind=kind,sheet=si,event_index=idx,event_uid=e[4] if len(e)>4 else 0,
+                            call_index=call_index,object_index=object_index,
+                            object_name=obj[0] if obj else ("System" if object_index==-1 else ""),
+                            object_type_id=obj[1] if obj else -1,command_id=x[1],raw_call=x))
+            events.append(dict(index=idx,sheet=si,parent=parent,depth=depth,
                 uid=e[4] if len(e)>4 else 0,conditions=cs,actions=ac,subevents=len(sub),source_record=e))
             walk(sub,si,name,idx,depth+1)
     for si,(name,entries) in enumerate(p[6]):
@@ -82,7 +90,7 @@ def main():
             event_nodes=len(events)-start,variables=len(variables)-vstart,first_event=start))
     audio=[dict(filename=x[0],bytes=x[1]) for x in p[7] if isinstance(x,list) and len(x)>1]
     (out/"construct_project_parsed.json").write_text(json.dumps(root,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
-    (out/"event_sheet_index.json").write_text(json.dumps(dict(sheets=sheets,events=events,variables=variables,groups=groups,
+    (out/"event_sheet_index.json").write_text(json.dumps(dict(sheets=sheets,events=events,variables=variables,groups=groups,ace_calls=ace_calls,
         condition_type_counts=cond,action_type_counts=acts),ensure_ascii=False,separators=(",",":")),encoding="utf-8")
     ace_rows=[]
     for kind,refs in (("condition",cond_refs),("action",act_refs)):
