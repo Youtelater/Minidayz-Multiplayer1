@@ -39,14 +39,16 @@
 
 ## Reproducible extraction
 
-Run from the repository root after placing the supplied source export at the root:
+The complete parsed source snapshot is now stored in ordered chunks under `data/stage1/source_snapshot/`. Reassemble it, then regenerate the indexes and inventories from the repository copy:
 
 ```sh
-python tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
+python tools/stage1/reassemble_snapshot.py
+python tools/stage1/extract_construct.py data/stage1/construct_project_parsed.json --out data/stage1
 ```
 
 Outputs:
-- `data/stage1/construct_project_parsed.json` — complete parsed source project and event trees.
+- `data/stage1/source_snapshot/part_*.jsonpart` — complete parsed source snapshot, split into ordered Git-friendly chunks.
+- `data/stage1/construct_project_parsed.json` — reconstructed complete parsed source project and event trees.
 - `data/stage1/event_sheet_index.json` — nested event index, variables, groups, and command-ID frequency tables.
 - `data/stage1/stage1_manifest.json` — source and extraction manifest.
 - `data/stage1/instances.csv`, `animations.csv`, `image_refs.csv`, `audio_resources.csv`.
