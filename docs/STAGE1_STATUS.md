@@ -74,3 +74,8 @@ Structural extraction and indexing are complete, but the original game has **not
 `docs/STAGE1_MAP_GENERATION_AUDIT.md` records the current structural audit of the `Map generation` group, including its nested event-node count, child groups, and exact object/command references. This is an audit index, not a completed gameplay port.
 
 **Stage 1 status: structural extraction verified; semantic behavior translation, asset/event cross-reference, and behavior-equivalence testing remain incomplete. Stage 2 must not start until those items are completed and verified.**
+
+
+## Legacy ROMFS cross-check (non-authoritative)
+
+The user has authorized inspection of `romfs/` as legacy reference material. The current tree contains 611 files (295 WAV, 290 T3X, 12 JSON, 12 BIN, one PNG and one T3S). The legacy audio index contains 489 unique filenames, matching all 489 audio resource filenames in the authoritative Construct export. This is filename-level corroboration only; it does not validate the age, contents, format, coordinates, or runtime compatibility of the legacy assets. Legacy UI/log dictionaries remain candidates for cross-checking, not sources of truth.
