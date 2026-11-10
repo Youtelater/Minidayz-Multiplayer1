@@ -14,6 +14,7 @@ public:
  void begin_frame() noexcept; void begin_screen(gfxScreen_t screen) noexcept; void end_frame() noexcept;
  void load_debug_overlay(std::uint64_t frame, float delta, const InputState& input, bool scene_active) noexcept;
  void draw_debug_overlay() noexcept;
+ void draw_solid_rect(float x,float y,float width,float height,u32 color) noexcept;
  bool load_sheet(std::size_t slot,const char* romfs_path) noexcept;
  void unload_sheet(std::size_t slot) noexcept; void unload_all() noexcept;
  bool draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx=1.0f,float sy=1.0f,float rotation=0.0f,float depth=0.5f) noexcept;
