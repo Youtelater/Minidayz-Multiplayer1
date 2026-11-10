@@ -1,26 +1,28 @@
-# Stage 1 — Original Construct project extraction
+# Stage 1 — Original Construct project extraction and semantic port audit
 
-**Source:** `data.deobfuscated.js` / `data.deobfuscated.js` deobfuscated export  
-**Repository branch:** `main`  
+**Source:** the supplied 14,558,329-byte `data.deobfuscated.js` export  
+**Working branch:** `main`  
 **Target:** faithful Nintendo 3DS C++ port
 
 ## Scope guardrails
 
-- Inspect the original Construct project data and permitted original assets.
-- Do not use `romfs/`, `raw/`, or `c2injt.js`.
-- Exclude files ending in `mp.json`; multiplayer non-JSON material is reserved for its later phase.
-- Do not treat the source data export as a substitute for the actual game logic.
-- Preserve original dimensions, transforms, UIDs, object IDs, event-sheet order, sprite references and audio resources.
+- Use `main` as the working branch.
+- Do not inspect or use `romfs/`, `raw/`, or `c2injt.js` as extraction sources.
+- Exclude every file ending in `mp.json`; multiplayer non-JSON material is reserved for the later multiplayer stage.
+- Do not modify original media assets.
+- Keep project-owned `.cpp` files under `source/` and `.hpp`/`.h` files under `include/`.
+- Keep extracted non-C++ inventories under `data/stage1/`.
 
-## Structural extraction already verified from the uploaded export
+## Structural extraction verified from the supplied export
 
-- 29 top-level project sections; project version 1.6.0; canvas 1024 × 768.
-- 1,429 object definitions across 20 Construct plugin/type IDs.
-- 8 layouts, 360 layers, 5,256 placed instances.
-- 6 event sheets, 610 event variables and 39 named event groups.
-- 6,338 animation definitions and 2,194 object-to-image references.
+- 29 project sections; Construct version 1.6.0; canvas 1024 × 768.
+- 1,429 object definitions across 20 plugin/type IDs.
+- 8 layouts, 360 layers, and 5,256 placed instances.
+- 6 event sheets; 22,343 nested event nodes.
+- 1,017 event-variable declarations and 220 named event groups.
+- 6,338 animation definitions and 14,505 image-frame references.
 - 489 audio resource entries.
-- The generated C++17 data header was compiled with g++ using strict warnings and count assertions.
+- The extraction script normalizes spaced negative numeric literals and emits the parsed project, event index, manifest, CSV inventories, and a generated C++17 header under `include/minidayz/generated/stage1_data.hpp`.
 
 ## Layout inventory
 
@@ -35,42 +37,37 @@
 | Login | 850 × 890 | 30 |
 | Loading | 2000 × 1500 | 6 |
 
-## Repeatable extractor
+## Reproducible extraction
 
-Run:
-
-```sh
-python tools/stage1/extract_construct.py data.deobfuscated.js --out src/generated/stage1
-```
-
-It emits the parsed complete project, manifest, placed-instance CSV, animation CSV, image-reference CSV and audio-resource CSV. The C++ type definitions are in `src/data/construct_stage1_types.hpp`.
-
-## Remaining work required before Stage 1 can be signed off
-
-Structural extraction is not the same as semantic reverse engineering. The original event-sheet trees are preserved in the parsed project, but the following work must still be completed and verified against the source:
-
-1. Translate every event condition/action and subevent into a traceable C++ behavior specification.
-2. Trace the player controller, collision and physics rules, weapons, combat, damage, enemy AI, loot, inventory, crafting, vehicles and survival systems.
-3. Trace procedural map/world generation, terrain, buildings, spawn tables and NPC/zombie spawn rules.
-4. Reconstruct all UI states, transitions, HUD placement and touch-screen interactions.
-5. Map each audio resource to its event trigger and playback parameters.
-6. Verify animation frame rectangles, origins, collision polygons and sprite-sheet crops against permitted original assets.
-7. Verify save/load, progression, tutorial and menu/login flows.
-8. Produce a source-to-C++ traceability matrix and compile/run regression tests.
-
-**Stage 1 status: structural export parsed; semantic gameplay specification and asset cross-checks remain in progress. Stage 2 must not start until those items are verified.**
-## C++ directory convention
-
-All project-owned C++ translation units (`.cpp`) belong under `source/`. All project-owned C++ headers (`.hpp`/`.h`) belong under `include/`. The Stage 1 data generator writes its generated header to `include/minidayz/generated/stage1_data.hpp`; parsed source snapshots and CSV/JSON inventories belong under `data/stage1/`. The compile-time metadata checks live in `source/stage1_summary_compile.cpp` so the Makefile's source discovery includes them.
-
-Run from the repository root:
+Run from the repository root after placing the supplied source export at the root:
 
 ```sh
 python tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
 ```
 
-Header locations:
-- `include/minidayz/construct_stage1_types.hpp`
-- `include/minidayz/stage1_summary.hpp`
-- `include/minidayz/generated/stage1_data.hpp` (generated)
+Outputs:
+- `data/stage1/construct_project_parsed.json` — complete parsed source project and event trees.
+- `data/stage1/event_sheet_index.json` — nested event index, variables, groups, and command-ID frequency tables.
+- `data/stage1/stage1_manifest.json` — source and extraction manifest.
+- `data/stage1/instances.csv`, `animations.csv`, `image_refs.csv`, `audio_resources.csv`.
+- `include/minidayz/generated/stage1_data.hpp` — C++17 constexpr metadata tables.
 
+## Remaining work before Stage 1 sign-off
+
+Structural extraction and indexing are complete, but the original game has **not** yet been fully translated into C++ or behaviorally verified. These items remain open:
+
+1. Resolve all 115 distinct condition command IDs and 206 distinct action command IDs against Construct/plugin metadata, including parameters, object references, expressions, and subevent semantics.
+2. Translate every event sheet and nested event into traceable C++ behavior specifications and implementation.
+3. Trace player movement, collisions/physics, weapons, combat, damage, enemy AI, NPCs, loot, inventory, crafting, vehicles, survival stats, status effects, and progression.
+4. Reconstruct procedural world generation, terrain, roads, towns, structures, spawn tables, and NPC/zombie spawn rules.
+5. Reconstruct UI states, HUD placement, touch interactions, menus, tutorial, login/loading, and death flows.
+6. Map audio resources to exact event triggers and playback parameters.
+7. Verify sprite-sheet rectangles, animation timing, origins, imagepoints, and collision polygons against permitted original assets.
+8. Verify save/load, progression, achievements, quests, perks, and day progression.
+9. Produce a source-to-C++ traceability matrix and run regression/behavior-equivalence tests on the target platform.
+
+## Current verified deep-dive
+
+`docs/STAGE1_MAP_GENERATION_AUDIT.md` records the current structural audit of the `Map generation` group, including its nested event-node count, child groups, and exact object/command references. This is an audit index, not a completed gameplay port.
+
+**Stage 1 status: structural extraction verified; semantic behavior translation, asset/event cross-reference, and behavior-equivalence testing remain incomplete. Stage 2 must not start until those items are completed and verified.**
