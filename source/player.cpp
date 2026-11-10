@@ -99,18 +99,12 @@ PlayerSurvivalResult PlayerSystem::update_survival(
     if (state_.hunger <= 0.0f) {
         const float damage =
             std::max(0.0f, rules.starvation_damage_per_second) * dt;
-        const float health_before = state_.health;
-        apply_damage(damage);
-        if (health_before > 0.0f && !state_.alive)
-            state_.death_reason = PlayerDeathReason::hunger;
+        apply_damage(damage, PlayerDeathReason::hunger);
     }
     if (state_.thirst <= 0.0f) {
         const float damage =
             std::max(0.0f, rules.dehydration_damage_per_second) * dt;
-        const float health_before = state_.health;
-        apply_damage(damage);
-        if (health_before > 0.0f && !state_.alive)
-            state_.death_reason = PlayerDeathReason::thirst;
+        apply_damage(damage, PlayerDeathReason::thirst);
     }
 
     if (state_.bleeding > 0.0f)
@@ -142,8 +136,14 @@ PlayerSurvivalResult PlayerSystem::update_survival(
 }
 
 void PlayerSystem::apply_damage(float amount) noexcept {
+    apply_damage(amount, PlayerDeathReason::other);
+}
+
+void PlayerSystem::apply_damage(float amount, PlayerDeathReason cause) noexcept {
     if (!state_.alive || amount <= 0.0f) return;
     state_.health = std::max(0.0f, state_.health - amount);
+    if (state_.health <= 0.0f && cause != PlayerDeathReason::none)
+        state_.death_reason = cause;
     update_life_state();
 }
 
