@@ -55,6 +55,30 @@ bool classify_source_layer(const char* name, WorldFeatureKind& kind) noexcept {
     return false;
 }
 
+
+bool compare_source_value(std::uint8_t op, std::uint8_t actual,
+                          std::uint8_t expected) noexcept {
+    switch (op) {
+    case 0: return actual == expected;
+    case 1: return actual != expected;
+    case 2: return actual < expected;
+    case 3: return actual <= expected;
+    case 4: return actual > expected;
+    case 5: return actual >= expected;
+    default: return true; // 255 is the source-table wildcard.
+    }
+}
+
+std::uint16_t find_layer_index_by_name(std::uint16_t layout,
+                                       const char* name) noexcept {
+    if (!name) return 0xffff;
+    for (const auto& layer : stage1::kLayerTable) {
+        if (layer.layout == layout && std::strcmp(layer.name, name) == 0)
+            return layer.index;
+    }
+    return 0xffff;
+}
+
 bool is_road_anchor(std::uint16_t code) noexcept {
     return code == 9 || code == 6 || code == 103 || code == 11 || code == 15;
 }
@@ -413,6 +437,42 @@ bool WorldSystem::add_feature(const WorldFeature& f) {
     if (!initialized_ || !bounds_.contains(f.position)) return false;
     features_.push_back(f);
     return true;
+}
+
+
+std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2,
+                                            std::uint8_t var6, WorldPoint position) {
+    if (!initialized_ || !bounds_.contains(position)) return 0;
+    const auto* layout = stage1::find_layout("Map");
+    if (!layout) return 0;
+    const auto layout_index = static_cast<std::uint16_t>(layout - stage1::kLayoutTable);
+
+    std::size_t added = 0;
+    for (const auto& rule : stage1::kWorldElementSpawnSource) {
+        if (!compare_source_value(rule.var1_op, var1, rule.var1_value) ||
+            !compare_source_value(rule.var2_op, var2, rule.var2_value) ||
+            !compare_source_value(rule.var6_op, var6, rule.var6_value)) continue;
+
+        const std::uint16_t layer = find_layer_index_by_name(layout_index, rule.layer_name);
+        if (layer == 0xffff) continue;
+
+        placements_.push_back({
+            layer, rule.object, rule.uid, position.x, position.y, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, rule.image_point
+        });
+
+        WorldFeatureKind kind{};
+        if (classify_source_layer(rule.layer_name, kind)) {
+            const std::uint32_t source_variant =
+                (static_cast<std::uint32_t>(var1) << 16) |
+                (static_cast<std::uint32_t>(var2) << 8) | var6;
+            features_.push_back({kind, position, rule.uid, source_variant,
+                                 layer, rule.object, 0.0f, 0.0f, 0.0f,
+                                 rule.image_point});
+        }
+        ++added;
+    }
+    return added;
 }
 
 const WorldMapMarker* WorldSystem::map_marker(std::size_t i) const noexcept {

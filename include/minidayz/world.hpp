@@ -102,7 +102,7 @@ public:
     bool generate_from_source(std::uint32_t seed, std::string_view layout_name = "Map",
                               std::uint8_t level = 0);
     bool generate_procedural_grid(std::uint8_t level, std::uint32_t seed);
-    bool build_map_markers(std::uint8_t level, std::uint32_t seed);
+    bool build_map_markers(std::uint8_t level, std::uint32_t seed);\n    std::size_t expand_map_element(std::uint8_t var1, std::uint8_t var2,\n                                   std::uint8_t var6, WorldPoint position);
     bool load_source_layout(std::string_view layout_name);
     bool load_source_bunker_spawns(bool map_fs = false);
     bool load_source_bridge_elements();
