@@ -49,3 +49,24 @@ The repository also contains `spawn_npc_arrays.txt`; its paths identify Construc
 ## Stage 2 gate
 
 Do not treat this audit as permission to approximate the original game. Stage 2 should begin only after the authoritative project data has been parsed and the world-generation/layout specification is verified. Keep this file updated with evidence and mark checklist items complete only after direct inspection.
+
+
+## 2026-11-09 extraction update — full supplied data.deobfuscated.js parsed
+
+The complete 14,558,329-byte upload was materialized and parsed successfully as JSON after normalizing whitespace between unary minus signs and numeric literals. All 29 project sections are preserved in the generated parsed export.
+
+Verified structural extraction:
+
+- 1,429 Construct object definitions across 20 plugin/type IDs.
+- 8 layouts, 360 layers, and 5,256 placed instances with source transforms, UIDs, object indices, and layer membership.
+- 6 event sheets: Game_events (518 top-level blocks), Menu_Events (153), Login_events (27), Loading_events (15), Everywere (4), Tutorial_events (13).
+- 610 event-sheet variables and 39 named event groups indexed.
+- 6,338 animation definitions; 2,194 object-to-image references.
+- 489 audio resource entries with original file byte sizes.
+- Original project canvas 1024 × 768; project version 1.6.0.
+
+Generated outputs are available as a downloadable extraction bundle in the conversation: `stage1_extracted.zip`. The bundle contains `stage1_data.hpp` (C++17 constexpr tables), `construct_project_parsed.json` (complete parsed project and raw event trees), `stage1_manifest.json`, `instances.csv`, `audio_resources.csv`, and `README_STAGE1.md`. The C++ header passed a `g++ -std=c++17 -Wall -Wextra -pedantic` compile check with count assertions.
+
+**Status correction:** the supplied Construct export has now been structurally extracted into C++-usable data. Stage 1's *semantic gameplay specification* is still in progress: every condition/action in the event sheets must be traced into player, AI, combat, loot, survival, world-generation, UI, save/load, and audio systems; sprite crops and media files must also be cross-checked. Do not claim all gameplay mechanics have been translated or mark the Stage 1 gate complete yet.
+
+All scope exclusions remain in force: no `romfs/`, `raw/`, `c2injt.js`, or MP JSON files. Non-JSON MP files remain reserved for multiplayer later.
