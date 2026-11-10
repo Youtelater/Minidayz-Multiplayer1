@@ -17,15 +17,12 @@ public:
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
+        // The Circle Pad is the movement control. Do not map the D-pad or
+        // an arbitrary button to movement/running.
         minidayz::PlayerInput movement{};
-        movement.move_x = axis_from_keys(input.held, KEY_DRIGHT, KEY_DLEFT);
-        movement.move_y = axis_from_keys(input.held, KEY_DDOWN, KEY_DUP);
-        if (input.circle.dx > 24 || input.circle.dx < -24)
-            movement.move_x = static_cast<float>(input.circle.dx) / 156.0f;
-        if (input.circle.dy > 24 || input.circle.dy < -24)
-            movement.move_y = -static_cast<float>(input.circle.dy) / 156.0f;
-        movement.run = (input.held & KEY_B) != 0;
-
+        movement.move_x = static_cast<float>(input.circle.dx) / 156.0f;
+        movement.move_y = -static_cast<float>(input.circle.dy) / 156.0f;
+        movement.run = false;
         player_.update_movement(movement, dt, preview_rules_,
                                 &PlayerPreviewScene::blocked, this);
     }
