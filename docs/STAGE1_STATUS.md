@@ -69,7 +69,12 @@ Structural extraction and indexing are complete, but the original game has **not
 8. Verify save/load, progression, achievements, quests, perks, and day progression.
 9. Produce a source-to-C++ traceability matrix and run regression/behavior-equivalence tests on the target platform.
 
-## Current verified deep-dive
+## Current verified deep-dives
+
+- `docs/STAGE1_LAYOUT_ANIMATION_AUDIT.md` records the 8 source layouts, their layer counts and key layer ordering, the animation inventory, sprite metadata limits, and the remaining render-mapping work.
+- `docs/STAGE1_MAP_GENERATION_AUDIT.md` records the current structural audit of the `Map generation` group, including its nested event-node count, child groups, and exact object/command references. This is an audit index, not a completed gameplay port.
+
+## Current verified deep-dive (historical note)
 
 `docs/STAGE1_MAP_GENERATION_AUDIT.md` records the current structural audit of the `Map generation` group, including its nested event-node count, child groups, and exact object/command references. This is an audit index, not a completed gameplay port.
 
