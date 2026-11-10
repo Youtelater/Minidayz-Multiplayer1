@@ -72,6 +72,8 @@ Structural extraction and indexing are complete, but the original game has **not
 ## Current verified deep-dives
 
 - `docs/STAGE1_LAYOUT_ANIMATION_AUDIT.md` records the 8 source layouts, their layer counts and key layer ordering, the animation inventory, sprite metadata limits, and the remaining render-mapping work.
+
+- `docs/STAGE1_WORLD_SYSTEM_AUDIT.md` records the verified Map generation event-group scope and the first C++ world-system foundation. This is not yet a complete procedural world port.
 - `docs/STAGE1_MAP_GENERATION_AUDIT.md` records the current structural audit of the `Map generation` group, including its nested event-node count, child groups, and exact object/command references. This is an audit index, not a completed gameplay port.
 
 ## Current verified deep-dive (historical note)
