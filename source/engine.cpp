@@ -1,7 +1,7 @@
-#include "minidayz/engine.hpp"
+#include "minidayz/engine.hpp"\n#include "minidayz/generated/sprite_catalog.hpp"
 
 #include <algorithm>
-#include <cstdio>
+#include <cstdio>\n#include <cstring>
 
 namespace minidayz {
 bool Renderer::initialize() noexcept {
@@ -92,6 +92,30 @@ bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,fl
  if(slot>=kMaxSheets||!sheets_[slot]||image>=C2D_SpriteSheetCount(sheets_[slot])) return false;
  C2D_Sprite sprite{}; C2D_SpriteFromSheet(&sprite,sheets_[slot],image); C2D_SpriteSetPos(&sprite,x,y);
  C2D_SpriteSetScale(&sprite,sx,sy); C2D_SpriteSetRotation(&sprite,rotation); C2D_SpriteSetDepth(&sprite,depth); return C2D_DrawSprite(&sprite);
+}
+bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float sx,float sy,float depth) noexcept {
+ const stage1::SpriteFrameDef* selected=nullptr;
+ for(std::size_t i=0;i<stage1::kSpriteFrameCount;++i){
+  const auto& candidate=stage1::kSpriteFrames[i];
+  if(candidate.object==object&&candidate.animation==animation&&candidate.frame==frame){selected=&candidate;break;}
+ }
+ if(!selected) return false;
+ std::size_t slot=kMaxSheets;
+ for(std::size_t i=0;i<kMaxSheets;++i){
+  if(sprite_cache_[i].sheet[0]&&std::strcmp(sprite_cache_[i].sheet,selected->sheet)==0){slot=i;break;}
+ }
+ if(slot==kMaxSheets){
+  slot=next_sprite_cache_++%kMaxSheets;
+  unload_sheet(slot);
+  char path[128];
+  const int n=std::snprintf(path,sizeof(path),"romfs:/gfx/sprites/%s.t3x",selected->sheet);
+  if(n<=0||static_cast<std::size_t>(n)>=sizeof(path)||!load_sheet(slot,path)) return false;
+  std::snprintf(sprite_cache_[slot].sheet,sizeof(sprite_cache_[slot].sheet),"%s",selected->sheet);
+  sprite_cache_[slot].slot=slot;
+ }
+ const float draw_x=x-selected->origin_x*selected->width*sx;
+ const float draw_y=y-selected->origin_y*selected->height*sy;
+ return draw_sprite(slot,selected->image,draw_x,draw_y,sx,sy,0.0f,depth);
 }
 bool Engine::initialize() noexcept {
  gfxInitDefault();
