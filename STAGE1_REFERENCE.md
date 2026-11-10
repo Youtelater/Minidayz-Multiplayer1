@@ -8,7 +8,7 @@ Target: faithful C++ / Nintendo 3DS port.
 
 - Use `main` as the working branch.
 - The supplied `data.deobfuscated.js` Construct export is the authoritative source for project structure and event logic.
-- `romfs/` is now permitted for inspection only as legacy/reference material. Treat it as outdated and unverified; cross-check every candidate against the authoritative export and current repository assets before reuse.
+- Do not inspect or use `romfs/` as a source or reference. The user explicitly identified its contents as unreliable generated material.
 - Do not use `raw/` or `c2injt.js` as extraction sources.
 - Exclude every file ending in `mp.json`; non-JSON multiplayer material is reserved for the later multiplayer stage.
 - Do not modify original media assets.
@@ -55,11 +55,11 @@ Generated C++ metadata belongs under `include/minidayz/generated/stage1_data.hpp
 
 The current `romfs/` tree contains 611 files: 295 WAV, 290 T3X, 12 JSON, 12 BIN, one PNG and one T3S. The legacy `romfs/data/extracted_audio_and_coords_v2.json` lists 489 unique audio filenames, and all 489 filenames match the 489 entries in the authoritative Construct export's `audio_resources.csv`.
 
-This filename match is useful corroboration only. It does not prove that the old audio files, coordinates, sprite conversions, UI strings, or gameplay data are current or usable on 3DS. The legacy UI/log JSON dictionaries are candidate references and still need ID/content cross-checking. No legacy asset is accepted solely because it exists in `romfs/`.
+This filename match is useful corroboration only. It does not prove that the old audio files, coordinates, sprite conversions, UI strings, or gameplay data are current or usable on 3DS. Legacy UI/log JSON dictionaries and converted assets are excluded from Stage 1 inspection under the user's source restrictions.
 
 ## Remaining Stage 1 completion checklist
 
-- [ ] Resolve all 115 condition and 206 action command IDs against exact Construct 2 editor-side ACE metadata (plugin/behavior `edittime.js` definitions), including parameters, object references, expressions and subevent semantics. Do not guess command names.
+- [ ] Resolve all 115 condition and 206 action command IDs against the exact runtime dispatch and implementation paths, including parameters, object references, expressions and subevent semantics. Editor-side `edittime.js` metadata is optional corroboration, not a prerequisite. Do not guess command names.
 - [ ] Translate every event sheet and nested event into traceable C++ behavior specifications and implementation.
 - [ ] Trace movement, collisions/physics, weapons, combat, damage, enemy AI, NPCs, loot, inventory, crafting, vehicles, survival stats, status effects and progression.
 - [ ] Reconstruct procedural world generation, terrain, roads, towns, structures and spawn rules.
