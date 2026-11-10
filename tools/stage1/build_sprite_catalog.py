@@ -81,12 +81,19 @@ def main() -> int:
             # while most world/UI sheets live under assets/gfx/. Resolve by exact
             # basename only; never substitute a similarly named artwork file.
             basename = Path(source_path).name
-            candidates = (ASSETS / basename, ROOT / "images" / basename)
-            source = next((candidate for candidate in candidates if candidate.is_file()), None)
-            if source is None:
+            candidates = [candidate for candidate in (ASSETS / basename, ROOT / "images" / basename)
+                          if candidate.is_file()]
+            if not candidates:
+                # Some original Construct sheets are grouped in subfolders
+                # (for example assets/gfx/player/). Match the exact basename,
+                # and reject ambiguity rather than choosing the wrong artwork.
+                candidates = list(ASSETS.rglob(basename)) + list((ROOT / "images").rglob(basename))
+            if len(candidates) != 1:
                 raise SystemExit(
-                    "Original sprite sheet missing from assets/gfx and images: " + basename
+                    "Expected exactly one original sprite sheet named " + basename
+                    + "; found " + str(len(candidates))
                 )
+            source = candidates[0]
             stem = ident(source_path)
             frame_items = list(frame_map.keys())
             for page, first in enumerate(range(0, len(frame_items), 128)):
