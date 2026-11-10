@@ -91,10 +91,18 @@ def main() -> int:
                 with Image.open(source) as image:
                     image.load()
                     for index, (x,y,w,h) in enumerate(page_items):
-                        if x < 0 or y < 0 or x+w > image.width or y+h > image.height:
-                            raise SystemExit(f"Frame outside {source.name}: {(x,y,w,h)} vs {image.size}")
+                        # Construct frame rectangles can extend beyond the source sheet.
+                        # Preserve the declared frame dimensions and offset by padding
+                        # out-of-sheet pixels transparently; never shift or resize artwork.
+                        left, top = max(0, x), max(0, y)
+                        right, bottom = min(image.width, x + w), min(image.height, y + h)
+                        if right <= left or bottom <= top:
+                            raise SystemExit(f"Frame has no pixels inside {source.name}: {(x,y,w,h)} vs {image.size}")
                         crop = page_dir / f"frame_{index:03d}.png"
-                        image.crop((x,y,x+w,y+h)).save(crop, format="PNG")
+                        frame_image = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+                        visible = image.convert("RGBA").crop((left, top, right, bottom))
+                        frame_image.paste(visible, (left - x, top - y))
+                        frame_image.save(crop, format="PNG")
                         entries.append(crop.name)
                 manifest = page_dir / "atlas.t3s"
                 manifest.write_text("--atlas -f rgba -z auto\n" + "\n".join(entries) + "\n", encoding="utf-8")
