@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Extract the supplied original Construct export into machine-readable and C++ data.
-Usage: python tools/stage1/extract_construct.py data.deobfuscated.js --out src/generated/stage1
+Usage: python tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
 Does not read romfs/, raw/, c2injt.js, or any MP JSON file.
 """
 import argparse,csv,json,re
@@ -54,7 +54,7 @@ def main():
                 speed=an[3] if len(an)>3 else 0,loop=bool(an[2]) if len(an)>2 else False))
             for fr in frames:
                 if isinstance(fr,list) and fr and isinstance(fr[0],str):
-                    image_refs.append(dict(object=oi,path=fr[0]))
+                    image_refs.append(dict(object=oi,animation=an[0],frame=frames.index(fr),path=fr[0],sheet_id=fr[1] if len(fr)>1 else None,x=fr[2] if len(fr)>2 else None,y=fr[3] if len(fr)>3 else None,width=fr[4] if len(fr)>4 else None,height=fr[5] if len(fr)>5 else None,origin_x=fr[7] if len(fr)>7 else None,origin_y=fr[8] if len(fr)>8 else None,collision=fr[10] if len(fr)>10 else None))
     sheets=[]; events=[]; variables=[]; groups=[]; cond=Counter(); acts=Counter()
     def walk(items,si,name,parent=-1,depth=0):
         for e in items:
@@ -107,9 +107,9 @@ def main():
        f"inline constexpr std::size_t kObjectCount={len(objects)},kLayoutCount={len(layouts)},kLayerCount={len(layers)},kInstanceCount={len(instances)},kAnimationCount={len(animations)},kAudioCount={len(audio)},kEventSheetCount={len(sheets)},kEventCount={len(events)},kVariableCount={len(variables)},kGroupCount={len(groups)};",
        "inline constexpr ObjectDef kObjects[]={"]
     for i,o in enumerate(objects):h.append(f"{{{i},{o[1]},{q(o[0])}}},")
-    h+=["};","inline constexpr LayoutDef kLayouts[]={"]
+    h+=["};","inline constexpr LayoutDef kLayoutTable[]={"]
     for x in layouts:h.append(f"{{{q(x['name'])},{cf(x['width'])},{cf(x['height'])},{q(x['event_sheet'])},{x['first']},{x['count']}}},")
-    h+=["};","inline constexpr LayerDef kLayers[]={"]
+    h+=["};","inline constexpr LayerDef kLayerTable[]={"]
     for x in layers:h.append(f"{{{x['layout']},{x['index']},{q(x['name'])},{x['first']},{x['count']},{str(x['visible']).lower()},{cf(x['parallax_x'])},{cf(x['parallax_y'])}}},")
     h+=["};","inline constexpr InstanceDef kInstances[]={"]
     for x in instances:h.append("{"+",".join([str(x[k]) for k in ("layout","layer","object","uid")]+[cf(x[k]) for k in ("x","y","z","width","height","angle","opacity","scale_x","origin_x","origin_y")])+"},")
@@ -117,7 +117,7 @@ def main():
     for x in animations:h.append(f"{{{x['object']},{q(x['name'])},{x['frames']},{cf(x['speed'])},{str(x['loop']).lower()}}},")
     h+=["};","inline constexpr AudioDef kAudio[]={"]
     for x in audio:h.append(f"{{{q(x['filename'])},{x['bytes']}}},")
-    h+=["};","inline constexpr EventSheetDef kEventSheets[]={"]
+    h+=["};","inline constexpr EventSheetDef kEventSheetTable[]={"]
     for x in sheets:h.append(f"{{{q(x['name'])},{x['first_event']},{x['event_nodes']},{x['variables']}}},")
     h+=["};","inline constexpr CommandCount kConditionTypes[]={"]
     for i,n in sorted(cond.items()):h.append(f"{{{i},{n}}},")
