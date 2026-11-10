@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""Build exact Construct sprite-frame atlases and a C++ lookup table.
+
+Reads only the reassembled original Construct export and assets/gfx. Each
+unique source frame rectangle is cropped to a temporary PNG, grouped by its
+original source sheet, and packed into a Tex3DS sheet. Original PNGs are never
+modified. Frame order in each output atlas is recorded in sprite_catalog.hpp.
+"""
+from __future__ import annotations
+import json, re, shutil, subprocess, sys, tempfile
+from collections import OrderedDict
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+SOURCE = ROOT / "data/stage1/construct_project_parsed.json"
+ASSETS = ROOT / "assets/gfx"
+OUT = ROOT / "romfs/gfx/sprites"
+HEADER = ROOT / "include/minidayz/generated/sprite_catalog.hpp"
+
+def ident(path: str) -> str:
+    stem = Path(path).stem.replace("-", "_").replace(".", "_")
+    return re.sub(r"[^A-Za-z0-9_]", "_", stem)
+
+def cf(v) -> str:
+    return f"{float(v):.9g}f"
+
+def main() -> int:
+    if not SOURCE.is_file():
+        raise SystemExit("Missing parsed Construct source; run reassemble_snapshot.py and extract_construct.py first")
+    project = json.loads(SOURCE.read_text(encoding="utf-8"))
+    objects = project["project"][3]
+    # Preserve first-seen source-sheet and frame order from the original object
+    # and animation arrays. Deduplicate only identical source rectangles.
+    sheets: OrderedDict[str, OrderedDict[tuple, int]] = OrderedDict()
+    records = []
+    animations = []
+    for oi, obj in enumerate(objects):
+        for ai, anim in enumerate(obj[7] if len(obj) > 7 and isinstance(obj[7], list) else []):
+            if not isinstance(anim, list) or not anim:
+                continue
+            frames = anim[7] if len(anim) > 7 and isinstance(anim[7], list) else []
+            animations.append((oi, ai, str(anim[0]), len(frames), float(anim[3]) if len(anim)>3 else 0.0, bool(anim[2]) if len(anim)>2 else False))
+            for fi, fr in enumerate(frames):
+                if not isinstance(fr, list) or not fr or not isinstance(fr[0], str):
+                    continue
+                source_path = fr[0]
+                key = (int(fr[2]), int(fr[3]), int(fr[4]), int(fr[5]))
+                if key[2] <= 0 or key[3] <= 0:
+                    raise SystemExit(f"Invalid source frame rectangle: object={oi} animation={anim[0]} frame={fi} rect={key}")
+                by_frame = sheets.setdefault(source_path, OrderedDict())
+                atlas_index = by_frame.setdefault(key, len(by_frame))
+                records.append((oi, ai, fi, source_path, atlas_index, key[2], key[3],
+                                float(fr[7]) if len(fr)>7 else 0.5,
+                                float(fr[8]) if len(fr)>8 else 0.5))
+    OUT.mkdir(parents=True, exist_ok=True)
+    HEADER.parent.mkdir(parents=True, exist_ok=True)
+    header = [
+        "#pragma once", "#include <cstdint>", "#include <cstddef>",
+        "namespace minidayz::stage1 {",
+        "struct SpriteFrameDef { std::uint16_t object, animation; std::uint32_t frame, image; const char* sheet; float width,height,origin_x,origin_y; };",
+        "struct SpriteAnimationDef { std::uint16_t object, animation; const char* name; std::uint32_t frame_count; float source_speed; bool loop; };",
+        f"inline constexpr std::size_t kSpriteFrameCount={len(records)};",
+        f"inline constexpr std::size_t kSpriteAnimationCount={len(animations)};",
+        "inline constexpr SpriteFrameDef kSpriteFrames[] = {"
+    ]
+    for oi, ai, fi, path, idx, w, h, ox, oy in records:
+        header.append(f'{{{oi},{ai},{fi},{idx},"{ident(path)}",{cf(w)},{cf(h)},{cf(ox)},{cf(oy)}}},')
+    header += ["};", "inline constexpr SpriteAnimationDef kSpriteAnimations[] = {"]
+    for oi, ai, name, count, speed, loop in animations:
+        safe = name.replace("\\", "\\\\").replace('"', '\\"')
+        header.append(f'{{{oi},{ai},"{safe}",{count},{cf(speed)},{str(loop).lower()}}},')
+    header += ["};", "} // namespace minidayz::stage1", ""]
+    HEADER.write_text("\n".join(header), encoding="utf-8")
+    with tempfile.TemporaryDirectory(prefix="minidayz_frames_") as tmp:
+        temp = Path(tmp)
+        for source_path, frame_map in sheets.items():
+            source = ASSETS / Path(source_path).name
+            if not source.is_file():
+                raise SystemExit(f"Original sprite sheet missing: {source}")
+            stem = ident(source_path)
+            destination = OUT / f"{stem}.t3x"
+            # Always rebuild the generated atlas; source assets remain untouched.
+            crop_files = []
+            from PIL import Image
+            with Image.open(source) as image:
+                image.load()
+                for index, (x,y,w,h) in enumerate(frame_map.keys()):
+                    if x < 0 or y < 0 or x+w > image.width or y+h > image.height:
+                        raise SystemExit(f"Frame outside {source.name}: {(x,y,w,h)} vs {image.size}")
+                    crop = temp / f"{stem}_{index:05d}.png"
+                    image.crop((x,y,x+w,y+h)).save(crop, format="PNG")
+                    crop_files.append(str(crop))
+            if not crop_files:
+                continue
+            result = subprocess.run(["tex3ds", "-o", str(destination), *crop_files], check=False)
+            if result.returncode or not destination.is_file():
+                raise SystemExit(f"tex3ds failed building source sprite atlas {source.name}")
+            print(f"{source.name}: {len(crop_files)} exact source frames -> {destination.name}")
+    print(f"Generated {len(records)} frame references across {len(sheets)} original sheets.")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
