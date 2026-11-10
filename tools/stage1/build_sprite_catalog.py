@@ -80,26 +80,34 @@ def main() -> int:
             # The original project stores some GUI item sheets under images/
             # while most world/UI sheets live under assets/gfx/. Resolve by exact
             # basename only; never substitute a similarly named artwork file.
-            basename = Path(source_path).name
-            candidates = [candidate for candidate in (ASSETS / basename, ROOT / "images" / basename)
-                          if candidate.is_file()]
-            if not candidates:
-                # Some original Construct sheets are grouped in subfolders
-                # (for example assets/gfx/player/). Match the exact basename,
-                # and reject ambiguity rather than choosing the wrong artwork.
-                candidates = list(ASSETS.rglob(basename)) + list((ROOT / "images").rglob(basename))
-            # The repository intentionally mirrors some original sheets in
-            # both images/ and assets/gfx/. Treat byte-identical copies as one
-            # source; fail only when same-name candidates contain different art.
+            source_ref = Path(source_path)
+            basename = source_ref.name
+            # First honor the exact relative path recorded in the original
+            # Construct frame. Only then use the known asset roots.
+            exact_candidates = [
+                ROOT / source_ref,
+                ASSETS / source_ref,
+                ROOT / "images" / source_ref,
+            ]
+            exact_candidates = [p for p in exact_candidates if p.is_file()]
+            if not exact_candidates:
+                exact_candidates = [
+                    p for p in (ASSETS / basename, ROOT / "images" / basename)
+                    if p.is_file()
+                ]
+            if not exact_candidates:
+                exact_candidates = list(ASSETS.rglob(basename)) + list((ROOT / "images").rglob(basename))
+            # Mirrored files are acceptable only when their bytes match.
             unique = OrderedDict()
-            for candidate in candidates:
+            for candidate in exact_candidates:
                 digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
                 unique.setdefault(digest, candidate)
             if len(unique) != 1:
                 raise SystemExit(
                     "Ambiguous original sprite sheet " + basename
-                    + ": same-name files have different contents: "
-                    + ", ".join(str(path.relative_to(ROOT)) for path in candidates)
+                    + ": source reference=" + source_path
+                    + "; candidates: "
+                    + ", ".join(str(path) for path in exact_candidates)
                 )
             source = next(iter(unique.values()))
             stem = ident(source_path)
