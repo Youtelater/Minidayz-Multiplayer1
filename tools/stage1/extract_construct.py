@@ -12,7 +12,7 @@ from pathlib import Path
 def load_export(path):
     text = Path(path).read_text(encoding="utf-8")
     # The deobfuscated export can contain whitespace after unary minus.
-    text = re.sub(r'(?<![A-Za-z0-9_.])-\\s+(?=\\d)', '-', text)
+    text = re.sub(r'(?<![A-Za-z0-9_.])-\s+(?=\d)', '-', text)
     root = json.loads(text)
     if not isinstance(root, dict) or not isinstance(root.get("project"), list):
         raise ValueError("Not a recognized Construct project export")
