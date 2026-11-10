@@ -7,6 +7,9 @@ namespace minidayz {
 enum class PlayerFacing : std::uint8_t { down, up, left, right };
 enum class PlayerAnimation : std::uint8_t { idle, walk, run, dead };
 
+// These labels are present in the original Player stats event tree.
+enum class PlayerDeathReason : std::uint8_t { none, hunger, thirst, cold, other };
+
 struct PlayerState {
     float x{};
     float y{};
@@ -19,6 +22,7 @@ struct PlayerState {
     PlayerFacing facing{PlayerFacing::down};
     PlayerAnimation animation{PlayerAnimation::idle};
     bool alive{true};
+    PlayerDeathReason death_reason{PlayerDeathReason::none};
 };
 
 struct PlayerInput {
@@ -86,6 +90,7 @@ public:
         float delta_seconds, const PlayerRules& rules) noexcept;
 
     void apply_damage(float amount) noexcept;
+    void kill(PlayerDeathReason reason) noexcept;
     void heal(float amount, float max_health) noexcept;
     void adjust_hunger(float amount, float max_hunger) noexcept;
     void adjust_thirst(float amount, float max_thirst) noexcept;
