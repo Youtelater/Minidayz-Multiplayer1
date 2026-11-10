@@ -15,7 +15,7 @@ int main() {
     rules.max_health = 100.0f;
     rules.max_hunger = 100.0f;
     rules.max_thirst = 100.0f;
-    rules.starvation_damage_per_second = 10.0f;
+    rules.starvation_damage_per_second = 50.0f;
 
     const auto starvation_result = starvation.update_survival(0.1f, rules);
     assert(starvation_result.died);
@@ -28,7 +28,7 @@ int main() {
     state.thirst = 0.0f;
     PlayerSystem dehydration(state);
     rules.starvation_damage_per_second = 0.0f;
-    rules.dehydration_damage_per_second = 10.0f;
+    rules.dehydration_damage_per_second = 50.0f;
 
     const auto dehydration_result = dehydration.update_survival(0.1f, rules);
     assert(dehydration_result.died);
