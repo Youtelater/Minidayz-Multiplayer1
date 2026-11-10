@@ -23,8 +23,6 @@ jobs:
           path: |
             romfs/gfx
           key: graphics-v3-${{ hashFiles('assets/gfx/**/*.png', 'images/**/*.png', 'data/stage1/construct_project_parsed.json', 'tools/build_textures.py', 'tools/stage1/build_sprite_catalog.py') }}
-          restore-keys: |
-            graphics-v3-
 
       # Texture conversion is handled incrementally by the Makefile from assets/gfx.
       - name: Update 3DS Libraries via dkp-pacman
