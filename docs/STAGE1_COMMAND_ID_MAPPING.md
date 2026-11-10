@@ -6,6 +6,8 @@ The parsed event trees preserve numeric condition and action command IDs, the re
 
 These IDs are not safe to rename by guesswork. The same numeric ID must be interpreted in the context of the referenced Construct object/plugin and, where applicable, its behavior.
 
+The source-derived `data/stage1/ace_reference_inventory.csv` now records every distinct object/command pair and occurrence count: **1,120 condition pairs** and **4,237 action pairs** (5,357 rows total). Each row preserves the event kind, source object index/name, source object type ID, command ID, and occurrence count. `tools/stage1/extract_construct.py` regenerates this inventory directly from `data.deobfuscated.js`. The `tNNN` names are export identifiers, not decoded gameplay names.
+
 ## Required metadata
 
 Construct 2's editor-side plugin definitions declare the available actions, conditions, expressions, their editor names, parameter definitions, and display strings. The runtime-side scripts implement the corresponding methods. See the official Construct 2 SDK documentation:
@@ -18,7 +20,7 @@ The current repository has the generated/minified `c2runtime.js`, but does not c
 
 ## Resolution procedure
 
-1. Inventory every distinct `(object/plugin type, command ID)` pair used by the event trees.
+1. Use `data/stage1/ace_reference_inventory.csv` as the exact source inventory of all object/command pairs; do not collapse IDs across different object types.
 2. Obtain the exact matching Construct 2 editor-side plugin and behavior definitions for the runtime version used by this project.
 3. Resolve each command ID to its condition/action name, parameter schema, and display string.
 4. Preserve the original raw command, parameters, expression tree, object index, and event UID beside the resolved label.
@@ -27,4 +29,4 @@ The current repository has the generated/minified `c2runtime.js`, but does not c
 
 ## Status
 
-**Blocked pending exact ACE metadata.** The source event trees and raw IDs are preserved and indexed. No numeric ID is being presented as a human-readable command name until its mapping is verified against the matching editor-side definitions.
+**Blocked pending exact ACE metadata.** The source event trees and raw IDs are preserved and indexed, including 1,120 condition pairs and 4,237 action pairs. The repository's bundled `c2runtime.js` is minified runtime code; the exact matching editor-side `edittime.js` definitions are not present. No numeric ID is being presented as a human-readable command name until its mapping is verified against the matching editor-side definitions.
