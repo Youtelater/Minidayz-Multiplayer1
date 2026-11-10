@@ -65,7 +65,8 @@ public:
         }
         renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 3.0f, C2D_Color32(75, 91, 70, 255));
     }
-\n    void render(minidayz::Renderer& renderer) noexcept override {
+
+    void render(minidayz::Renderer& renderer) noexcept override {
         // Render the source Map layout as a scaled overview. This deliberately
         // visualizes source placements; it does not pretend that placeholder
         // rectangles are the final original sprite/tile renderer.
