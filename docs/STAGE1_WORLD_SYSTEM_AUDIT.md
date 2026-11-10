@@ -21,7 +21,7 @@
   - Level 3: 3 villages, 5 military, 11 cities, 4 hospitals, 2 fire stations, 1 chaoshi.
   - Level 4: 4 villages, 8 military, 6 cities, 4 hospitals, 4 fire stations, 1 chaoshi.
 - The source tests a 3 × 3 neighborhood for empty Array cells before placing each of these markers. Gas stations, lite shops, and roadside cafes are separate counters and are not among these six Array marker codes.
-- `generate_array_roads_1` and `generate_array_roads_2` write road codes 13, 12, and 14 into this grid while avoiding occupied location codes.
+- `generate_array_roads_1` and `generate_array_roads_2` write road codes 13, 12, and 14 into this grid. The native pass follows the source loops: connect the first two qualifying POI markers on each row/column, skip occupied cells, and turn horizontal/vertical intersections into code 14. The level-4 path also runs the source's second vertical pass with a +17 Y offset.
 - `generate_array_tomap` has 176 nested nodes and maps grid values to visual map elements.
 - `generate_mapgen_toelements` calls `generate_location`; that function has 201 nested nodes and 62 location-template branches.
 
@@ -35,7 +35,7 @@
 ## Native C++ work committed
 
 - `WorldSystem` loads the original Map layout and indexes terrain, road, building, and spawn-point placements by their original layer names, preserving 64-bit UIDs and source transforms.
-- A native `WorldGrid` implements zero-based 2D cell storage, out-of-range reads as zero, and the source 3 × 3 empty-neighborhood placement check.
+- A native `WorldGrid` implements zero-based 2D cell storage, out-of-range reads as zero, the source 3 × 3 empty-neighborhood placement check, and the source horizontal/vertical road-code passes.
 - `source_world_profile` contains the source level 0–4 map dimensions and POI quotas. `generate_procedural_grid` places the source marker codes using a seeded native PRNG. This reproduces the source quotas, codes, and spacing rule, but the PRNG sequence is not yet proven identical to Construct.
 - The source data header contains all 136 bunker spawn records and all 59 bridge element records, including bridge object-index mappings. `generate_from_source(seed, "Map", level)` loads the layout, generates the POI grid, and indexes the source bunker/bridge features.
 - Bunker features preserve the original function slot/weight values and map_fs X offset. Bridge features preserve family, element, enabled flag, source object index, and original coordinates.
@@ -43,7 +43,7 @@
 
 ## Remaining implementation before Step 3 sign-off
 
-1. Translate and verify the two road-generation functions and map their road codes to world-space road segments.
+1. Translate `generate_array_tomap` so grid road codes become actual world-space road segments and original artwork placements.
 2. Port all 62 location-template branches and map-element creation into actual building/terrain placements.
 3. Render and collide with bunker and bridge pieces using the original object artwork; verify bridge state behavior.
 4. Port `Spawn_NPC`, `Trigger_spawn`, zombie spawn selection, and spawn conditions.

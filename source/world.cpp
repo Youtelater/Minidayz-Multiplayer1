@@ -55,6 +55,58 @@ bool classify_source_layer(const char* name, WorldFeatureKind& kind) noexcept {
     return false;
 }
 
+
+bool is_road_anchor(std::uint16_t code) noexcept {
+    // The source road events explicitly test these five location codes.
+    return code == 9 || code == 6 || code == 103 || code == 11 || code == 15;
+}
+
+void generate_source_roads(WorldGrid& grid, std::uint8_t level) {
+    // generate_array_roads_1: each row uses the first two road-anchor cells.
+    for (int row = 0; row < grid.width(); ++row) {
+        int first = -1;
+        int second = -1;
+        for (int x = 0; x < grid.width(); ++x) {
+            if (!is_road_anchor(grid.at(x, row))) continue;
+            if (first == -1) first = x;
+            else if (second == -1) second = x;
+        }
+        if (first >= 0 && second > first) {
+            for (int offset = 0; offset < second - first; ++offset) {
+                const int x = first + offset;
+                if (grid.at(x, row) == 0) grid.set(x, row, 13);
+            }
+        }
+    }
+
+    const auto add_vertical_roads = [&grid](int y_offset) {
+        // generate_array_roads_2 iterates Map_size_Y for both axes. Reads and
+        // writes beyond the Array's declared bounds are intentionally no-ops.
+        for (int column = 0; column < grid.height(); ++column) {
+            int first = -1;
+            int second = -1;
+            for (int offset = 0; offset < grid.height(); ++offset) {
+                const int y = offset + y_offset;
+                if (!is_road_anchor(grid.at(column, y))) continue;
+                if (first == -1) first = y;
+                else if (second == -1) second = y;
+            }
+            if (first < 0 || second <= first) continue;
+            for (int offset = 0; offset < second - first; ++offset) {
+                const int y = first + offset;
+                const std::uint16_t cell = grid.at(column, y);
+                if (cell == 13) grid.set(column, y, 14);
+                else if (cell == 0) grid.set(column, y, 12);
+            }
+        }
+    };
+
+    // The normal vertical pass covers the complete Map_size_Y range.
+    add_vertical_roads(0);
+    // CurrentLevel >= 4 has a second source branch starting at Y + 17.
+    if (level >= 4) add_vertical_roads(17);
+}
+
 bool place_poi_count(WorldGrid& grid, std::uint8_t count, std::uint16_t code,
                      std::mt19937& rng) {
     if (count == 0) return true;
@@ -189,12 +241,16 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     // These are the exact location codes written by generate_array_locations.
     // Gas stations, shops and roadside cafes are separate source counters and
     // are not inserted into this map-marker Array.
-    return place_poi_count(grid_, profile.villages, 9, rng) &&
-           place_poi_count(grid_, profile.militaries, 5, rng) &&
-           place_poi_count(grid_, profile.cities, 6, rng) &&
-           place_poi_count(grid_, profile.hospitals, 11, rng) &&
-           place_poi_count(grid_, profile.firestations, 15, rng) &&
-           place_poi_count(grid_, profile.chaoshi, 103, rng);
+    const bool placed =
+        place_poi_count(grid_, profile.villages, 9, rng) &&
+        place_poi_count(grid_, profile.militaries, 5, rng) &&
+        place_poi_count(grid_, profile.cities, 6, rng) &&
+        place_poi_count(grid_, profile.hospitals, 11, rng) &&
+        place_poi_count(grid_, profile.firestations, 15, rng) &&
+        place_poi_count(grid_, profile.chaoshi, 103, rng);
+    if (!placed) return false;
+    generate_source_roads(grid_, level);
+    return true;
 }
 
 bool WorldSystem::load_source_layout(std::string_view name) {
