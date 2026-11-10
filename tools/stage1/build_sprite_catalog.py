@@ -29,7 +29,8 @@ def cf(v) -> str:
 def main() -> int:
     if not SOURCE.is_file():
         raise SystemExit("Missing parsed Construct source; run reassemble_snapshot.py and extract_construct.py first")
-    script_digest = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()\n    project = json.loads(SOURCE.read_text(encoding="utf-8"))
+    script_digest = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    project = json.loads(SOURCE.read_text(encoding="utf-8"))
     objects = project["project"][3]
     # Preserve first-seen source-sheet and frame order from the original object
     # and animation arrays. Deduplicate only identical source rectangles.
@@ -161,7 +162,7 @@ def main() -> int:
                 result = subprocess.run(["tex3ds", "-i", str(manifest), "-o", str(destination)], cwd=page_dir, check=False)
                 if result.returncode or not destination.is_file():
                     raise SystemExit(f"tex3ds failed building source sprite atlas {source.name}, page {page}")
-                stamp.write_text(fingerprint + "\\n", encoding="ascii")
+                stamp.write_text(fingerprint + "\n", encoding="ascii")
                 if result.returncode or not destination.is_file():
                     raise SystemExit(f"tex3ds failed building source sprite atlas {source.name}, page {page}")
                 print(f"{source.name} page {page}: {len(page_items)} exact source frames -> {destination.name}")
