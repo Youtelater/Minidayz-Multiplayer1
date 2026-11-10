@@ -24,7 +24,10 @@ def ident(path: str) -> str:
     return re.sub(r"[^A-Za-z0-9_]", "_", stem)
 
 def cf(v) -> str:
-    return f"{float(v):.9g}f"
+    value = f"{float(v):.9g}"
+    if "." not in value and "e" not in value.lower():
+        value += ".0"
+    return value + "f"
 
 def main() -> int:
     if not SOURCE.is_file():
