@@ -148,8 +148,9 @@ bool place_poi_count(WorldGrid& grid, std::uint8_t count, std::uint16_t code,
     for (std::uint8_t placed = 0; placed < count; ++placed) {
         bool found = false;
         for (int attempt = 0; attempt < max_attempts; ++attempt) {
-            const int x = xdist(rng);
-            const int y = ydist(rng);
+            // The source stores at check_X - 1 and check_Y - 1.
+            const int x = xdist(rng) - 1;
+            const int y = ydist(rng) - 1;
             if (!grid.has_empty_3x3(x, y)) continue;
             if (!grid.set(x, y, code)) return false;
             found = true;
