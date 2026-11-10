@@ -79,3 +79,8 @@ Structural extraction and indexing are complete, but the original game has **not
 ## Legacy ROMFS cross-check (non-authoritative)
 
 The user has authorized inspection of `romfs/` as legacy reference material. The current tree contains 611 files (295 WAV, 290 T3X, 12 JSON, 12 BIN, one PNG and one T3S). The legacy audio index contains 489 unique filenames, matching all 489 audio resource filenames in the authoritative Construct export. This is filename-level corroboration only; it does not validate the age, contents, format, coordinates, or runtime compatibility of the legacy assets. Legacy UI/log dictionaries remain candidates for cross-checking, not sources of truth.
+
+
+## Converted WAV coverage
+
+The 295 files under `romfs/wav/` cover all 275 unique audio stems present in the 489 source audio resource entries (extension-independent filename comparison). There are 20 additional WAV stems not found in the source audio resource list; treat them as legacy candidates pending event/reference verification. The source export includes multiple M4A/OGG variants for some stems, so the 489-to-295 comparison is by unique basename, not file count. This is filename coverage, not a playback/format compatibility test.
