@@ -18,7 +18,7 @@ DATA		:= data
 PORTLIBS	:= /opt/devkitpro/portlibs/3ds
 ROMFS		:= romfs
 INCLUDES	:= include source /opt/devkitpro/libctru/include $(PORTLIBS)/include
-GRAPHICS	:= gfx
+GRAPHICS	:= assets/gfx
 
 #-----------------------------------------------------------------
 # SOURCE & OBJECT MAPPING (Dynamic & Reliable)
