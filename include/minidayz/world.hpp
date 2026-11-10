@@ -71,7 +71,9 @@ private:
 
 struct WorldGenerationProfile {
     std::uint8_t map_size_x{16};
-    std::uint8_t map_size_y{16};
+    std::uint8_t map_size_y{16}; // active source loop range
+    std::uint8_t grid_height{16}; // allocated Array height
+    std::uint8_t second_half_start_y{};
     std::uint8_t villages{};
     std::uint8_t militaries{};
     std::uint8_t cities{};
@@ -81,6 +83,12 @@ struct WorldGenerationProfile {
     std::uint8_t gas_stations{};
     std::uint8_t lite_shop{};
     std::uint8_t roadside_cafes{};
+    std::uint8_t second_half_villages{};
+    std::uint8_t second_half_militaries{};
+    std::uint8_t second_half_cities{};
+    std::uint8_t second_half_hospitals{};
+    std::uint8_t second_half_firestations{};
+    std::uint8_t second_half_chaoshi{};
 };
 
 bool source_world_profile(std::uint8_t level, WorldGenerationProfile& profile) noexcept;

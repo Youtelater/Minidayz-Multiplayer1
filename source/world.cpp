@@ -59,7 +59,7 @@ bool is_road_anchor(std::uint16_t code) noexcept {
     return code == 9 || code == 6 || code == 103 || code == 11 || code == 15;
 }
 
-void generate_source_roads(WorldGrid& grid, std::uint8_t level) {
+void generate_source_roads(WorldGrid& grid, std::uint8_t level, std::uint8_t active_y_count) {
     // generate_array_roads_1: connect the first two source road anchors in each row.
     for (int row = 0; row < grid.width(); ++row) {
         int first = -1;
@@ -80,10 +80,10 @@ void generate_source_roads(WorldGrid& grid, std::uint8_t level) {
     const auto add_vertical_roads = [&grid](int y_offset) {
         // generate_array_roads_2 loops Map_size_Y on both axes. Array reads
         // outside the declared dimensions return zero and writes are ignored.
-        for (int column = 0; column < grid.height(); ++column) {
+        for (int column = 0; column < active_y_count; ++column) {
             int first = -1;
             int second = -1;
-            for (int offset = 0; offset < grid.height(); ++offset) {
+            for (int offset = 0; offset < active_y_count; ++offset) {
                 const int y = offset + y_offset;
                 if (!is_road_anchor(grid.at(column, y))) continue;
                 if (first == -1) first = y;
@@ -138,11 +138,11 @@ std::uint16_t source_marker_type(std::uint16_t code, std::uint8_t level,
 }
 
 bool place_poi_count(WorldGrid& grid, std::uint8_t count, std::uint16_t code,
-                     std::mt19937& rng) {
+                     std::mt19937& rng, int min_y, int max_y) {
     if (count == 0) return true;
-    if (grid.width() < 3 || grid.height() < 3) return false;
+    if (grid.width() < 3 || min_y < 0 || max_y >= grid.height() || min_y > max_y) return false;
     std::uniform_int_distribution<int> xdist(1, static_cast<int>(grid.width()) - 1);
-    std::uniform_int_distribution<int> ydist(1, static_cast<int>(grid.height()) - 1);
+    std::uniform_int_distribution<int> ydist(min_y, max_y);
     const int max_attempts = static_cast<int>(grid.width()) *
                              static_cast<int>(grid.height()) * 64;
     for (std::uint8_t placed = 0; placed < count; ++placed) {
@@ -213,23 +213,44 @@ bool WorldGrid::has_empty_3x3(int x, int y) const noexcept {
 bool source_world_profile(std::uint8_t level, WorldGenerationProfile& p) noexcept {
     p = {};
     p.map_size_x = 16;
-    p.map_size_y = (level == 4) ? 33 : 16;
+    p.map_size_y = 16;
+    p.grid_height = 16;
+
     switch (level) {
-    case 0: p.villages=20; p.cities=3; p.hospitals=1; p.firestations=1;
-            p.gas_stations=1; p.roadside_cafes=1; return true;
-    case 1: p.villages=15; p.militaries=2; p.cities=5; p.hospitals=2;
-            p.firestations=2; p.chaoshi=1; p.gas_stations=2;
-            p.lite_shop=1; p.roadside_cafes=2; return true;
-    case 2: p.villages=6; p.militaries=4; p.cities=10; p.hospitals=3;
-            p.firestations=3; p.chaoshi=1; p.gas_stations=3;
-            p.roadside_cafes=3; return true;
-    case 3: p.villages=3; p.militaries=5; p.cities=11; p.hospitals=4;
-            p.firestations=2; p.chaoshi=1; p.gas_stations=4;
-            p.roadside_cafes=4; return true;
-    case 4: p.villages=4; p.militaries=8; p.cities=6; p.hospitals=4;
-            p.firestations=4; p.chaoshi=1; p.gas_stations=4;
-            p.lite_shop=2; p.roadside_cafes=4; return true;
-    default: return false;
+    case 0:
+        p.villages=20; p.cities=3; p.hospitals=1; p.firestations=1;
+        p.gas_stations=1; p.roadside_cafes=1; return true;
+    case 1:
+        p.villages=15; p.militaries=2; p.cities=5; p.hospitals=2;
+        p.firestations=2; p.chaoshi=1; p.gas_stations=2;
+        p.lite_shop=1; p.roadside_cafes=2; return true;
+    case 2:
+        p.villages=6; p.militaries=4; p.cities=10; p.hospitals=3;
+        p.firestations=3; p.chaoshi=1; p.gas_stations=3;
+        p.roadside_cafes=3; return true;
+    case 3:
+        p.villages=3; p.militaries=5; p.cities=11; p.hospitals=4;
+        p.firestations=2; p.chaoshi=1; p.gas_stations=4;
+        p.roadside_cafes=4; return true;
+    case 4:
+        p.grid_height=33; p.second_half_start_y=18;
+        p.villages=4; p.militaries=8; p.cities=6; p.hospitals=4;
+        p.firestations=4; p.chaoshi=1;
+        p.second_half_villages=4; p.second_half_militaries=6;
+        p.second_half_cities=3; p.second_half_hospitals=2;
+        p.second_half_firestations=2; p.second_half_chaoshi=2;
+        p.gas_stations=8; p.roadside_cafes=8; return true;
+    default:
+        if (level < 5) return false;
+        // The source's CurrentLevel > 4 and >= 4 branches combine a first
+        // and second map half with these independent POI quotas.
+        p.grid_height=33; p.second_half_start_y=18;
+        p.villages=3; p.militaries=6; p.cities=3; p.hospitals=2;
+        p.firestations=2; p.chaoshi=2;
+        p.second_half_villages=4; p.second_half_militaries=6;
+        p.second_half_cities=3; p.second_half_hospitals=2;
+        p.second_half_firestations=2; p.second_half_chaoshi=2;
+        p.gas_stations=8; p.roadside_cafes=8; return true;
     }
 }
 
@@ -266,19 +287,35 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     map_markers_.clear();
     WorldGenerationProfile profile{};
     if (!source_world_profile(level, profile) ||
-        !grid_.resize(profile.map_size_x, profile.map_size_y)) return false;
+        !grid_.resize(profile.map_size_x, profile.grid_height)) return false;
 
     seed_ = seed;
     std::mt19937 rng(seed);
-    const bool placed =
-        place_poi_count(grid_, profile.villages, 9, rng) &&
-        place_poi_count(grid_, profile.militaries, 5, rng) &&
-        place_poi_count(grid_, profile.cities, 6, rng) &&
-        place_poi_count(grid_, profile.hospitals, 11, rng) &&
-        place_poi_count(grid_, profile.firestations, 15, rng) &&
-        place_poi_count(grid_, profile.chaoshi, 103, rng);
+    const int first_min_y = 1;
+    const int first_max_y = static_cast<int>(profile.map_size_y) - 1;
+    bool placed =
+        place_poi_count(grid_, profile.villages, 9, rng, first_min_y, first_max_y) &&
+        place_poi_count(grid_, profile.militaries, 5, rng, first_min_y, first_max_y) &&
+        place_poi_count(grid_, profile.cities, 6, rng, first_min_y, first_max_y) &&
+        place_poi_count(grid_, profile.hospitals, 11, rng, first_min_y, first_max_y) &&
+        place_poi_count(grid_, profile.firestations, 15, rng, first_min_y, first_max_y) &&
+        place_poi_count(grid_, profile.chaoshi, 103, rng, first_min_y, first_max_y);
     if (!placed) return false;
-    generate_source_roads(grid_, level);
+
+    if (profile.second_half_start_y != 0) {
+        const int second_min_y = profile.second_half_start_y;
+        const int second_max_y = static_cast<int>(profile.grid_height) - 1;
+        placed =
+            place_poi_count(grid_, profile.second_half_villages, 9, rng, second_min_y, second_max_y) &&
+            place_poi_count(grid_, profile.second_half_militaries, 5, rng, second_min_y, second_max_y) &&
+            place_poi_count(grid_, profile.second_half_cities, 6, rng, second_min_y, second_max_y) &&
+            place_poi_count(grid_, profile.second_half_hospitals, 11, rng, second_min_y, second_max_y) &&
+            place_poi_count(grid_, profile.second_half_firestations, 15, rng, second_min_y, second_max_y) &&
+            place_poi_count(grid_, profile.second_half_chaoshi, 103, rng, second_min_y, second_max_y);
+        if (!placed) return false;
+    }
+
+    generate_source_roads(grid_, level, profile.map_size_y);
     return true;
 }
 
