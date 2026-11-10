@@ -7,7 +7,7 @@ original source sheet, and packed into a Tex3DS sheet. Original PNGs are never
 modified. Frame order in each output atlas is recorded in sprite_catalog.hpp.
 """
 from __future__ import annotations
-import json, re, shutil, subprocess, sys, tempfile
+import hashlib, json, re, shutil, subprocess, sys, tempfile
 from collections import OrderedDict
 from pathlib import Path
 
@@ -88,12 +88,20 @@ def main() -> int:
                 # (for example assets/gfx/player/). Match the exact basename,
                 # and reject ambiguity rather than choosing the wrong artwork.
                 candidates = list(ASSETS.rglob(basename)) + list((ROOT / "images").rglob(basename))
-            if len(candidates) != 1:
+            # The repository intentionally mirrors some original sheets in
+            # both images/ and assets/gfx/. Treat byte-identical copies as one
+            # source; fail only when same-name candidates contain different art.
+            unique = OrderedDict()
+            for candidate in candidates:
+                digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
+                unique.setdefault(digest, candidate)
+            if len(unique) != 1:
                 raise SystemExit(
-                    "Expected exactly one original sprite sheet named " + basename
-                    + "; found " + str(len(candidates))
+                    "Ambiguous original sprite sheet " + basename
+                    + ": same-name files have different contents: "
+                    + ", ".join(str(path.relative_to(ROOT)) for path in candidates)
                 )
-            source = candidates[0]
+            source = next(iter(unique.values()))
             stem = ident(source_path)
             frame_items = list(frame_map.keys())
             for page, first in enumerate(range(0, len(frame_items), 128)):
