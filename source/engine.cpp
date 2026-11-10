@@ -58,7 +58,7 @@ void Renderer::load_debug_overlay(std::uint64_t frame,float delta,const InputSta
   static_cast<unsigned long>(input.pressed),
   input.circle.dx,input.circle.dy,input.touching?"yes":"no",
   static_cast<unsigned>(input.touch.px),static_cast<unsigned>(input.touch.py));
- C2D_TextParse(&debug_text_,debug_buffer_,debug_font_,lines);
+ C2D_TextParse(&debug_text_,debug_buffer_,lines);
  C2D_TextOptimize(&debug_text_);
 }
 void Renderer::draw_debug_overlay() noexcept {
