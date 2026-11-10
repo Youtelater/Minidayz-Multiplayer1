@@ -12,14 +12,17 @@ public:
  static constexpr std::size_t kMaxSheets=32;
  bool initialize() noexcept; void shutdown() noexcept;
  void begin_frame() noexcept; void begin_screen(gfxScreen_t screen) noexcept; void end_frame() noexcept;
+ void load_debug_overlay(std::uint64_t frame, float delta, const InputState& input, bool scene_active) noexcept;
  bool load_sheet(std::size_t slot,const char* romfs_path) noexcept;
  void unload_sheet(std::size_t slot) noexcept; void unload_all() noexcept;
  bool draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx=1.0f,float sy=1.0f,float rotation=0.0f,float depth=0.5f) noexcept;
  void set_camera(float x,float y) noexcept { camera_x_=x; camera_y_=y; }
  void reset_camera() noexcept { set_camera(0.0f,0.0f); }
 private:
+ void draw_debug_overlay() noexcept;
  C3D_RenderTarget* top_{}; C3D_RenderTarget* bottom_{}; C2D_SpriteSheet sheets_[kMaxSheets]{};
- float camera_x_{},camera_y_{}; bool initialized_{};
+ C2D_Font debug_font_{}; C2D_TextBuf debug_buffer_{}; C2D_Text debug_text_{};
+ float camera_x_{},camera_y_{}; bool initialized_{}; bool debug_ready_{};
 };
 class Scene {
 public:
