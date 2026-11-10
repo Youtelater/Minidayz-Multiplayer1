@@ -1,108 +1,74 @@
 # Stage 1 — Original Mini DAYZ source audit
 
 Repository: `Youtelater/Minidayz-Multiplayer1`
-Branch inspected: `main`
-Purpose: establish a source-backed specification for the faithful C++/Nintendo 3DS port.
+Branch: `main`
+Target: faithful C++ / Nintendo 3DS port.
 
 ## Scope rules
 
 - Use `main` as the working branch.
-- Do not inspect anything under `romfs/` (including its graphics/audio/data), `raw/`, or the mod file `c2injt.js`.
-- Exclude MP JSON files from this single-player stage. Non-JSON multiplayer files are reserved for the later multiplayer stage and are not used here.
+- The supplied `data.deobfuscated.js` Construct export is the authoritative source for project structure and event logic.
+- `romfs/` is now permitted for inspection only as legacy/reference material. Treat it as outdated and unverified; cross-check every candidate against the authoritative export and current repository assets before reuse.
+- Do not use `raw/` or `c2injt.js` as extraction sources.
+- Exclude every file ending in `mp.json`; non-JSON multiplayer material is reserved for the later multiplayer stage.
 - Do not modify original media assets.
-- Do not use the `raw/` folder as a source; it is duplicate data.
+- Keep project-owned `.cpp` files under `source/` and `.hpp`/`.h` files under `include/`.
 
 ## Verified source inventory
 
-| Source | Verified result | C++ relevance |
+The original Construct export is 14,558,329 bytes and has been structurally parsed. The reproducible extraction and exact counts are documented in `docs/STAGE1_STATUS.md` and `docs/STAGE1_EVENT_AUDIT.md`.
+
+| Source | Recorded inventory | C++ relevance |
 |---|---|---|
-| `bunker_json` | Construct tilemap; 225 × 74; 1,224 run-length tokens expand to exactly 16,650 cells | Tile IDs, map dimensions and bunker geometry |
+| `bunker_json` | Construct tilemap; 225 × 74; 1,224 run-length tokens expand to 16,650 cells | Bunker geometry and tile IDs |
 | `l_eng_ui.xml` | 597 text records/IDs | Menu, HUD, prompts and UI strings |
-| `l_eng_items.xml` | 405 item records/IDs (including the empty ID 0 entry) | Stable item IDs and display names |
+| `l_eng_items.xml` | 405 item records/IDs (including empty ID 0 entry) | Stable item IDs and display names |
 | `l_eng_log.xml` | 220 text records/IDs (including ID 0) | Gameplay feedback/log messages |
 | `l_eng_new.xml` | 528 text records/IDs (including ID 0) | Item descriptions and displayed stats/effects |
 | `gfx/spritesheet.meta.json` | Metadata v2; one visible Base layer; 290 sprite entries; 512 × 512 manual cell settings; 4 columns | Sprite frame metadata and source-to-render mapping |
-| Original media tree (excluding forbidden paths) | 510 audio files: 216 M4A and 294 OGG; 2,316 image files | Audio and artwork inventory; individual event/animation mappings still need extraction |
+| Original media inventory outside legacy `romfs/` | Previously inventoried as 510 audio files (216 M4A, 294 OGG) and 2,316 image files; filenames and event mappings still require current cross-check | Audio and artwork |
 | Localization XML inventory | 30 XML files across Czech, German, English, Spanish, French, Italian, Portuguese and Russian | Localization coverage |
 
-The XML record totals count the source entries, including the empty ID-zero records where present. Duplicate English files with a ` 2` suffix are present and should be compared before selecting a canonical copy.
+XML record totals include empty ID-zero records where present. Duplicate English files with a ` 2` suffix must be compared before selecting a canonical copy. Treat the above older inventory as a source checklist; do not assume it is already linked to Construct events.
 
-## Important limitation — Stage 1 is not yet complete
+## Structural extraction verified
 
-The authoritative Construct project data is `data.deobfuscated.js` (14,558,329 bytes; blob SHA `bd6fc44626d2f4ede48f9a6b83dedbb23ce06a9d`). The GitHub file connector returned an empty body for this file, and the raw-file fetch rejected it as too large. The original `data.js` is also 12,442,669 bytes and could not be retrieved through the available file fetch. Therefore the project layouts, event sheets, object properties, instance coordinates, animation definitions, event-to-audio triggers, and complete gameplay rules have **not** been exhaustively extracted or verified yet.
+- 29 Construct project sections; version 1.6.0; canvas 1024 × 768.
+- 1,429 object definitions across 20 plugin/type IDs.
+- 8 layouts, 360 layers and 5,256 placed instances.
+- 6 event sheets and 22,343 recursively counted event nodes.
+- 610 variable declarations and 220 named event groups.
+- 6,338 animation definitions and 14,505 image-frame references.
+- 489 audio resource entries.
+- 115 distinct condition command IDs and 206 distinct action command IDs.
 
-`c2runtime.js` (350,006 bytes) is the Construct 2 engine runtime, not the game's own event-sheet logic. It can explain engine behaviour, but it cannot substitute for inspecting the project's event sheets and object data.
+The complete parsed source snapshot is stored in ordered chunks under `data/stage1/source_snapshot/`. Reassemble and regenerate indexes using:
 
-The repository also contains `spawn_npc_arrays.txt`; its paths identify Construct project nodes named `Spawn_NPC`, but this alone does not establish the full NPC spawning rules.
+```sh
+python tools/stage1/reassemble_snapshot.py
+python tools/stage1/extract_construct.py data/stage1/construct_project_parsed.json --out data/stage1
+```
+
+Generated C++ metadata belongs under `include/minidayz/generated/stage1_data.hpp`; project headers belong under `include/`; translation units belong under `source/`. Inventories and parsed non-C++ data belong under `data/stage1/`.
+
+## Legacy ROMFS cross-check
+
+The current `romfs/` tree contains 611 files: 295 WAV, 290 T3X, 12 JSON, 12 BIN, one PNG and one T3S. The legacy `romfs/data/extracted_audio_and_coords_v2.json` lists 489 unique audio filenames, and all 489 filenames match the 489 entries in the authoritative Construct export's `audio_resources.csv`.
+
+This filename match is useful corroboration only. It does not prove that the old audio files, coordinates, sprite conversions, UI strings, or gameplay data are current or usable on 3DS. The legacy UI/log JSON dictionaries are candidate references and still need ID/content cross-checking. No legacy asset is accepted solely because it exists in `romfs/`.
 
 ## Remaining Stage 1 completion checklist
 
-- [ ] Retrieve and parse the complete authoritative `data.deobfuscated.js` (or equivalent original Construct project data) without using forbidden folders/files.
-- [ ] Enumerate layouts, layers, object types, object properties and placed instances, including exact coordinates, sizes, origins and z-order.
-- [ ] Extract animation names, frame sequences, durations, sprite-sheet references and collision/polygon data.
-- [ ] Map all original audio filenames to their actual event triggers and playback parameters.
-- [ ] Trace and document single-player world generation, terrain/roads/towns/structures, loot, NPC/zombie spawning and AI.
-- [ ] Trace and document player movement, collisions, combat, weapons, inventory, crafting, vehicles, survival stats, status effects, UI flows and save/load.
-- [ ] Cross-check extracted IDs and references against the English XML files and sprite/audio inventories.
-- [ ] Produce a C++ implementation map with source paths, verified constants, dependencies and unresolved questions.
+- [ ] Resolve all 115 condition and 206 action command IDs against exact Construct 2 editor-side ACE metadata (plugin/behavior `edittime.js` definitions), including parameters, object references, expressions and subevent semantics. Do not guess command names.
+- [ ] Translate every event sheet and nested event into traceable C++ behavior specifications and implementation.
+- [ ] Trace movement, collisions/physics, weapons, combat, damage, enemy AI, NPCs, loot, inventory, crafting, vehicles, survival stats, status effects and progression.
+- [ ] Reconstruct procedural world generation, terrain, roads, towns, structures and spawn rules.
+- [ ] Reconstruct UI states, HUD, touch interactions, menus, tutorial, login/loading and death flows.
+- [ ] Map audio resources to exact event triggers and playback parameters.
+- [ ] Verify sprite-sheet rectangles, animation timing, origins, imagepoints and collision polygons against permitted original assets.
+- [ ] Verify save/load, progression, achievements, quests, perks and day progression.
+- [ ] Produce a source-to-C++ traceability matrix and behavior-equivalence tests on the target platform.
 
 ## Stage 2 gate
 
-Do not treat this audit as permission to approximate the original game. Stage 2 should begin only after the authoritative project data has been parsed and the world-generation/layout specification is verified. Keep this file updated with evidence and mark checklist items complete only after direct inspection.
-
-
-## 2026-11-09 extraction update — full supplied data.deobfuscated.js parsed
-
-The complete 14,558,329-byte upload was materialized and parsed successfully as JSON after normalizing whitespace between unary minus signs and numeric literals. All 29 project sections are preserved in the generated parsed export.
-
-Verified structural extraction:
-
-- 1,429 Construct object definitions across 20 plugin/type IDs.
-- 8 layouts, 360 layers, and 5,256 placed instances with source transforms, UIDs, object indices, and layer membership.
-- 6 event sheets: Game_events (518 top-level blocks), Menu_Events (153), Login_events (27), Loading_events (15), Everywere (4), Tutorial_events (13).
-- 610 event-sheet variables and 39 named event groups indexed.
-- 6,338 animation definitions; 2,194 object-to-image references.
-- 489 audio resource entries with original file byte sizes.
-- Original project canvas 1024 × 768; project version 1.6.0.
-
-Generated outputs are available as a downloadable extraction bundle in the conversation: `stage1_extracted.zip`. The bundle contains `stage1_data.hpp` (C++17 constexpr tables), `construct_project_parsed.json` (complete parsed project and raw event trees), `stage1_manifest.json`, `instances.csv`, `audio_resources.csv`, and `README_STAGE1.md`. The C++ header passed a `g++ -std=c++17 -Wall -Wextra -pedantic` compile check with count assertions.
-
-**Status correction:** the supplied Construct export has now been structurally extracted into C++-usable data. Stage 1's *semantic gameplay specification* is still in progress: every condition/action in the event sheets must be traced into player, AI, combat, loot, survival, world-generation, UI, save/load, and audio systems; sprite crops and media files must also be cross-checked. Do not claim all gameplay mechanics have been translated or mark the Stage 1 gate complete yet.
-
-All scope exclusions remain in force: no `romfs/`, `raw/`, `c2injt.js`, or MP JSON files. Non-JSON MP files remain reserved for multiplayer later.
-
-
-## Full nested event-tree extraction — 2026-11-10
-
-The uploaded `data.deobfuscated.js` was reparsed recursively. Corrected structural counts (replacing earlier undercounts):
-
-| Sheet | Top-level entries | Nested event nodes | Variable declarations |
-|---|---:|---:|---:|
-| Game_events | 518 | 21,348 | 888 |
-| Menu_Events | 153 | 923 | 100 |
-| Login_events | 27 | 60 | 8 |
-| Loading_events | 15 | 8 | 9 |
-| Everywere | 4 | 4 | 1 |
-| Tutorial_events | 13 | 0 local nodes (11 variables; 2 include records) | 11 |
-| **Total** | **730** | **22,343** | **1,017** |
-
-The traversal identified 220 named group declarations, 115 distinct condition command IDs, and 206 distinct action command IDs. Image-frame references are 14,505 (the earlier 2,194 figure was an incomplete object-level count, not the complete frame-reference count).
-
-`docs/STAGE1_EVENT_AUDIT.md` documents the verified subsystem group names. `src/generated/stage1/stage1_summary.hpp` contains compile-tested C++ constants for these counts.
-
-The repository extractor `tools/stage1/extract_construct.py` now normalizes spaced negative literals correctly and emits:
-- `stage1_data.hpp`: C++ tables for object definitions, layouts, layers, placed instance transforms/UIDs, animations, audio resources, event-sheet boundaries and condition/action command-ID frequency tables.
-- `event_sheet_index.json`: nested event index, variable declarations, named groups, condition/action arrays and command ID counts.
-- `construct_project_parsed.json`: complete parsed original project.
-- CSV inventories and `stage1_manifest.json`.
-
-Run from repository root after placing the supplied source export at the root:
-```sh
-python tools/stage1/extract_construct.py data.deobfuscated.js --out src/generated/stage1
-```
-
-**Important:** structural extraction is now reproducible and the event tree is indexed. Native C++ behavior translation for every Construct condition/action, media trigger cross-reference and behavior-equivalence testing are not yet complete; Stage 1 is not signed off.
-
-## C++ source/header layout convention
-
-All project `.cpp` translation units are kept in `source/`; all project `.hpp`/`.h` headers are kept in `include/`. Stage 1 hand-authored headers are `include/minidayz/construct_stage1_types.hpp` and `include/minidayz/stage1_summary.hpp`. The extractor writes generated C++ to `include/minidayz/generated/stage1_data.hpp`; non-C++ inventories and the parsed export are written under `data/stage1/`. Compile-time metadata assertions are in `source/stage1_summary_compile.cpp`.
+The current `source/main.cpp` is a clean platform entry point, not a gameplay implementation. The structural extraction is in place, but semantic gameplay translation and behavior verification are not complete. Do not begin Stage 2 or sign off Stage 1 until the checklist above is resolved and tested.
