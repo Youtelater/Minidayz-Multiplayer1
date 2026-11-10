@@ -19,7 +19,7 @@ jobs:
       - name: Update 3DS Libraries via dkp-pacman
         run: |
           dirmngr < /dev/null || true
-          apt-get update && apt-get install -y --no-install-recommends ca-certificates
+          apt-get update && apt-get install -y --no-install-recommends ca-certificates python3-pil
           dkp-pacman -S --noconfirm 3ds-dev 3ds-portlibs || true
 
       - name: Compile 3DS Executable
