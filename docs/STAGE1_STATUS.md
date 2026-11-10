@@ -59,3 +59,18 @@ Structural extraction is not the same as semantic reverse engineering. The origi
 8. Produce a source-to-C++ traceability matrix and compile/run regression tests.
 
 **Stage 1 status: structural export parsed; semantic gameplay specification and asset cross-checks remain in progress. Stage 2 must not start until those items are verified.**
+## C++ directory convention
+
+All project-owned C++ translation units (`.cpp`) belong under `source/`. All project-owned C++ headers (`.hpp`/`.h`) belong under `include/`. The Stage 1 data generator writes its generated header to `include/minidayz/generated/stage1_data.hpp`; parsed source snapshots and CSV/JSON inventories belong under `data/stage1/`. The compile-time metadata checks live in `source/stage1_summary_compile.cpp` so the Makefile's source discovery includes them.
+
+Run from the repository root:
+
+```sh
+python tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
+```
+
+Header locations:
+- `include/minidayz/construct_stage1_types.hpp`
+- `include/minidayz/stage1_summary.hpp`
+- `include/minidayz/generated/stage1_data.hpp` (generated)
+
