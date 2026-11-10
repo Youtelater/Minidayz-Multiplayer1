@@ -90,6 +90,8 @@ public:
         float delta_seconds, const PlayerRules& rules) noexcept;
 
     void apply_damage(float amount) noexcept;
+    // Applies damage from a source event that has an explicit death-log cause.
+    void apply_damage(float amount, PlayerDeathReason cause) noexcept;
     void kill(PlayerDeathReason reason) noexcept;
     void heal(float amount, float max_health) noexcept;
     void adjust_hunger(float amount, float max_hunger) noexcept;
