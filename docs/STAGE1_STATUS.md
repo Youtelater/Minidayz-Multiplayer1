@@ -60,7 +60,7 @@ Outputs:
 
 Structural extraction and indexing are complete, but the original game has **not** yet been fully translated into C++ or behaviorally verified. These items remain open:
 
-1. Resolve all 115 distinct condition command IDs and 206 distinct action command IDs against the exact Construct 2 editor-side ACE metadata (plugin/behavior `edittime.js` definitions), including parameters, object references, expressions, and subevent semantics. The repository currently has no exact editor-side ACE definitions; see `docs/STAGE1_COMMAND_ID_MAPPING.md`. Do not guess command names.
+1. Resolve all 115 distinct condition command IDs and 206 distinct action command IDs using the exported event data and the matching `c2runtime.js` dispatch/implementation paths, including parameters, object references, expressions, and subevent semantics. `edittime.js` is optional editor metadata, not a runtime prerequisite; see `docs/STAGE1_COMMAND_ID_MAPPING.md`. Do not guess command names.
 2. Translate every event sheet and nested event into traceable C++ behavior specifications and implementation.
 3. Trace player movement, collisions/physics, weapons, combat, damage, enemy AI, NPCs, loot, inventory, crafting, vehicles, survival stats, status effects, and progression.
 4. Reconstruct procedural world generation, terrain, roads, towns, structures, spawn tables, and NPC/zombie spawn rules.
