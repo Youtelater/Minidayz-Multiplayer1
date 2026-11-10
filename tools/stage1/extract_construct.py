@@ -74,7 +74,7 @@ def main():
                 if isinstance(x,list) and len(x)>1 and isinstance(x[1],int):
                     acts[x[1]]+=1; act_refs[(x[0],x[1])]+=1
             idx=len(events);events.append(dict(index=idx,sheet=si,parent=parent,depth=depth,
-                uid=e[4] if len(e)>4 else 0,conditions=cs,actions=ac,subevents=len(sub)))
+                uid=e[4] if len(e)>4 else 0,conditions=cs,actions=ac,subevents=len(sub),source_record=e))
             walk(sub,si,name,idx,depth+1)
     for si,(name,entries) in enumerate(p[6]):
         start=len(events);vstart=len(variables);walk(entries,si,name)
