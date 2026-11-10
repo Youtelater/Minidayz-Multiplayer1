@@ -64,6 +64,9 @@ void Renderer::load_debug_overlay(std::uint64_t frame,float delta,const InputSta
 void Renderer::draw_debug_overlay() noexcept {
  if(debug_ready_) C2D_DrawText(&debug_text_,C2D_AlignLeft,8.0f,8.0f,0.5f,0.48f,0.48f);
 }
+void Renderer::draw_solid_rect(float x,float y,float width,float height,u32 color) noexcept {
+ if(width>0.0f&&height>0.0f) C2D_DrawRectSolid(x,y,0.5f,width,height,color);
+}
 bool Renderer::load_sheet(std::size_t slot,const char* path) noexcept {
  if(!initialized_||slot>=kMaxSheets||!path||!path[0]) return false;
  C2D_SpriteSheet fresh=C2D_SpriteSheetLoad(path); if(!fresh) return false;
