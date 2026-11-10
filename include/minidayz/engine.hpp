@@ -32,7 +32,7 @@ private:
 class Scene {
 public:
  virtual ~Scene()=default; virtual void on_enter() noexcept {} virtual void on_exit() noexcept {}
- virtual void update(const InputState&,float) noexcept=0; virtual void render(Renderer&) noexcept=0;
+ virtual void update(const InputState&,float) noexcept=0; virtual void render(Renderer&) noexcept=0; virtual void render_bottom(Renderer&) noexcept {}
 };
 class Engine {
 public:
