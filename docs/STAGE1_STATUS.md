@@ -7,7 +7,7 @@
 ## Scope guardrails
 
 - Use `main` as the working branch.
-- `romfs/` may be inspected only as a legacy/reference artifact; treat its contents as outdated and unverified, never as authoritative extraction sources. Cross-check any candidate against the supplied Construct export and current repository assets.
+- Do not inspect or use files under `romfs/` as extraction or reference sources; the user identified that data as Gemini-generated and unreliable.
 - Do not use `raw/` or `c2injt.js` as extraction sources.
 - Exclude every file ending in `mp.json`; multiplayer non-JSON material is reserved for the later multiplayer stage.
 - Do not modify original media assets.
@@ -51,6 +51,7 @@ Outputs:
 - `data/stage1/source_snapshot/part_*.jsonpart` — complete parsed source snapshot, split into ordered Git-friendly chunks.
 - `data/stage1/construct_project_parsed.json` — reconstructed complete parsed source project and event trees.
 - `data/stage1/event_sheet_index.json` — nested event index, variables, groups, and command-ID frequency tables.
+- `data/stage1/ace_reference_inventory.csv` — all 1,120 condition and 4,237 action object/command pairs, with source object type IDs and occurrence counts.
 - `data/stage1/stage1_manifest.json` — source and extraction manifest.
 - `data/stage1/instances.csv`, `animations.csv`, `image_refs.csv`, `audio_resources.csv`.
 - `include/minidayz/generated/stage1_data.hpp` — C++17 constexpr metadata tables.
@@ -91,3 +92,8 @@ The user has authorized inspection of `romfs/` as legacy reference material. The
 ## Converted WAV coverage
 
 The 295 files under `romfs/wav/` cover all 275 unique audio stems present in the 489 source audio resource entries (extension-independent filename comparison). There are 20 additional WAV stems not found in the source audio resource list; treat them as legacy candidates pending event/reference verification. The source export includes multiple M4A/OGG variants for some stems, so the 489-to-295 comparison is by unique basename, not file count. This is filename coverage, not a playback/format compatibility test.
+
+
+## Latest build verification
+
+The malformed newline sequence in `include/minidayz/generated/world_source_data.hpp` was repaired on `main` in commit `9403a7e229880430802f204138930964ab04a4e8`. GitHub Actions 3DS build run [42761196687](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/42761196687) completed successfully, including the compile and `.3dsx` artifact upload. This verifies compilation only; it does not complete semantic gameplay translation or emulator/hardware equivalence testing.
