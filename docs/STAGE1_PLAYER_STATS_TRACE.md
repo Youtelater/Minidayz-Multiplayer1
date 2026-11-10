@@ -36,6 +36,24 @@ Run `python tools/stage1/trace_player_stats.py` from the repository root after `
 
 `PlayerState` now carries a `PlayerDeathReason` enum (`none`, `hunger`, `thirst`, `cold`, `other`). `PlayerSystem::kill(reason)` records the source event's death category, sets health to zero, and transitions the actor to the dead animation/state. A zero-health state reached without an explicit source reason is marked `other`; the port does not guess that every damage event is hunger, thirst, or cold. The gameplay event dispatcher must call `kill()` with the reason selected by the matching original branch.
 
+## Regression coverage added
+
+`tests/player_system_tests.cpp` covers four deterministic cases:
+
+- Starvation damage that reaches zero health records `hunger`.
+- Dehydration damage that reaches zero health records `thirst`.
+- Unclassified damage records `other`.
+- An explicitly classified damage event can record `cold` without inventing a temperature threshold.
+
+Run on a host with a C++17 compiler:
+
+```sh
+c++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/player.cpp tests/player_system_tests.cpp -o /tmp/player_system_tests
+/tmp/player_system_tests
+```
+
+The explicit cause overload is only used to pass a cause already selected by an audited event branch. It does not infer cold death from temperature. The numeric survival rates remain externally supplied and are not populated with guesses.
+
 ## Next translation work
 
 - Correlate raw condition/action IDs with original runtime dispatch and implementations.
