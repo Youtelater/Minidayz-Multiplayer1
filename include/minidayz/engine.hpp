@@ -4,6 +4,7 @@
 #include <citro2d.h>
 #include <cstddef>
 #include <cstdint>
+#include <cstdint>
 
 namespace minidayz {
 struct InputState { u32 held{}, pressed{}, released{}; circlePosition circle{}; touchPosition touch{}; bool touching{}; };
@@ -17,12 +18,15 @@ public:
  void draw_solid_rect(float x,float y,float width,float height,u32 color) noexcept;
  bool load_sheet(std::size_t slot,const char* romfs_path) noexcept;
  void unload_sheet(std::size_t slot) noexcept; void unload_all() noexcept;
- bool draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx=1.0f,float sy=1.0f,float rotation=0.0f,float depth=0.5f) noexcept;\n bool draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f) noexcept;
+ bool draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx=1.0f,float sy=1.0f,float rotation=0.0f,float depth=0.5f) noexcept;
+ bool draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f) noexcept;
  void set_camera(float x,float y) noexcept { camera_x_=x; camera_y_=y; }
  void reset_camera() noexcept { set_camera(0.0f,0.0f); }
 private:
  C3D_RenderTarget* top_{}; C3D_RenderTarget* bottom_{}; C2D_SpriteSheet sheets_[kMaxSheets]{};
- struct SpriteCacheEntry { char sheet[128]{}; std::size_t slot{}; };\n SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{};\n C2D_Font debug_font_{}; C2D_TextBuf debug_buffer_{}; C2D_Text debug_text_{};
+ struct SpriteCacheEntry { char sheet[128]{}; std::size_t slot{}; };
+ SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{};
+ C2D_Font debug_font_{}; C2D_TextBuf debug_buffer_{}; C2D_Text debug_text_{};
  float camera_x_{},camera_y_{}; bool initialized_{}; bool debug_ready_{};
 };
 class Scene {
