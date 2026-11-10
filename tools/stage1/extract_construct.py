@@ -52,9 +52,9 @@ def main():
             frames=an[7] if len(an)>7 and isinstance(an[7],list) else []
             animations.append(dict(object=oi,name=an[0],frames=len(frames),
                 speed=an[3] if len(an)>3 else 0,loop=bool(an[2]) if len(an)>2 else False))
-            for fr in frames:
+            for fi,fr in enumerate(frames):
                 if isinstance(fr,list) and fr and isinstance(fr[0],str):
-                    image_refs.append(dict(object=oi,animation=an[0],frame=frames.index(fr),path=fr[0],sheet_id=fr[1] if len(fr)>1 else None,x=fr[2] if len(fr)>2 else None,y=fr[3] if len(fr)>3 else None,width=fr[4] if len(fr)>4 else None,height=fr[5] if len(fr)>5 else None,origin_x=fr[7] if len(fr)>7 else None,origin_y=fr[8] if len(fr)>8 else None,collision=fr[10] if len(fr)>10 else None))
+                    image_refs.append(dict(object=oi,animation=an[0],frame=fi,path=fr[0],sheet_id=fr[1] if len(fr)>1 else None,x=fr[2] if len(fr)>2 else None,y=fr[3] if len(fr)>3 else None,width=fr[4] if len(fr)>4 else None,height=fr[5] if len(fr)>5 else None,origin_x=fr[7] if len(fr)>7 else None,origin_y=fr[8] if len(fr)>8 else None,collision=fr[10] if len(fr)>10 else None))
     sheets=[]; events=[]; variables=[]; groups=[]; cond=Counter(); acts=Counter()
     def walk(items,si,name,parent=-1,depth=0):
         for e in items:
