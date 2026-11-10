@@ -56,6 +56,8 @@ public:
     // it does not fabricate procedural generation rules.
     bool generate_from_source(std::uint32_t seed, std::string_view layout_name = "Map");
     bool load_source_layout(std::string_view layout_name);
+    bool load_source_bunker_spawns(bool map_fs = false);
+    bool load_source_bridge_elements();
     void reset() noexcept;
 
     bool add_feature(const WorldFeature& feature);
