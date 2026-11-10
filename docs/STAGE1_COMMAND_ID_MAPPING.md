@@ -1,32 +1,35 @@
-# Stage 1 — Construct command-ID resolution blocker
+# Stage 1 — Construct command-ID resolution
 
-## What the export preserves
+## What the original export contains
 
-The parsed event trees preserve numeric condition and action command IDs, the referenced object-type index, parameters, expressions, and subevent structure. Across all event sheets the audit found **115 distinct condition command IDs** and **206 distinct action command IDs**.
+The exported Construct project preserves the event trees, numeric condition/action IDs, referenced object-type indices, parameters, expression trees, and nested-event structure. The current inventory records 115 distinct condition IDs and 206 distinct action IDs, across 1,120 condition object/command pairs and 4,237 action pairs.
 
-These IDs are not safe to rename by guesswork. The same numeric ID must be interpreted in the context of the referenced Construct object/plugin and, where applicable, its behavior.
+The new original offline package also confirms the presence of the game runtime (`c2runtime.js`) and exported project data (`data.js`). The offline manifest (`offline.js`) is a JSON asset manifest, not gameplay source code. It lists 1,825 package resources, including the runtime, data export, graphics, and audio.
 
-The source-derived `data/stage1/ace_reference_inventory.csv` now records every distinct object/command pair and occurrence count: **1,120 condition pairs** and **4,237 action pairs** (5,357 rows total). Each row preserves the event kind, source object index/name, source object type ID, command ID, and occurrence count. `tools/stage1/extract_construct.py` regenerates this inventory directly from `data.deobfuscated.js`. The `tNNN` names are export identifiers, not decoded gameplay names.
+## Important distinction: editor metadata vs. runtime
 
-## Required metadata
+The game runs in a browser without `edittime.js`. That file belongs to the Construct 2 editor SDK: it describes editor-facing ACE names, parameter types, and display strings. It is not required by the exported game's runtime and its absence is not a blocker to reverse-engineering or porting the game.
 
-Construct 2's editor-side plugin definitions declare the available actions, conditions, expressions, their editor names, parameter definitions, and display strings. The runtime-side scripts implement the corresponding methods. See the official Construct 2 SDK documentation:
-
-- [Actions, Conditions and Expressions](https://www.construct.net/en/construct-2/manuals/construct-2-javascript-sdk/sdk-documentation/actions-conditions-expressi)
-- [ACE implementations](https://www.construct.net/en/construct-2/manuals/construct-2-javascript-sdk/sdk-documentation/ace-implementations)
-- [Runtime functions](https://www.construct.net/en/construct-2/manuals/construct-2-javascript-sdk/sdk-documentation/runtime-functions)
-
-The current repository has the generated/minified `c2runtime.js`, but does not contain the original Construct editor-side `edittime.js` definitions for the built-in plugins and behaviors. The project export's numeric IDs alone do not provide the readable ACE labels and parameter schemas.
+The runtime contains the executable implementations and event-dispatch machinery. Therefore, command resolution should proceed from the runtime and the serialized event data. Editor definitions, if ever found, can be used as a cross-check, not as a prerequisite.
 
 ## Resolution procedure
 
-1. Use `data/stage1/ace_reference_inventory.csv` as the exact source inventory of all object/command pairs; do not collapse IDs across different object types.
-2. Obtain the exact matching Construct 2 editor-side plugin and behavior definitions for the runtime version used by this project.
-3. Resolve each command ID to its condition/action name, parameter schema, and display string.
-4. Preserve the original raw command, parameters, expression tree, object index, and event UID beside the resolved label.
-5. Add an automated check that every command reference resolves exactly once; report unknown and ambiguous references instead of guessing.
-6. Only then translate the command into C++ behavior and write source-to-C++ traceability tests.
+1. Preserve each raw event record exactly: sheet, event UID, object-type index, command ID, parameters, expression tree, and subevent nesting.
+2. Inspect the exact original `c2runtime.js` shipped with the offline package. Identify the runtime's condition/action dispatch tables and how serialized command IDs select implementations.
+3. Correlate runtime dispatch entries with the object/plugin type IDs and command IDs in `ace_reference_inventory.csv`.
+4. Recover parameter ordering and expression evaluation from the serialized event records and runtime call sites.
+5. Use behavior observed in the browser-exported game as a verification reference where a mapping is ambiguous.
+6. Record each mapping with its evidence and confidence. Do not infer a human-readable name from a numeric ID alone.
+7. Translate resolved behavior into C++ with source event UIDs and regression tests.
+
+## Current findings
+
+- The original offline package contains `c2runtime.js` (350,716 bytes) and `data.js` (12,442,669 bytes); the GitHub file reader can retrieve the runtime but currently returns empty text for the large `data.js` file.
+- The offline manifest contains no `edittime.js` or obvious editor plugin definition entries.
+- The offline runtime file and the earlier root runtime copy are not byte-identical (350,716 vs. 350,006 bytes). The offline-package copy should be investigated as the more directly associated runtime, with differences audited before choosing a canonical source.
+- The 1,825-entry offline manifest is a resource list, not a substitute for the project data.
+- The C++ port must not guess unresolved command semantics.
 
 ## Status
 
-**Blocked pending exact ACE metadata.** The source event trees and raw IDs are preserved and indexed, including 1,120 condition pairs and 4,237 action pairs. The repository's bundled `c2runtime.js` is minified runtime code; the exact matching editor-side `edittime.js` definitions are not present. No numeric ID is being presented as a human-readable command name until its mapping is verified against the matching editor-side definitions.
+**Not blocked on `edittime.js`.** Runtime-based command resolution and behavioral translation remain unfinished. No claim is made that the command IDs have all been resolved or that all events have been ported.
