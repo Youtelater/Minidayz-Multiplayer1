@@ -96,10 +96,22 @@ PlayerSurvivalResult PlayerSystem::update_survival(
 
     // Damage from depleted food/water reserves is applied only when the
     // caller supplies source-audited damage rates.
-    if (state_.hunger <= 0.0f)
-        apply_damage(std::max(0.0f, rules.starvation_damage_per_second) * dt);
-    if (state_.thirst <= 0.0f)
-        apply_damage(std::max(0.0f, rules.dehydration_damage_per_second) * dt);
+    if (state_.hunger <= 0.0f) {
+        const float damage =
+            std::max(0.0f, rules.starvation_damage_per_second) * dt;
+        const float health_before = state_.health;
+        apply_damage(damage);
+        if (health_before > 0.0f && !state_.alive)
+            state_.death_reason = PlayerDeathReason::hunger;
+    }
+    if (state_.thirst <= 0.0f) {
+        const float damage =
+            std::max(0.0f, rules.dehydration_damage_per_second) * dt;
+        const float health_before = state_.health;
+        apply_damage(damage);
+        if (health_before > 0.0f && !state_.alive)
+            state_.death_reason = PlayerDeathReason::thirst;
+    }
 
     if (state_.bleeding > 0.0f)
         apply_damage(state_.bleeding *
