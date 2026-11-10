@@ -102,3 +102,7 @@ python tools/stage1/extract_construct.py data.deobfuscated.js --out src/generate
 ```
 
 **Important:** structural extraction is now reproducible and the event tree is indexed. Native C++ behavior translation for every Construct condition/action, media trigger cross-reference and behavior-equivalence testing are not yet complete; Stage 1 is not signed off.
+
+## C++ source/header layout convention
+
+All project `.cpp` translation units are kept in `source/`; all project `.hpp`/`.h` headers are kept in `include/`. Stage 1 hand-authored headers are `include/minidayz/construct_stage1_types.hpp` and `include/minidayz/stage1_summary.hpp`. The extractor writes generated C++ to `include/minidayz/generated/stage1_data.hpp`; non-C++ inventories and the parsed export are written under `data/stage1/`. Compile-time metadata assertions are in `source/stage1_summary_compile.cpp`.
