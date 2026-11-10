@@ -107,6 +107,12 @@ $(BUILD)/%.o: %.s
 #-----------------------------------------------------------------
 # GRAPHICS ASSET PIPELINE
 #-----------------------------------------------------------------
+# Python handles arbitrary original filenames safely and converts only changed PNGs.
+graphics:
+	@mkdir -p $(ROMFS)/gfx
+	@python3 tools/build_textures.py "$(GRAPHICS)" "$(ROMFS)/gfx"
+
+#-----------------------------------------------------------------
 # Convert only new or modified PNGs. find -exec preserves filenames containing spaces.
 # Existing .t3x files are reused on subsequent builds.
 graphics:
