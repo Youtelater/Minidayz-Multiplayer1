@@ -77,7 +77,7 @@ void generate_source_roads(WorldGrid& grid, std::uint8_t level, std::uint8_t act
         }
     }
 
-    const auto add_vertical_roads = [&grid](int y_offset) {
+    const auto add_vertical_roads = [&grid, active_y_count](int y_offset) {
         // generate_array_roads_2 loops Map_size_Y on both axes. Array reads
         // outside the declared dimensions return zero and writes are ignored.
         for (int column = 0; column < active_y_count; ++column) {
