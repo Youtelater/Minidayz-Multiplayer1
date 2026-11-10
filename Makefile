@@ -66,7 +66,7 @@ LIBS		:= -lcitro2d -lcitro3d -lctru -lz -lm
 
 # Collect all files inside romfs to track dependencies accurately
 # Escape spaces so GNU Make treats each ROMFS filename as one prerequisite.
-ROMFS_FILES := $(shell find "$(ROMFS)" -type f -printf '%p\\n' 2>/dev/null | sed 's/ /\\\\ /g')
+ROMFS_FILES := $(shell find "$(ROMFS)" -type f -printf '%p\n' 2>/dev/null | sed 's/ /\\ /g')
 
 #-----------------------------------------------------------------
 # MAIN RULES
