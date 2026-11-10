@@ -7,7 +7,7 @@ static_assert(minidayz::stage1::kPlacedInstances==5256);
 static_assert(minidayz::stage1::kAnimationDefinitions==6338);
 static_assert(minidayz::stage1::kEventSheets==6);
 static_assert(minidayz::stage1::kNestedEventNodes==22343);
-static_assert(minidayz::stage1::kEventVariables==1017);
+static_assert(minidayz::stage1::kEventVariables==610);
 
 static_assert(minidayz::stage1::kImageFrameReferences==14505);
 static_assert(minidayz::stage1::kAudioResources==489);
