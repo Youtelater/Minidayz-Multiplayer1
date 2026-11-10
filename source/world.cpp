@@ -1,5 +1,6 @@
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
+#include "minidayz/generated/world_source_data.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -91,9 +92,16 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
 
 bool WorldSystem::generate_from_source(std::uint32_t seed, std::string_view name) {
     if (!initialize(seed)) return false;
-    if (load_source_layout(name)) return true;
-    reset();
-    return false;
+    if (!load_source_layout(name)) {
+        reset();
+        return false;
+    }
+    if (name == "Map" &&
+        (!load_source_bunker_spawns(false) || !load_source_bridge_elements())) {
+        reset();
+        return false;
+    }
+    return true;
 }
 
 bool WorldSystem::load_source_layout(std::string_view name) {
@@ -136,6 +144,77 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     }
 
     initialized_ = true;
+    return true;
+}
+
+
+bool WorldSystem::load_source_bunker_spawns(bool map_fs) {
+    if (!initialized_) return false;
+
+    features_.erase(std::remove_if(features_.begin(), features_.end(),
+        [](const WorldFeature& item) { return item.kind == WorldFeatureKind::Bunker; }),
+        features_.end());
+
+    constexpr float kBunkerOriginX = 2306.0f;
+    constexpr float kBunkerOriginY = 17464.0f;
+    constexpr float kAlternateMapOffsetX = 16900.0f;
+
+    for (const auto& source : stage1::kBunkerSpawnSource) {
+        const WorldPoint position{
+            kBunkerOriginX + static_cast<float>(source.x) +
+                (map_fs ? kAlternateMapOffsetX : 0.0f),
+            kBunkerOriginY + static_cast<float>(source.y)
+        };
+        if (!bounds_.contains(position)) return false;
+
+        features_.push_back({
+            WorldFeatureKind::Bunker,
+            position,
+            source.uid,
+            source.kind,
+            source.layer,
+            975, // Construct object created by Bunker_spawn.
+            0.0f,
+            0.0f,
+            0.0f
+        });
+    }
+    return true;
+}
+
+bool WorldSystem::load_source_bridge_elements() {
+    if (!initialized_) return false;
+
+    features_.erase(std::remove_if(features_.begin(), features_.end(),
+        [](const WorldFeature& item) { return item.kind == WorldFeatureKind::Bridge; }),
+        features_.end());
+
+    for (const auto& source : stage1::kBridgeElementSource) {
+        const WorldPoint position{
+            static_cast<float>(source.x),
+            static_cast<float>(source.y)
+        };
+        if (!bounds_.contains(position)) return false;
+
+        // Pack the source function's family, element, and optional enabled
+        // argument without losing the original event-call UID.
+        const std::uint32_t variant =
+            (static_cast<std::uint32_t>(source.family) << 16) |
+            (static_cast<std::uint32_t>(source.element) << 1) |
+            (source.enabled ? 1u : 0u);
+
+        features_.push_back({
+            WorldFeatureKind::Bridge,
+            position,
+            source.uid,
+            variant,
+            0,
+            0,
+            0.0f,
+            0.0f,
+            0.0f
+        });
+    }
     return true;
 }
 
