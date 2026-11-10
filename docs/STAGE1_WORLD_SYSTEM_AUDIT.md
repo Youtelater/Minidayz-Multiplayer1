@@ -47,6 +47,8 @@
 2. Port all 62 location-template branches and map-element creation into actual building/terrain placements.
 3. Render and collide with bunker and bridge pieces using the original object artwork; verify bridge state behavior.
 4. Port `Spawn_NPC`, `Trigger_spawn`, zombie spawn selection, and spawn conditions.
-5. Connect generated grid and features to the runtime camera, rendering, and collision; compare the result in Manic Emu.
+5. Replace the new diagnostic overview with the original sprite/tile renderer, connect player coordinates and camera to source-world coordinates, implement world collision, and compare the result in Manic Emu.
 
-**Status:** source-backed grid/POI placement, bunker descriptors, bridge descriptors, and static layout indexing are implemented in C++. Roads, full building-template expansion, dynamic spawn behavior, and emulator verification remain. A successful CI build verifies compilation only, not gameplay equivalence.
+**Runtime preview integration (2026-11-10):** `source/main.cpp` now initializes `WorldSystem` from the original `Map` layout and renders a scaled diagnostic overview of the indexed source features plus an inset of the generated POI/road grid. The preview uses colored rectangles as diagnostics, not original game artwork; the player remains a screen-space preview actor and is not yet connected to world coordinates or world collision.
+
+**Status:** source-backed grid/POI placement, road-code generation, bunker descriptors, bridge descriptors, static layout indexing, and diagnostic runtime overview are implemented in C++. Exact POI cell-to-world placement, full building-template expansion, original-art rendering, bunker/bridge collision and behavior, dynamic spawn behavior, world/player/camera integration, and emulator verification remain. A successful CI build verifies compilation only, not gameplay equivalence.
