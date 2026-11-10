@@ -16,6 +16,8 @@ SOURCE = ROOT / "data/stage1/construct_project_parsed.json"
 ASSETS = ROOT / "assets/gfx"
 OUT = ROOT / "romfs/gfx/sprites"
 HEADER = ROOT / "include/minidayz/generated/sprite_catalog.hpp"
+# Small batches avoid Tex3DS atlas solver failures on crowded source sheets.
+MAX_FRAMES_PER_ATLAS = 16
 
 def ident(path: str) -> str:
     stem = Path(path).stem.replace("-", "_").replace(".", "_")
@@ -49,8 +51,8 @@ def main() -> int:
                     raise SystemExit(f"Invalid source frame rectangle: object={oi} animation={anim[0]} frame={fi} rect={key}")
                 by_frame = sheets.setdefault(source_path, OrderedDict())
                 atlas_index = by_frame.setdefault(key, len(by_frame))
-                page = atlas_index // 128
-                page_image = atlas_index % 128
+                page = atlas_index // MAX_FRAMES_PER_ATLAS
+                page_image = atlas_index % MAX_FRAMES_PER_ATLAS
                 records.append((oi, ai, fi, source_path, page, page_image, key[2], key[3],
                                 float(fr[7]) if len(fr)>7 else 0.5,
                                 float(fr[8]) if len(fr)>8 else 0.5))
@@ -112,8 +114,8 @@ def main() -> int:
             source = next(iter(unique.values()))
             stem = ident(source_path)
             frame_items = list(frame_map.keys())
-            for page, first in enumerate(range(0, len(frame_items), 128)):
-                page_items = frame_items[first:first+128]
+            for page, first in enumerate(range(0, len(frame_items), MAX_FRAMES_PER_ATLAS)):
+                page_items = frame_items[first:first+MAX_FRAMES_PER_ATLAS]
                 page_stem = f"{stem}_p{page:03d}"
                 page_dir = temp / page_stem
                 page_dir.mkdir()
