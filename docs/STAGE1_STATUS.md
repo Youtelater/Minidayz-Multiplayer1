@@ -72,6 +72,8 @@ Structural extraction and indexing are complete, but the original game has **not
 
 ## Current verified deep-dives
 
+- `docs/STAGE1_PLAYER_STATS_TRACE.md` records the first source-grounded semantic trace of the `Player stats` event group (UID `7463747062628312`), including its 732 nested event nodes, child `States`/`colchecker` scopes, source variable names, and directly observed expression patterns. It explicitly separates observed constants from unresolved trigger cadence and command semantics.
+
 - `docs/STAGE1_LAYOUT_ANIMATION_AUDIT.md` records the 8 source layouts, their layer counts and key layer ordering, the animation inventory, sprite metadata limits, and the remaining render-mapping work.
 
 - `docs/STAGE1_WORLD_SYSTEM_AUDIT.md` records the verified Map generation event-group scope and the first C++ world-system foundation. This is not yet a complete procedural world port.
