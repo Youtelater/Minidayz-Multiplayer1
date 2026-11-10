@@ -49,7 +49,9 @@ def main() -> int:
                     raise SystemExit(f"Invalid source frame rectangle: object={oi} animation={anim[0]} frame={fi} rect={key}")
                 by_frame = sheets.setdefault(source_path, OrderedDict())
                 atlas_index = by_frame.setdefault(key, len(by_frame))
-                records.append((oi, ai, fi, source_path, atlas_index, key[2], key[3],
+                page = atlas_index // 128
+                page_image = atlas_index % 128
+                records.append((oi, ai, fi, source_path, page, page_image, key[2], key[3],
                                 float(fr[7]) if len(fr)>7 else 0.5,
                                 float(fr[8]) if len(fr)>8 else 0.5))
     OUT.mkdir(parents=True, exist_ok=True)
@@ -63,8 +65,8 @@ def main() -> int:
         f"inline constexpr std::size_t kSpriteAnimationCount={len(animations)};",
         "inline constexpr SpriteFrameDef kSpriteFrames[] = {"
     ]
-    for oi, ai, fi, path, idx, w, h, ox, oy in records:
-        header.append(f'{{{oi},{ai},{fi},{idx},"{ident(path)}",{cf(w)},{cf(h)},{cf(ox)},{cf(oy)}}},')
+    for oi, ai, fi, path, page, idx, w, h, ox, oy in records:
+        header.append(f'{{{oi},{ai},{fi},{idx},"{ident(path)}_p{page:03d}",{cf(w)},{cf(h)},{cf(ox)},{cf(oy)}}},')
     header += ["};", "inline constexpr SpriteAnimationDef kSpriteAnimations[] = {"]
     for oi, ai, name, count, speed, loop in animations:
         safe = name.replace("\\", "\\\\").replace('"', '\\"')
@@ -73,29 +75,34 @@ def main() -> int:
     HEADER.write_text("\n".join(header), encoding="utf-8")
     with tempfile.TemporaryDirectory(prefix="minidayz_frames_") as tmp:
         temp = Path(tmp)
+        from PIL import Image
         for source_path, frame_map in sheets.items():
             source = ASSETS / Path(source_path).name
             if not source.is_file():
                 raise SystemExit(f"Original sprite sheet missing: {source}")
             stem = ident(source_path)
-            destination = OUT / f"{stem}.t3x"
-            # Always rebuild the generated atlas; source assets remain untouched.
-            crop_files = []
-            from PIL import Image
-            with Image.open(source) as image:
-                image.load()
-                for index, (x,y,w,h) in enumerate(frame_map.keys()):
-                    if x < 0 or y < 0 or x+w > image.width or y+h > image.height:
-                        raise SystemExit(f"Frame outside {source.name}: {(x,y,w,h)} vs {image.size}")
-                    crop = temp / f"{stem}_{index:05d}.png"
-                    image.crop((x,y,x+w,y+h)).save(crop, format="PNG")
-                    crop_files.append(str(crop))
-            if not crop_files:
-                continue
-            result = subprocess.run(["tex3ds", "-o", str(destination), *crop_files], check=False)
-            if result.returncode or not destination.is_file():
-                raise SystemExit(f"tex3ds failed building source sprite atlas {source.name}")
-            print(f"{source.name}: {len(crop_files)} exact source frames -> {destination.name}")
+            frame_items = list(frame_map.keys())
+            for page, first in enumerate(range(0, len(frame_items), 128)):
+                page_items = frame_items[first:first+128]
+                page_stem = f"{stem}_p{page:03d}"
+                page_dir = temp / page_stem
+                page_dir.mkdir()
+                entries = []
+                with Image.open(source) as image:
+                    image.load()
+                    for index, (x,y,w,h) in enumerate(page_items):
+                        if x < 0 or y < 0 or x+w > image.width or y+h > image.height:
+                            raise SystemExit(f"Frame outside {source.name}: {(x,y,w,h)} vs {image.size}")
+                        crop = page_dir / f"frame_{index:03d}.png"
+                        image.crop((x,y,x+w,y+h)).save(crop, format="PNG")
+                        entries.append(crop.name)
+                manifest = page_dir / "atlas.t3s"
+                manifest.write_text("--atlas -f rgba -z auto\n" + "\n".join(entries) + "\n", encoding="utf-8")
+                destination = OUT / f"{page_stem}.t3x"
+                result = subprocess.run(["tex3ds", "-i", str(manifest), "-o", str(destination)], cwd=page_dir, check=False)
+                if result.returncode or not destination.is_file():
+                    raise SystemExit(f"tex3ds failed building source sprite atlas {source.name}, page {page}")
+                print(f"{source.name} page {page}: {len(page_items)} exact source frames -> {destination.name}")
     print(f"Generated {len(records)} frame references across {len(sheets)} original sheets.")
     return 0
 
