@@ -72,3 +72,8 @@ This filename match is useful corroboration only. It does not prove that the old
 ## Stage 2 gate
 
 The current `source/main.cpp` is a clean platform entry point, not a gameplay implementation. The structural extraction is in place, but semantic gameplay translation and behavior verification are not complete. Do not begin Stage 2 or sign off Stage 1 until the checklist above is resolved and tested.
+
+
+## Converted WAV coverage cross-check
+
+The target `romfs/wav/` directory contains 295 WAV files. Comparing filenames by extension-independent stem against the 489 audio resource entries in the authoritative Construct export gives 275 unique source audio stems, and **all 275 are present as WAV files**. The WAV directory also contains 20 additional stems not present in that export's audio resource list; retain them as legacy candidates until their use is confirmed. The source export lists multiple M4A/OGG variants for some stems, so the comparison is by stem, not a one-to-one count of source rows. This confirms filename coverage only; playback quality, sample rate, channel layout, event triggers and 3DS decoder compatibility still require verification.
