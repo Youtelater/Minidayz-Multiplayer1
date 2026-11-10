@@ -77,9 +77,16 @@ def main() -> int:
         temp = Path(tmp)
         from PIL import Image
         for source_path, frame_map in sheets.items():
-            source = ASSETS / Path(source_path).name
-            if not source.is_file():
-                raise SystemExit(f"Original sprite sheet missing: {source}")
+            # The original project stores some GUI item sheets under images/
+            # while most world/UI sheets live under assets/gfx/. Resolve by exact
+            # basename only; never substitute a similarly named artwork file.
+            basename = Path(source_path).name
+            candidates = (ASSETS / basename, ROOT / "images" / basename)
+            source = next((candidate for candidate in candidates if candidate.is_file()), None)
+            if source is None:
+                raise SystemExit(
+                    "Original sprite sheet missing from assets/gfx and images: " + basename
+                )
             stem = ident(source_path)
             frame_items = list(frame_map.keys())
             for page, first in enumerate(range(0, len(frame_items), 128)):
