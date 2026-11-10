@@ -80,8 +80,14 @@ DataValidation validate_data() noexcept {
     }
     for (const auto& instance : kInstances) {
         if (instance.object >= kObjectCount) ++result.invalid_object_indices;
-        if (instance.layout >= kLayoutCount) ++result.invalid_layout_indices;
-        if (instance.layer >= kLayerCount) ++result.invalid_layer_indices;
+        if (instance.layout >= kLayoutCount) {
+            ++result.invalid_layout_indices;
+            continue;
+        }
+        // Instance.layer is a layout-local layer index, not an index into
+        // the global 360-entry layer table. Validate the actual pair.
+        if (!find_layer(instance.layout, instance.layer))
+            ++result.invalid_layer_indices;
     }
     for (const auto& animation : kAnimations)
         if (animation.object >= kObjectCount) ++result.invalid_animation_objects;
