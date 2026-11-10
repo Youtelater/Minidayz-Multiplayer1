@@ -107,14 +107,19 @@ $(BUILD)/%.o: %.s
 #-----------------------------------------------------------------
 # GRAPHICS ASSET PIPELINE
 #-----------------------------------------------------------------
+# Convert only new or modified PNGs. find -exec preserves filenames containing spaces.
+# Existing .t3x files are reused on subsequent builds.
 graphics:
 	@mkdir -p $(ROMFS)/gfx
-	@for png in $(GRAPHICS)/*.png; do \
-		if [ -f "$$png" ]; then \
-			fname=$$(basename "$$png"); \
+	@find "$(GRAPHICS)" -maxdepth 1 -type f -name '*.png' -exec sh -c ' \
+		for png do \
+			fname=$(basename "$png"); \
 			fbase=$${fname%.png}; \
-			safebase=$$(echo "$$fbase" | tr '-' '_' | tr '.' '_'); \
-			echo "Building texture sheet: $$safebase.t3x"; \
-			tex3ds -o "$(ROMFS)/gfx/$$safebase.t3x" "$$png" || exit 1; \
-		fi; \
-	done
+			safebase=$(echo "$fbase" | tr '-' '_' | tr '.' '_'); \
+			out="$(ROMFS)/gfx/$safebase.t3x"; \
+			if [ ! -f "$out" ] || [ "$png" -nt "$out" ]; then \
+				echo "Building texture sheet: $safebase.t3x"; \
+				tex3ds -o "$out" "$png" || exit 1; \
+			fi; \
+		done \
+	' sh {} +
