@@ -18,6 +18,8 @@ void PlayerSystem::update_life_state() noexcept {
         state_.health = 0.0f;
         state_.alive = false;
         state_.animation = PlayerAnimation::dead;
+        if (state_.death_reason == PlayerDeathReason::none)
+            state_.death_reason = PlayerDeathReason::other;
     }
 }
 
@@ -130,6 +132,14 @@ PlayerSurvivalResult PlayerSystem::update_survival(
 void PlayerSystem::apply_damage(float amount) noexcept {
     if (!state_.alive || amount <= 0.0f) return;
     state_.health = std::max(0.0f, state_.health - amount);
+    update_life_state();
+}
+
+void PlayerSystem::kill(PlayerDeathReason reason) noexcept {
+    if (!state_.alive) return;
+    state_.death_reason = reason == PlayerDeathReason::none
+        ? PlayerDeathReason::other : reason;
+    state_.health = 0.0f;
     update_life_state();
 }
 
