@@ -37,7 +37,14 @@ struct WorldFeature {
     std::uint32_t source_value{};
 };
 
-struct WorldMapMarker {\n    std::uint8_t cell_x{};\n    std::uint8_t cell_y{};\n    std::uint16_t source_code{};\n    std::uint16_t marker_type{};\n};\n\nstruct WorldPlacement {
+struct WorldMapMarker {
+    std::uint8_t cell_x{};
+    std::uint8_t cell_y{};
+    std::uint16_t source_code{};
+    std::uint16_t marker_type{};
+};
+
+struct WorldPlacement {
     std::uint16_t layer{};
     std::uint16_t object{};
     std::uint64_t source_uid{};
@@ -86,7 +93,8 @@ public:
     bool initialize(std::uint32_t seed, WorldBounds bounds = {}) noexcept;
     bool generate_from_source(std::uint32_t seed, std::string_view layout_name = "Map",
                               std::uint8_t level = 0);
-    bool generate_procedural_grid(std::uint8_t level, std::uint32_t seed);\n    bool build_map_markers(std::uint8_t level, std::uint32_t seed);
+    bool generate_procedural_grid(std::uint8_t level, std::uint32_t seed);
+    bool build_map_markers(std::uint8_t level, std::uint32_t seed);
     bool load_source_layout(std::string_view layout_name);
     bool load_source_bunker_spawns(bool map_fs = false);
     bool load_source_bridge_elements();
@@ -99,7 +107,9 @@ public:
 
     const WorldPlacement* placement(std::size_t index) const noexcept;
     std::size_t placement_count() const noexcept { return placements_.size(); }
-    const WorldGrid& grid() const noexcept { return grid_; }\n    const WorldMapMarker* map_marker(std::size_t index) const noexcept;\n    std::size_t map_marker_count() const noexcept { return map_markers_.size(); }
+    const WorldGrid& grid() const noexcept { return grid_; }
+    const WorldMapMarker* map_marker(std::size_t index) const noexcept;
+    std::size_t map_marker_count() const noexcept { return map_markers_.size(); }
 
     const WorldBounds& bounds() const noexcept { return bounds_; }
     std::uint32_t seed() const noexcept { return seed_; }
@@ -109,6 +119,7 @@ private:
     WorldBounds bounds_{};
     std::uint32_t seed_{};
     WorldGrid grid_{};
+    std::vector<WorldMapMarker> map_markers_{};
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
     bool initialized_{};

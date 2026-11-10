@@ -55,14 +55,12 @@ bool classify_source_layer(const char* name, WorldFeatureKind& kind) noexcept {
     return false;
 }
 
-
 bool is_road_anchor(std::uint16_t code) noexcept {
-    // The source road events explicitly test these five location codes.
     return code == 9 || code == 6 || code == 103 || code == 11 || code == 15;
 }
 
 void generate_source_roads(WorldGrid& grid, std::uint8_t level) {
-    // generate_array_roads_1: each row uses the first two road-anchor cells.
+    // generate_array_roads_1: connect the first two source road anchors in each row.
     for (int row = 0; row < grid.width(); ++row) {
         int first = -1;
         int second = -1;
@@ -80,8 +78,8 @@ void generate_source_roads(WorldGrid& grid, std::uint8_t level) {
     }
 
     const auto add_vertical_roads = [&grid](int y_offset) {
-        // generate_array_roads_2 iterates Map_size_Y for both axes. Reads and
-        // writes beyond the Array's declared bounds are intentionally no-ops.
+        // generate_array_roads_2 loops Map_size_Y on both axes. Array reads
+        // outside the declared dimensions return zero and writes are ignored.
         for (int column = 0; column < grid.height(); ++column) {
             int first = -1;
             int second = -1;
@@ -101,9 +99,7 @@ void generate_source_roads(WorldGrid& grid, std::uint8_t level) {
         }
     };
 
-    // The normal vertical pass covers the complete Map_size_Y range.
     add_vertical_roads(0);
-    // CurrentLevel >= 4 has a second source branch starting at Y + 17.
     if (level >= 4) add_vertical_roads(17);
 }
 
@@ -125,8 +121,9 @@ std::uint16_t source_marker_type(std::uint16_t code, std::uint8_t level,
         {23,24,25,26,27,28,29,40,42,43,44,45,46,47,48,49,60,61,62,63,64};
 
     switch (code) {
-    case 0: return level >= 4 ? choose_marker(kLevelFourMarkers, rng)
-                              : choose_marker(kDefaultMarkers, rng);
+    case 0:
+        return level >= 4 ? choose_marker(kLevelFourMarkers, rng)
+                          : choose_marker(kDefaultMarkers, rng);
     case 9: return choose_marker(kVillageMarkers, rng);
     case 6: return choose_marker(kCityMarkers, rng);
     case 5: return 22;
@@ -242,6 +239,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     bounds_ = bounds;
     seed_ = seed;
     grid_.clear();
+    map_markers_.clear();
     features_.clear();
     placements_.clear();
     initialized_ = true;
@@ -251,7 +249,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
 bool WorldSystem::generate_from_source(std::uint32_t seed, std::string_view name,
                                        std::uint8_t level) {
     if (!initialize(seed) || !load_source_layout(name) ||
-        !generate_procedural_grid(level, seed)) {
+        !generate_procedural_grid(level, seed) || !build_map_markers(level, seed)) {
         reset();
         return false;
     }
@@ -265,15 +263,13 @@ bool WorldSystem::generate_from_source(std::uint32_t seed, std::string_view name
 
 bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t seed) {
     if (!initialized_) return false;
+    map_markers_.clear();
     WorldGenerationProfile profile{};
     if (!source_world_profile(level, profile) ||
         !grid_.resize(profile.map_size_x, profile.map_size_y)) return false;
 
     seed_ = seed;
     std::mt19937 rng(seed);
-    // These are the exact location codes written by generate_array_locations.
-    // Gas stations, shops and roadside cafes are separate source counters and
-    // are not inserted into this map-marker Array.
     const bool placed =
         place_poi_count(grid_, profile.villages, 9, rng) &&
         place_poi_count(grid_, profile.militaries, 5, rng) &&
@@ -285,7 +281,6 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     generate_source_roads(grid_, level);
     return true;
 }
-
 
 bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
     if (!initialized_ || grid_.width() == 0 || grid_.height() == 0) return false;
@@ -302,12 +297,15 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
     }
     return true;
 }
-\nbool WorldSystem::load_source_layout(std::string_view name) {
+
+bool WorldSystem::load_source_layout(std::string_view name) {
     const auto* layout = stage1::find_layout(name);
     if (!layout) return false;
     const auto index = static_cast<std::uint16_t>(layout - stage1::kLayoutTable);
     const auto range = stage1::instances_for_layout(index);
     bounds_ = {layout->width, layout->height};
+    grid_.clear();
+    map_markers_.clear();
     features_.clear();
     placements_.clear();
     placements_.reserve(range.size);
@@ -323,7 +321,6 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
         const auto* layer = stage1::find_layer(index, src.layer);
         WorldFeatureKind kind{};
         if (!layer || !classify_source_layer(layer->name, kind)) continue;
-        // Preserve original coordinates, including negative off-layout art.
         features_.push_back({kind,{src.x,src.y},src.uid,src.object,src.layer,
                              src.object,src.w,src.h,src.angle,0});
     }
@@ -367,6 +364,7 @@ bool WorldSystem::load_source_bridge_elements() {
 
 void WorldSystem::reset() noexcept {
     grid_.clear();
+    map_markers_.clear();
     features_.clear();
     placements_.clear();
     seed_ = 0;
@@ -379,7 +377,11 @@ bool WorldSystem::add_feature(const WorldFeature& f) {
     return true;
 }
 
-const WorldMapMarker* WorldSystem::map_marker(std::size_t i) const noexcept {\n    return i < map_markers_.size() ? &map_markers_[i] : nullptr;\n}\n\nconst WorldFeature* WorldSystem::feature(std::size_t i) const noexcept {
+const WorldMapMarker* WorldSystem::map_marker(std::size_t i) const noexcept {
+    return i < map_markers_.size() ? &map_markers_[i] : nullptr;
+}
+
+const WorldFeature* WorldSystem::feature(std::size_t i) const noexcept {
     return i < features_.size() ? &features_[i] : nullptr;
 }
 
