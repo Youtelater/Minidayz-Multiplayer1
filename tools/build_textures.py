@@ -7,11 +7,12 @@ be misparsed by its image-loading dependencies.
 """
 from __future__ import annotations
 
-import hashlib
 import shutil
 import subprocess
 import sys
 import tempfile
+
+from PIL import Image
 from pathlib import Path
 
 
@@ -56,7 +57,16 @@ def main() -> int:
 
             safe_input = temp_dir / f"input_{index:04d}.png"
             safe_output = temp_dir / f"output_{index:04d}.t3x"
-            shutil.copyfile(source, safe_input)
+            # 3DS hardware textures are limited to 1024x1024. Keep the
+            # original art untouched and downscale only the temporary build
+            # copy when a source sheet exceeds that limit.
+            with Image.open(source) as image:
+                image.load()
+                if image.width > 1024 or image.height > 1024:
+                    image.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+                    image.save(safe_input, format="PNG")
+                else:
+                    shutil.copyfile(source, safe_input)
 
             print(f"Building texture sheet: {destination.name}")
             result = subprocess.run(
