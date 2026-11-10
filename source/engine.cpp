@@ -1,7 +1,7 @@
 #include "minidayz/engine.hpp"\n#include "minidayz/generated/sprite_catalog.hpp"
 
 #include <algorithm>
-#include <cstdio>\n#include <cstring>
+#include <cstdio>\n#include <cstring>\n#include <tuple>
 
 namespace minidayz {
 bool Renderer::initialize() noexcept {
@@ -94,12 +94,14 @@ bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,fl
  C2D_SpriteSetScale(&sprite,sx,sy); C2D_SpriteSetRotation(&sprite,rotation); C2D_SpriteSetDepth(&sprite,depth); return C2D_DrawSprite(&sprite);
 }
 bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float sx,float sy,float depth) noexcept {
- const stage1::SpriteFrameDef* selected=nullptr;
- for(std::size_t i=0;i<stage1::kSpriteFrameCount;++i){
-  const auto& candidate=stage1::kSpriteFrames[i];
-  if(candidate.object==object&&candidate.animation==animation&&candidate.frame==frame){selected=&candidate;break;}
- }
- if(!selected) return false;
+ const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,animation,frame};
+ const auto* begin=stage1::kSpriteFrames;
+ const auto* end=begin+stage1::kSpriteFrameCount;
+ const auto* found=std::lower_bound(begin,end,key,[](const stage1::SpriteFrameDef& item,const auto& wanted){
+  return std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{item.object,item.animation,item.frame}<wanted;
+ });
+ if(found==end||found->object!=object||found->animation!=animation||found->frame!=frame) return false;
+ const auto* selected=found;
  std::size_t slot=kMaxSheets;
  for(std::size_t i=0;i<kMaxSheets;++i){
   if(sprite_cache_[i].sheet[0]&&std::strcmp(sprite_cache_[i].sheet,selected->sheet)==0){slot=i;break;}
