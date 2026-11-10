@@ -62,7 +62,18 @@ void Renderer::load_debug_overlay(std::uint64_t frame,float delta,const InputSta
  C2D_TextOptimize(&debug_text_);
 }
 void Renderer::draw_debug_overlay() noexcept {
- if(debug_ready_) C2D_DrawText(&debug_text_,C2D_AlignLeft,8.0f,8.0f,0.5f,0.48f,0.48f);
+ // Always draw a visible diagnostics panel, even if the system font cannot
+ // be loaded by an emulator. This makes font failure distinguishable from
+ // a screen/target failure.
+ draw_solid_rect(0.0f,0.0f,320.0f,240.0f,C2D_Color32(12,18,22,255));
+ draw_solid_rect(6.0f,6.0f,308.0f,28.0f,C2D_Color32(35,75,58,255));
+ draw_solid_rect(10.0f,42.0f,300.0f,2.0f,C2D_Color32(80,120,100,255));
+ draw_solid_rect(10.0f,54.0f,220.0f,8.0f,C2D_Color32(45,90,70,255));
+ draw_solid_rect(10.0f,72.0f,180.0f,8.0f,C2D_Color32(45,90,70,255));
+ draw_solid_rect(10.0f,90.0f,260.0f,8.0f,C2D_Color32(45,90,70,255));
+ draw_solid_rect(10.0f,108.0f,140.0f,8.0f,C2D_Color32(45,90,70,255));
+ draw_solid_rect(10.0f,126.0f,290.0f,2.0f,C2D_Color32(80,120,100,255));
+ if(debug_ready_) C2D_DrawText(&debug_text_,C2D_AlignLeft,12.0f,12.0f,0.4f,0.38f,0.38f);
 }
 void Renderer::draw_solid_rect(float x,float y,float width,float height,u32 color) noexcept {
  if(width>0.0f&&height>0.0f) C2D_DrawRectSolid(x,y,0.5f,width,height,color);
