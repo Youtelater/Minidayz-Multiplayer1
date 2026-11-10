@@ -24,7 +24,7 @@ def cf(x):
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("source",nargs="?",default="data.deobfuscated.js")
-    ap.add_argument("--out",default="src/generated/stage1")
+    ap.add_argument("--out",default="data/stage1")
     a=ap.parse_args(); root,p=load(a.source); out=Path(a.out);out.mkdir(parents=True,exist_ok=True)
     objects=p[3]; layouts=[];layers=[];instances=[];animations=[];image_refs=[]
     for li,L in enumerate(p[5]):
@@ -94,6 +94,7 @@ def main():
         if rows:
             with (out/fn).open("w",newline="",encoding="utf-8") as f:
                 w=csv.DictWriter(f,fieldnames=list(rows[0]));w.writeheader();w.writerows(rows)
+    header=Path("include/minidayz/generated/stage1_data.hpp"); header.parent.mkdir(parents=True,exist_ok=True)
     h=["#pragma once","#include <cstdint>","#include <cstddef>","namespace minidayz::stage1 {",
        "struct ObjectDef{std::uint16_t index;std::uint8_t type;const char* name;};",
        "struct LayoutDef{const char* name;float width,height;const char* event_sheet;std::uint32_t first,count;};",
