@@ -78,7 +78,7 @@ $(BUILD):
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(ROMFS)/gfx/*.t3x
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh
 
 # Explicitly depend on graphics and ROMFS contents to force rebuilding .3dsx when romfs changes
 $(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh graphics $(ROMFS_FILES)
@@ -112,20 +112,4 @@ graphics:
 	@mkdir -p $(ROMFS)/gfx
 	@python3 tools/build_textures.py "$(GRAPHICS)" "$(ROMFS)/gfx"
 
-#-----------------------------------------------------------------
-# Convert only new or modified PNGs. find -exec preserves filenames containing spaces.
-# Existing .t3x files are reused on subsequent builds.
-graphics:
-	@mkdir -p $(ROMFS)/gfx
-	@find "$(GRAPHICS)" -maxdepth 1 -type f -name '*.png' -exec sh -c ' \
-		for png do \
-			fname=$(basename "$png"); \
-			fbase=$${fname%.png}; \
-			safebase=$(echo "$fbase" | tr '-' '_' | tr '.' '_'); \
-			out="$(ROMFS)/gfx/$safebase.t3x"; \
-			if [ ! -f "$out" ] || [ "$png" -nt "$out" ]; then \
-				echo "Building texture sheet: $safebase.t3x"; \
-				tex3ds -o "$out" "$png" || exit 1; \
-			fi; \
-		done \
-	' sh {} +
+
