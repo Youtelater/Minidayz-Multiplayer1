@@ -98,7 +98,8 @@ public:
     }
 
     void on_exit() noexcept override {
-        (void)write_saved_game(world_seed_, player_.state());
+        if (world_ready_ && !menu_active_)
+            (void)write_saved_game(world_seed_, player_.state());
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
