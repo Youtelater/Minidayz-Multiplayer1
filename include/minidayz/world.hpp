@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string_view>
 #include <vector>
+#include "minidayz/generated/location_template_source.hpp"
 
 namespace minidayz {
 
@@ -93,6 +94,21 @@ struct WorldGenerationProfile {
 };
 
 bool source_world_profile(std::uint8_t level, WorldGenerationProfile& profile) noexcept;
+
+// Source-backed dispatch descriptors extracted from the original generate_location function.
+inline constexpr std::size_t source_location_template_count() noexcept {
+    return stage1::kLocationTemplateSourceCount;
+}
+inline const stage1::LocationTemplateSource* source_location_template(std::size_t index) noexcept {
+    return index < stage1::kLocationTemplateSourceCount ? &stage1::kLocationTemplateSource[index] : nullptr;
+}
+inline const stage1::LocationTemplateSource* find_source_location_template(std::uint16_t tile_code) noexcept {
+    for (const auto& entry : stage1::kLocationTemplateSource) {
+        for (std::uint8_t i = 0; i < entry.tile_code_count; ++i)
+            if (entry.tile_codes[i] == tile_code) return &entry;
+    }
+    return nullptr;
+}
 
 class WorldSystem {
 public:
