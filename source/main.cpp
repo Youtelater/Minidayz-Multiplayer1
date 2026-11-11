@@ -264,37 +264,7 @@ public:
                 }
             }
 
-            for (std::size_t i = 0; i < world_.feature_count(); ++i) {
-                const auto* feature = world_.feature(i);
-                if (!feature) continue;
-                const float px = feature->position.x;
-                const float py = feature->position.y;
-                if (px < camera_x - 24.0f || px > camera_x + view_w + 24.0f ||
-                    py < camera_y - 24.0f || py > camera_y + view_h + 24.0f)
-                    continue;
-                u32 color = C2D_Color32(75, 91, 70, 255);
-                switch (feature->kind) {
-                case minidayz::WorldFeatureKind::Terrain:
-                    color = C2D_Color32(56, 76, 59, 255); break;
-                case minidayz::WorldFeatureKind::Road:
-                    color = C2D_Color32(145, 133, 105, 255); break;
-                case minidayz::WorldFeatureKind::Building:
-                    color = C2D_Color32(184, 166, 130, 255); break;
-                case minidayz::WorldFeatureKind::Bunker:
-                    color = C2D_Color32(196, 88, 66, 255); break;
-                case minidayz::WorldFeatureKind::Bridge:
-                    color = C2D_Color32(225, 190, 83, 255); break;
-                case minidayz::WorldFeatureKind::SpawnPoint:
-                    color = C2D_Color32(85, 190, 210, 255); break;
-                case minidayz::WorldFeatureKind::Obstacle:
-                    color = C2D_Color32(65, 83, 56, 255); break;
-                case minidayz::WorldFeatureKind::Water:
-                    color = C2D_Color32(45, 105, 155, 255); break;
-                }
-                const float fw = feature->width > 0.0f ? feature->width : 3.0f;
-                const float fh = feature->height > 0.0f ? feature->height : 3.0f;
-                renderer.draw_solid_rect(px, py, fw, fh, color);
-            }
+
         }
 
         const bool sprite_drawn = p.alive &&
