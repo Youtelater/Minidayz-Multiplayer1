@@ -490,13 +490,6 @@ bool WorldSystem::generate_source_locations() {
                     layer, source.object, source.action_uid, position.x, position.y,
                     0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0
                 });
-                WorldFeatureKind kind{};
-                if (classify_source_layer(source.layer_name, kind)) {
-                    features_.push_back({
-                        kind, position, source.action_uid, source.tile_code,
-                        layer, source.object, 0.0f, 0.0f, 0.0f, 0
-                    });
-                }
                 ++added;
             }
         }
