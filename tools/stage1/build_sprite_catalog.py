@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "data/stage1/construct_project_parsed.json"
 ASSETS = ROOT / "assets/gfx"
-OUT = ROOT / "romfs/gfx/sprites"
+OUT = ROOT / "romfs/gfx"
 HEADER = ROOT / "include/minidayz/generated/sprite_catalog.hpp"
 # Small batches avoid Tex3DS atlas solver failures on crowded source sheets.
 MAX_FRAMES_PER_ATLAS = 16
@@ -170,7 +170,7 @@ def main() -> int:
                 stamp.write_text(fingerprint + "\n", encoding="ascii")
                 if result.returncode or not destination.is_file():
                     raise SystemExit(f"tex3ds failed building source sprite atlas {source.name}, page {page}")
-                print(f"{source.name} page {page}: {len(page_items)} exact source frames -> {destination.name}")
+                print(f"{source.name} page {page}: {len(page_items)} exact source frames -> romfs/gfx/{destination.name}")
     print(f"Generated {len(records)} frame references across {len(sheets)} original sheets.")
     return 0
 
