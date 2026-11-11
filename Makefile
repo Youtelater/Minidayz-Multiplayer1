@@ -18,7 +18,6 @@ DATA		:= data
 PORTLIBS	:= /opt/devkitpro/portlibs/3ds
 ROMFS		:= romfs
 INCLUDES	:= include source /opt/devkitpro/libctru/include $(PORTLIBS)/include
-GRAPHICS	:= assets/gfx
 
 #-----------------------------------------------------------------
 # SOURCE & OBJECT MAPPING (Dynamic & Reliable)
@@ -71,7 +70,7 @@ ROMFS_FILES := $(shell find "$(ROMFS)" -type f -printf '%p\n' 2>/dev/null | sed 
 #-----------------------------------------------------------------
 # MAIN RULES
 #-----------------------------------------------------------------
-all: graphics $(BUILD) $(TARGET).3dsx
+all: stage1-assets $(BUILD) $(TARGET).3dsx
 
 $(BUILD):
 	@mkdir -p $(BUILD)
@@ -81,7 +80,7 @@ clean:
 	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh
 
 # Explicitly depend on graphics and ROMFS contents to force rebuilding .3dsx when romfs changes
-$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh graphics $(ROMFS_FILES)
+$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh stage1-assets $(ROMFS_FILES)
 	@echo building 3dsx with romfs ...
 	@3dsxtool $(TARGET).elf $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS)
 
@@ -105,14 +104,18 @@ $(BUILD)/%.o: %.s
 	@$(CC) -c $(ASFLAGS) $< -o $@
 
 #-----------------------------------------------------------------
-# GRAPHICS ASSET PIPELINE
+# STAGE 1 SPRITE CATALOG / FRAME ATLAS GENERATION
 #-----------------------------------------------------------------
-# Python handles arbitrary original filenames safely and converts only changed PNGs.
-graphics:
+# Existing full-sheet .t3x files in romfs/gfx are packaged as-is.
+# The engine also needs cropped, frame-indexed atlases in romfs/gfx/sprites;
+# build_sprite_catalog.py creates those atlases and the generated C++ lookup
+# header from the original Construct frame rectangles.
+# Do not run tools/build_textures.py here: bulk PNG -> T3X conversion is no
+# longer part of the normal build.
+stage1-assets:
 	@mkdir -p $(ROMFS)/gfx
 	@python3 tools/stage1/reassemble_snapshot.py
 	@python3 tools/stage1/extract_construct.py data/stage1/construct_project_parsed.json --out data/stage1
 	@python3 tools/stage1/build_sprite_catalog.py
-	@python3 tools/build_textures.py "$(GRAPHICS)" "$(ROMFS)/gfx"
 
 
