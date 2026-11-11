@@ -155,6 +155,7 @@ private:
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
     std::size_t source_location_spawn_count_{};
+    bool generate_source_locations();
     bool initialized_{};
 };
 
