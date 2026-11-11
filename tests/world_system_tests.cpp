@@ -77,7 +77,8 @@ void test_original_map_layout_and_descriptors() {
     assert(world.placement_count() >= 1250);
     assert(world.source_location_spawn_count() > 0);
     assert(world.placement_count() == 1250 + world.source_location_spawn_count());
-    assert(world.feature_count(minidayz::WorldFeatureKind::Building) == 103);
+    // Includes the 103 authored Map-layout buildings plus buildings instantiated by generated POIs.
+    assert(world.feature_count(minidayz::WorldFeatureKind::Building) >= 103);
     assert(world.feature_count(minidayz::WorldFeatureKind::SpawnPoint) == 78);
     assert(world.feature_count(minidayz::WorldFeatureKind::Bunker) == 136);
     assert(world.feature_count(minidayz::WorldFeatureKind::Bridge) == 59);
