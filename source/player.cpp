@@ -53,7 +53,7 @@ void PlayerSystem::update_life_state() noexcept {
 }
 
 std::uint16_t PlayerSystem::source_animation_index() const noexcept {
-    if (!state_.alive || state_.animation == PlayerAnimation::dead) return 12;
+    if (!state_.alive || state_.animation == PlayerAnimation::dead) return 0;
     const std::uint16_t direction = static_cast<std::uint16_t>(facing_offset(state_.facing));
     if (state_.animation == PlayerAnimation::idle) return direction;
     // The extracted player actor has idle_* and run_* animations but no
