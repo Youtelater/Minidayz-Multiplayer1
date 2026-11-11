@@ -1,6 +1,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
+#include "minidayz/generated/location_spawn_source.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -323,6 +324,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     map_markers_.clear();
     features_.clear();
     placements_.clear();
+    source_location_spawn_count_ = 0;
     initialized_ = true;
     return true;
 }
@@ -335,7 +337,8 @@ bool WorldSystem::generate_from_source(std::uint32_t seed, std::string_view name
         return false;
     }
     if (name == "Map" &&
-        (!load_source_bunker_spawns(false) || !load_source_bridge_elements())) {
+        (!generate_source_locations() || !load_source_bunker_spawns(false) ||
+         !load_source_bridge_elements())) {
         reset();
         return false;
     }
@@ -451,6 +454,57 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     return true;
 }
 
+
+bool WorldSystem::generate_source_locations() {
+    if (!initialized_ || grid_.width() == 0 || grid_.height() == 0) return false;
+    const auto* layout = stage1::find_layout("Map");
+    if (!layout) return false;
+    const auto layout_index = static_cast<std::uint16_t>(layout - stage1::kLayoutTable);
+
+    // The original generate_location event creates its objects at hotspotX/Y
+    // plus the exact offsets extracted from each Construct System Create action.
+    // The map-generation grid spans the source Map layout, so each cell's
+    // center is the location hotspot used for that generated POI.
+    const float cell_width = bounds_.width / static_cast<float>(grid_.width());
+    const float cell_height = bounds_.height / static_cast<float>(grid_.height());
+    std::size_t added = 0;
+    for (int y = 0; y < grid_.height(); ++y) {
+        for (int x = 0; x < grid_.width(); ++x) {
+            const std::uint16_t code = grid_.at(x, y);
+            if (code == 0) continue;
+            const WorldPoint hotspot{
+                (static_cast<float>(x) + 0.5f) * cell_width,
+                (static_cast<float>(y) + 0.5f) * cell_height
+            };
+            for (const auto& source : stage1::kLocationSpawnSource) {
+                if (source.tile_code != code) continue;
+                const std::uint16_t layer =
+                    find_layer_index_by_name(layout_index, source.layer_name);
+                if (layer == 0xffff) return false;
+                const WorldPoint position{
+                    hotspot.x + static_cast<float>(source.offset_x),
+                    hotspot.y + static_cast<float>(source.offset_y)
+                };
+                if (!bounds_.contains(position)) continue;
+                placements_.push_back({
+                    layer, source.object, source.action_uid, position.x, position.y,
+                    0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0
+                });
+                WorldFeatureKind kind{};
+                if (classify_source_layer(source.layer_name, kind)) {
+                    features_.push_back({
+                        kind, position, source.action_uid, source.tile_code,
+                        layer, source.object, 0.0f, 0.0f, 0.0f, 0
+                    });
+                }
+                ++added;
+            }
+        }
+    }
+    source_location_spawn_count_ = added;
+    return true;
+}
+
 bool WorldSystem::load_source_bunker_spawns(bool map_fs) {
     if (!initialized_) return false;
     features_.erase(std::remove_if(features_.begin(), features_.end(),
@@ -490,6 +544,7 @@ void WorldSystem::reset() noexcept {
     map_markers_.clear();
     features_.clear();
     placements_.clear();
+    source_location_spawn_count_ = 0;
     seed_ = 0;
     initialized_ = false;
 }
