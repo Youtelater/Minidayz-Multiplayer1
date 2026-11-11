@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <random>
 #include <string_view>
 #include <vector>
 #include "minidayz/generated/location_template_source.hpp"
@@ -145,6 +146,9 @@ public:
 private:
     WorldBounds bounds_{};
     std::uint32_t seed_{};
+    // One continuous random stream for the original generation pipeline:
+    // POI placement consumes it before map-marker selection.
+    std::mt19937 rng_{};
     WorldGrid grid_{};
     std::vector<WorldMapMarker> map_markers_{};
     std::vector<WorldFeature> features_{};
