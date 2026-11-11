@@ -4,7 +4,7 @@
 namespace minidayz::stage1 {
 struct LocationTemplateSource {
     std::uint64_t event_uid;
-    std::uint16_t tile_codes[24];
+    std::uint16_t tile_codes[25];
     std::uint8_t tile_code_count;
     std::uint16_t event_nodes;
     std::uint16_t array_write_actions;
