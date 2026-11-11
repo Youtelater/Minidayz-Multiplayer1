@@ -59,8 +59,14 @@ bool write_saved_game(std::uint32_t seed,
         (void)std::remove(kSaveTempPath);
         return false;
     }
-    (void)std::remove(kSavePath);
-    return std::rename(kSaveTempPath, kSavePath) == 0;
+    // POSIX rename replaces an existing destination atomically when both
+    // paths are on the same filesystem. Do not remove the last good save first:
+    // a power loss or failed rename must leave Continue usable.
+    if (std::rename(kSaveTempPath, kSavePath) != 0) {
+        (void)std::remove(kSaveTempPath);
+        return false;
+    }
+    return true;
 }
 
 std::uint32_t make_new_world_seed() noexcept {
