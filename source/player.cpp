@@ -41,7 +41,7 @@ float PlayerSystem::clamp(float value, float low, float high) noexcept {
 }
 
 void PlayerSystem::update_life_state() noexcept {
-    if (state_.health <= 0.0f) {
+    if (!state_.alive || state_.health <= 0.0f) {
         state_.health = 0.0f;
         state_.alive = false;
         state_.animation = PlayerAnimation::dead;
@@ -89,8 +89,8 @@ PlayerMoveResult PlayerSystem::update_movement(
         return result;
 
     const float dt = clamp(delta_seconds, 0.0f, 0.05f);
-    float ix = clamp(input.move_x, -1.0f, 1.0f);
-    float iy = clamp(input.move_y, -1.0f, 1.0f);
+    float ix = clamp(finite_or_zero(input.move_x), -1.0f, 1.0f);
+    float iy = clamp(finite_or_zero(input.move_y), -1.0f, 1.0f);
     const float magnitude = std::sqrt(ix * ix + iy * iy);
     if (magnitude > 1.0f) {
         ix /= magnitude;
