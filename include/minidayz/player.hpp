@@ -8,8 +8,8 @@ enum class PlayerFacing : std::uint8_t { down, up, left, right };
 enum class PlayerAnimation : std::uint8_t { idle, walk, run, dead };
 enum class PlayerDeathReason : std::uint8_t { none, hunger, thirst, cold, other };
 
-// Object 33 is the player actor in the extracted animation inventory.
-inline constexpr std::uint16_t kSourcePlayerObject = 33;
+// Object 679 is the default player skin (player_skin_def_2) in the extracted inventory.
+inline constexpr std::uint16_t kSourcePlayerObject = 679;
 
 struct PlayerState {
     float x{};
@@ -93,7 +93,7 @@ public:
         float delta_seconds, const PlayerRules& rules) noexcept;
 
     // Maps the state/facing to the original player object's animation order:
-    // idle_* = 0..3, run_* = 4..7, on_ground = 12.
+    // idle_* = 0..3 and run_* = 4..7 for the default skin.
     std::uint16_t source_animation_index() const noexcept;
     std::uint32_t source_animation_frame() const noexcept {
         return state_.animation_frame;
