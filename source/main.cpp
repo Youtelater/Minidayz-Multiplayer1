@@ -188,9 +188,11 @@ public:
         // Render the original player actor animation (object 33). Fall back
         // to a diagnostic marker if its generated atlas is unavailable.
         const auto& p = player_.state();
-        if (!renderer.draw_source_sprite(minidayz::kSourcePlayerObject,
+        const bool sprite_drawn = p.alive &&
+            renderer.draw_source_sprite(minidayz::kSourcePlayerObject,
                 player_.source_animation_index(), player_.source_animation_frame(),
-                p.x, p.y, 0.55f, 0.55f)) {
+                p.x, p.y, 0.55f, 0.55f);
+        if (!sprite_drawn) {
             renderer.draw_solid_rect(p.x - 8.0f, p.y - 5.0f, 16.0f, 18.0f,
                                      C2D_Color32(18, 20, 18, 255));
             renderer.draw_solid_rect(p.x - 6.0f, p.y - 10.0f, 12.0f, 12.0f,
