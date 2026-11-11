@@ -119,6 +119,7 @@ stage1-assets:
 	@mkdir -p $(ROMFS)/gfx
 	@python3 tools/stage1/reassemble_snapshot.py
 	@python3 tools/stage1/extract_construct.py data/stage1/construct_project_parsed.json --out data/stage1
+	@python3 tools/stage1/extract_location_templates.py
 	@python3 tools/stage1/audit_event_groups.py data/stage1/construct_project_parsed.json --out data/stage1/event_groups.csv
 	@python3 tools/stage1/validate_stage1.py
 	@python3 tools/stage1/build_sprite_catalog.py
