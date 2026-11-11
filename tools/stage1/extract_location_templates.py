@@ -73,13 +73,13 @@ def main():
         raise SystemExit(f"Expected 62 original location branches, found {len(rows)}")
     lines = ["#pragma once", "#include <cstddef>", "#include <cstdint>",
              "namespace minidayz::stage1 {",
-             "struct LocationTemplateSource { std::uint64_t event_uid; std::uint16_t tile_codes[24]; std::uint8_t tile_code_count; std::uint16_t event_nodes; std::uint16_t array_write_actions; std::uint8_t system_create_actions; };",
+             "struct LocationTemplateSource { std::uint64_t event_uid; std::uint16_t tile_codes[25]; std::uint8_t tile_code_count; std::uint16_t event_nodes; std::uint16_t array_write_actions; std::uint8_t system_create_actions; };",
              f"inline constexpr std::size_t kLocationTemplateSourceCount = {len(rows)};",
              "inline constexpr LocationTemplateSource kLocationTemplateSource[] = {"]
     for uid, codes, nodes, writes, creates in rows:
-        if len(codes) > 24:
-            raise SystemExit(f"Branch {uid} has {len(codes)} tile codes; descriptor capacity is 24")
-        padded = codes + [0] * (24 - len(codes))
+        if len(codes) > 25:
+            raise SystemExit(f"Branch {uid} has {len(codes)} tile codes; descriptor capacity is 25")
+        padded = codes + [0] * (25 - len(codes))
         lines.append(f"    {{{uid}ULL, {{{', '.join(map(str, padded))}}}, {len(codes)}, {nodes}, {writes}, {creates}}},")
     lines += ["};", "} // namespace minidayz::stage1", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
