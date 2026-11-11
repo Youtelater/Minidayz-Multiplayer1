@@ -112,6 +112,7 @@ int main() {
     PlayerInput invalid{};
     invalid.move_x = std::numeric_limits<float>::quiet_NaN();
     edge_player.update_movement(invalid, 0.05f, edge_rules);
+    assert(edge_player.state().x == 1.0f);
     assert(std::isfinite(edge_player.state().x));
     assert(std::isfinite(edge_player.state().y));
 
