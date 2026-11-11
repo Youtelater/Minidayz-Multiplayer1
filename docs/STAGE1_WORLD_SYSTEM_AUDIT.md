@@ -51,4 +51,11 @@
 
 **Runtime preview integration (2026-11-10):** `source/main.cpp` now initializes `WorldSystem` from the original `Map` layout and renders a scaled diagnostic overview of the indexed source features plus an inset of the generated POI/road grid. The preview uses colored rectangles as diagnostics, not original game artwork; the player remains a screen-space preview actor and is not yet connected to world coordinates or world collision.
 
+## Original location-template source index (2026-11-11)
+
+- Added `tools/stage1/extract_location_templates.py`. It locates the original `generate_location` function by its source event UID in the reassembled Construct export, then verifies and indexes all 62 direct template branches.
+- Added generated `include/minidayz/generated/location_template_source.hpp`, preserving each branch's original event UID, exact tile-code condition(s), nested event-node count, Array write-action count, and System create-action count.
+- Exposed the source descriptors through `source_location_template_count()`, `source_location_template()`, and `find_source_location_template()` in `world.hpp`. The Makefile regenerates this index from the original snapshot before compilation.
+- This is a source-derived dispatch index, not a completed location-template interpreter. The 5,533 Array writes and their Construct expressions still need command-semantic decoding; the native world does not yet instantiate all 62 templates. No invented building coordinates or guessed Array behavior were added.
+
 **Status:** source-backed grid/POI placement, road-code generation, bunker descriptors, bridge descriptors, static layout indexing, and diagnostic runtime overview are implemented in C++. Exact POI cell-to-world placement, full building-template expansion, original-art rendering, bunker/bridge collision and behavior, dynamic spawn behavior, world/player/camera integration, and emulator verification remain. A successful CI build verifies compilation only, not gameplay equivalence.
