@@ -6,9 +6,10 @@ namespace minidayz {
 
 enum class PlayerFacing : std::uint8_t { down, up, left, right };
 enum class PlayerAnimation : std::uint8_t { idle, walk, run, dead };
-
-// These labels are present in the original Player stats event tree.
 enum class PlayerDeathReason : std::uint8_t { none, hunger, thirst, cold, other };
+
+// Object 33 is the player actor in the extracted animation inventory.
+inline constexpr std::uint16_t kSourcePlayerObject = 33;
 
 struct PlayerState {
     float x{};
@@ -21,22 +22,20 @@ struct PlayerState {
     float infection{};
     PlayerFacing facing{PlayerFacing::down};
     PlayerAnimation animation{PlayerAnimation::idle};
+    std::uint32_t animation_frame{};
+    float animation_elapsed{};
     bool alive{true};
     PlayerDeathReason death_reason{PlayerDeathReason::none};
 };
 
-struct PlayerInput {
-    float move_x{};
-    float move_y{};
-    bool run{};
-};
-
-// All numeric gameplay values are supplied by the source-equivalence layer.
-// Zero defaults deliberately avoid inventing Mini DAYZ values while ACE
-// command semantics and event timing are still being resolved.
+// Numeric movement/survival tuning is injected from source-equivalent rules.
+// The preview scene may use clearly labeled temporary movement values, but
+// source survival rates must remain unset until their event cadence is traced.
 struct PlayerRules {
     float walk_speed{};
     float run_speed{};
+    float collision_half_width{};
+    float collision_half_height{};
     float max_health{};
     float max_hunger{};
     float max_thirst{};
@@ -52,6 +51,12 @@ struct PlayerRules {
     float temperature_change_per_second{};
     float min_temperature{};
     float max_temperature{};
+};
+
+struct PlayerInput {
+    float move_x{};
+    float move_y{};
+    bool run{};
 };
 
 using PlayerCollisionQuery = bool (*)(void* context, float x, float y) noexcept;
@@ -84,13 +89,17 @@ public:
         PlayerCollisionQuery is_blocked = nullptr,
         void* collision_context = nullptr) noexcept;
 
-    // Advances passive survival effects. Rates and caps are intentionally
-    // injected from the audited game rules; this class does not guess them.
     PlayerSurvivalResult update_survival(
         float delta_seconds, const PlayerRules& rules) noexcept;
 
+    // Maps the state/facing to the original player object's animation order:
+    // idle_* = 0..3, run_* = 4..7, on_ground = 12.
+    std::uint16_t source_animation_index() const noexcept;
+    std::uint32_t source_animation_frame() const noexcept {
+        return state_.animation_frame;
+    }
+
     void apply_damage(float amount) noexcept;
-    // Applies damage from a source event that has an explicit death-log cause.
     void apply_damage(float amount, PlayerDeathReason cause) noexcept;
     void kill(PlayerDeathReason reason) noexcept;
     void heal(float amount, float max_health) noexcept;
@@ -104,6 +113,7 @@ public:
 private:
     static float clamp(float value, float low, float high) noexcept;
     void update_life_state() noexcept;
+    void advance_animation(float delta_seconds) noexcept;
     PlayerState state_{};
 };
 
