@@ -497,6 +497,20 @@ bool WorldSystem::generate_source_locations() {
                     layer, source.object, source.action_uid, position.x, position.y,
                     0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0
                 });
+
+                // Generated POI templates are real map objects too. Feed their
+                // source layers into the same collision-feature list as objects
+                // already present in the Map layout; otherwise buildings and
+                // environmental blockers spawned by a village/city are visible
+                // but completely non-solid to the player.
+                WorldFeatureKind kind{};
+                if (const auto* source_layer = stage1::find_layer(layout_index, layer);
+                    source_layer && classify_source_layer(source_layer->name, kind)) {
+                    features_.push_back({
+                        kind, position, source.action_uid, source.object, layer,
+                        source.object, 0.0f, 0.0f, 0.0f, 0
+                    });
+                }
                 ++added;
             }
         }
