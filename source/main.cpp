@@ -8,6 +8,21 @@
 
 namespace {
 
+// Construct 2 creates a fresh random world on a new game; it does not use
+// SEED_RUN as a numeric world seed. Use the 3DS clock and hardware tick as
+// fresh entropy for this native session. This is a per-run seed, not a claim
+// that the original browser Math.random() sequence is reproducible.
+std::uint32_t make_new_world_seed() noexcept {
+    const std::uint64_t wall = static_cast<std::uint64_t>(osGetTime());
+    const std::uint64_t ticks = static_cast<std::uint64_t>(svcGetSystemTick());
+    std::uint64_t value = wall ^ (ticks + 0x9e3779b97f4a7c15ULL);
+    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
+    value ^= value >> 31;
+    const std::uint32_t seed = static_cast<std::uint32_t>(value ^ (value >> 32));
+    return seed != 0 ? seed : 0x6d696e69u;
+}
+
 class WorldPreviewScene final : public minidayz::Scene {
 public:
     WorldPreviewScene() noexcept
@@ -26,7 +41,7 @@ public:
         preview_rules_.max_thirst = 100.0f;
         preview_rules_.min_temperature = -10.0f;
         preview_rules_.max_temperature = 10.0f;
-        world_ready_ = world_.generate_from_source(0x4d444159u, "Map", 0);
+        world_ready_ = world_.generate_from_source(make_new_world_seed(), "Map", 0);
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
