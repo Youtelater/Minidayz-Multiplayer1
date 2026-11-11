@@ -14,8 +14,18 @@ public:
         : player_(make_initial_state()) {
         // Preview-only movement tuning. Source-equivalent values still need
         // to be supplied by the gameplay rules port.
+        // Temporary preview movement tuning only. Original source movement
+        // values are not guessed; they will replace these when the movement
+        // event/ACE trace is complete.
         preview_rules_.walk_speed = 72.0f;
         preview_rules_.run_speed = 108.0f;
+        preview_rules_.collision_half_width = 5.0f;
+        preview_rules_.collision_half_height = 7.0f;
+        preview_rules_.max_health = 100.0f;
+        preview_rules_.max_hunger = 100.0f;
+        preview_rules_.max_thirst = 100.0f;
+        preview_rules_.min_temperature = -10.0f;
+        preview_rules_.max_temperature = 10.0f;
         world_ready_ = world_.generate_from_source(0x4d444159u, "Map", 0);
     }
 
@@ -23,7 +33,11 @@ public:
         minidayz::PlayerInput movement{};
         movement.move_x = static_cast<float>(input.circle.dx) / 156.0f;
         movement.move_y = -static_cast<float>(input.circle.dy) / 156.0f;
-        movement.run = false;
+        if (input.held & KEY_DLEFT)  movement.move_x -= 1.0f;
+        if (input.held & KEY_DRIGHT) movement.move_x += 1.0f;
+        if (input.held & KEY_DUP)    movement.move_y -= 1.0f;
+        if (input.held & KEY_DDOWN)  movement.move_y += 1.0f;
+        movement.run = (input.held & KEY_B) != 0;
         if (input.touching) {
             const int tx = input.touch.px;
             const int ty = input.touch.py;
@@ -37,12 +51,36 @@ public:
         }
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
+        // Source-derived survival rates are still zero until their original
+        // event cadence is resolved; the update path is now live and ready.
+        player_.update_survival(dt, preview_rules_);
     }
 
     void render_bottom(minidayz::Renderer& renderer) noexcept override {
         // The lower 3DS screen is the touch inventory, not a debug panel.
         renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f, C2D_Color32(20, 25, 23, 255));
         renderer.draw_solid_rect(6.0f, 6.0f, 308.0f, 25.0f, C2D_Color32(54, 68, 55, 255));
+        // Compact live player status meters. Values are normalized against
+        // the preview caps above; exact source caps/rates remain under audit.
+        const auto meter = [&](float x, float value, float maximum, u32 color) {
+            renderer.draw_solid_rect(x, 15.0f, 68.0f, 8.0f,
+                                     C2D_Color32(8, 12, 10, 255));
+            const float ratio = maximum > 0.0f
+                ? std::max(0.0f, std::min(1.0f, value / maximum)) : 0.0f;
+            renderer.draw_solid_rect(x + 1.0f, 16.0f, 66.0f * ratio, 6.0f, color);
+        };
+        const auto& stats = player_.state();
+        meter(10.0f, stats.health, preview_rules_.max_health,
+              C2D_Color32(190, 65, 55, 255));
+        meter(88.0f, stats.hunger, preview_rules_.max_hunger,
+              C2D_Color32(204, 151, 65, 255));
+        meter(166.0f, stats.thirst, preview_rules_.max_thirst,
+              C2D_Color32(65, 145, 205, 255));
+        const float temperature_ratio = (stats.temperature -
+            preview_rules_.min_temperature) /
+            (preview_rules_.max_temperature - preview_rules_.min_temperature);
+        meter(244.0f, temperature_ratio * 100.0f, 100.0f,
+              C2D_Color32(75, 180, 165, 255));
         // Equipment / quick-access row. Empty slots stay empty until the
         // item and equipment systems are connected to source definitions.
         for (int i = 0; i < 4; ++i) {
@@ -147,18 +185,20 @@ public:
                                      C2D_Color32(190, 55, 55, 255));
         }
 
-        // This actor remains a controllable preview marker, not yet positioned
-        // in source-world coordinates.
+        // Render the original player actor animation (object 33). Fall back
+        // to a diagnostic marker if its generated atlas is unavailable.
         const auto& p = player_.state();
-        renderer.draw_solid_rect(p.x - 8.0f, p.y - 5.0f, 16.0f, 18.0f,
-                                 C2D_Color32(18, 20, 18, 255));
-        renderer.draw_solid_rect(p.x - 6.0f, p.y - 10.0f, 12.0f, 12.0f,
-                                 C2D_Color32(205, 184, 139, 255));
-        renderer.draw_solid_rect(p.x - 7.0f, p.y + 2.0f, 14.0f, 12.0f,
-                                 p.alive ? C2D_Color32(190, 126, 65, 255)
-                                         : C2D_Color32(130, 45, 45, 255));
-        renderer.draw_solid_rect(p.x - 2.0f, p.y + 13.0f, 4.0f, 3.0f,
-                                 C2D_Color32(235, 215, 150, 255));
+        if (!renderer.draw_source_sprite(minidayz::kSourcePlayerObject,
+                player_.source_animation_index(), player_.source_animation_frame(),
+                p.x, p.y, 0.55f, 0.55f)) {
+            renderer.draw_solid_rect(p.x - 8.0f, p.y - 5.0f, 16.0f, 18.0f,
+                                     C2D_Color32(18, 20, 18, 255));
+            renderer.draw_solid_rect(p.x - 6.0f, p.y - 10.0f, 12.0f, 12.0f,
+                                     C2D_Color32(205, 184, 139, 255));
+            renderer.draw_solid_rect(p.x - 7.0f, p.y + 2.0f, 14.0f, 12.0f,
+                                     p.alive ? C2D_Color32(190, 126, 65, 255)
+                                             : C2D_Color32(130, 45, 45, 255));
+        }
     }
 
 private:
@@ -167,6 +207,8 @@ private:
         state.x = 160.0f;
         state.y = 120.0f;
         state.health = 100.0f;
+        state.hunger = 100.0f;
+        state.thirst = 100.0f;
         state.alive = true;
         return state;
     }
