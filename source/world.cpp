@@ -387,15 +387,15 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
         const int second_min_y = profile.second_half_start_y;
         const int second_max_y = static_cast<int>(profile.grid_height) - 1;
         placed =
-            place_poi_count(grid_, profile.second_half_villages, 9, rng, second_min_y, second_max_y) &&
-            place_poi_count(grid_, profile.second_half_militaries, 5, rng, second_min_y, second_max_y) &&
-            place_poi_count(grid_, profile.second_half_cities, 6, rng, second_min_y, second_max_y) &&
-            place_poi_count(grid_, profile.second_half_hospitals, 11, rng, second_min_y, second_max_y) &&
-            place_poi_count(grid_, profile.second_half_firestations, 15, rng, second_min_y, second_max_y) &&
-            place_poi_count(grid_, profile.second_half_chaoshi, 103, rng, second_min_y, second_max_y) &&
-            place_gas_station_count(grid_, second_gas_stations, rng, second_min_y, second_max_y) &&
-            place_poi_count(grid_, second_lite_shops, 51, rng, second_min_y, second_max_y) &&
-            place_poi_count(grid_, second_roadside_cafes, 50, rng, second_min_y, second_max_y);
+            place_poi_count(grid_, profile.second_half_villages, 9, rng_, second_min_y, second_max_y) &&
+            place_poi_count(grid_, profile.second_half_militaries, 5, rng_, second_min_y, second_max_y) &&
+            place_poi_count(grid_, profile.second_half_cities, 6, rng_, second_min_y, second_max_y) &&
+            place_poi_count(grid_, profile.second_half_hospitals, 11, rng_, second_min_y, second_max_y) &&
+            place_poi_count(grid_, profile.second_half_firestations, 15, rng_, second_min_y, second_max_y) &&
+            place_poi_count(grid_, profile.second_half_chaoshi, 103, rng_, second_min_y, second_max_y) &&
+            place_gas_station_count(grid_, second_gas_stations, rng_, second_min_y, second_max_y) &&
+            place_poi_count(grid_, second_lite_shops, 51, rng_, second_min_y, second_max_y) &&
+            place_poi_count(grid_, second_roadside_cafes, 50, rng_, second_min_y, second_max_y);
         if (!placed) return false;
     }
 
