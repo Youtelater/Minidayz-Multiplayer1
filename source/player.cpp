@@ -151,7 +151,13 @@ PlayerMoveResult PlayerSystem::update_movement(
         result.blocked_y = true;
     }
 
-    advance_animation(dt);
+    if (result.dx == 0.0f && result.dy == 0.0f) {
+        state_.animation = PlayerAnimation::idle;
+        state_.animation_frame = 0;
+        state_.animation_elapsed = 0.0f;
+    } else {
+        advance_animation(dt);
+    }
     return result;
 }
 
@@ -166,12 +172,17 @@ PlayerSurvivalResult PlayerSystem::update_survival(
     const float old_hunger = state_.hunger;
     const float old_thirst = state_.thirst;
 
-    state_.hunger = clamp(state_.hunger -
-        std::max(0.0f, finite_or_zero(rules.hunger_drain_per_second)) * dt,
-        0.0f, std::max(0.0f, finite_or_zero(rules.max_hunger)));
-    state_.thirst = clamp(state_.thirst -
-        std::max(0.0f, finite_or_zero(rules.thirst_drain_per_second)) * dt,
-        0.0f, std::max(0.0f, finite_or_zero(rules.max_thirst)));
+    const float hunger_after_drain = std::max(0.0f, state_.hunger -
+        std::max(0.0f, finite_or_zero(rules.hunger_drain_per_second)) * dt);
+    const float thirst_after_drain = std::max(0.0f, state_.thirst -
+        std::max(0.0f, finite_or_zero(rules.thirst_drain_per_second)) * dt);
+    const float hunger_cap = std::max(0.0f, finite_or_zero(rules.max_hunger));
+    const float thirst_cap = std::max(0.0f, finite_or_zero(rules.max_thirst));
+    // A zero cap means "not configured", not an instruction to erase the stat.
+    state_.hunger = hunger_cap > 0.0f
+        ? std::min(hunger_after_drain, hunger_cap) : hunger_after_drain;
+    state_.thirst = thirst_cap > 0.0f
+        ? std::min(thirst_after_drain, thirst_cap) : thirst_after_drain;
 
     if (state_.hunger <= 0.0f) {
         const float damage =
