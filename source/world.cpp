@@ -205,13 +205,13 @@ bool place_gas_station_count(WorldGrid& grid, std::uint8_t count,
             const int y = ydist(rng) - 1;
             if (!grid.has_empty_3x3(x, y)) continue;
             // Validate the full footprint before writing any part of it.
-            if (x <= 0 || x + 1 >= grid.width() ||
-                y <= 0 || y + 1 >= grid.height()) continue;
-            grid.set(x, y, 99);
-            grid.set(x, y - 1, 100);
-            grid.set(x, y + 1, 100);
-            grid.set(x - 1, y, 101);
-            grid.set(x + 1, y, 101);
+            // Construct Array writes outside its dimensions are ignored;
+            // edge locations remain valid when the 3x3 emptiness test passes.
+            (void)grid.set(x, y, 99);
+            (void)grid.set(x, y - 1, 100);
+            (void)grid.set(x, y + 1, 100);
+            (void)grid.set(x - 1, y, 101);
+            (void)grid.set(x + 1, y, 101);
             found = true;
             break;
         }
@@ -353,6 +353,11 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     std::mt19937 rng(seed);
     const int first_min_y = 1;
     const int first_max_y = static_cast<int>(profile.map_size_y) - 1;
+    const std::uint8_t first_gas_stations = profile.second_half_start_y
+        ? static_cast<std::uint8_t>(profile.gas_stations / 2)
+        : profile.gas_stations;
+    const std::uint8_t second_gas_stations = static_cast<std::uint8_t>(
+        profile.gas_stations - first_gas_stations);
     bool placed =
         place_poi_count(grid_, profile.villages, 9, rng, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.militaries, 5, rng, first_min_y, first_max_y) &&
@@ -360,7 +365,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
         place_poi_count(grid_, profile.hospitals, 11, rng, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.firestations, 15, rng, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.chaoshi, 103, rng, first_min_y, first_max_y) &&
-        place_gas_station_count(grid_, profile.gas_stations, rng, first_min_y, first_max_y);
+        place_gas_station_count(grid_, first_gas_stations, rng, first_min_y, first_max_y);
     if (!placed) return false;
 
     if (profile.second_half_start_y != 0) {
@@ -373,7 +378,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
             place_poi_count(grid_, profile.second_half_hospitals, 11, rng, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_firestations, 15, rng, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_chaoshi, 103, rng, second_min_y, second_max_y) &&
-            place_gas_station_count(grid_, profile.gas_stations, rng, second_min_y, second_max_y);
+            place_gas_station_count(grid_, second_gas_stations, rng, second_min_y, second_max_y);
         if (!placed) return false;
     }
 
