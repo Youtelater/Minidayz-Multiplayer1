@@ -15,7 +15,7 @@ The extracted source snapshot identifies `t679` / `player_skin_def_2` (object in
 
 - `idle_down/up/right/left`: animation indices 0–3.
 - `run_down/up/right/left`: animation indices 4–7, four looping frames each.
-- The default skin has no dedicated `on_ground` / death animation; the current renderer falls back to its down-facing idle frame after death rather than assigning an unrelated animation.
+- The default skin has no dedicated `on_ground` / death animation; the scene shows a diagnostic dead marker after death rather than assigning an unrelated animation.
 - The source inventory has no `walk_*` animation for this actor. The current renderer therefore uses the matching `run_*` directional sprite for both movement speeds rather than inventing a walk animation.
 - The source animation speed field is 1.0; the native player animation timer uses that extracted speed for the four-frame run cycle.
 
