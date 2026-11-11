@@ -54,6 +54,7 @@ def main():
         raise SystemExit(f"Expected one root event in {FUNCTION_NAME}, found {len(event_roots)}")
     branches = event_roots[0][7]
     rows = []
+    spawn_rows = []
     for branch in branches:
         if not isinstance(branch, list) or not branch or branch[0] != 0:
             continue
@@ -69,8 +70,36 @@ def main():
             raise SystemExit(f"Location branch UID {branch[4]} has no decoded tile-code condition")
         nodes, writes, creates = count_branch(branch)
         rows.append((branch[4], codes, nodes, writes, creates))
-    if len(rows) != 62:
-        raise SystemExit(f"Expected 62 original location branches, found {len(rows)}")
+
+        def hotspot_offset(expression, variable):
+            if expression == [23, variable]:
+                return 0
+            if (isinstance(expression, list) and len(expression) == 3 and
+                expression[0] == 4 and expression[1] == [23, variable] and
+                isinstance(expression[2], list) and expression[2][0] == 0):
+                return int(expression[2][1])
+            raise SystemExit(
+                f"Unsupported {variable} location spawn expression in branch {branch[4]}: {expression!r}")
+
+        stack = [branch]
+        while stack:
+            node = stack.pop()
+            if not isinstance(node, list) or len(node) < 8 or node[0] != 0:
+                continue
+            for action in node[6] if isinstance(node[6], list) else []:
+                if not isinstance(action, list) or len(action) < 6 or action[0] != -1 or action[1] != 94:
+                    continue
+                params = action[5]
+                if len(params) < 4:
+                    raise SystemExit(f"Malformed System Create action in branch {branch[4]}")
+                object_index = int(params[0][1])
+                layer_name = str(params[1][1][1])
+                dx = hotspot_offset(params[2][1], "hotspotX")
+                dy = hotspot_offset(params[3][1], "hotspotY")
+                for code in codes:
+                    spawn_rows.append((branch[4], int(action[3]), code,
+                                       object_index, layer_name, dx, dy))
+            stack.extend(node[7] if isinstance(node[7], list) else [])
     lines = ["#pragma once", "#include <cstddef>", "#include <cstdint>",
              "namespace minidayz::stage1 {",
              "struct LocationTemplateSource { std::uint64_t event_uid; std::uint16_t tile_codes[25]; std::uint8_t tile_code_count; std::uint16_t event_nodes; std::uint16_t array_write_actions; std::uint8_t system_create_actions; };",
@@ -84,6 +113,20 @@ def main():
     lines += ["};", "} // namespace minidayz::stage1", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
+    spawn_output = OUTPUT.with_name("location_spawn_source.hpp")
+    spawn_lines = [
+        "#pragma once", "#include <cstddef>", "#include <cstdint>",
+        "namespace minidayz::stage1 {",
+        "struct LocationSpawnSource { std::uint64_t event_uid, action_uid; std::uint16_t tile_code, object; const char* layer_name; std::int16_t offset_x, offset_y; };",
+        f"inline constexpr std::size_t kLocationSpawnSourceCount = {len(spawn_rows)};",
+        "inline constexpr LocationSpawnSource kLocationSpawnSource[] = {"
+    ]
+    for event_uid, action_uid, code, obj, layer, dx, dy in spawn_rows:
+        spawn_lines.append(
+            f'    {{{event_uid}ULL, {action_uid}ULL, {code}, {obj}, "{layer}", {dx}, {dy}}},')
+    spawn_lines += ["};", "} // namespace minidayz::stage1", ""]
+    spawn_output.write_text("\\n".join(spawn_lines), encoding="utf-8")
+    print(f"Extracted {len(spawn_rows)} original System Create actions -> {spawn_output}")
     print(f"Indexed {len(rows)} original generate_location branches -> {OUTPUT}")
 
 if __name__ == "__main__":
