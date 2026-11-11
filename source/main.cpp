@@ -174,6 +174,8 @@ public:
             renderer.draw_solid_rect(18.0f, 145.0f, 284.0f, 57.0f,
                                      C2D_Color32(110, 75, 49, 255));
             renderer.draw_text("NEW GAME", 92.0f, 165.0f, 0.55f);
+            if (!world_ready_)
+                renderer.draw_text("WORLD GENERATION FAILED - RETRY NEW GAME", 18.0f, 204.0f, 0.27f);
             renderer.draw_text("A: Continue   X: New Game", 18.0f, 216.0f, 0.32f);
             return;
         }
@@ -291,7 +293,9 @@ private:
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
         save_elapsed_ = 0.0f;
         has_saved_game_ = false;
-        menu_active_ = false;
+        // Never enter a blank gameplay scene when source world generation
+        // fails. Keep the menu available so the player can retry instead.
+        menu_active_ = !world_ready_;
         if (world_ready_) (void)write_saved_game(world_seed_, player_.state());
     }
 
