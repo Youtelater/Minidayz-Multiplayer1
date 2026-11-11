@@ -301,7 +301,7 @@ bool source_world_profile(std::uint8_t level, WorldGenerationProfile& p) noexcep
         p.second_half_firestations=2; p.second_half_chaoshi=2;
         p.gas_stations=8; p.roadside_cafes=8; return true;
     default:
-        if (level < 5) return false;
+        if (level != 5) return false;
         // The source's CurrentLevel > 4 and >= 4 branches combine a first
         // and second map half with these independent POI quotas.
         p.grid_height=33; p.second_half_start_y=18;
