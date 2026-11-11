@@ -358,6 +358,16 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
         : profile.gas_stations;
     const std::uint8_t second_gas_stations = static_cast<std::uint8_t>(
         profile.gas_stations - first_gas_stations);
+    const std::uint8_t first_roadside_cafes = profile.second_half_start_y
+        ? static_cast<std::uint8_t>(profile.roadside_cafes / 2)
+        : profile.roadside_cafes;
+    const std::uint8_t second_roadside_cafes = static_cast<std::uint8_t>(
+        profile.roadside_cafes - first_roadside_cafes);
+    const std::uint8_t first_lite_shops = profile.second_half_start_y
+        ? static_cast<std::uint8_t>(profile.lite_shop / 2)
+        : profile.lite_shop;
+    const std::uint8_t second_lite_shops = static_cast<std::uint8_t>(
+        profile.lite_shop - first_lite_shops);
     bool placed =
         place_poi_count(grid_, profile.villages, 9, rng, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.militaries, 5, rng, first_min_y, first_max_y) &&
@@ -365,7 +375,9 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
         place_poi_count(grid_, profile.hospitals, 11, rng, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.firestations, 15, rng, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.chaoshi, 103, rng, first_min_y, first_max_y) &&
-        place_gas_station_count(grid_, first_gas_stations, rng, first_min_y, first_max_y);
+        place_gas_station_count(grid_, first_gas_stations, rng, first_min_y, first_max_y) &&
+        place_poi_count(grid_, first_lite_shops, 51, rng, first_min_y, first_max_y) &&
+        place_poi_count(grid_, first_roadside_cafes, 50, rng, first_min_y, first_max_y);
     if (!placed) return false;
 
     if (profile.second_half_start_y != 0) {
@@ -378,7 +390,9 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
             place_poi_count(grid_, profile.second_half_hospitals, 11, rng, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_firestations, 15, rng, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_chaoshi, 103, rng, second_min_y, second_max_y) &&
-            place_gas_station_count(grid_, second_gas_stations, rng, second_min_y, second_max_y);
+            place_gas_station_count(grid_, second_gas_stations, rng, second_min_y, second_max_y) &&
+            place_poi_count(grid_, second_lite_shops, 51, rng, second_min_y, second_max_y) &&
+            place_poi_count(grid_, second_roadside_cafes, 50, rng, second_min_y, second_max_y);
         if (!placed) return false;
     }
 
