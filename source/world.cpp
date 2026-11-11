@@ -350,7 +350,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
         !grid_.resize(profile.map_size_x, profile.grid_height)) return false;
 
     seed_ = seed;
-    std::mt19937 rng(seed);
+    rng_.seed(seed);
     const int first_min_y = 1;
     // On split-map levels the original first-half event uses check_Y 1..15
     // and stores at Y-1, leaving grid rows 15 and 16 as the separator.
@@ -372,15 +372,15 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     const std::uint8_t second_lite_shops = static_cast<std::uint8_t>(
         profile.lite_shop - first_lite_shops);
     bool placed =
-        place_poi_count(grid_, profile.villages, 9, rng, first_min_y, first_max_y) &&
-        place_poi_count(grid_, profile.militaries, 5, rng, first_min_y, first_max_y) &&
-        place_poi_count(grid_, profile.cities, 6, rng, first_min_y, first_max_y) &&
-        place_poi_count(grid_, profile.hospitals, 11, rng, first_min_y, first_max_y) &&
-        place_poi_count(grid_, profile.firestations, 15, rng, first_min_y, first_max_y) &&
-        place_poi_count(grid_, profile.chaoshi, 103, rng, first_min_y, first_max_y) &&
-        place_gas_station_count(grid_, first_gas_stations, rng, first_min_y, first_max_y) &&
-        place_poi_count(grid_, first_lite_shops, 51, rng, first_min_y, first_max_y) &&
-        place_poi_count(grid_, first_roadside_cafes, 50, rng, first_min_y, first_max_y);
+        place_poi_count(grid_, profile.villages, 9, rng_, first_min_y, first_max_y) &&
+        place_poi_count(grid_, profile.militaries, 5, rng_, first_min_y, first_max_y) &&
+        place_poi_count(grid_, profile.cities, 6, rng_, first_min_y, first_max_y) &&
+        place_poi_count(grid_, profile.hospitals, 11, rng_, first_min_y, first_max_y) &&
+        place_poi_count(grid_, profile.firestations, 15, rng_, first_min_y, first_max_y) &&
+        place_poi_count(grid_, profile.chaoshi, 103, rng_, first_min_y, first_max_y) &&
+        place_gas_station_count(grid_, first_gas_stations, rng_, first_min_y, first_max_y) &&
+        place_poi_count(grid_, first_lite_shops, 51, rng_, first_min_y, first_max_y) &&
+        place_poi_count(grid_, first_roadside_cafes, 50, rng_, first_min_y, first_max_y);
     if (!placed) return false;
 
     if (profile.second_half_start_y != 0) {
@@ -407,12 +407,12 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
     if (!initialized_ || grid_.width() == 0 || grid_.height() == 0) return false;
     map_markers_.clear();
     map_markers_.reserve(static_cast<std::size_t>(grid_.width()) * grid_.height());
-    std::mt19937 rng(seed ^ 0x9e3779b9u);
+    (void)seed; // The source uses one global random stream across generation stages.
     for (std::uint8_t y = 0; y < grid_.height(); ++y) {
         for (std::uint8_t x = 0; x < grid_.width(); ++x) {
             const std::uint16_t source_code = grid_.at(x, y);
             map_markers_.push_back({
-                x, y, source_code, source_marker_type(source_code, level, rng)
+                x, y, source_code, source_marker_type(source_code, level, rng_)
             });
         }
     }
