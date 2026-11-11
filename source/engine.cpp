@@ -100,7 +100,7 @@ bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,fl
  C2D_Sprite sprite{}; C2D_SpriteFromSheet(&sprite,sheets_[slot],image); C2D_SpriteSetPos(&sprite,x,y);
  C2D_SpriteSetScale(&sprite,sx,sy); C2D_SpriteSetRotation(&sprite,rotation); C2D_SpriteSetDepth(&sprite,depth); return C2D_DrawSprite(&sprite);
 }
-bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float sx,float sy,float depth) noexcept {
+bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float sx,float sy,float depth,float rotation) noexcept {
  const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,animation,frame};
  const auto* begin=stage1::kSpriteFrames;
  const auto* end=begin+stage1::kSpriteFrameCount;
@@ -125,7 +125,7 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  const float draw_x=x-selected->origin_x*selected->width*sx;
  const float draw_y=y-selected->origin_y*selected->height*sy;
  return draw_sprite(slot,selected->image,draw_x,draw_y,
-                     sx*selected->texture_scale_x,sy*selected->texture_scale_y,0.0f,depth);
+                     sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth);
 }
 bool Engine::initialize() noexcept {
  gfxInitDefault();
