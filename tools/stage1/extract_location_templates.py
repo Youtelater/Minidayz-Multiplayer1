@@ -45,7 +45,7 @@ def main():
     project = root["project"]
     sheets = {name: entries for name, entries in project[6]}
     candidates = [n for n in walk_events(sheets["Game_events"])
-                  if n[4] == FUNCTION_UID and FUNCTION_NAME in json.dumps(n[1], ensure_ascii=False)]
+                  if n[4] == FUNCTION_UID and FUNCTION_NAME in json.dumps(n[5], ensure_ascii=False)]
     if len(candidates) != 1:
         raise SystemExit(f"Expected one {FUNCTION_NAME} function event, found {len(candidates)}")
     function = candidates[0]
