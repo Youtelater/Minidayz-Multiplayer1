@@ -385,7 +385,9 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
 
     if (profile.second_half_start_y != 0) {
         const int second_min_y = profile.second_half_start_y;
-        const int second_max_y = static_cast<int>(profile.grid_height) - 1;
+        // The original second-half POI loop checks Y=18..32 and stores at Y-1,
+        // so the last occupied row is 31; row 32 is the unused boundary.
+        const int second_max_y = static_cast<int>(profile.grid_height) - 2;
         placed =
             place_poi_count(grid_, profile.second_half_villages, 9, rng_, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_militaries, 5, rng_, second_min_y, second_max_y) &&
