@@ -70,6 +70,8 @@ ROMFS_FILES := $(shell find "$(ROMFS)" -type f -printf '%p\n' 2>/dev/null | sed 
 #-----------------------------------------------------------------
 # MAIN RULES
 #-----------------------------------------------------------------
+.PHONY: all clean stage1-assets
+
 all: stage1-assets $(BUILD) $(TARGET).3dsx
 
 $(BUILD):
@@ -79,8 +81,8 @@ clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh
 
-# Explicitly depend on graphics and ROMFS contents to force rebuilding .3dsx when romfs changes
-$(TARGET).3dsx: $(TARGET).elf $(TARGET).smdh stage1-assets $(ROMFS_FILES)
+# Explicitly depend on generated assets and ROMFS contents so packaging includes them
+$(TARGET).3dsx: stage1-assets $(TARGET).elf $(TARGET).smdh $(ROMFS_FILES)
 	@echo building 3dsx with romfs ...
 	@3dsxtool $(TARGET).elf $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS)
 
@@ -90,6 +92,8 @@ $(TARGET).smdh:
 $(TARGET).elf: $(OFILES)
 	@echo linking ...
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
+
+$(OFILES): | stage1-assets
 
 $(BUILD)/%.o: %.cpp
 	@echo cxx $<
