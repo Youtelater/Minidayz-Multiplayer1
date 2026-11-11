@@ -87,8 +87,12 @@ bool Renderer::load_sheet(std::size_t slot,const char* path) noexcept {
  if(sheets_[slot]) C2D_SpriteSheetFree(sheets_[slot]); sheets_[slot]=fresh; return true;
 }
 void Renderer::unload_sheet(std::size_t slot) noexcept {
- if(slot>=kMaxSheets||!sheets_[slot]) return;
- C2D_SpriteSheetFree(sheets_[slot]); sheets_[slot]=nullptr;
+ if(slot>=kMaxSheets) return;
+ if(sheets_[slot]) C2D_SpriteSheetFree(sheets_[slot]);
+ sheets_[slot]=nullptr;
+ // Keep the name cache synchronized with the actual loaded sheet. Without
+ // this, an evicted sprite atlas could be mistaken for a still-loaded one.
+ sprite_cache_[slot]={};
 }
 void Renderer::unload_all() noexcept { for(std::size_t i=0;i<kMaxSheets;++i) unload_sheet(i); }
 bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx,float sy,float rotation,float depth) noexcept {
