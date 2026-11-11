@@ -125,7 +125,7 @@ def main():
         spawn_lines.append(
             f'    {{{event_uid}ULL, {action_uid}ULL, {code}, {obj}, "{layer}", {dx}, {dy}}},')
     spawn_lines += ["};", "} // namespace minidayz::stage1", ""]
-    spawn_output.write_text("\\n".join(spawn_lines), encoding="utf-8")
+    spawn_output.write_text("\n".join(spawn_lines), encoding="utf-8")
     print(f"Extracted {len(spawn_rows)} original System Create actions -> {spawn_output}")
     print(f"Indexed {len(rows)} original generate_location branches -> {OUTPUT}")
 
