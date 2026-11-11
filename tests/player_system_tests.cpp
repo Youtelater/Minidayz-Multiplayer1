@@ -142,6 +142,18 @@ int main() {
     assert(survival_result.hunger_lost == 5.0f);
     assert(survival_result.thirst_lost == 5.0f);
 
+    // Unconfigured zero caps must not erase stats while source values
+    // are intentionally left unresolved.
+    PlayerState unconfigured_state{};
+    unconfigured_state.health = 50.0f;
+    unconfigured_state.hunger = 37.0f;
+    unconfigured_state.thirst = 62.0f;
+    PlayerSystem unconfigured(unconfigured_state);
+    const auto unchanged = unconfigured.update_survival(0.1f, PlayerRules{});
+    assert(!unchanged.died);
+    assert(unconfigured.state().hunger == 37.0f);
+    assert(unconfigured.state().thirst == 62.0f);
+
     // Stat setters clamp to the limits supplied by the caller.
     survival.adjust_hunger(200.0f, 100.0f);
     survival.adjust_thirst(-200.0f, 100.0f);
