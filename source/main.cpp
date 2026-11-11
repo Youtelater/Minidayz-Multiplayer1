@@ -77,8 +77,9 @@ std::uint32_t make_new_world_seed() noexcept {
 class WorldPreviewScene final : public minidayz::Scene {
 public:
     explicit WorldPreviewScene(const SavedGame* restored = nullptr) noexcept
-        : player_(restored ? restored->player : make_initial_state()),
-          world_seed_(restored ? restored->seed : make_new_world_seed()) {
+        : world_seed_(restored ? restored->seed : make_new_world_seed()),
+          has_saved_game_(restored != nullptr),
+          player_(restored ? restored->player : make_initial_state()) {
         // Preview-only movement tuning. Source-equivalent values still need
         // to be supplied by the gameplay rules port.
         // Temporary preview movement tuning only. Original source movement
@@ -101,6 +102,23 @@ public:
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
+        if (menu_active_) {
+            bool continue_game = has_saved_game_ && (input.pressed & KEY_A) != 0;
+            bool new_game = (input.pressed & KEY_X) != 0;
+            if (input.touching) {
+                const int tx = input.touch.px;
+                const int ty = input.touch.py;
+                if (tx >= 18 && tx <= 302 && ty >= 78 && ty <= 132)
+                    continue_game = has_saved_game_;
+                if (tx >= 18 && tx <= 302 && ty >= 145 && ty <= 202)
+                    new_game = true;
+            }
+            if (new_game) start_new_game();
+            else if (continue_game) menu_active_ = false;
+            else if (!has_saved_game_ && (input.pressed & KEY_A))
+                start_new_game();
+            return;
+        }
         minidayz::PlayerInput movement{};
         movement.move_x = static_cast<float>(input.circle.dx) / 156.0f;
         movement.move_y = -static_cast<float>(input.circle.dy) / 156.0f;
@@ -133,6 +151,25 @@ public:
     }
 
     void render_bottom(minidayz::Renderer& renderer) noexcept override {
+        if (menu_active_) {
+            renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
+                                     C2D_Color32(20, 25, 23, 255));
+            renderer.draw_text("WORLD SAVE", 18.0f, 20.0f, 0.55f);
+            if (has_saved_game_) {
+                renderer.draw_solid_rect(18.0f, 78.0f, 284.0f, 54.0f,
+                                         C2D_Color32(62, 92, 66, 255));
+                renderer.draw_text("CONTINUE", 92.0f, 96.0f, 0.55f);
+            } else {
+                renderer.draw_solid_rect(18.0f, 78.0f, 284.0f, 54.0f,
+                                         C2D_Color32(55, 65, 58, 255));
+                renderer.draw_text("NO SAVE FOUND", 70.0f, 96.0f, 0.45f);
+            }
+            renderer.draw_solid_rect(18.0f, 145.0f, 284.0f, 57.0f,
+                                     C2D_Color32(110, 75, 49, 255));
+            renderer.draw_text("NEW GAME", 92.0f, 165.0f, 0.55f);
+            renderer.draw_text("A: Continue   X: New Game", 18.0f, 216.0f, 0.32f);
+            return;
+        }
         // The lower 3DS screen is the touch inventory, not a debug panel.
         renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f, C2D_Color32(20, 25, 23, 255));
         renderer.draw_solid_rect(6.0f, 6.0f, 308.0f, 25.0f, C2D_Color32(54, 68, 55, 255));
@@ -181,6 +218,17 @@ public:
     }
 
     void render(minidayz::Renderer& renderer) noexcept override {
+        if (menu_active_) {
+            renderer.reset_camera();
+            renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
+                                     C2D_Color32(24, 34, 29, 255));
+            renderer.draw_solid_rect(30.0f, 42.0f, 340.0f, 3.0f,
+                                     C2D_Color32(132, 150, 116, 255));
+            renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
+            renderer.draw_text("SURVIVE THE WILDERNESS", 65.0f, 124.0f, 0.42f);
+            renderer.draw_text("SELECT CONTINUE OR START A NEW WORLD", 30.0f, 174.0f, 0.32f);
+            return;
+        }
         const auto& p = player_.state();
         constexpr float view_w = 400.0f;
         constexpr float view_h = 240.0f;
@@ -260,6 +308,16 @@ public:
     }
 
 private:
+    void start_new_game() noexcept {
+        world_seed_ = make_new_world_seed();
+        player_ = minidayz::PlayerSystem(make_initial_state());
+        world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
+        save_elapsed_ = 0.0f;
+        has_saved_game_ = false;
+        menu_active_ = false;
+        if (world_ready_) (void)write_saved_game(world_seed_, player_.state());
+    }
+
     static minidayz::PlayerState make_initial_state() noexcept {
         minidayz::PlayerState state{};
         state.x = 160.0f;
@@ -307,6 +365,8 @@ private:
     std::uint32_t world_seed_{};
     float save_elapsed_{};
     bool world_ready_{};
+    bool menu_active_{true};
+    bool has_saved_game_{};
     minidayz::PlayerSystem player_;
     minidayz::PlayerRules preview_rules_{};
     int selected_inventory_slot_{};
