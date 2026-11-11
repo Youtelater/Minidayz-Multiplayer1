@@ -66,8 +66,8 @@ int main() {
     assert(moving.state().x == 0.0f && moving.state().y > 0.0f);
     assert(moving.state().animation == PlayerAnimation::walk);
 
-    // The original player animation inventory is ordered as idle down/up/
-    // right/left (0..3), run down/up/right/left (4..7), on_ground (12).
+    // The default player skin has idle down/up/right/left (0..3) and
+    // run down/up/right/left (4..7); it has no dedicated death animation.
     PlayerState animation_state{};
     animation_state.health = 100.0f;
     PlayerSystem animated(animation_state);
@@ -85,7 +85,7 @@ int main() {
     assert(animated.source_animation_index() == 1);
     assert(animated.source_animation_frame() == 0);
     animated.kill(PlayerDeathReason::other);
-    assert(animated.source_animation_index() == 12);
+    assert(animated.source_animation_index() == 0);
     assert(animated.source_animation_frame() == 0);
 
     // The configured player half-size participates in collision checks.
