@@ -135,6 +135,7 @@ public:
 
     const WorldPlacement* placement(std::size_t index) const noexcept;
     std::size_t placement_count() const noexcept { return placements_.size(); }
+    std::size_t source_location_spawn_count() const noexcept { return source_location_spawn_count_; }
     const WorldGrid& grid() const noexcept { return grid_; }
     const WorldMapMarker* map_marker(std::size_t index) const noexcept;
     std::size_t map_marker_count() const noexcept { return map_markers_.size(); }
@@ -153,6 +154,7 @@ private:
     std::vector<WorldMapMarker> map_markers_{};
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
+    std::size_t source_location_spawn_count_{};
     bool initialized_{};
 };
 
