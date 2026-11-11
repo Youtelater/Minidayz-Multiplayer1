@@ -77,7 +77,7 @@ int main() {
     animated.update_movement(up, 0.05f, movement_rules);
     assert(animated.source_animation_index() == 5);
     assert(animated.source_animation_frame() == 0);
-    for (int i = 0; i < 19; ++i)
+    for (int i = 0; i < 20; ++i)
         animated.update_movement(up, 0.05f, movement_rules);
     assert(animated.source_animation_frame() == 1);
     PlayerInput idle{};
