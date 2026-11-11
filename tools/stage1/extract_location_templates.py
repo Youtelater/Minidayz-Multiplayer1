@@ -33,7 +33,7 @@ def count_branch(branch):
         for action in node[6] if isinstance(node[6], list) else []:
             if not isinstance(action, list) or len(action) < 2:
                 continue
-            if action[0] == 525 and action[1] == 199:
+            if action[0] == 518 and action[1] == 199:
                 writes += 1
             if action[0] == -1 and action[1] == 94:
                 creates += 1
@@ -45,7 +45,7 @@ def main():
     project = root["project"]
     sheets = {name: entries for name, entries in project[6]}
     candidates = [n for n in walk_events(sheets["Game_events"])
-                  if n[4] == FUNCTION_UID and FUNCTION_NAME in json.dumps(n[5], ensure_ascii=False)]
+                  if n[4] == FUNCTION_UID]
     if len(candidates) != 1:
         raise SystemExit(f"Expected one {FUNCTION_NAME} function event, found {len(candidates)}")
     function = candidates[0]
