@@ -46,10 +46,17 @@ bool classify_source_layer(const char* name, WorldFeatureKind& kind) noexcept {
         kind = WorldFeatureKind::Bridge;
         return true;
     }
+    if (equals(name, "Water")) {
+        kind = WorldFeatureKind::Water;
+        return true;
+    }
+    if (equals(name, "Obstacle_enviroment") || equals(name, "Forests") ||
+        equals(name, "Trees")) {
+        kind = WorldFeatureKind::Obstacle;
+        return true;
+    }
     if (equals(name, "bg") || equals(name, "snow") || equals(name, "sand") ||
-        equals(name, "swamp") || equals(name, "ground_enviroment") ||
-        equals(name, "Obstacle_enviroment") || equals(name, "Water") ||
-        equals(name, "Forests") || equals(name, "Trees")) {
+        equals(name, "swamp") || equals(name, "ground_enviroment")) {
         kind = WorldFeatureKind::Terrain;
         return true;
     }
