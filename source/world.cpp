@@ -352,7 +352,10 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     seed_ = seed;
     std::mt19937 rng(seed);
     const int first_min_y = 1;
-    const int first_max_y = static_cast<int>(profile.map_size_y) - 1;
+    // On split-map levels the original first-half event uses check_Y 1..15
+    // and stores at Y-1, leaving grid rows 15 and 16 as the separator.
+    const int first_max_y = static_cast<int>(profile.map_size_y) -
+                            (profile.second_half_start_y ? 2 : 1);
     const std::uint8_t first_gas_stations = profile.second_half_start_y
         ? static_cast<std::uint8_t>(profile.gas_stations / 2)
         : profile.gas_stations;
