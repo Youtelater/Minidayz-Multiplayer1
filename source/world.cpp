@@ -165,8 +165,10 @@ bool place_poi_count(WorldGrid& grid, std::uint8_t count, std::uint16_t code,
                      std::mt19937& rng, int min_y, int max_y) {
     if (count == 0) return true;
     if (grid.width() < 3 || min_y < 0 || max_y >= grid.height() || min_y > max_y) return false;
-    std::uniform_int_distribution<int> xdist(1, static_cast<int>(grid.width()) - 1);
-    std::uniform_int_distribution<int> ydist(min_y, max_y);
+    // Construct's random(1, Map_size_X/Y) includes both endpoints.
+    // The event then writes at check_X - 1 / check_Y - 1.
+    std::uniform_int_distribution<int> xdist(1, static_cast<int>(grid.width()));
+    std::uniform_int_distribution<int> ydist(min_y, max_y + 1);
     const int max_attempts = static_cast<int>(grid.width()) *
                              static_cast<int>(grid.height()) * 64;
     for (std::uint8_t placed = 0; placed < count; ++placed) {
@@ -177,6 +179,39 @@ bool place_poi_count(WorldGrid& grid, std::uint8_t count, std::uint16_t code,
             const int y = ydist(rng) - 1;
             if (!grid.has_empty_3x3(x, y)) continue;
             if (!grid.set(x, y, code)) return false;
+            found = true;
+            break;
+        }
+        if (!found) return false;
+    }
+    return true;
+}
+ 
+bool place_gas_station_count(WorldGrid& grid, std::uint8_t count,
+                             std::mt19937& rng, int min_y, int max_y) {
+    // Exact five-cell footprint written by the original Map generation
+    // event: center 99, north/south 100, west/east 101. The event first
+    // verifies that the surrounding 3x3 Array cells are all zero.
+    if (count == 0) return true;
+    if (grid.width() < 3 || min_y < 1 || max_y >= grid.height()) return false;
+    std::uniform_int_distribution<int> xdist(1, static_cast<int>(grid.width()));
+    std::uniform_int_distribution<int> ydist(min_y, max_y + 1);
+    const int max_attempts = static_cast<int>(grid.width()) *
+                             static_cast<int>(grid.height()) * 64;
+    for (std::uint8_t placed = 0; placed < count; ++placed) {
+        bool found = false;
+        for (int attempt = 0; attempt < max_attempts; ++attempt) {
+            const int x = xdist(rng) - 1;
+            const int y = ydist(rng) - 1;
+            if (!grid.has_empty_3x3(x, y)) continue;
+            // Validate the full footprint before writing any part of it.
+            if (x <= 0 || x + 1 >= grid.width() ||
+                y <= 0 || y + 1 >= grid.height()) continue;
+            grid.set(x, y, 99);
+            grid.set(x, y - 1, 100);
+            grid.set(x, y + 1, 100);
+            grid.set(x - 1, y, 101);
+            grid.set(x + 1, y, 101);
             found = true;
             break;
         }
@@ -324,7 +359,8 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
         place_poi_count(grid_, profile.cities, 6, rng, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.hospitals, 11, rng, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.firestations, 15, rng, first_min_y, first_max_y) &&
-        place_poi_count(grid_, profile.chaoshi, 103, rng, first_min_y, first_max_y);
+        place_poi_count(grid_, profile.chaoshi, 103, rng, first_min_y, first_max_y) &&
+        place_gas_station_count(grid_, profile.gas_stations, rng, first_min_y, first_max_y);
     if (!placed) return false;
 
     if (profile.second_half_start_y != 0) {
@@ -336,7 +372,8 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
             place_poi_count(grid_, profile.second_half_cities, 6, rng, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_hospitals, 11, rng, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_firestations, 15, rng, second_min_y, second_max_y) &&
-            place_poi_count(grid_, profile.second_half_chaoshi, 103, rng, second_min_y, second_max_y);
+            place_poi_count(grid_, profile.second_half_chaoshi, 103, rng, second_min_y, second_max_y) &&
+            place_gas_station_count(grid_, profile.gas_stations, rng, second_min_y, second_max_y);
         if (!placed) return false;
     }
 
