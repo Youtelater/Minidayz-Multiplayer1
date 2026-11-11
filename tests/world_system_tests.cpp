@@ -135,6 +135,34 @@ void test_seed_reproducibility() {
     }
 }
 
+void test_every_source_level_quota() {
+    for (std::uint8_t level = 0; level <= 5; ++level) {
+        minidayz::WorldGenerationProfile profile{};
+        assert(minidayz::source_world_profile(level, profile));
+
+        minidayz::WorldSystem world;
+        const std::uint32_t seed = 0x4d445a33u + level * 7919u;
+        assert(world.initialize(seed));
+        assert(world.generate_procedural_grid(level, seed));
+        assert(world.build_map_markers(level, seed));
+
+        const auto total = [](std::uint8_t first, std::uint8_t second) {
+            return static_cast<std::size_t>(first) + second;
+        };
+        assert(count_code(world.grid(), 9) == total(profile.villages, profile.second_half_villages));
+        assert(count_code(world.grid(), 5) == total(profile.militaries, profile.second_half_militaries));
+        assert(count_code(world.grid(), 6) == total(profile.cities, profile.second_half_cities));
+        assert(count_code(world.grid(), 11) == total(profile.hospitals, profile.second_half_hospitals));
+        assert(count_code(world.grid(), 15) == total(profile.firestations, profile.second_half_firestations));
+        assert(count_code(world.grid(), 103) == total(profile.chaoshi, profile.second_half_chaoshi));
+        assert(count_code(world.grid(), 99) == profile.gas_stations);
+        assert(count_code(world.grid(), 51) == profile.lite_shop);
+        assert(count_code(world.grid(), 50) == profile.roadside_cafes);
+        assert(world.map_marker_count() ==
+               static_cast<std::size_t>(profile.map_size_x) * profile.grid_height);
+    }
+}
+
 void test_level_four_split_grid() {
     minidayz::WorldSystem world;
     assert(world.initialize(0x1234u));
@@ -165,6 +193,7 @@ int main() {
     test_original_map_layout_and_descriptors();
     test_seed_reproducibility();
     test_level_four_split_grid();
+    test_every_source_level_quota();
     std::puts("World source regression tests passed.");
     return 0;
 }
