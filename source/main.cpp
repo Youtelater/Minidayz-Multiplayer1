@@ -1,6 +1,7 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/stage1_data_access.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -134,6 +135,25 @@ public:
                                  C2D_Color32(35, 49, 42, 255));
 
         if (world_ready_) {
+            // Draw the actual source-layout sprites from the generated frame
+            // catalog. The source placements remain in original map coordinates;
+            // only the overview transform is applied here.
+            for (std::size_t i = 0; i < world_.placement_count(); ++i) {
+                const auto* placement = world_.placement(i);
+                if (!placement) continue;
+                const auto animations =
+                    minidayz::stage1::animations_for_object(placement->object);
+                if (!animations.data || animations.size == 0 ||
+                    animations.data[0].frames == 0) continue;
+                const float px = map_x + placement->x * sx;
+                const float py = map_y + placement->y * sy;
+                const float instance_scale =
+                    placement->scale_x > 0.0f ? placement->scale_x : 1.0f;
+                renderer.draw_source_sprite(
+                    placement->object, 0, 0, px, py,
+                    sx * instance_scale, sy * instance_scale);
+            }
+
             for (std::size_t i = 0; i < world_.feature_count(); ++i) {
                 const auto* feature = world_.feature(i);
                 if (!feature) continue;
