@@ -37,3 +37,14 @@ The next semantic pass must trace, at minimum:
 - map/minimap legend and location presentation.
 
 **Status: source group indexed; gameplay semantics and C++ behavior are not yet signed off.**
+
+
+## Seed and random-number trace (source correction)
+
+The `Game_events` variable table declares `SEED_RUN` as a numeric 0/1-style flag with default value `0`. The `Start events` group contains a `SEED RUNS` branch that tests `SEED_RUN == 1` and toggles the separate `SEED_gunnerzeds`, `SEED_VIP`, `SEED_morezeds`, `SEED_Wildlife`, `SEED_stalker`, `SEED_pubg`, `SEED_playcasual`, and `SEED_TD` flags. A separate start event sets `SEED_RUN` back to `0`. These are game-mode/challenge flags; they are not evidence of a numeric per-world seed.
+
+The map-generation entry point is invoked through the `generate_array_locations`, `generate_array_roads_1`, `generate_array_roads_2`, `generate_array_tomap`, and `generate_mapgen_toelements` function events. The current native implementation uses `std::mt19937` to make the provisional C++ placement repeatable, but the original Construct random-expression semantics and call order have not yet been resolved. Therefore identical C++ seeds are repeatable in the port, but they are **not yet proven to reproduce the original game's world**.
+
+`mp_worldseed.js` is a separate multiplayer-side helper file in the repository, not part of the original `Game_events` Construct export. Its PRNG/hash implementation must not be treated as the original single-player world-generation algorithm.
+
+**Required next step:** resolve the original System/Construct random expression IDs and their runtime implementation, then port the same random-call order before claiming original seed compatibility. Do not rename `SEED_RUN` as a world seed or claim the current PRNG is source-equivalent.
