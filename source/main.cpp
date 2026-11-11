@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
+#include <sys/stat.h>
 
 namespace {
 
@@ -13,6 +15,54 @@ namespace {
 // SEED_RUN as a numeric world seed. Use the 3DS clock and hardware tick as
 // fresh entropy for this native session. This is a per-run seed, not a claim
 // that the original browser Math.random() sequence is reproducible.
+constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
+constexpr std::uint32_t kSaveVersion = 1u;
+constexpr const char* kSavePath = "sdmc:/3ds/Minidayz/world.sav";
+constexpr const char* kSaveTempPath = "sdmc:/3ds/Minidayz/world.tmp";
+
+struct SavedGame {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{kSaveVersion};
+    std::uint32_t seed{};
+    minidayz::PlayerState player{};
+};
+
+bool load_saved_game(SavedGame& save) noexcept {
+    std::FILE* file = std::fopen(kSavePath, "rb");
+    if (!file) return false;
+    const bool read_ok = std::fread(&save, sizeof(save), 1, file) == 1;
+    const bool no_extra_data = std::fgetc(file) == EOF;
+    std::fclose(file);
+    return read_ok && no_extra_data && save.magic == kSaveMagic &&
+        save.version == kSaveVersion && save.seed != 0 &&
+        std::isfinite(save.player.x) && std::isfinite(save.player.y) &&
+        std::isfinite(save.player.health) && std::isfinite(save.player.hunger) &&
+        std::isfinite(save.player.thirst) && save.player.x >= 0.0f &&
+        save.player.y >= 0.0f &&
+        save.player.x <= minidayz::WorldSystem::kSourceMapWidth &&
+        save.player.y <= minidayz::WorldSystem::kSourceMapHeight;
+}
+
+bool write_saved_game(std::uint32_t seed,
+                      const minidayz::PlayerState& player) noexcept {
+    (void)::mkdir("sdmc:/3ds", 0777);
+    (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
+    SavedGame save{};
+    save.seed = seed;
+    save.player = player;
+    std::FILE* file = std::fopen(kSaveTempPath, "wb");
+    if (!file) return false;
+    const bool written = std::fwrite(&save, sizeof(save), 1, file) == 1 &&
+                         std::fflush(file) == 0;
+    const bool closed = std::fclose(file) == 0;
+    if (!written || !closed) {
+        (void)std::remove(kSaveTempPath);
+        return false;
+    }
+    (void)std::remove(kSavePath);
+    return std::rename(kSaveTempPath, kSavePath) == 0;
+}
+
 std::uint32_t make_new_world_seed() noexcept {
     const std::uint64_t wall = static_cast<std::uint64_t>(osGetTime());
     const std::uint64_t ticks = static_cast<std::uint64_t>(svcGetSystemTick());
@@ -26,8 +76,9 @@ std::uint32_t make_new_world_seed() noexcept {
 
 class WorldPreviewScene final : public minidayz::Scene {
 public:
-    WorldPreviewScene() noexcept
-        : player_(make_initial_state()) {
+    explicit WorldPreviewScene(const SavedGame* restored = nullptr) noexcept
+        : player_(restored ? restored->player : make_initial_state()),
+          world_seed_(restored ? restored->seed : make_new_world_seed()) {
         // Preview-only movement tuning. Source-equivalent values still need
         // to be supplied by the gameplay rules port.
         // Temporary preview movement tuning only. Original source movement
@@ -42,7 +93,24 @@ public:
         preview_rules_.max_thirst = 100.0f;
         preview_rules_.min_temperature = -10.0f;
         preview_rules_.max_temperature = 10.0f;
-        world_ready_ = world_.generate_from_source(make_new_world_seed(), "Map", 0);
+        world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
+        if (world_ready_ && !restored) {
+            // The original Map layout supplies the spawn-point layer; use its
+            // extracted coordinates rather than a guessed screen-space start.
+            for (std::size_t i = 0; i < world_.feature_count(); ++i) {
+                const auto* feature = world_.feature(i);
+                if (feature && feature->kind == minidayz::WorldFeatureKind::SpawnPoint) {
+                    auto& state = player_.state_for_setup();
+                    state.x = feature->position.x;
+                    state.y = feature->position.y;
+                    break;
+                }
+            }
+        }
+    }
+
+    void on_exit() noexcept override {
+        (void)write_saved_game(world_seed_, player_.state());
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
@@ -70,6 +138,11 @@ public:
         // Source-derived survival rates are still zero until their original
         // event cadence is resolved; the update path is now live and ready.
         player_.update_survival(dt, preview_rules_);
+        save_elapsed_ += dt;
+        if (save_elapsed_ >= 2.0f) {
+            save_elapsed_ = 0.0f;
+            (void)write_saved_game(world_seed_, player_.state());
+        }
     }
 
     void render_bottom(minidayz::Renderer& renderer) noexcept override {
@@ -230,6 +303,8 @@ private:
     }
 
     minidayz::WorldSystem world_{};
+    std::uint32_t world_seed_{};
+    float save_elapsed_{};
     bool world_ready_{};
     minidayz::PlayerSystem player_;
     minidayz::PlayerRules preview_rules_{};
@@ -248,7 +323,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    WorldPreviewScene scene;
+    SavedGame restored{};
+    const bool has_saved_game = load_saved_game(restored);
+    WorldPreviewScene scene(has_saved_game ? &restored : nullptr);
     if (!engine.set_scene(&scene)) {
         std::printf("Mini DAYZ+: startup scene attachment failed.\\n");
         engine.shutdown();
