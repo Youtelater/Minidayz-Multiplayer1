@@ -94,28 +94,30 @@ def main() -> int:
             basename = source_ref.name
             # First honor the exact relative path recorded in the original
             # Construct frame. Only then use the known asset roots.
+            # Stage 1 artwork is sourced exclusively from assets/gfx.
+            # Never fall back to the duplicate images/ directory.
             exact_candidates = [
                 ROOT / source_ref,
                 ASSETS / source_ref,
-                ROOT / "images" / source_ref,
             ]
             exact_candidates = [p for p in exact_candidates if p.is_file()]
             if not exact_candidates:
-                exact_candidates = [
-                    p for p in (ASSETS / basename, ROOT / "images" / basename)
-                    if p.is_file()
-                ]
-            if not exact_candidates:
-                exact_candidates = list(ASSETS.rglob(basename)) + list((ROOT / "images").rglob(basename))
-            # Mirrored files are acceptable only when their bytes match.
+                exact_candidates = [p for p in ASSETS.rglob(basename) if p.is_file()]
+
+            # Multiple paths are acceptable only when their bytes are identical.
             unique = OrderedDict()
             for candidate in exact_candidates:
                 digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
                 unique.setdefault(digest, candidate)
+            if not unique:
+                raise SystemExit(
+                    "Missing original sprite sheet in assets/gfx: " + basename
+                    + "; source reference=" + source_path
+                )
             if len(unique) != 1:
                 raise SystemExit(
-                    "Ambiguous original sprite sheet " + basename
-                    + ": source reference=" + source_path
+                    "Ambiguous original sprite sheet in assets/gfx: " + basename
+                    + "; source reference=" + source_path
                     + "; candidates: "
                     + ", ".join(str(path) for path in exact_candidates)
                 )
