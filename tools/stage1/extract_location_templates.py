@@ -33,7 +33,7 @@ def count_branch(branch):
         for action in node[6] if isinstance(node[6], list) else []:
             if not isinstance(action, list) or len(action) < 2:
                 continue
-            if action[0] == 518 and action[1] == 199:
+            if action[0] == 525 and action[1] == 199:
                 writes += 1
             if action[0] == -1 and action[1] == 94:
                 creates += 1
