@@ -89,7 +89,12 @@ def main():
         sheets.append(dict(index=si,name=name,top_level_entries=len(entries),
             event_nodes=len(events)-start,variables=len(variables)-vstart,first_event=start))
     audio=[dict(filename=x[0],bytes=x[1]) for x in p[7] if isinstance(x,list) and len(x)>1]
-    (out/"construct_project_parsed.json").write_text(json.dumps(root,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+    parsed_output=out/"construct_project_parsed.json"
+    # When the source is the reassembled snapshot itself, keep its exact bytes.
+    # Re-serializing JSON here would destroy the byte-for-byte snapshot invariant
+    # checked by validate_stage1.py on the next build step.
+    if Path(a.source).resolve() != parsed_output.resolve():
+        parsed_output.write_text(json.dumps(root,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
     (out/"event_sheet_index.json").write_text(json.dumps(dict(sheets=sheets,events=events,variables=variables,groups=groups,ace_calls=ace_calls,
         condition_type_counts=cond,action_type_counts=acts),ensure_ascii=False,separators=(",",":")),encoding="utf-8")
     ace_rows=[]
