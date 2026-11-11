@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Incremental, filename-safe PNG -> Tex3DS converter.
+"""Incremental, filename-safe recursive PNG -> Tex3DS converter.
 
-Original assets are never renamed or modified. Tex3DS receives a short ASCII
-temporary filename so spaces and non-ASCII characters in source paths cannot
-be misparsed by its image-loading dependencies.
+Converts every PNG under the supplied source root, preserving its relative
+subdirectory in the output tree. Original artwork is never renamed or modified.
 """
 from __future__ import annotations
 
@@ -11,13 +10,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 from PIL import Image
-from pathlib import Path
 
 
 def output_stem(source: Path) -> str:
-    # Keep the established runtime naming convention.
     return source.stem.replace("-", "_").replace(".", "_")
 
 
@@ -32,34 +30,45 @@ def main() -> int:
         print(f"graphics input directory not found: {input_dir}", file=sys.stderr)
         return 2
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    sources = sorted(p for p in input_dir.iterdir()
-                     if p.is_file() and p.suffix.lower() == ".png")
+    sources = sorted(
+        p for p in input_dir.rglob("*")
+        if p.is_file() and p.suffix.lower() == ".png"
+    )
+    if not sources:
+        print(f"no PNG assets found under: {input_dir}", file=sys.stderr)
+        return 1
 
-    # Detect names that would overwrite one another after the Makefile's
-    # historical hyphen/dot normalization rather than silently losing art.
-    owners: dict[str, Path] = {}
+    # Keep source subfolders in the output to avoid cross-folder name clashes.
+    owners: dict[Path, Path] = {}
     for source in sources:
-        stem = output_stem(source)
-        previous = owners.get(stem)
+        relative = source.relative_to(input_dir)
+        relative_output = relative.parent / f"{output_stem(source)}.t3x"
+        previous = owners.get(relative_output)
         if previous is not None:
-            print(f"texture output collision: {previous.name!r} and "
-                  f"{source.name!r} both map to {stem}.t3x", file=sys.stderr)
+            print(
+                f"texture output collision: {previous} and {relative} "
+                f"both map to {relative_output}",
+                file=sys.stderr,
+            )
             return 1
-        owners[stem] = source
+        owners[relative_output] = relative
 
+    output_dir.mkdir(parents=True, exist_ok=True)
+    converted = reused = 0
     with tempfile.TemporaryDirectory(prefix="minidayz_tex_") as temp:
         temp_dir = Path(temp)
         for index, source in enumerate(sources):
-            destination = output_dir / f"{output_stem(source)}.t3x"
-            if destination.exists() and destination.stat().st_mtime >= source.stat().st_mtime:
+            relative = source.relative_to(input_dir)
+            destination = output_dir / relative.parent / f"{output_stem(source)}.t3x"
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if destination.is_file() and destination.stat().st_mtime >= source.stat().st_mtime:
+                reused += 1
                 continue
 
             safe_input = temp_dir / f"input_{index:04d}.png"
             safe_output = temp_dir / f"output_{index:04d}.t3x"
-            # 3DS hardware textures are limited to 1024x1024. Keep the
-            # original art untouched and downscale only the temporary build
-            # copy when a source sheet exceeds that limit.
+            # 3DS hardware textures are limited to 1024x1024. Resize only a
+            # temporary conversion copy; never alter the original PNG.
             with Image.open(source) as image:
                 image.load()
                 if image.width > 1024 or image.height > 1024:
@@ -68,18 +77,21 @@ def main() -> int:
                 else:
                     shutil.copyfile(source, safe_input)
 
-            print(f"Building texture sheet: {destination.name}")
+            print(f"Building texture: {relative.as_posix()} -> {destination}")
             result = subprocess.run(
                 ["tex3ds", "-o", str(safe_output), str(safe_input)],
                 check=False,
             )
             if result.returncode != 0 or not safe_output.is_file():
-                print(f"tex3ds failed for original asset: {source.name!r}",
-                      file=sys.stderr)
+                print(f"tex3ds failed for original asset: {relative}", file=sys.stderr)
                 return result.returncode or 1
             shutil.copy2(safe_output, destination)
+            converted += 1
 
-    print(f"Checked {len(sources)} PNG assets; unchanged textures were reused.")
+    print(
+        f"Checked {len(sources)} PNG assets: "
+        f"{converted} converted, {reused} unchanged textures reused."
+    )
     return 0
 
 
