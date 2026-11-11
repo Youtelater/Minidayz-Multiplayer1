@@ -10,7 +10,7 @@
 namespace minidayz {
 
 enum class WorldFeatureKind : std::uint8_t {
-    Terrain, Road, Building, Bunker, Bridge, SpawnPoint
+    Terrain, Road, Building, Bunker, Bridge, SpawnPoint, Obstacle, Water
 };
 
 struct WorldPoint {
