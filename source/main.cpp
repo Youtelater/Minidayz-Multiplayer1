@@ -94,19 +94,6 @@ public:
         preview_rules_.min_temperature = -10.0f;
         preview_rules_.max_temperature = 10.0f;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
-        if (world_ready_ && !restored) {
-            // The original Map layout supplies the spawn-point layer; use its
-            // extracted coordinates rather than a guessed screen-space start.
-            for (std::size_t i = 0; i < world_.feature_count(); ++i) {
-                const auto* feature = world_.feature(i);
-                if (feature && feature->kind == minidayz::WorldFeatureKind::SpawnPoint) {
-                    auto& state = player_.state_for_setup();
-                    state.x = feature->position.x;
-                    state.y = feature->position.y;
-                    break;
-                }
-            }
-        }
     }
 
     void on_exit() noexcept override {
@@ -249,6 +236,10 @@ public:
                     color = C2D_Color32(225, 190, 83, 255); break;
                 case minidayz::WorldFeatureKind::SpawnPoint:
                     color = C2D_Color32(85, 190, 210, 255); break;
+                case minidayz::WorldFeatureKind::Obstacle:
+                    color = C2D_Color32(65, 83, 56, 255); break;
+                case minidayz::WorldFeatureKind::Water:
+                    color = C2D_Color32(45, 105, 155, 255); break;
                 }
                 const float fw = feature->width > 0.0f ? feature->width : 3.0f;
                 const float fh = feature->height > 0.0f ? feature->height : 3.0f;
@@ -284,19 +275,28 @@ private:
         if (!scene || x < 0.0f || y < 0.0f ||
             x > scene->world_.bounds().width || y > scene->world_.bounds().height)
             return true;
-        constexpr float half_w = 5.0f;
-        constexpr float half_h = 7.0f;
+        const auto* map_layout = minidayz::stage1::find_layout("Map");
+        if (!map_layout) return true;
+        const auto map_index = static_cast<std::uint16_t>(
+            map_layout - minidayz::stage1::kLayoutTable);
         for (std::size_t i = 0; i < scene->world_.feature_count(); ++i) {
             const auto* feature = scene->world_.feature(i);
-            if (!feature || (feature->kind != minidayz::WorldFeatureKind::Building &&
-                             feature->kind != minidayz::WorldFeatureKind::Bunker))
-                continue;
+            if (!feature) continue;
+            bool blocks = feature->kind == minidayz::WorldFeatureKind::Bunker ||
+                          feature->kind == minidayz::WorldFeatureKind::Obstacle ||
+                          feature->kind == minidayz::WorldFeatureKind::Water;
+            if (feature->kind == minidayz::WorldFeatureKind::Building) {
+                const auto* layer = minidayz::stage1::find_layer(
+                    map_index, feature->source_layer);
+                // Construct's building collision is attached to the actual
+                // Buildings layer, not its decorative shadows/base duplicates.
+                blocks = layer && std::strcmp(layer->name, "Buildings") == 0;
+            }
+            if (!blocks) continue;
             const float w = feature->width > 0.0f ? feature->width : 12.0f;
             const float h = feature->height > 0.0f ? feature->height : 12.0f;
-            if (x + half_w > feature->position.x &&
-                x - half_w < feature->position.x + w &&
-                y + half_h > feature->position.y &&
-                y - half_h < feature->position.y + h)
+            if (x >= feature->position.x && x <= feature->position.x + w &&
+                y >= feature->position.y && y <= feature->position.y + h)
                 return true;
         }
         return false;
