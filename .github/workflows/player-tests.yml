@@ -28,6 +28,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Generate Original World Source Tables
+        run: |
+          python3 tools/stage1/reassemble_snapshot.py
+          python3 tools/stage1/extract_construct.py data/stage1/construct_project_parsed.json --out data/stage1
+          python3 tools/stage1/extract_location_templates.py
+
       - name: Compile World Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
