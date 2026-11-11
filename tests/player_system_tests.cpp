@@ -1,6 +1,8 @@
 #include "minidayz/player.hpp"
 
 #include <cassert>
+#include <cmath>
+#include <limits>
 
 using namespace minidayz;
 
@@ -63,6 +65,55 @@ int main() {
     assert(move_result.dx == 0.0f && move_result.dy > 0.0f);
     assert(moving.state().x == 0.0f && moving.state().y > 0.0f);
     assert(moving.state().animation == PlayerAnimation::walk);
+
+    // The original player animation inventory is ordered as idle down/up/
+    // right/left (0..3), run down/up/right/left (4..7), on_ground (12).
+    PlayerState animation_state{};
+    animation_state.health = 100.0f;
+    PlayerSystem animated(animation_state);
+    assert(animated.source_animation_index() == 0);
+    PlayerInput up{};
+    up.move_y = -1.0f;
+    animated.update_movement(up, 0.05f, movement_rules);
+    assert(animated.source_animation_index() == 5);
+    assert(animated.source_animation_frame() == 0);
+    for (int i = 0; i < 19; ++i)
+        animated.update_movement(up, 0.05f, movement_rules);
+    assert(animated.source_animation_frame() == 1);
+    PlayerInput idle{};
+    animated.update_movement(idle, 0.05f, movement_rules);
+    assert(animated.source_animation_index() == 1);
+    assert(animated.source_animation_frame() == 0);
+    animated.kill(PlayerDeathReason::other);
+    assert(animated.source_animation_index() == 12);
+    assert(animated.source_animation_frame() == 0);
+
+    // The configured player half-size participates in collision checks.
+    PlayerState edge_state{};
+    edge_state.x = 1.0f;
+    edge_state.y = 10.0f;
+    edge_state.health = 100.0f;
+    PlayerSystem edge_player(edge_state);
+    PlayerRules edge_rules{};
+    edge_rules.walk_speed = 20.0f;
+    edge_rules.collision_half_width = 2.0f;
+    edge_rules.collision_half_height = 2.0f;
+    const auto outside_world = +[](void*, float x, float y) noexcept {
+        return x < 0.0f || y < 0.0f || x > 100.0f || y > 100.0f;
+    };
+    PlayerInput left{};
+    left.move_x = -1.0f;
+    const auto edge_move = edge_player.update_movement(
+        left, 0.05f, edge_rules, outside_world, nullptr);
+    assert(edge_move.blocked_x);
+    assert(edge_player.state().x == 1.0f);
+
+    // Non-finite input must not poison player coordinates or stats.
+    PlayerInput invalid{};
+    invalid.move_x = std::numeric_limits<float>::quiet_NaN();
+    edge_player.update_movement(invalid, 0.05f, edge_rules);
+    assert(std::isfinite(edge_player.state().x));
+    assert(std::isfinite(edge_player.state().y));
 
     // Injected survival rates are applied over a bounded frame. These are
     // API tests, not claims about the original game's tuned gameplay values.
