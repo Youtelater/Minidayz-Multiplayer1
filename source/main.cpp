@@ -206,7 +206,8 @@ public:
                     continue;
                 const float sx = placement->scale_x > 0.0f ? placement->scale_x : 1.0f;
                 if (!renderer.draw_source_sprite(placement->object, 0, 0,
-                        px, py, sx, sx)) {
+                        px, py, sx, sx, 0.5f,
+                        placement->angle * 0.01745329251994329577f)) {
                     // Keep missing atlas frames visible as small source-position
                     // markers, without inventing replacement artwork.
                     renderer.draw_solid_rect(px - 1.0f, py - 1.0f, 2.0f, 2.0f,
