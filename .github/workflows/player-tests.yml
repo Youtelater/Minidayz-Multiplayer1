@@ -1,4 +1,4 @@
-name: Player System Tests
+name: Native System Regression Tests
 
 on:
   push:
@@ -21,3 +21,18 @@ jobs:
 
       - name: Run Player Regression Tests
         run: ./player_system_tests
+
+  world-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Compile World Regression Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/world.cpp source/stage1_data_access.cpp tests/world_system_tests.cpp \
+            -o world_system_tests
+
+      - name: Run World Regression Tests
+        run: ./world_system_tests
