@@ -3,7 +3,6 @@
 from __future__ import annotations
 import argparse
 import csv
-import hashlib
 import json
 import re
 import sys
@@ -93,7 +92,7 @@ def main() -> int:
     for symbol, key in (("kObjectCount", "objects"), ("kLayoutCount", "layouts"),
                         ("kInstanceCount", "instances"), ("kAnimationCount", "animations"),
                         ("kAudioCount", "audio_resources"), ("kEventCount", "event_nodes")):
-        match = re.search(r"\\b" + symbol + r"\\s*=(\\d+)", header_text)
+        match = re.search(r"\b" + symbol + r"\s*=(\d+)", header_text)
         if not match or int(match.group(1)) != checks[key]:
             fail(f"generated C++ header {symbol} does not match the extracted data")
 
