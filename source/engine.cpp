@@ -113,7 +113,7 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
   slot=next_sprite_cache_++%kMaxSheets;
   unload_sheet(slot);
   char path[128];
-  const int n=std::snprintf(path,sizeof(path),"romfs:/gfx/sprites/%s.t3x",selected->sheet);
+  const int n=std::snprintf(path,sizeof(path),"romfs:/gfx/%s.t3x",selected->sheet);
   if(n<=0||static_cast<std::size_t>(n)>=sizeof(path)||!load_sheet(slot,path)) return false;
   std::snprintf(sprite_cache_[slot].sheet,sizeof(sprite_cache_[slot].sheet),"%s",selected->sheet);
   sprite_cache_[slot].slot=slot;
