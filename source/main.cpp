@@ -121,118 +121,74 @@ public:
     }
 
     void render(minidayz::Renderer& renderer) noexcept override {
-        // Render the source Map layout as a scaled overview. This deliberately
-        // visualizes source placements; it does not pretend that placeholder
-        // rectangles are the final original sprite/tile renderer.
-        constexpr float map_x = 8.0f;
-        constexpr float map_y = 8.0f;
-        constexpr float map_w = 304.0f;
-        constexpr float map_h = 224.0f;
-        constexpr float sx = map_w / minidayz::WorldSystem::kSourceMapWidth;
-        constexpr float sy = map_h / minidayz::WorldSystem::kSourceMapHeight;
-
-        renderer.draw_solid_rect(map_x, map_y, map_w, map_h,
+        const auto& p = player_.state();
+        constexpr float view_w = 400.0f;
+        constexpr float view_h = 240.0f;
+        const float camera_x = std::clamp(p.x - view_w * 0.5f, 0.0f,
+            std::max(0.0f, world_.bounds().width - view_w));
+        const float camera_y = std::clamp(p.y - view_h * 0.5f, 0.0f,
+            std::max(0.0f, world_.bounds().height - view_h));
+        renderer.set_camera(camera_x, camera_y);
+        renderer.draw_solid_rect(camera_x, camera_y, view_w, view_h,
                                  C2D_Color32(35, 49, 42, 255));
 
         if (world_ready_) {
-            // Draw the actual source-layout sprites from the generated frame
-            // catalog. The source placements remain in original map coordinates;
-            // only the overview transform is applied here.
+            // Render the actual source Map layout in world coordinates.
+            // Cull placements outside the camera rectangle to keep 3DS draw
+            // cost bounded instead of drawing the entire 36k x 20k layout.
             for (std::size_t i = 0; i < world_.placement_count(); ++i) {
                 const auto* placement = world_.placement(i);
                 if (!placement) continue;
-                const auto animations =
-                    minidayz::stage1::animations_for_object(placement->object);
-                if (!animations.data || animations.size == 0 ||
-                    animations.data[0].frames == 0) continue;
-                const float px = map_x + placement->x * sx;
-                const float py = map_y + placement->y * sy;
-                const float instance_scale =
-                    placement->scale_x > 0.0f ? placement->scale_x : 1.0f;
-                renderer.draw_source_sprite(
-                    placement->object, 0, 0, px, py,
-                    sx * instance_scale, sy * instance_scale);
+                const float px = placement->x;
+                const float py = placement->y;
+                if (px < camera_x - 96.0f || px > camera_x + view_w + 96.0f ||
+                    py < camera_y - 96.0f || py > camera_y + view_h + 96.0f)
+                    continue;
+                const float sx = placement->scale_x > 0.0f ? placement->scale_x : 1.0f;
+                if (!renderer.draw_source_sprite(placement->object, 0, 0,
+                        px, py, sx, sx)) {
+                    // Keep missing atlas frames visible as small source-position
+                    // markers, without inventing replacement artwork.
+                    renderer.draw_solid_rect(px - 1.0f, py - 1.0f, 2.0f, 2.0f,
+                                             C2D_Color32(105, 120, 95, 255));
+                }
             }
 
             for (std::size_t i = 0; i < world_.feature_count(); ++i) {
                 const auto* feature = world_.feature(i);
                 if (!feature) continue;
+                const float px = feature->position.x;
+                const float py = feature->position.y;
+                if (px < camera_x - 24.0f || px > camera_x + view_w + 24.0f ||
+                    py < camera_y - 24.0f || py > camera_y + view_h + 24.0f)
+                    continue;
                 u32 color = C2D_Color32(75, 91, 70, 255);
-                float w = 1.2f;
-                float h = 1.2f;
                 switch (feature->kind) {
                 case minidayz::WorldFeatureKind::Terrain:
-                    color = C2D_Color32(56, 76, 59, 255);
-                    break;
+                    color = C2D_Color32(56, 76, 59, 255); break;
                 case minidayz::WorldFeatureKind::Road:
-                    color = C2D_Color32(145, 133, 105, 255);
-                    w = 2.0f; h = 2.0f;
-                    break;
+                    color = C2D_Color32(145, 133, 105, 255); break;
                 case minidayz::WorldFeatureKind::Building:
-                    color = C2D_Color32(184, 166, 130, 255);
-                    w = 2.0f; h = 2.0f;
-                    break;
+                    color = C2D_Color32(184, 166, 130, 255); break;
                 case minidayz::WorldFeatureKind::Bunker:
-                    color = C2D_Color32(196, 88, 66, 255);
-                    w = 2.5f; h = 2.5f;
-                    break;
+                    color = C2D_Color32(196, 88, 66, 255); break;
                 case minidayz::WorldFeatureKind::Bridge:
-                    color = C2D_Color32(225, 190, 83, 255);
-                    w = 2.5f; h = 2.5f;
-                    break;
+                    color = C2D_Color32(225, 190, 83, 255); break;
                 case minidayz::WorldFeatureKind::SpawnPoint:
-                    color = C2D_Color32(85, 190, 210, 255);
-                    break;
+                    color = C2D_Color32(85, 190, 210, 255); break;
                 }
-                const float px = map_x + feature->position.x * sx;
-                const float py = map_y + feature->position.y * sy;
-                renderer.draw_solid_rect(px, py, w, h, color);
+                const float fw = feature->width > 0.0f ? feature->width : 3.0f;
+                const float fh = feature->height > 0.0f ? feature->height : 3.0f;
+                renderer.draw_solid_rect(px, py, fw, fh, color);
             }
-
-            // Display the generated POI/road grid in the lower-right corner.
-            // It is a diagnostic inset until the source cell-to-world
-            // transform and original location templates are ported.
-            constexpr float inset_x = 222.0f;
-            constexpr float inset_y = 158.0f;
-            constexpr float cell_w = 5.0f;
-            constexpr float cell_h = 4.0f;
-            for (int y = 0; y < world_.grid().height(); ++y) {
-                for (int x = 0; x < world_.grid().width(); ++x) {
-                    const auto code = world_.grid().at(x, y);
-                    if (code == 0) continue;
-                    u32 color = C2D_Color32(170, 170, 150, 255);
-                    if (code == 12 || code == 13 || code == 14)
-                        color = C2D_Color32(220, 195, 130, 255);
-                    else if (code == 5)
-                        color = C2D_Color32(190, 85, 70, 255);
-                    else if (code == 9 || code == 6)
-                        color = C2D_Color32(100, 190, 110, 255);
-                    else if (code == 11 || code == 15 || code == 103)
-                        color = C2D_Color32(90, 170, 210, 255);
-                    renderer.draw_solid_rect(inset_x + x * cell_w,
-                                             inset_y + y * cell_h,
-                                             cell_w - 1.0f, cell_h - 1.0f,
-                                             color);
-                }
-            }
-        } else {
-            renderer.draw_solid_rect(12.0f, 12.0f, 296.0f, 8.0f,
-                                     C2D_Color32(190, 55, 55, 255));
         }
 
-        // Render the original player actor animation (object 33). Fall back
-        // to a diagnostic marker if its generated atlas is unavailable.
-        const auto& p = player_.state();
         const bool sprite_drawn = p.alive &&
             renderer.draw_source_sprite(minidayz::kSourcePlayerObject,
                 player_.source_animation_index(), player_.source_animation_frame(),
                 p.x, p.y, 0.55f, 0.55f);
         if (!sprite_drawn) {
-            renderer.draw_solid_rect(p.x - 8.0f, p.y - 5.0f, 16.0f, 18.0f,
-                                     C2D_Color32(18, 20, 18, 255));
-            renderer.draw_solid_rect(p.x - 6.0f, p.y - 10.0f, 12.0f, 12.0f,
-                                     C2D_Color32(205, 184, 139, 255));
-            renderer.draw_solid_rect(p.x - 7.0f, p.y + 2.0f, 14.0f, 12.0f,
+            renderer.draw_solid_rect(p.x - 5.0f, p.y - 5.0f, 10.0f, 12.0f,
                                      p.alive ? C2D_Color32(190, 126, 65, 255)
                                              : C2D_Color32(130, 45, 45, 255));
         }
@@ -250,8 +206,27 @@ private:
         return state;
     }
 
-    static bool blocked(void*, float x, float y) noexcept {
-        return x < 18.0f || x > 302.0f || y < 20.0f || y > 220.0f;
+    static bool blocked(void* context, float x, float y) noexcept {
+        const auto* scene = static_cast<const WorldPreviewScene*>(context);
+        if (!scene || x < 0.0f || y < 0.0f ||
+            x > scene->world_.bounds().width || y > scene->world_.bounds().height)
+            return true;
+        constexpr float half_w = 5.0f;
+        constexpr float half_h = 7.0f;
+        for (std::size_t i = 0; i < scene->world_.feature_count(); ++i) {
+            const auto* feature = scene->world_.feature(i);
+            if (!feature || (feature->kind != minidayz::WorldFeatureKind::Building &&
+                             feature->kind != minidayz::WorldFeatureKind::Bunker))
+                continue;
+            const float w = feature->width > 0.0f ? feature->width : 12.0f;
+            const float h = feature->height > 0.0f ? feature->height : 12.0f;
+            if (x + half_w > feature->position.x &&
+                x - half_w < feature->position.x + w &&
+                y + half_h > feature->position.y &&
+                y - half_h < feature->position.y + h)
+                return true;
+        }
+        return false;
     }
 
     minidayz::WorldSystem world_{};
