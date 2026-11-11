@@ -110,10 +110,9 @@ $(BUILD)/%.o: %.s
 #-----------------------------------------------------------------
 # STAGE 1 SPRITE CATALOG / FRAME ATLAS GENERATION
 #-----------------------------------------------------------------
-# Existing full-sheet .t3x files in romfs/gfx are packaged as-is.
-# The engine also needs cropped, frame-indexed atlases in romfs/gfx/sprites;
-# build_sprite_catalog.py creates those atlases and the generated C++ lookup
-# header from the original Construct frame rectangles.
+# The engine loads the generated, frame-indexed .t3x atlases directly from
+# romfs/gfx. build_sprite_catalog.py writes those atlases beside the existing
+# full-sheet .t3x files and generates the matching C++ lookup header.
 # Do not run tools/build_textures.py here: bulk PNG -> T3X conversion is no
 # longer part of the normal build.
 stage1-assets:
