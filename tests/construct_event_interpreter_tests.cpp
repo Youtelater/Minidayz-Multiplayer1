@@ -79,6 +79,6 @@ int main() {
     assert(construct::execute_location_event_branch(repeat_branch_uid, callbacks, matched));
     assert(matched);
     assert(repeat_state.actions_executed > 0);
-    assert(repeat_state.repeat_indices_seen != 0);
+    assert((repeat_state.repeat_indices_seen & (repeat_state.repeat_indices_seen - 1)) != 0);
     return 0;
 }
