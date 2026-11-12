@@ -59,6 +59,7 @@ void SourceLocationEventRuntime::set_mapgen(std::uint16_t tile_code,
     set_variable("PlantX", Value::from_number(0));
     set_variable("PlantY", Value::from_number(0));
     last_spawn_index_ = static_cast<std::size_t>(-1);
+    spawn_start_index_ = spawns_.size();
 }
 
 bool SourceLocationEventRuntime::execute_branch(std::uint64_t branch_uid,
@@ -191,9 +192,11 @@ void SourceLocationEventRuntime::set_variable(std::string_view name,
 
 SourceLocationSpawn* SourceLocationEventRuntime::last_spawn(std::uint16_t object) noexcept {
     if (last_spawn_index_ >= spawns_.size()) return nullptr;
-    auto& spawn = spawns_[last_spawn_index_];
-    if (object != 0 && spawn.object != object) return nullptr;
-    return &spawn;
+    for (std::size_t i = last_spawn_index_ + 1; i > spawn_start_index_;) {
+        --i;
+        if (object == 0 || spawns_[i].object == object) return &spawns_[i];
+    }
+    return nullptr;
 }
 
 bool SourceLocationEventRuntime::evaluate_condition(
