@@ -49,6 +49,11 @@ jobs:
           make clean
           make
 
+      - name: Test Construct location event interpreter
+        run: |
+          g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/construct_expression.cpp source/construct_event_interpreter.cpp tests/construct_event_interpreter_tests.cpp -o /tmp/construct_event_interpreter_tests
+          /tmp/construct_event_interpreter_tests
+
       - name: Upload .3dsx Executable
         uses: actions/upload-artifact@v4
         with:
