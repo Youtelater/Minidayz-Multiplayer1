@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
+#include <cstdio>
 
 using namespace minidayz;
 
@@ -62,6 +63,7 @@ int main() {
     callbacks.user = &repeat_state;
     assert(construct::execute_location_event_branch(branch_for_code(52), callbacks, matched));
     assert(matched);
+    std::printf("repeat writes=%zu sizes=%zu mask=%x\\n", repeat_state.array_writes, repeat_state.array_sizes, repeat_state.repeat_indices_seen);
     assert(repeat_state.array_writes == 72);
     assert(repeat_state.array_sizes == 1);
     assert(repeat_state.repeat_indices_seen == 0xffff);
