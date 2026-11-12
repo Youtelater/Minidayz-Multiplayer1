@@ -415,9 +415,14 @@ bool evaluate_source_system_expression(void* user, std::uint16_t expression_id,
         if (argument_count != 1 || !arguments) return false;
         result = Value::from_number(std::floor(arguments[0].as_number()));
         return true;
-    case 82: { // choose(a, b, ...)
-        if (!state->rng || !arguments || argument_count < 2 ||
+    case 82: { // choose(a, b, ...); a single choice is returned unchanged.
+        if (!arguments || argument_count == 0 ||
             argument_count > std::numeric_limits<std::uint32_t>::max()) return false;
+        if (argument_count == 1) {
+            result = arguments[0];
+            return true;
+        }
+        if (!state->rng) return false;
         const auto bound = static_cast<std::uint32_t>(argument_count);
         const std::uint32_t threshold = static_cast<std::uint32_t>(-bound) % bound;
         std::uint32_t draw{};
