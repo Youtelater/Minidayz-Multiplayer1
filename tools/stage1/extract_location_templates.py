@@ -86,6 +86,28 @@ def collect_expression_inventory(rows):
     return sorted(opcode_counts.items()), sorted(function_counts.items())
 
 
+def collect_array_operations(branch):
+    """Preserve Array Set-at-XY and Set-size calls in one ordered stream."""
+    operations = []
+    stack = [branch]
+    while stack:
+        node = stack.pop()
+        if not isinstance(node, list) or len(node) < 8 or node[0] != 0:
+            continue
+        for action in node[6] if isinstance(node[6], list) else []:
+            if not isinstance(action, list) or len(action) < 6:
+                continue
+            if action[0] != 525 or action[1] not in (199, 210):
+                continue
+            params = action[5]
+            if len(params) != 3 or any(not isinstance(p, list) or len(p) < 2 for p in params):
+                raise SystemExit(f"Malformed Array operation {action[3]}")
+            operations.append((branch[4], node[4], action[3], action[1],
+                               *(json.dumps(p[1], separators=(",", ":")) for p in params)))
+        children = node[7] if isinstance(node[7], list) else []
+        stack.extend(reversed(children))
+    return operations
+
 def cpp_string(value):
     return json.dumps(value)
 
@@ -105,6 +127,7 @@ def main():
     rows = []
     spawn_rows = []
     array_write_rows = []
+    array_operation_rows = []
     for branch in branches:
         if not isinstance(branch, list) or not branch or branch[0] != 0:
             continue
@@ -121,6 +144,7 @@ def main():
         nodes, writes, creates = count_branch(branch)
         rows.append((branch[4], codes, nodes, writes, creates))
         array_write_rows.extend(collect_array_writes(branch))
+        array_operation_rows.extend(collect_array_operations(branch))
 
         def hotspot_offset(expression, variable):
             if expression == [23, variable]:
@@ -253,6 +277,20 @@ def main():
     event_lines += ["};", "} // namespace minidayz::stage1", ""]
     event_output = OUTPUT.with_name("location_event_source.hpp")
     event_output.write_text("\n".join(event_lines), encoding="utf-8")
+
+    operation_lines = [
+        "#pragma once", "#include <cstddef>", "#include <cstdint>",
+        "namespace minidayz::stage1 {",
+        "struct LocationArrayOperationSource { std::uint64_t branch_uid, event_uid, action_uid; std::uint16_t action_id; const char* parameter_0; const char* parameter_1; const char* parameter_2; };",
+        f"inline constexpr std::size_t kLocationArrayOperationSourceCount = {len(array_operation_rows)};",
+        "inline constexpr LocationArrayOperationSource kLocationArrayOperationSource[] = {"
+    ]
+    for branch_uid, event_uid, action_uid, action_id, p0, p1, p2 in array_operation_rows:
+        operation_lines.append(
+            f"    {{{branch_uid}ULL, {event_uid}ULL, {action_uid}ULL, {action_id}, {cpp_string(p0)}, {cpp_string(p1)}, {cpp_string(p2)}}},")
+    operation_lines += ["};", "} // namespace minidayz::stage1", ""]
+    operation_output = OUTPUT.with_name("location_array_operation_source.hpp")
+    operation_output.write_text("\n".join(operation_lines), encoding="utf-8")
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
