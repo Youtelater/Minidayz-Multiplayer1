@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <string_view>
 
@@ -31,6 +32,17 @@ using ObjectExpression = bool (*)(void* user, std::uint16_t object_index,
                                   std::string_view behavior_name,
                                   const Value* arguments, std::size_t argument_count,
                                   Value& result);
+
+struct SourceSystemExpressionState {
+    std::mt19937* rng{};
+    int loop_index{};
+};
+
+// Source System expression IDs used by generate_location:
+// 80=random, 82=choose, 95=floor, 150=loopindex.
+bool evaluate_source_system_expression(void* user, std::uint16_t expression_id,
+                                       const Value* arguments,
+                                       std::size_t argument_count, Value& result);
 
 struct EvaluationContext {
     void* user{};
