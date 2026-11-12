@@ -1,4 +1,5 @@
 #include "minidayz/construct_event_interpreter.hpp"
+#include "minidayz/generated/location_event_source.hpp"
 
 #include <cstddef>
 #include <cstdint>
