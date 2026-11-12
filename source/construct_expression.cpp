@@ -198,6 +198,36 @@ private:
             return true;
         }
 
+        if (opcode == 21) {
+            std::uint16_t object_index{}, variable_index{};
+            if (!integer(object_index) || !take(',')) return false;
+            whitespace();
+            bool is_behavior = false;
+            if (input_.substr(position_, 4) == "true") {
+                is_behavior = true;
+                position_ += 4;
+            } else if (input_.substr(position_, 5) == "false") {
+                position_ += 5;
+            } else return false;
+            if (!take(',')) return false;
+            whitespace();
+            std::string behavior_name;
+            if (input_.substr(position_, 4) == "null") position_ += 4;
+            else if (!string(behavior_name)) return false;
+            if (!take(',') || !integer(variable_index) || !take(']')) return false;
+            if (!context_.read_instance_variable) {
+                error_ = EvaluationError::MissingCallback;
+                return false;
+            }
+            if (!context_.read_instance_variable(context_.user, object_index,
+                                                 is_behavior, behavior_name,
+                                                 variable_index, result)) {
+                error_ = EvaluationError::CallbackFailed;
+                return false;
+            }
+            return true;
+        }
+
         if (opcode == 23) {
             std::string name;
             if (!string(name) || !take(']')) return false;
