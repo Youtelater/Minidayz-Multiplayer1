@@ -17,7 +17,7 @@ bool evaluate_condition(void*, const stage1::LocationEventConditionSource& condi
                         int, bool, bool& matched, int& repeat_count) {
     matched = true;
     if (condition.object_index == -1 && condition.command_id == 123)
-        repeat_count = 12;
+        repeat_count = 16;
     return true;
 }
 
@@ -60,8 +60,8 @@ int main() {
     callbacks.user = &repeat_state;
     assert(construct::execute_location_event_branch(branch_for_code(52), callbacks, matched));
     assert(matched);
-    assert(repeat_state.array_writes == 144);
+    assert(repeat_state.array_writes == 72);
     assert(repeat_state.array_sizes == 1);
-    assert(repeat_state.repeat_indices_seen == 0x0fff);
+    assert(repeat_state.repeat_indices_seen == 0xffff);
     return 0;
 }
