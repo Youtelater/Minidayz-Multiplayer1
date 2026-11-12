@@ -52,3 +52,13 @@ jobs:
 
       - name: Run Construct Location Event Interpreter Tests
         run: ./construct_event_interpreter_tests
+
+      - name: Compile Original Location Runtime Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/construct_array.cpp source/construct_expression.cpp \
+            source/construct_event_interpreter.cpp source/location_event_runtime.cpp \
+            tests/location_event_runtime_tests.cpp -o location_event_runtime_tests
+
+      - name: Run Original Location Runtime Tests
+        run: ./location_event_runtime_tests
