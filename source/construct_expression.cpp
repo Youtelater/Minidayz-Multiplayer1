@@ -341,18 +341,10 @@ bool evaluate_source_system_expression(void* user, std::uint16_t expression_id,
     if (!state) return false;
 
     switch (expression_id) {
-    case 80: { // random(x) / random(a, b)
-        if (!state->rng || argument_count == 0 || argument_count > 2) return false;
-        const double unit = static_cast<double>((*state->rng)()) / 4294967296.0;
-        if (argument_count == 1) {
-            result = Value::from_number(unit * arguments[0].as_number());
-        } else {
-            const double lower = arguments[0].as_number();
-            const double upper = arguments[1].as_number();
-            result = Value::from_number(lower + unit * (upper - lower));
-        }
+    case 80: // floor(x)
+        if (argument_count != 1 || !arguments) return false;
+        result = Value::from_number(std::floor(arguments[0].as_number()));
         return true;
-    }
     case 82: { // choose(a, b, ...)
         if (!state->rng || !arguments || argument_count < 2 ||
             argument_count > std::numeric_limits<std::uint32_t>::max()) return false;
@@ -365,13 +357,26 @@ bool evaluate_source_system_expression(void* user, std::uint16_t expression_id,
         result = arguments[draw % bound];
         return true;
     }
-    case 95: // floor(x)
-        if (argument_count != 1) return false;
-        result = Value::from_number(std::floor(arguments[0].as_number()));
+    case 95: { // random(x) / random(a, b)
+        if (!state->rng || !arguments || argument_count == 0 || argument_count > 2)
+            return false;
+        const double unit = static_cast<double>((*state->rng)()) / 4294967296.0;
+        if (argument_count == 1) {
+            result = Value::from_number(unit * arguments[0].as_number());
+        } else {
+            const double lower = arguments[0].as_number();
+            const double upper = arguments[1].as_number();
+            result = Value::from_number(lower + unit * (upper - lower));
+        }
         return true;
+    }
     case 150: // loopindex
         if (argument_count != 0) return false;
         result = Value::from_number(static_cast<double>(state->loop_index));
+        return true;
+    case 204: // int(x)
+        if (argument_count != 1 || !arguments) return false;
+        result = Value::from_number(std::trunc(arguments[0].as_number()));
         return true;
     default:
         return false;
