@@ -5,6 +5,41 @@
 #include <cstdint>
 
 namespace minidayz::construct {
+
+bool evaluate_location_event_parameter(
+    const stage1::LocationEventParameterSource& parameter,
+    EvaluationContext& context, Value& result) {
+    if (!parameter.raw_value) return false;
+    const std::string_view raw(parameter.raw_value);
+    std::string expression;
+
+    // Construct object/layer parameters are encoded as [2,"name"] rather
+    // than expression nodes. Convert their string payload to a literal node.
+    if (raw.size() >= 5 && raw.substr(0, 3) == "[2,") {
+        std::size_t quote = raw.find('"', 3);
+        if (quote == std::string_view::npos) return false;
+        std::size_t end = quote + 1;
+        bool escaped = false;
+        for (; end < raw.size(); ++end) {
+            const char c = raw[end];
+            if (escaped) escaped = false;
+            else if (c == '\\\\') escaped = true;
+            else if (c == '"') break;
+        }
+        if (end >= raw.size()) return false;
+        expression = "[0,";
+        expression.append(raw.substr(quote, end - quote + 1));
+        expression += "]";
+    } else if (!raw.empty() && raw.front() == '[') {
+        expression.assign(raw);
+    } else {
+        expression = "[0,";
+        expression.append(raw);
+        expression += "]";
+    }
+    return evaluate_expression(expression, context, result);
+}
+
 namespace {
 
 constexpr std::size_t kMaxEventDepth = 64;
