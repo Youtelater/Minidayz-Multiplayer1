@@ -159,7 +159,7 @@ def main():
         stack = [branch]
         while stack:
             node = stack.pop()
-            if not isinstance(node, list) or len(node) < 7 or node[0] != 0:
+            if not isinstance(node, list) or len(node) < 8 or node[0] != 0:
                 continue
             for action in node[6] if isinstance(node[6], list) else []:
                 if not isinstance(action, list) or len(action) < 6 or action[0] != -1 or action[1] != 94:
