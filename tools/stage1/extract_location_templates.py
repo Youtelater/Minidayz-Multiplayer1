@@ -64,6 +64,28 @@ def collect_array_writes(branch):
         stack.extend(reversed(children))
     return writes
 
+def collect_expression_inventory(rows):
+    opcode_counts = {}
+    function_counts = {}
+
+    def walk(node):
+        if not isinstance(node, list):
+            return
+        if node and isinstance(node[0], int):
+            opcode = node[0]
+            opcode_counts[opcode] = opcode_counts.get(opcode, 0) + 1
+            if opcode == 19 and len(node) > 1 and isinstance(node[1], int):
+                function_id = node[1]
+                function_counts[function_id] = function_counts.get(function_id, 0) + 1
+        for child in node:
+            walk(child)
+
+    for row in rows:
+        for expression in row[3:]:
+            walk(json.loads(expression))
+    return sorted(opcode_counts.items()), sorted(function_counts.items())
+
+
 def cpp_string(value):
     return json.dumps(value)
 
@@ -149,6 +171,19 @@ def main():
               "inline constexpr LocationArrayWriteSource kLocationArrayWriteSource[] = {"]
     for branch_uid, event_uid, action_uid, array_expr, index_expr, value_expr in array_write_rows:
         lines.append(f"    {{{branch_uid}ULL, {event_uid}ULL, {action_uid}ULL, {cpp_string(array_expr)}, {cpp_string(index_expr)}, {cpp_string(value_expr)}}},")
+    opcode_counts, function_counts = collect_expression_inventory(array_write_rows)
+    lines += ["};",
+              "struct LocationExpressionOpcodeCount { std::uint16_t opcode; std::uint32_t count; };",
+              f"inline constexpr std::size_t kLocationExpressionOpcodeCount = {len(opcode_counts)};",
+              "inline constexpr LocationExpressionOpcodeCount kLocationExpressionOpcodeCounts[] = {"]
+    for opcode, count in opcode_counts:
+        lines.append(f"    {{{opcode}, {count}}},")
+    lines += ["};",
+              "struct LocationExpressionFunctionCount { std::uint16_t function_id; std::uint32_t count; };",
+              f"inline constexpr std::size_t kLocationExpressionFunctionCount = {len(function_counts)};",
+              "inline constexpr LocationExpressionFunctionCount kLocationExpressionFunctionCounts[] = {"]
+    for function_id, count in function_counts:
+        lines.append(f"    {{{function_id}, {count}}},")
     lines += ["};", "} // namespace minidayz::stage1", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
