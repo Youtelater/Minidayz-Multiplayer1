@@ -35,6 +35,8 @@ jobs:
         run: |
           g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/construct_expression.cpp tests/construct_expression_tests.cpp -o /tmp/construct_expression_tests
           /tmp/construct_expression_tests
+          g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/construct_expression.cpp source/construct_array.cpp tests/construct_array_tests.cpp -o /tmp/construct_array_tests
+          /tmp/construct_array_tests
 
       - name: Compile 3DS Executable
         shell: bash
