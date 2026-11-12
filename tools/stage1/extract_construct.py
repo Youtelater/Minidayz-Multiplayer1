@@ -120,7 +120,7 @@ def main():
                 w=csv.DictWriter(f,fieldnames=list(rows[0]));w.writeheader();w.writerows(rows)
     header=Path("include/minidayz/generated/stage1_data.hpp"); header.parent.mkdir(parents=True,exist_ok=True)
     h=["#pragma once","#include <cstdint>","#include <cstddef>","namespace minidayz::stage1 {",
-       "struct ObjectDef{std::uint16_t index;std::uint8_t type;const char* name;};",
+       "struct ObjectDef{std::uint16_t index;std::uint8_t type;const char* name;float width{},height{};};",
        "struct LayoutDef{const char* name;float width,height;const char* event_sheet;std::uint32_t first,count;};",
        "struct LayerDef{std::uint16_t layout,index;const char* name;std::uint32_t first,count;bool visible;float px,py;};",
        "struct InstanceDef{std::uint16_t layout,layer,object;std::uint64_t uid;float x,y,z,w,h,angle,opacity,scale_x,ox,oy;};",
@@ -130,7 +130,19 @@ def main():
        "struct CommandCount{std::uint16_t id;std::uint32_t count;};",
        f"inline constexpr std::size_t kObjectCount={len(objects)},kLayoutCount={len(layouts)},kLayerCount={len(layers)},kInstanceCount={len(instances)},kAnimationCount={len(animations)},kAudioCount={len(audio)},kEventSheetCount={len(sheets)},kEventCount={len(events)},kVariableCount={len(variables)},kGroupCount={len(groups)};",
        "inline constexpr ObjectDef kObjects[]={"]
-    for i,o in enumerate(objects):h.append(f"{{{i},{o[1]},{q(o[0])}}},")
+    for i,o in enumerate(objects):
+        width,height=0,0
+        for animation in (o[7] if len(o)>7 and isinstance(o[7],list) else []):
+            frames=animation[7] if len(animation)>7 and isinstance(animation[7],list) else []
+            for frame in frames:
+                if isinstance(frame,list) and frame and isinstance(frame[0],str):
+                    fw=frame[4] if len(frame)>4 else 0
+                    fh=frame[5] if len(frame)>5 else 0
+                    if isinstance(fw,(int,float)) and isinstance(fh,(int,float)) and fw>0 and fh>0:
+                        width,height=fw,fh
+                        break
+            if width>0 and height>0: break
+        h.append(f"{{{i},{o[1]},{q(o[0])},{cf(width)},{cf(height)}}},")
     h+=["};","inline constexpr LayoutDef kLayoutTable[]={"]
     for x in layouts:h.append(f"{{{q(x['name'])},{cf(x['width'])},{cf(x['height'])},{q(x['event_sheet'])},{x['first']},{x['count']}}},")
     h+=["};","inline constexpr LayerDef kLayerTable[]={"]
