@@ -159,7 +159,7 @@ def main():
         stack = [branch]
         while stack:
             node = stack.pop()
-            if not isinstance(node, list) or len(node) < 8 or node[0] != 0:
+            if not isinstance(node, list) or len(node) < 7 or node[0] != 0:
                 continue
             for action in node[6] if isinstance(node[6], list) else []:
                 if not isinstance(action, list) or len(action) < 6 or action[0] != -1 or action[1] != 94:
@@ -177,7 +177,7 @@ def main():
             # Preserve Construct's authored event order; generated spawn rows are
             # appended to the map in this order, so reversing siblings changes
             # overlap/draw ordering for objects created by nested events.
-            children = node[7] if isinstance(node[7], list) else []
+            children = node[7] if len(node) > 7 and isinstance(node[7], list) else []
             stack.extend(reversed(children))
     lines = ["#pragma once", "#include <cstddef>", "#include <cstdint>",
              "namespace minidayz::stage1 {",
