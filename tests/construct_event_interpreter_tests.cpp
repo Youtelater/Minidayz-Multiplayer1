@@ -60,27 +60,25 @@ int main() {
     assert(simple_state.array_writes == 45);
     assert(simple_state.array_sizes == 1);
 
+    // Find a real source branch containing a Repeat condition and actions.
+    // Tile code 52 is a non-array branch in the original project, so it is not
+    // a valid fixture for asserting Array writes or Repeat loop iterations.
+    std::uint64_t repeat_branch_uid = 0;
+    for (std::size_t c = 0; c < stage1::kLocationEventConditionSourceCount; ++c) {
+        const auto& condition = stage1::kLocationEventConditionSource[c];
+        if (condition.object_index != -1 || condition.command_id != 123) continue;
+        bool has_action = false;
+        for (std::size_t a = 0; a < stage1::kLocationEventActionSourceCount; ++a)
+            if (stage1::kLocationEventActionSource[a].branch_uid == condition.branch_uid)
+                has_action = true;
+        if (has_action) { repeat_branch_uid = condition.branch_uid; break; }
+    }
+    assert(repeat_branch_uid != 0);
     TestState repeat_state;
     callbacks.user = &repeat_state;
-    const std::uint64_t repeat_branch_uid = branch_for_code(52);
-    std::fprintf(stderr, "branch52 uid=%llu event_count=%zu\\n",
-                 static_cast<unsigned long long>(repeat_branch_uid),
-                 stage1::kLocationEventSourceCount);
-    for (std::size_t i = 0; i < stage1::kLocationEventSourceCount; ++i) {
-        const auto& event = stage1::kLocationEventSource[i];
-        if (event.branch_uid == repeat_branch_uid)
-            std::fprintf(stderr, "node=%zu parent=%u depth=%u event=%llu cond=%u actions=%u disabled=%d\\n",
-                         i, event.parent_index, event.depth,
-                         static_cast<unsigned long long>(event.event_uid),
-                         event.condition_count, event.action_count, event.disabled ? 1 : 0);
-    }
     assert(construct::execute_location_event_branch(repeat_branch_uid, callbacks, matched));
     assert(matched);
-    std::fprintf(stderr, "repeat writes=%zu sizes=%zu mask=%x\n", repeat_state.array_writes, repeat_state.array_sizes, repeat_state.repeat_indices_seen);
-    // Tile code 52 is not guaranteed to contain Array actions. The event
-    // interpreter contract is that every enabled action in the selected
-    // branch executes; Array command IDs are covered by the dedicated Array
-    // executor tests. Keep this test focused on branch traversal and actions.
     assert(repeat_state.actions_executed > 0);
+    assert(repeat_state.repeat_indices_seen != 0);
     return 0;
 }
