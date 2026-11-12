@@ -44,7 +44,7 @@ std::uint64_t branch_for_code(std::uint16_t code) {
 }
 
 int main() {
-    EventCallbacks callbacks{};
+    construct::EventCallbacks callbacks{};
     callbacks.evaluate_condition = evaluate_condition;
     callbacks.execute_action = execute_action;
 
