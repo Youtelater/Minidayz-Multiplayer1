@@ -58,6 +58,18 @@ Value Array::at(int x, int y, int z) const {
                           static_cast<std::size_t>(z))];
 }
 
+bool Array::evaluate_expression(std::uint16_t expression_id, const Value* arguments,
+                                  std::size_t argument_count, Value& result) const {
+    // Construct Array expression ACE 222 is At(X[, Y[, Z]]).
+    if (expression_id != 222 || !arguments || argument_count == 0 ||
+        argument_count > 3) return false;
+    const int x = static_cast<int>(arguments[0].as_number());
+    const int y = argument_count > 1 ? static_cast<int>(arguments[1].as_number()) : 0;
+    const int z = argument_count > 2 ? static_cast<int>(arguments[2].as_number()) : 0;
+    result = at(x, y, z);
+    return true;
+}
+
 bool Array::set_at_x(int x, Value value) {
     return set_at_xyz(x, 0, 0, std::move(value));
 }
