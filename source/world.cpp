@@ -1,7 +1,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
-#include "minidayz/generated/location_spawn_source.hpp"
+#include "minidayz/location_event_runtime.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -486,67 +486,89 @@ bool WorldSystem::generate_source_locations() {
     if (!layout) return false;
     const auto layout_index = static_cast<std::uint16_t>(layout - stage1::kLayoutTable);
 
-    // The original generate_location event creates its objects at hotspotX/Y
-    // plus the exact offsets extracted from each Construct System Create action.
-    // The map-generation grid spans the source Map layout, so each cell's
-    // center is the location hotspot used for that generated POI.
-    const float cell_width = bounds_.width / static_cast<float>(grid_.width());
-    const float cell_height = bounds_.height / static_cast<float>(grid_.height());
+    // Feed the generated grid into the original Construct map Array. The
+    // location event interpreter then runs the actual per-tile event branch;
+    // no pre-expanded System Create offset table is used here.
+    construct::Array map_array;
+    if (!map_array.set_size(grid_.width(), grid_.height(), 1)) return false;
+    for (int y = 0; y < grid_.height(); ++y) {
+        for (int x = 0; x < grid_.width(); ++x) {
+            if (!map_array.set_at_xy(x, y,
+                    construct::Value::from_number(grid_.at(x, y)))) return false;
+        }
+    }
+
+    construct::SourceLocationEventRuntime runtime;
+    if (!runtime.initialize(static_cast<std::uint8_t>(0), map_array, rng_)) return false;
+
+    const double cell_width = bounds_.width / static_cast<double>(grid_.width());
+    const double cell_height = bounds_.height / static_cast<double>(grid_.height());
     std::size_t added = 0;
     for (int y = 0; y < grid_.height(); ++y) {
         for (int x = 0; x < grid_.width(); ++x) {
             const std::uint16_t code = grid_.at(x, y);
             if (code == 0) continue;
             const WorldPoint hotspot{
-                (static_cast<float>(x) + 0.5f) * cell_width,
-                (static_cast<float>(y) + 0.5f) * cell_height
+                static_cast<float>((static_cast<double>(x) + 0.5) * cell_width),
+                static_cast<float>((static_cast<double>(y) + 0.5) * cell_height)
             };
-            for (const auto& source : stage1::kLocationSpawnSource) {
-                if (source.tile_code != code) continue;
-                const std::uint16_t layer =
-                    find_layer_index_by_name(layout_index, source.layer_name);
-                if (layer == 0xffff) return false;
-                const WorldPoint position{
-                    hotspot.x + static_cast<float>(source.offset_x),
-                    hotspot.y + static_cast<float>(source.offset_y)
-                };
-                if (!bounds_.contains(position)) continue;
-                const auto* object = stage1::find_object(source.object);
-                float object_width = object ? object->width : 0.0f;
-                float object_height = object ? object->height : 0.0f;
-                // Older generated headers may not yet contain sprite dimensions.
-                // Recover dimensions from source layout instances until the data
-                // extractor has regenerated the enriched object table.
-                if (object_width <= 0.0f || object_height <= 0.0f) {
-                    for (const auto& instance : stage1::kInstances) {
-                        if (instance.object != source.object ||
-                            instance.w <= 0.0f || instance.h <= 0.0f) continue;
-                        object_width = instance.w;
-                        object_height = instance.h;
+
+            for (const auto& source : stage1::kLocationTemplateSource) {
+                bool tile_matches = false;
+                for (std::uint8_t i = 0; i < source.tile_code_count; ++i) {
+                    if (source.tile_codes[i] == code) {
+                        tile_matches = true;
                         break;
                     }
                 }
-                placements_.push_back({
-                    layer, source.object, source.action_uid, position.x, position.y,
-                    0.0f, object_width, object_height, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0
-                });
+                if (!tile_matches) continue;
 
-                // Generated POI templates are real map objects too. Feed their
-                // source layers into the same collision-feature list as objects
-                // already present in the Map layout; otherwise buildings and
-                // environmental blockers spawned by a village/city are visible
-                // but completely non-solid to the player.
-                WorldFeatureKind kind{};
-                if (const auto* source_layer = stage1::find_layer(layout_index, layer);
-                    source_layer && classify_source_layer(source_layer->name, kind)) {
-                    features_.push_back({
-                        kind, position, source.action_uid, source.object, layer,
-                        source.object, object_width, object_height, 0.0f, 0
-                    });
-                }
-                ++added;
+                runtime.set_mapgen(code, static_cast<std::uint8_t>(x),
+                                   static_cast<std::uint8_t>(y),
+                                   hotspot.x, hotspot.y, cell_width, cell_height);
+                bool matched = false;
+                if (!runtime.execute_branch(source.event_uid, matched)) return false;
+                if (!matched) continue;
             }
         }
+    }
+
+    for (const auto& spawn : runtime.spawns()) {
+        const std::uint16_t layer =
+            find_layer_index_by_name(layout_index, spawn.layer.c_str());
+        if (layer == 0xffff) return false;
+        const WorldPoint position{static_cast<float>(spawn.x),
+                                  static_cast<float>(spawn.y)};
+        if (!bounds_.contains(position)) continue;
+
+        const auto* object = stage1::find_object(spawn.object);
+        float object_width = static_cast<float>(spawn.width);
+        float object_height = static_cast<float>(spawn.height);
+        if (object_width <= 0.0f && object) object_width = object->width;
+        if (object_height <= 0.0f && object) object_height = object->height;
+        if (object_width <= 0.0f || object_height <= 0.0f) {
+            for (const auto& instance : stage1::kInstances) {
+                if (instance.object != spawn.object ||
+                    instance.w <= 0.0f || instance.h <= 0.0f) continue;
+                if (object_width <= 0.0f) object_width = instance.w;
+                if (object_height <= 0.0f) object_height = instance.h;
+                break;
+            }
+        }
+
+        placements_.push_back({
+            layer, spawn.object, 0, position.x, position.y, 0.0f,
+            object_width, object_height, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0
+        });
+        WorldFeatureKind kind{};
+        if (const auto* source_layer = stage1::find_layer(layout_index, layer);
+            source_layer && classify_source_layer(source_layer->name, kind)) {
+            features_.push_back({
+                kind, position, 0, spawn.object, layer, spawn.object,
+                object_width, object_height, 0.0f, 0
+            });
+        }
+        ++added;
     }
     source_location_spawn_count_ = added;
     return true;
