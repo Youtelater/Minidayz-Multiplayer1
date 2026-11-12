@@ -70,6 +70,24 @@ bool Array::evaluate_expression(std::uint16_t expression_id, const Value* argume
     return true;
 }
 
+bool Array::execute_action(std::uint16_t action_id, const Value* arguments,
+                            std::size_t argument_count) {
+    if (!arguments || argument_count != 3) return false;
+    if (action_id == 199) {
+        // Set at XY. Construct silently ignores writes outside the current size.
+        (void)set_at_xy(static_cast<int>(arguments[0].as_number()),
+                        static_cast<int>(arguments[1].as_number()), arguments[2]);
+        return true;
+    }
+    if (action_id == 210) {
+        // Set size to width, height, depth.
+        return set_size(static_cast<int>(arguments[0].as_number()),
+                        static_cast<int>(arguments[1].as_number()),
+                        static_cast<int>(arguments[2].as_number()));
+    }
+    return false;
+}
+
 bool Array::set_at_x(int x, Value value) {
     return set_at_xyz(x, 0, 0, std::move(value));
 }
