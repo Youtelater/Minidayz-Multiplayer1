@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <cstddef>
 namespace minidayz::stage1 {
-struct ObjectDef{std::uint16_t index;std::uint8_t type;const char* name;};
+struct ObjectDef{std::uint16_t index;std::uint8_t type;const char* name;float width{},height{};};
 struct LayoutDef{const char* name;float width,height;const char* event_sheet;std::uint32_t first,count;};
 struct LayerDef{std::uint16_t layout,index;const char* name;std::uint32_t first,count;bool visible;float px,py;};
 struct InstanceDef{std::uint16_t layout,layer,object;std::uint64_t uid;float x,y,z,w,h,angle,opacity,scale_x,ox,oy;};
