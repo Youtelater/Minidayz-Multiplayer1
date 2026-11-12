@@ -185,6 +185,75 @@ def main():
     for function_id, count in function_counts:
         lines.append(f"    {{{function_id}, {count}}},")
     lines += ["};", "} // namespace minidayz::stage1", ""]
+    # Preserve the full event tree as executable input for the native
+    # interpreter. The older location-template table intentionally contains
+    # only dispatch/spawn summaries and cannot represent nested conditions,
+    # Else siblings, or Repeat loops.
+    event_rows = []
+    condition_rows = []
+    action_rows = []
+    def collect_event_tree(root_event):
+        stack = [(root_event, 0xffffffff, 0, 0)]
+        while stack:
+            node, parent_index, depth, branch_uid = stack.pop()
+            if not isinstance(node, list) or len(node) < 8 or node[0] != 0:
+                continue
+            if depth == 1:
+                branch_uid = node[4]
+            node_index = len(event_rows)
+            first_condition = len(condition_rows)
+            for condition in node[5] if isinstance(node[5], list) else []:
+                if not isinstance(condition, list) or len(condition) < 2:
+                    continue
+                condition_rows.append((branch_uid, node[4], int(condition[0]),
+                                       int(condition[1]), json.dumps(condition, separators=(",", ":"))))
+            first_action = len(action_rows)
+            for action in node[6] if isinstance(node[6], list) else []:
+                if not isinstance(action, list) or len(action) < 2:
+                    continue
+                action_rows.append((branch_uid, node[4], int(action[0]), int(action[1]),
+                                    json.dumps(action, separators=(",", ":"))))
+            event_rows.append((branch_uid, node[4], parent_index, depth,
+                               first_condition, len(condition_rows) - first_condition,
+                               first_action, len(action_rows) - first_action,
+                               bool(node[2]) if len(node) > 2 else False))
+            children = node[7] if isinstance(node[7], list) else []
+            stack.extend((child, node_index, depth + 1, branch_uid)
+                         for child in reversed(children) if isinstance(child, list))
+    collect_event_tree(event_roots[0])
+
+    event_lines = [
+        "#pragma once", "#include <cstddef>", "#include <cstdint>",
+        "namespace minidayz::stage1 {",
+        "struct LocationEventSource { std::uint64_t branch_uid, event_uid; std::uint32_t parent_index, first_condition, condition_count, first_action, action_count; std::uint16_t depth; bool disabled; };",
+        f"inline constexpr std::size_t kLocationEventSourceCount = {len(event_rows)};",
+        "inline constexpr LocationEventSource kLocationEventSource[] = {"
+    ]
+    for branch_uid, event_uid, parent, depth, first_condition, condition_count, first_action, action_count, disabled in event_rows:
+        event_lines.append(
+            f"    {{{branch_uid}ULL, {event_uid}ULL, {parent}u, {first_condition}u, {condition_count}u, {first_action}u, {action_count}u, {depth}, {str(disabled).lower()}}},")
+    event_lines += [
+        "};",
+        "struct LocationEventConditionSource { std::uint64_t branch_uid, event_uid; std::int16_t object_index; std::uint16_t command_id; const char* raw_call; };",
+        f"inline constexpr std::size_t kLocationEventConditionSourceCount = {len(condition_rows)};",
+        "inline constexpr LocationEventConditionSource kLocationEventConditionSource[] = {"
+    ]
+    for branch_uid, event_uid, object_index, command_id, raw_call in condition_rows:
+        event_lines.append(
+            f"    {{{branch_uid}ULL, {event_uid}ULL, {object_index}, {command_id}, {cpp_string(raw_call)}}},")
+    event_lines += [
+        "};",
+        "struct LocationEventActionSource { std::uint64_t branch_uid, event_uid; std::int16_t object_index; std::uint16_t command_id; const char* raw_call; };",
+        f"inline constexpr std::size_t kLocationEventActionSourceCount = {len(action_rows)};",
+        "inline constexpr LocationEventActionSource kLocationEventActionSource[] = {"
+    ]
+    for branch_uid, event_uid, object_index, command_id, raw_call in action_rows:
+        event_lines.append(
+            f"    {{{branch_uid}ULL, {event_uid}ULL, {object_index}, {command_id}, {cpp_string(raw_call)}}},")
+    event_lines += ["};", "} // namespace minidayz::stage1", ""]
+    event_output = OUTPUT.with_name("location_event_source.hpp")
+    event_output.write_text("\n".join(event_lines), encoding="utf-8")
+
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
     spawn_output = OUTPUT.with_name("location_spawn_source.hpp")
