@@ -214,15 +214,15 @@ bool place_gas_station_count(WorldGrid& grid, std::uint8_t count,
     // verifies that the surrounding 3x3 Array cells are all zero.
     if (count == 0) return true;
     if (grid.width() < 3 || min_y < 1 || max_y >= grid.height()) return false;
-    std::uniform_int_distribution<int> xdist(1, static_cast<int>(grid.width()));
-    std::uniform_int_distribution<int> ydist(min_y, max_y + 1);
+    const std::uint32_t x_bound = grid.width();
+    const std::uint32_t y_bound = static_cast<std::uint32_t>(max_y - min_y + 2);
     const int max_attempts = static_cast<int>(grid.width()) *
                              static_cast<int>(grid.height()) * 64;
     for (std::uint8_t placed = 0; placed < count; ++placed) {
         bool found = false;
         for (int attempt = 0; attempt < max_attempts; ++attempt) {
-            const int x = xdist(rng) - 1;
-            const int y = ydist(rng) - 1;
+            const int x = static_cast<int>(source_random_bounded(rng, x_bound));
+            const int y = min_y + static_cast<int>(source_random_bounded(rng, y_bound)) - 1;
             if (!grid.has_empty_3x3(x, y)) continue;
             // Validate the full footprint before writing any part of it.
             // Construct Array writes outside its dimensions are ignored;
