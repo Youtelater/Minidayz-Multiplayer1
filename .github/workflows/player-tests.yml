@@ -33,6 +33,7 @@ jobs:
           python3 tools/stage1/reassemble_snapshot.py
           python3 tools/stage1/extract_construct.py data/stage1/construct_project_parsed.json --out data/stage1
           python3 tools/stage1/extract_location_templates.py
+          python3 tools/stage1/extract_npc_spawn_calls.py
 
       - name: Compile World Regression Tests
         run: |
@@ -64,3 +65,11 @@ jobs:
 
       - name: Run Original Location Runtime Tests
         run: ./location_event_runtime_tests
+
+      - name: Compile Original NPC Spawn Source Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \\
+            tests/npc_spawn_source_tests.cpp -o npc_spawn_source_tests
+
+      - name: Run Original NPC Spawn Source Tests
+        run: ./npc_spawn_source_tests
