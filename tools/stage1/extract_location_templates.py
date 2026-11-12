@@ -128,7 +128,11 @@ def main():
                 for code in codes:
                     spawn_rows.append((branch[4], int(action[3]), code,
                                        object_index, layer_name, dx, dy))
-            stack.extend(node[7] if isinstance(node[7], list) else [])
+            # Preserve Construct's authored event order; generated spawn rows are
+            # appended to the map in this order, so reversing siblings changes
+            # overlap/draw ordering for objects created by nested events.
+            children = node[7] if isinstance(node[7], list) else []
+            stack.extend(reversed(children))
     lines = ["#pragma once", "#include <cstddef>", "#include <cstdint>",
              "namespace minidayz::stage1 {",
              "struct LocationTemplateSource { std::uint64_t event_uid; std::uint16_t tile_codes[25]; std::uint8_t tile_code_count; std::uint16_t event_nodes; std::uint16_t array_write_actions; std::uint8_t system_create_actions; };",
