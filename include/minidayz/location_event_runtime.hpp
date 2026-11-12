@@ -73,6 +73,7 @@ private:
     std::vector<std::pair<std::string, Value>> variables_{};
     std::vector<SourceLocationSpawn> spawns_{};
     std::size_t last_spawn_index_{static_cast<std::size_t>(-1)};
+    std::size_t spawn_start_index_{};
     int zed_frame_{};
     bool initialized_{};
 };
