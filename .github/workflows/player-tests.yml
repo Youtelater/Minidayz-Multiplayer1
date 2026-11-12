@@ -37,9 +37,9 @@ jobs:
       - name: Compile World Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
-            source/world.cpp source/stage1_data_access.cpp source/construct_array.cpp \\
-            source/construct_expression.cpp source/construct_event_interpreter.cpp \\
-            source/location_event_runtime.cpp tests/world_system_tests.cpp \\
+            source/world.cpp source/stage1_data_access.cpp source/construct_array.cpp \
+            source/construct_expression.cpp source/construct_event_interpreter.cpp \
+            source/location_event_runtime.cpp tests/world_system_tests.cpp \
             -o world_system_tests
 
       - name: Run World Regression Tests
