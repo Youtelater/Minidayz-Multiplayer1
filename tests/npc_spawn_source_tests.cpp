@@ -23,7 +23,7 @@ int main() {
         assert(call.argument_count == 3 || call.argument_count == 4);
         for (std::size_t i = 0; i < call.argument_count; ++i) {
             assert(call.arguments[i] != nullptr);
-            assert(call.arguments[i][0] != '\\0');
+            assert(call.arguments[i][0] != '\0');
         }
         for (std::size_t i = call.argument_count; i < 4; ++i)
             assert(call.arguments[i] == nullptr);
