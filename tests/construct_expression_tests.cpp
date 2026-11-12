@@ -79,7 +79,7 @@ int main() {
     std::mt19937 source_rng(1234);
     SourceSystemExpressionState source_system{&source_rng, 4};
     const Value floor_argument[] = {Value::from_number(3.9)};
-    assert(evaluate_source_system_expression(&source_system, 95, floor_argument, 1, result));
+    assert(evaluate_source_system_expression(&source_system, 80, floor_argument, 1, result));
     assert(result.as_number() == 3);
     assert(evaluate_source_system_expression(&source_system, 150, nullptr, 0, result));
     assert(result.as_number() == 4);
@@ -87,8 +87,10 @@ int main() {
     assert(evaluate_source_system_expression(&source_system, 82, choose_arguments, 2, result));
     assert(result.as_number() == 2 || result.as_number() == 8);
     const Value random_argument[] = {Value::from_number(12)};
-    assert(evaluate_source_system_expression(&source_system, 80, random_argument, 1, result));
+    assert(evaluate_source_system_expression(&source_system, 95, random_argument, 1, result));
     assert(result.as_number() >= 0 && result.as_number() < 12);
+    assert(evaluate_source_system_expression(&source_system, 204, floor_argument, 1, result));
+    assert(result.as_number() == 3);
 
     EvaluationError error{};
     assert(!evaluate_expression("[99,0]", context, result, &error));
