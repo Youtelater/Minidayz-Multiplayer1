@@ -23,6 +23,9 @@ using VariableReader = bool (*)(void* user, std::string_view name, Value& result
 using SystemExpression = bool (*)(void* user, std::uint16_t expression_id,
                                   const Value* arguments, std::size_t argument_count,
                                   Value& result);
+using InstanceVariableReader = bool (*)(void* user, std::uint16_t object_index,
+                                        bool is_behavior, std::string_view behavior_name,
+                                        std::uint16_t variable_index, Value& result);
 using ObjectExpression = bool (*)(void* user, std::uint16_t object_index,
                                   std::uint16_t expression_id, bool is_behavior,
                                   std::string_view behavior_name,
@@ -34,6 +37,7 @@ struct EvaluationContext {
     VariableReader read_variable{};
     SystemExpression call_system{};
     ObjectExpression call_object{};
+    InstanceVariableReader read_instance_variable{};
 };
 
 enum class EvaluationError : std::uint8_t {
