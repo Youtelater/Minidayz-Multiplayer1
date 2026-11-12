@@ -1,8 +1,11 @@
 #pragma once
 
-#include "minidayz/generated/location_event_source.hpp"
-
 #include <cstdint>
+
+namespace minidayz::stage1 {
+struct LocationEventConditionSource;
+struct LocationEventActionSource;
+}
 
 namespace minidayz::construct {
 
