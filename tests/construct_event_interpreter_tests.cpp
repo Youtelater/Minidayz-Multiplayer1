@@ -47,7 +47,7 @@ std::uint64_t branch_for_code(std::uint16_t code) {
 
 int main() {
     construct::EvaluationContext parameter_context{};
-    Value parameter_value;
+    construct::Value parameter_value;
     const auto repeat_branch = branch_for_code(52);
     const stage1::LocationEventConditionSource* repeat_condition = nullptr;
     for (std::size_t i = 0; i < stage1::kLocationEventConditionSourceCount; ++i) {
