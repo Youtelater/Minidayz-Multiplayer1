@@ -46,7 +46,8 @@ jobs:
       - name: Compile Construct Location Event Interpreter Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
-            source/construct_event_interpreter.cpp tests/construct_event_interpreter_tests.cpp \
+            source/construct_expression.cpp source/construct_event_interpreter.cpp \
+            tests/construct_event_interpreter_tests.cpp \
             -o construct_event_interpreter_tests
 
       - name: Run Construct Location Event Interpreter Tests
