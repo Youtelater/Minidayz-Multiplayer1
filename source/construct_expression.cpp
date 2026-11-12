@@ -180,7 +180,7 @@ private:
             const char c = input_[position_++];
             if (in_string) {
                 if (escaped) escaped = false;
-                else if (c == '\\\\') escaped = true;
+                else if (c == '\\') escaped = true;
                 else if (c == '"') in_string = false;
                 continue;
             }
