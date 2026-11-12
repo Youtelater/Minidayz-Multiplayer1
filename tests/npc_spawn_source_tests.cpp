@@ -1,4 +1,5 @@
 #include "minidayz/generated/npc_spawn_call_source.hpp"
+#include "minidayz/generated/npc_spawn_function_source.hpp"
 
 #include <cassert>
 #include <cstddef>
@@ -9,6 +10,24 @@ int main() {
     using namespace minidayz::stage1;
     static_assert(kNpcSpawnCallSourceCount == 162);
     static_assert(kNpcSpawnFunctionEventUid == 180375540292947ULL);
+    static_assert(kNpcFunctionDefinitionEventUid == 180375540292947ULL);
+    static_assert(kNpcFunctionEventSourceCount == 399);
+    static_assert(kNpcFunctionConditionSourceCount > 0);
+    static_assert(kNpcFunctionActionSourceCount > 0);
+    static_assert(kNpcFunctionParameterSourceCount > 0);
+
+    bool has_nested_function_call = false;
+    for (const auto& action : kNpcFunctionActionSource) {
+        if (action.object_index == 189 && action.command_id == 69)
+            has_nested_function_call = true;
+        assert(action.raw_call != nullptr);
+    }
+    assert(has_nested_function_call);
+    for (const auto& event : kNpcFunctionEventSource) {
+        assert(event.event_uid != 0);
+        assert(event.depth < 64);
+        assert(event.parent_index == 0xffffffffu || event.parent_index < kNpcFunctionEventSourceCount);
+    }
 
     std::size_t three_argument_calls = 0;
     std::size_t four_argument_calls = 0;
