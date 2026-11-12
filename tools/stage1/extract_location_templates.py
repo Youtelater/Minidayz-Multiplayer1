@@ -309,6 +309,9 @@ def main():
     spawn_output.write_text("\n".join(spawn_lines), encoding="utf-8")
     print(f"Extracted {len(spawn_rows)} original System Create actions -> {spawn_output}")
     print(f"Indexed {len(rows)} original generate_location branches -> {OUTPUT}")
+    print(f"Indexed {len(event_rows)} event nodes, {len(condition_rows)} conditions, and {len(action_rows)} actions -> {event_output}")
+    print(f"Extracted {len(array_operation_rows)} ordered Array operations -> {operation_output}")
+    print(f"Preserved {len(array_write_rows)} Array writes")
 
 if __name__ == "__main__":
     main()
