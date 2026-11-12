@@ -6,12 +6,12 @@
 namespace minidayz { namespace {
 struct N { enum K{Null,Num,Str,Bool,Arr} k{Null}; double n{}; bool b{}; std::string s; std::vector<N> a; };
 class Reader {
- std::string_view s; std::size_t p{};
+ std::string s; std::size_t p{};
  void ws(){while(p<s.size()&&(s[p]==' '||s[p]=='\n'||s[p]=='\r'||s[p]=='\t'))++p;}
  bool str(std::string& o){if(p>=s.size()||s[p++]!='"')return false;while(p<s.size()){char c=s[p++];if(c=='"')return true;if(c=='\\'){if(p>=s.size())return false;char e=s[p++];switch(e){case '"':case '\\':case '/':o+=e;break;case 'n':o+='\n';break;case 'r':o+='\r';break;case 't':o+='\t';break;case 'b':o+='\b';break;case 'f':o+='\f';break;default:return false;}}else{if((unsigned char)c<32)return false;o+=c;}}return false;}
  bool val(N& x){ws();if(p>=s.size())return false;if(s[p]=='['){++p;x.k=N::Arr;ws();if(p<s.size()&&s[p]==']'){++p;return true;}for(;;){N v;if(!val(v))return false;x.a.push_back(std::move(v));ws();if(p>=s.size())return false;char c=s[p++];if(c==']')return true;if(c!=',')return false;}}
  if(s[p]=='"'){x.k=N::Str;return str(x.s);}if(s.substr(p,4)=="null"){p+=4;return true;}if(s.substr(p,4)=="true"){p+=4;x.k=N::Bool;x.b=true;return true;}if(s.substr(p,5)=="false"){p+=5;x.k=N::Bool;return true;}
- char* e=nullptr;errno=0;x.n=std::strtod(s.data()+p,&e);if(e==s.data()+p||errno==ERANGE||!std::isfinite(x.n))return false;p+=(e-(s.data()+p));x.k=N::Num;return true;}
+ char* e=nullptr;errno=0;x.n=std::strtod(s.c_str()+p,&e);if(e==s.c_str()+p||errno==ERANGE||!std::isfinite(x.n))return false;p+=(e-(s.c_str()+p));x.k=N::Num;return true;}
 public: explicit Reader(std::string_view v):s(v){} bool parse(N& x){if(!val(x))return false;ws();return p==s.size();}
 };
 bool run(const N& x,const LocationExpressionContext& c,LocationExpressionValue& o){
