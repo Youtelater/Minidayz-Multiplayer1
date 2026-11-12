@@ -167,7 +167,7 @@ private:
             while (position_ < input_.size()) {
                 const char c = input_[position_];
                 if (c == ',' || c == ']' || c == '}' ||
-                    c == ' ' || c == '\\n' || c == '\\r' || c == '\\t') break;
+                    c == ' ' || c == '\n' || c == '\r' || c == '\t') break;
                 ++position_;
             }
             return position_ > start;
