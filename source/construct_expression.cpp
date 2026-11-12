@@ -334,6 +334,50 @@ std::string Value::as_string() const {
     return written > 0 ? std::string(buffer, static_cast<std::size_t>(written)) : std::string{};
 }
 
+bool evaluate_source_system_expression(void* user, std::uint16_t expression_id,
+                                       const Value* arguments,
+                                       std::size_t argument_count, Value& result) {
+    auto* state = static_cast<SourceSystemExpressionState*>(user);
+    if (!state) return false;
+
+    switch (expression_id) {
+    case 80: { // random(x) / random(a, b)
+        if (!state->rng || argument_count == 0 || argument_count > 2) return false;
+        const double unit = static_cast<double>((*state->rng)()) / 4294967296.0;
+        if (argument_count == 1) {
+            result = Value::from_number(unit * arguments[0].as_number());
+        } else {
+            const double lower = arguments[0].as_number();
+            const double upper = arguments[1].as_number();
+            result = Value::from_number(lower + unit * (upper - lower));
+        }
+        return true;
+    }
+    case 82: { // choose(a, b, ...)
+        if (!state->rng || !arguments || argument_count < 2 ||
+            argument_count > std::numeric_limits<std::uint32_t>::max()) return false;
+        const auto bound = static_cast<std::uint32_t>(argument_count);
+        const std::uint32_t threshold = static_cast<std::uint32_t>(-bound) % bound;
+        std::uint32_t draw{};
+        do {
+            draw = static_cast<std::uint32_t>((*state->rng)());
+        } while (draw < threshold);
+        result = arguments[draw % bound];
+        return true;
+    }
+    case 95: // floor(x)
+        if (argument_count != 1) return false;
+        result = Value::from_number(std::floor(arguments[0].as_number()));
+        return true;
+    case 150: // loopindex
+        if (argument_count != 0) return false;
+        result = Value::from_number(static_cast<double>(state->loop_index));
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool evaluate_expression(std::string_view source, EvaluationContext& context,
                          Value& result, EvaluationError* error) {
     Parser parser(source, context);
