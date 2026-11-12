@@ -57,7 +57,7 @@ def collect_array_writes(branch):
             params = action[5]
             if len(params) < 3 or any(not isinstance(p, list) or len(p) < 2 for p in params[:3]):
                 raise SystemExit(f"Malformed Array write action {action[3]}")
-            writes.append((node[4], action[3],
+            writes.append((branch[4], node[4], action[3],
                            *(json.dumps(p[1], separators=(",", ":")) for p in params[:3])))
         # Reverse before pushing so traversal retains Construct event order.
         children = node[7] if isinstance(node[7], list) else []
@@ -140,11 +140,11 @@ def main():
         padded = codes + [0] * (25 - len(codes))
         lines.append(f"    {{{uid}ULL, {{{', '.join(map(str, padded))}}}, {len(codes)}, {nodes}, {writes}, {creates}}},")
     lines += ["};",
-              "struct LocationArrayWriteSource { std::uint64_t event_uid, action_uid; const char* array_expression; const char* index_expression; const char* value_expression; };",
+              "struct LocationArrayWriteSource { std::uint64_t branch_uid, event_uid, action_uid; const char* array_expression; const char* index_expression; const char* value_expression; };",
               f"inline constexpr std::size_t kLocationArrayWriteSourceCount = {len(array_write_rows)};",
               "inline constexpr LocationArrayWriteSource kLocationArrayWriteSource[] = {"]
-    for event_uid, action_uid, array_expr, index_expr, value_expr in array_write_rows:
-        lines.append(f"    {{{event_uid}ULL, {action_uid}ULL, {cpp_string(array_expr)}, {cpp_string(index_expr)}, {cpp_string(value_expr)}}},")
+    for branch_uid, event_uid, action_uid, array_expr, index_expr, value_expr in array_write_rows:
+        lines.append(f"    {{{branch_uid}ULL, {event_uid}ULL, {action_uid}ULL, {cpp_string(array_expr)}, {cpp_string(index_expr)}, {cpp_string(value_expr)}}},")
     lines += ["};", "} // namespace minidayz::stage1", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
