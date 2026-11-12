@@ -135,10 +135,22 @@ void generate_source_roads(WorldGrid& grid, std::uint8_t level, std::uint8_t act
     if (level >= 4) add_vertical_roads(17);
 }
 
+// std::uniform_int_distribution is not required to use the same mapping on
+// every standard-library implementation. Multiplayer clients must turn the
+// same seed and MT stream into the same world, so use an explicit unbiased
+// bounded draw instead of a library-defined distribution.
+std::uint32_t source_random_bounded(std::mt19937& rng, std::uint32_t bound) {
+    if (bound <= 1) return 0;
+    const std::uint32_t threshold = static_cast<std::uint32_t>(-bound) % bound;
+    for (;;) {
+        const std::uint32_t value = static_cast<std::uint32_t>(rng());
+        if (value >= threshold) return value % bound;
+    }
+}
+
 template <std::size_t N>
 std::uint16_t choose_marker(const std::uint16_t (&values)[N], std::mt19937& rng) {
-    std::uniform_int_distribution<std::size_t> pick(0, N - 1);
-    return values[pick(rng)];
+    return values[source_random_bounded(rng, static_cast<std::uint32_t>(N))];
 }
 
 std::uint16_t source_marker_type(std::uint16_t code, std::uint8_t level,
@@ -175,16 +187,16 @@ bool place_poi_count(WorldGrid& grid, std::uint8_t count, std::uint16_t code,
     if (grid.width() < 3 || min_y < 0 || max_y >= grid.height() || min_y > max_y) return false;
     // Construct's random(1, Map_size_X/Y) includes both endpoints.
     // The event then writes at check_X - 1 / check_Y - 1.
-    std::uniform_int_distribution<int> xdist(1, static_cast<int>(grid.width()));
-    std::uniform_int_distribution<int> ydist(min_y, max_y + 1);
+    const std::uint32_t x_bound = grid.width();
+    const std::uint32_t y_bound = static_cast<std::uint32_t>(max_y - min_y + 2);
     const int max_attempts = static_cast<int>(grid.width()) *
                              static_cast<int>(grid.height()) * 64;
     for (std::uint8_t placed = 0; placed < count; ++placed) {
         bool found = false;
         for (int attempt = 0; attempt < max_attempts; ++attempt) {
             // The source stores at check_X - 1 and check_Y - 1.
-            const int x = xdist(rng) - 1;
-            const int y = ydist(rng) - 1;
+            const int x = static_cast<int>(source_random_bounded(rng, x_bound));
+            const int y = min_y + static_cast<int>(source_random_bounded(rng, y_bound)) - 1;
             if (!grid.has_empty_3x3(x, y)) continue;
             if (!grid.set(x, y, code)) return false;
             found = true;
