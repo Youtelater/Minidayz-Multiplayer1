@@ -60,7 +60,19 @@ int main() {
 
     TestState repeat_state;
     callbacks.user = &repeat_state;
-    assert(construct::execute_location_event_branch(branch_for_code(52), callbacks, matched));
+    const std::uint64_t repeat_branch_uid = branch_for_code(52);
+    std::fprintf(stderr, "branch52 uid=%llu event_count=%zu\\n",
+                 static_cast<unsigned long long>(repeat_branch_uid),
+                 stage1::kLocationEventSourceCount);
+    for (std::size_t i = 0; i < stage1::kLocationEventSourceCount; ++i) {
+        const auto& event = stage1::kLocationEventSource[i];
+        if (event.branch_uid == repeat_branch_uid)
+            std::fprintf(stderr, "node=%zu parent=%u depth=%u event=%llu cond=%u actions=%u disabled=%d\\n",
+                         i, event.parent_index, event.depth,
+                         static_cast<unsigned long long>(event.event_uid),
+                         event.condition_count, event.action_count, event.disabled ? 1 : 0);
+    }
+    assert(construct::execute_location_event_branch(repeat_branch_uid, callbacks, matched));
     assert(matched);
     std::fprintf(stderr, "repeat writes=%zu sizes=%zu mask=%x\n", repeat_state.array_writes, repeat_state.array_sizes, repeat_state.repeat_indices_seen);
     assert(repeat_state.array_writes > 0);
