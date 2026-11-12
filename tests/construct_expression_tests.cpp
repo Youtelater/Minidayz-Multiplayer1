@@ -73,7 +73,7 @@ int main() {
     assert(evaluate_expression("[18,[17,[0,2],[0,2]],[0,7],[0,9]]", context, result));
     assert(result.as_number() == 7);
     assert(evaluate_expression("[18,[0,1],[0,7],[19,82,[[0,1],[0,2]]]]", context, result));
-    assert(result.as_number() == 7 && state.system_calls == 1);
+    assert(result.as_number() == 7 && state.system_calls == 0);
 
     assert(evaluate_expression("[19,82,[[0,2],[0,4]]]", context, result));
     assert(result.as_number() == 4 && state.system_calls == 1);
