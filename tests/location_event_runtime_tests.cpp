@@ -33,5 +33,15 @@ int main() {
     assert(std::fabs(zed->x - 1237.0) < 0.001);
     assert(std::fabs(zed->y - 2283.0) < 0.001);
     assert(zed->frame == 11);
+
+    // This branch exercises choose(), random(), floor(), int(), arithmetic,
+    // Array writes, and the source Repeat(16) loop.
+    runtime.set_mapgen(52, 4, 5, 1500.0, 2500.0, 100.0, 100.0);
+    const auto* repeated_location = find_source_location_template(52);
+    assert(repeated_location);
+    assert(runtime.execute_branch(repeated_location->event_uid, matched));
+    assert(matched);
+    assert(runtime.location_array().height() == 6);
+    assert(runtime.spawns().size() == 1);
     return 0;
 }
