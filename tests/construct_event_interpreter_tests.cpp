@@ -5,7 +5,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
-#include <cstdio>
 
 using namespace minidayz;
 
@@ -29,7 +28,7 @@ bool execute_action(void* user, const stage1::LocationEventActionSource& action,
     auto& state = *static_cast<TestState*>(user);
     if (action.object_index == 525 && action.command_id == 199) {
         ++state.array_writes;
-        if (loop_index >= 0 && loop_index < 12)
+        if (loop_index >= 0 && loop_index < 16)
             state.repeat_indices_seen |= (1 << loop_index);
     }
     if (action.object_index == 525 && action.command_id == 210)
@@ -63,7 +62,7 @@ int main() {
     callbacks.user = &repeat_state;
     assert(construct::execute_location_event_branch(branch_for_code(52), callbacks, matched));
     assert(matched);
-    std::printf("repeat writes=%zu sizes=%zu mask=%x\\n", repeat_state.array_writes, repeat_state.array_sizes, repeat_state.repeat_indices_seen);
+    std::printf("repeat writes=%zu sizes=%zu mask=%x\n", repeat_state.array_writes, repeat_state.array_sizes, repeat_state.repeat_indices_seen);
     assert(repeat_state.array_writes == 72);
     assert(repeat_state.array_sizes == 1);
     assert(repeat_state.repeat_indices_seen == 0xffff);
