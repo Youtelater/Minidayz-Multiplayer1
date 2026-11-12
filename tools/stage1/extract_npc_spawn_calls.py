@@ -69,7 +69,7 @@ def main():
         "#pragma once", "#include <cstddef>", "#include <cstdint>",
         "namespace minidayz::stage1 {",
         "struct NpcSpawnCallSource { const char* event_sheet; std::uint64_t event_uid; std::uint64_t action_uid; std::uint8_t argument_count; const char* arguments[4]; };",
-        f"inline constexpr std::uint64_t kNpcSpawnFunctionEventUid = {definitions[0][1]}ULL;",
+        f"inline constexpr std::uint64_t kNpcFunctionDefinitionEventUid = {definitions[0][1]}ULL;",
         f"inline constexpr std::size_t kNpcSpawnCallSourceCount = {len(calls)};",
         "inline constexpr NpcSpawnCallSource kNpcSpawnCallSource[] = {",
     ]
@@ -86,7 +86,6 @@ def main():
     function_condition_rows = []
     function_action_rows = []
     function_parameter_rows = []
-    stack = [(definitions[0][1], None)]
     # Re-find the definition node without depending on event traversal indexes.
     function_node = None
     for sheet_name, entries in project[6]:
@@ -182,7 +181,7 @@ def main():
     function_lines += ["};", "} // namespace minidayz::stage1", ""]
     function_output = OUTPUT.with_name("npc_spawn_function_source.hpp")
     function_output.parent.mkdir(parents=True, exist_ok=True)
-    function_output.write_text("\\n".join(function_lines), encoding="utf-8")
+    function_output.write_text("\n".join(function_lines), encoding="utf-8")
     if len(function_event_rows) != 399:
         raise SystemExit(f"Expected 399 Spawn_NPC event nodes, found {len(function_event_rows)}")
 
