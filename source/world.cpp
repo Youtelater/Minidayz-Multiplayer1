@@ -400,7 +400,10 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
         place_poi_count(grid_, profile.hospitals, 11, rng_, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.firestations, 15, rng_, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.chaoshi, 103, rng_, first_min_y, first_max_y) &&
-        place_gas_station_count(grid_, first_gas_stations, rng_, first_min_y, first_max_y) &&
+        // Keep the gas-station footprint (center plus one row north/south)
+        // inside the first map half, away from the split-map separator.
+        place_gas_station_count(grid_, first_gas_stations, rng_,
+                                first_min_y, first_max_y - (profile.second_half_start_y ? 1 : 0)) &&
         place_poi_count(grid_, first_lite_shops, 51, rng_, first_min_y, first_max_y) &&
         place_poi_count(grid_, first_roadside_cafes, 50, rng_, first_min_y, first_max_y);
     if (!placed) return false;
