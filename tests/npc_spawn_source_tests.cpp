@@ -4,14 +4,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <unordered_set>
+#include <set>
 
 int main() {
     using namespace minidayz::stage1;
     static_assert(kNpcSpawnCallSourceCount == 162);
     static_assert(kNpcSpawnFunctionEventUid == 180375540292947ULL);
 
-    std::unordered_set<std::uint64_t> action_uids;
+    std::set<std::pair<std::uint64_t, std::uint64_t>> action_uids;
     std::size_t three_argument_calls = 0;
     std::size_t four_argument_calls = 0;
     for (const auto& call : kNpcSpawnCallSource) {
@@ -19,7 +19,7 @@ int main() {
         assert(std::strcmp(call.event_sheet, "Game_events") == 0);
         assert(call.event_uid != 0);
         assert(call.action_uid != 0);
-        assert(action_uids.insert(call.action_uid).second);
+        assert(action_uids.insert({call.event_uid, call.action_uid}).second);
         assert(call.argument_count == 3 || call.argument_count == 4);
         for (std::size_t i = 0; i < call.argument_count; ++i) {
             assert(call.arguments[i] != nullptr);
