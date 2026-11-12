@@ -216,6 +216,7 @@ def main():
     event_rows = []
     condition_rows = []
     action_rows = []
+    parameter_rows = []
     def collect_event_tree(root_event):
         stack = [(root_event, 0xffffffff, 0, 0)]
         while stack:
@@ -229,13 +230,28 @@ def main():
             for condition in node[5] if isinstance(node[5], list) else []:
                 if not isinstance(condition, list) or len(condition) < 2:
                     continue
+                first_parameter = len(parameter_rows)
+                params = condition[9] if len(condition) > 9 and isinstance(condition[9], list) else []
+                for parameter in params:
+                    if isinstance(parameter, list) and len(parameter) > 1:
+                        parameter_rows.append((int(parameter[0]),
+                                               json.dumps(parameter[1], separators=(",", ":"))))
                 condition_rows.append((branch_uid, node[4], int(condition[0]),
-                                       int(condition[1]), json.dumps(condition, separators=(",", ":"))))
+                                       int(condition[1]), first_parameter,
+                                       len(parameter_rows) - first_parameter,
+                                       json.dumps(condition, separators=(",", ":"))))
             first_action = len(action_rows)
             for action in node[6] if isinstance(node[6], list) else []:
                 if not isinstance(action, list) or len(action) < 2:
                     continue
+                first_parameter = len(parameter_rows)
+                params = action[5] if len(action) > 5 and isinstance(action[5], list) else []
+                for parameter in params:
+                    if isinstance(parameter, list) and len(parameter) > 1:
+                        parameter_rows.append((int(parameter[0]),
+                                               json.dumps(parameter[1], separators=(",", ":"))))
                 action_rows.append((branch_uid, node[4], int(action[0]), int(action[1]),
+                                    first_parameter, len(parameter_rows) - first_parameter,
                                     json.dumps(action, separators=(",", ":"))))
             event_rows.append((branch_uid, node[4], parent_index, depth,
                                first_condition, len(condition_rows) - first_condition,
@@ -258,22 +274,30 @@ def main():
             f"    {{{branch_uid}ULL, {event_uid}ULL, {parent}u, {first_condition}u, {condition_count}u, {first_action}u, {action_count}u, {depth}, {str(disabled).lower()}}},")
     event_lines += [
         "};",
-        "struct LocationEventConditionSource { std::uint64_t branch_uid, event_uid; std::int16_t object_index; std::uint16_t command_id; const char* raw_call; };",
+        "struct LocationEventConditionSource { std::uint64_t branch_uid, event_uid; std::int16_t object_index; std::uint16_t command_id; std::uint32_t first_parameter; std::uint16_t parameter_count; const char* raw_call; };",
         f"inline constexpr std::size_t kLocationEventConditionSourceCount = {len(condition_rows)};",
         "inline constexpr LocationEventConditionSource kLocationEventConditionSource[] = {"
     ]
-    for branch_uid, event_uid, object_index, command_id, raw_call in condition_rows:
+    for branch_uid, event_uid, object_index, command_id, first_parameter, parameter_count, raw_call in condition_rows:
         event_lines.append(
-            f"    {{{branch_uid}ULL, {event_uid}ULL, {object_index}, {command_id}, {cpp_string(raw_call)}}},")
+            f"    {{{branch_uid}ULL, {event_uid}ULL, {object_index}, {command_id}, {first_parameter}u, {parameter_count}, {cpp_string(raw_call)}}},")
     event_lines += [
         "};",
-        "struct LocationEventActionSource { std::uint64_t branch_uid, event_uid; std::int16_t object_index; std::uint16_t command_id; const char* raw_call; };",
+        "struct LocationEventActionSource { std::uint64_t branch_uid, event_uid; std::int16_t object_index; std::uint16_t command_id; std::uint32_t first_parameter; std::uint16_t parameter_count; const char* raw_call; };",
         f"inline constexpr std::size_t kLocationEventActionSourceCount = {len(action_rows)};",
         "inline constexpr LocationEventActionSource kLocationEventActionSource[] = {"
     ]
-    for branch_uid, event_uid, object_index, command_id, raw_call in action_rows:
+    for branch_uid, event_uid, object_index, command_id, first_parameter, parameter_count, raw_call in action_rows:
         event_lines.append(
-            f"    {{{branch_uid}ULL, {event_uid}ULL, {object_index}, {command_id}, {cpp_string(raw_call)}}},")
+            f"    {{{branch_uid}ULL, {event_uid}ULL, {object_index}, {command_id}, {first_parameter}u, {parameter_count}, {cpp_string(raw_call)}}},")
+    event_lines += [
+        "};",
+        "struct LocationEventParameterSource { std::uint16_t type; const char* raw_value; };",
+        f"inline constexpr std::size_t kLocationEventParameterSourceCount = {len(parameter_rows)};",
+        "inline constexpr LocationEventParameterSource kLocationEventParameterSource[] = {"
+    ]
+    for parameter_type, raw_value in parameter_rows:
+        event_lines.append(f"    {{{parameter_type}, {cpp_string(raw_value)}}},")
     event_lines += ["};", "} // namespace minidayz::stage1", ""]
     event_output = OUTPUT.with_name("location_event_source.hpp")
     event_output.write_text("\n".join(event_lines), encoding="utf-8")
@@ -309,7 +333,7 @@ def main():
     spawn_output.write_text("\n".join(spawn_lines), encoding="utf-8")
     print(f"Extracted {len(spawn_rows)} original System Create actions -> {spawn_output}")
     print(f"Indexed {len(rows)} original generate_location branches -> {OUTPUT}")
-    print(f"Indexed {len(event_rows)} event nodes, {len(condition_rows)} conditions, and {len(action_rows)} actions -> {event_output}")
+    print(f"Indexed {len(event_rows)} event nodes, {len(condition_rows)} conditions, {len(action_rows)} actions, and {len(parameter_rows)} parameters -> {event_output}")
     print(f"Extracted {len(array_operation_rows)} ordered Array operations -> {operation_output}")
     print(f"Preserved {len(array_write_rows)} Array writes")
 
