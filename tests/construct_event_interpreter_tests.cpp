@@ -46,6 +46,39 @@ std::uint64_t branch_for_code(std::uint16_t code) {
 }
 
 int main() {
+    construct::EvaluationContext parameter_context{};
+    Value parameter_value;
+    const auto repeat_branch = branch_for_code(52);
+    const stage1::LocationEventConditionSource* repeat_condition = nullptr;
+    for (std::size_t i = 0; i < stage1::kLocationEventConditionSourceCount; ++i) {
+        const auto& condition = stage1::kLocationEventConditionSource[i];
+        if (condition.branch_uid == repeat_branch &&
+            condition.object_index == -1 && condition.command_id == 123) {
+            repeat_condition = &condition;
+            break;
+        }
+    }
+    assert(repeat_condition && repeat_condition->parameter_count == 1);
+    assert(construct::evaluate_location_event_parameter(
+        stage1::kLocationEventParameterSource[repeat_condition->first_parameter],
+        parameter_context, parameter_value));
+    assert(parameter_value.as_number() == 16);
+
+    const auto simple_branch = branch_for_code(50);
+    const stage1::LocationEventActionSource* create_action = nullptr;
+    for (std::size_t i = 0; i < stage1::kLocationEventActionSourceCount; ++i) {
+        const auto& action = stage1::kLocationEventActionSource[i];
+        if (action.branch_uid == simple_branch &&
+            action.object_index == -1 && action.command_id == 94) {
+            create_action = &action;
+            break;
+        }
+    }
+    assert(create_action && create_action->parameter_count == 4);
+    assert(construct::evaluate_location_event_parameter(
+        stage1::kLocationEventParameterSource[create_action->first_parameter + 1],
+        parameter_context, parameter_value));
+    assert(parameter_value.as_string() == "zed_resp");
     construct::EventCallbacks callbacks{};
     callbacks.evaluate_condition = evaluate_condition;
     callbacks.execute_action = execute_action;
