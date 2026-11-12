@@ -493,9 +493,24 @@ bool WorldSystem::generate_source_locations() {
                     hotspot.y + static_cast<float>(source.offset_y)
                 };
                 if (!bounds_.contains(position)) continue;
+                const auto* object = stage1::find_object(source.object);
+                float object_width = object ? object->width : 0.0f;
+                float object_height = object ? object->height : 0.0f;
+                // Older generated headers may not yet contain sprite dimensions.
+                // Recover dimensions from source layout instances until the data
+                // extractor has regenerated the enriched object table.
+                if (object_width <= 0.0f || object_height <= 0.0f) {
+                    for (const auto& instance : stage1::kInstances) {
+                        if (instance.object != source.object ||
+                            instance.w <= 0.0f || instance.h <= 0.0f) continue;
+                        object_width = instance.w;
+                        object_height = instance.h;
+                        break;
+                    }
+                }
                 placements_.push_back({
                     layer, source.object, source.action_uid, position.x, position.y,
-                    0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0
+                    0.0f, object_width, object_height, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0
                 });
 
                 // Generated POI templates are real map objects too. Feed their
@@ -508,7 +523,7 @@ bool WorldSystem::generate_source_locations() {
                     source_layer && classify_source_layer(source_layer->name, kind)) {
                     features_.push_back({
                         kind, position, source.action_uid, source.object, layer,
-                        source.object, 0.0f, 0.0f, 0.0f, 0
+                        source.object, object_width, object_height, 0.0f, 0
                     });
                 }
                 ++added;
