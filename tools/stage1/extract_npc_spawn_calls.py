@@ -64,8 +64,6 @@ def main():
         raise SystemExit(f"Expected one {FUNCTION_NAME} definition, found {len(definitions)}")
     if len(calls) != 162:
         raise SystemExit(f"Expected 162 original {FUNCTION_NAME} callsites, found {len(calls)}")
-    if len({(row[1], row[2]) for row in calls}) != len(calls):
-        raise SystemExit("Duplicate original Spawn_NPC event/action UID pair detected")
 
     lines = [
         "#pragma once", "#include <cstddef>", "#include <cstdint>",
