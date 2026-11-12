@@ -27,7 +27,7 @@ def count_branch(branch):
     stack = [branch]
     while stack:
         node = stack.pop()
-        if not isinstance(node, list) or len(node) < 8 or node[0] != 0:
+        if not isinstance(node, list) or len(node) < 7 or node[0] != 0:
             continue
         nodes += 1
         for action in node[6] if isinstance(node[6], list) else []:
@@ -37,7 +37,7 @@ def count_branch(branch):
                 writes += 1
             if action[0] == -1 and action[1] == 94:
                 creates += 1
-        stack.extend(node[7] if isinstance(node[7], list) else [])
+        stack.extend(node[7] if len(node) > 7 and isinstance(node[7], list) else [])
     return nodes, writes, creates
 
 def collect_array_writes(branch):
@@ -46,7 +46,7 @@ def collect_array_writes(branch):
     stack = [branch]
     while stack:
         node = stack.pop()
-        if not isinstance(node, list) or len(node) < 8 or node[0] != 0:
+        if not isinstance(node, list) or len(node) < 7 or node[0] != 0:
             continue
         actions = node[6] if isinstance(node[6], list) else []
         for action in actions:
@@ -60,7 +60,7 @@ def collect_array_writes(branch):
             writes.append((branch[4], node[4], action[3],
                            *(json.dumps(p[1], separators=(",", ":")) for p in params[:3])))
         # Reverse before pushing so traversal retains Construct event order.
-        children = node[7] if isinstance(node[7], list) else []
+        children = node[7] if len(node) > 7 and isinstance(node[7], list) else []
         stack.extend(reversed(children))
     return writes
 
@@ -92,7 +92,7 @@ def collect_array_operations(branch):
     stack = [branch]
     while stack:
         node = stack.pop()
-        if not isinstance(node, list) or len(node) < 8 or node[0] != 0:
+        if not isinstance(node, list) or len(node) < 7 or node[0] != 0:
             continue
         for action in node[6] if isinstance(node[6], list) else []:
             if not isinstance(action, list) or len(action) < 6:
@@ -104,7 +104,7 @@ def collect_array_operations(branch):
                 raise SystemExit(f"Malformed Array operation {action[3]}")
             operations.append((branch[4], node[4], action[3], action[1],
                                *(json.dumps(p[1], separators=(",", ":")) for p in params)))
-        children = node[7] if isinstance(node[7], list) else []
+        children = node[7] if len(node) > 7 and isinstance(node[7], list) else []
         stack.extend(reversed(children))
     return operations
 
@@ -220,7 +220,7 @@ def main():
         stack = [(root_event, 0xffffffff, 0, 0)]
         while stack:
             node, parent_index, depth, branch_uid = stack.pop()
-            if not isinstance(node, list) or len(node) < 8 or node[0] != 0:
+            if not isinstance(node, list) or len(node) < 7 or node[0] != 0:
                 continue
             if depth == 1:
                 branch_uid = node[4]
@@ -241,7 +241,7 @@ def main():
                                first_condition, len(condition_rows) - first_condition,
                                first_action, len(action_rows) - first_action,
                                bool(node[2]) if len(node) > 2 else False))
-            children = node[7] if isinstance(node[7], list) else []
+            children = node[7] if len(node) > 7 and isinstance(node[7], list) else []
             stack.extend((child, node_index, depth + 1, branch_uid)
                          for child in reversed(children) if isinstance(child, list))
     collect_event_tree(event_roots[0])
