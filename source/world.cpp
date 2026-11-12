@@ -356,7 +356,7 @@ bool WorldSystem::generate_from_source(std::uint32_t seed, std::string_view name
         return false;
     }
     if (name == "Map" &&
-        (!generate_source_locations() || !load_source_bunker_spawns(false) ||
+        (!generate_source_locations(level) || !load_source_bunker_spawns(false) ||
          !load_source_bridge_elements())) {
         reset();
         return false;
@@ -480,7 +480,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
 }
 
 
-bool WorldSystem::generate_source_locations() {
+bool WorldSystem::generate_source_locations(std::uint8_t level) {
     if (!initialized_ || grid_.width() == 0 || grid_.height() == 0) return false;
     const auto* layout = stage1::find_layout("Map");
     if (!layout) return false;
@@ -499,7 +499,7 @@ bool WorldSystem::generate_source_locations() {
     }
 
     construct::SourceLocationEventRuntime runtime;
-    if (!runtime.initialize(static_cast<std::uint8_t>(0), map_array, rng_)) return false;
+    if (!runtime.initialize(level, map_array, rng_)) return false;
 
     const double cell_width = bounds_.width / static_cast<double>(grid_.width());
     const double cell_height = bounds_.height / static_cast<double>(grid_.height());
