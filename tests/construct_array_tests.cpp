@@ -9,6 +9,10 @@ int main() {
     assert(array.set_size(3, 2, 1));
     assert(array.set_at_xy(1, 1, Value::from_number(42)));
     assert(array.at(1, 1).as_number() == 42);
+    const Value at_arguments[] = {Value::from_number(1), Value::from_number(1)};
+    Value expression_result;
+    assert(array.evaluate_expression(222, at_arguments, 2, expression_result));
+    assert(expression_result.as_number() == 42);
     assert(array.at(9, 9).as_number() == 0);
     assert(!array.set_at_xy(9, 9, Value::from_number(1)));
 
