@@ -6,7 +6,10 @@ using namespace minidayz::construct;
 
 int main() {
     Array array;
-    assert(array.set_size(3, 2, 1));
+    const Value size_arguments[] = {Value::from_number(3), Value::from_number(2), Value::from_number(1)};
+    assert(array.execute_action(210, size_arguments, 3));
+    const Value set_arguments[] = {Value::from_number(1), Value::from_number(1), Value::from_number(42)};
+    assert(array.execute_action(199, set_arguments, 3));
     assert(array.set_at_xy(1, 1, Value::from_number(42)));
     assert(array.at(1, 1).as_number() == 42);
     const Value at_arguments[] = {Value::from_number(1), Value::from_number(1)};
