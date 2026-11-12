@@ -1,10 +1,13 @@
 #pragma once
 
+#include "minidayz/construct_expression.hpp"
+
 #include <cstdint>
 
 namespace minidayz::stage1 {
 struct LocationEventConditionSource;
 struct LocationEventActionSource;
+struct LocationEventParameterSource;
 }
 
 namespace minidayz::construct {
@@ -25,6 +28,10 @@ struct EventCallbacks {
 // actions are delegated to source-specific callbacks; this layer preserves
 // Construct's event order, nested subevents, Else sibling state and Repeat
 // loop-index behavior.
+bool evaluate_location_event_parameter(
+    const stage1::LocationEventParameterSource& parameter,
+    EvaluationContext& context, Value& result);
+
 bool execute_location_event_branch(std::uint64_t branch_uid,
                                    const EventCallbacks& callbacks,
                                    bool& branch_matched);
