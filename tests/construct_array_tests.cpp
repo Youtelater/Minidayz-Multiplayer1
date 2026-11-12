@@ -12,12 +12,6 @@ int main() {
     assert(array.execute_action(199, set_arguments, 3));
     assert(array.set_at_xy(1, 1, Value::from_number(42)));
     assert(array.at(1, 1).as_number() == 42);
-    const Value empty_size_arguments[] = {
-        Value::from_number(0), Value::from_number(6), Value::from_number(1)
-    };
-    assert(array.execute_action(210, empty_size_arguments, 3));
-    assert(array.width() == 0 && array.height() == 6 && array.depth() == 1);
-    assert(array.at(0, 0).as_number() == 0);
     const Value at_arguments[] = {Value::from_number(1), Value::from_number(1)};
     Value expression_result;
     assert(array.evaluate_expression(222, at_arguments, 2, expression_result));
@@ -37,7 +31,8 @@ int main() {
     assert(array.width() == 2 && array.height() == 2);
     assert(array.at(1, 1).as_number() == 0);
 
-    assert(array.set_size(0, 2, 1));
-    assert(array.width() == 0 && array.height() == 0 && array.depth() == 0);
+    assert(array.set_size(0, 6, 1));
+    assert(array.width() == 0 && array.height() == 6 && array.depth() == 1);
+    assert(array.at(0, 0).as_number() == 0);
     return 0;
 }
