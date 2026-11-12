@@ -31,6 +31,11 @@ jobs:
           apt-get update && apt-get install -y --no-install-recommends ca-certificates python3-pil
           dkp-pacman -S --noconfirm 3ds-dev 3ds-portlibs || true
 
+      - name: Test Construct expression evaluator
+        run: |
+          g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/construct_expression.cpp tests/construct_expression_tests.cpp -o /tmp/construct_expression_tests
+          /tmp/construct_expression_tests
+
       - name: Compile 3DS Executable
         shell: bash
         run: |
