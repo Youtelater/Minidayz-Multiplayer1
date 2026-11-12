@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cmath>
 #include <map>
+#include <random>
 #include <string>
 
 using namespace minidayz::construct;
@@ -74,6 +75,20 @@ int main() {
 
     assert(evaluate_expression("[4,[0,\"north\"],[0,\" road\"]]", context, result));
     assert(result.kind == Value::Kind::String && result.string == "north road");
+
+    std::mt19937 source_rng(1234);
+    SourceSystemExpressionState source_system{&source_rng, 4};
+    const Value floor_argument[] = {Value::from_number(3.9)};
+    assert(evaluate_source_system_expression(&source_system, 95, floor_argument, 1, result));
+    assert(result.as_number() == 3);
+    assert(evaluate_source_system_expression(&source_system, 150, nullptr, 0, result));
+    assert(result.as_number() == 4);
+    const Value choose_arguments[] = {Value::from_number(2), Value::from_number(8)};
+    assert(evaluate_source_system_expression(&source_system, 82, choose_arguments, 2, result));
+    assert(result.as_number() == 2 || result.as_number() == 8);
+    const Value random_argument[] = {Value::from_number(12)};
+    assert(evaluate_source_system_expression(&source_system, 80, random_argument, 1, result));
+    assert(result.as_number() >= 0 && result.as_number() < 12);
 
     EvaluationError error{};
     assert(!evaluate_expression("[99,0]", context, result, &error));
