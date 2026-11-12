@@ -39,7 +39,7 @@ struct SourceSystemExpressionState {
 };
 
 // Source System expression IDs used by generate_location:
-// 80=random, 82=choose, 95=floor, 150=loopindex.
+// 80=floor, 82=choose, 95=random, 150=loopindex, 204=int.
 bool evaluate_source_system_expression(void* user, std::uint16_t expression_id,
                                        const Value* arguments,
                                        std::size_t argument_count, Value& result);
