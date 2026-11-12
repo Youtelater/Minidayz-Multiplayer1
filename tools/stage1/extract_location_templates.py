@@ -40,6 +40,33 @@ def count_branch(branch):
         stack.extend(node[7] if isinstance(node[7], list) else [])
     return nodes, writes, creates
 
+def collect_array_writes(branch):
+    """Preserve every original Array write's expression tree for native execution."""
+    writes = []
+    stack = [branch]
+    while stack:
+        node = stack.pop()
+        if not isinstance(node, list) or len(node) < 8 or node[0] != 0:
+            continue
+        actions = node[6] if isinstance(node[6], list) else []
+        for action in actions:
+            if not isinstance(action, list) or len(action) < 6:
+                continue
+            if action[0] != 525 or action[1] != 199:
+                continue
+            params = action[5]
+            if len(params) < 3 or any(not isinstance(p, list) or len(p) < 2 for p in params[:3]):
+                raise SystemExit(f"Malformed Array write action {action[3]}")
+            writes.append((node[4], action[3],
+                           *(json.dumps(p[1], separators=(",", ":")) for p in params[:3])))
+        # Reverse before pushing so traversal retains Construct event order.
+        children = node[7] if isinstance(node[7], list) else []
+        stack.extend(reversed(children))
+    return writes
+
+def cpp_string(value):
+    return json.dumps(value)
+
 def main():
     root = json.loads(SOURCE.read_text(encoding="utf-8"))
     project = root["project"]
@@ -55,6 +82,7 @@ def main():
     branches = event_roots[0][7]
     rows = []
     spawn_rows = []
+    array_write_rows = []
     for branch in branches:
         if not isinstance(branch, list) or not branch or branch[0] != 0:
             continue
@@ -70,6 +98,7 @@ def main():
             raise SystemExit(f"Location branch UID {branch[4]} has no decoded tile-code condition")
         nodes, writes, creates = count_branch(branch)
         rows.append((branch[4], codes, nodes, writes, creates))
+        array_write_rows.extend(collect_array_writes(branch))
 
         def hotspot_offset(expression, variable):
             if expression == [23, variable]:
@@ -110,6 +139,12 @@ def main():
             raise SystemExit(f"Branch {uid} has {len(codes)} tile codes; descriptor capacity is 25")
         padded = codes + [0] * (25 - len(codes))
         lines.append(f"    {{{uid}ULL, {{{', '.join(map(str, padded))}}}, {len(codes)}, {nodes}, {writes}, {creates}}},")
+    lines += ["};",
+              "struct LocationArrayWriteSource { std::uint64_t event_uid, action_uid; const char* array_expression; const char* index_expression; const char* value_expression; };",
+              f"inline constexpr std::size_t kLocationArrayWriteSourceCount = {len(array_write_rows)};",
+              "inline constexpr LocationArrayWriteSource kLocationArrayWriteSource[] = {"]
+    for event_uid, action_uid, array_expr, index_expr, value_expr in array_write_rows:
+        lines.append(f"    {{{event_uid}ULL, {action_uid}ULL, {cpp_string(array_expr)}, {cpp_string(index_expr)}, {cpp_string(value_expr)}}},")
     lines += ["};", "} // namespace minidayz::stage1", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
