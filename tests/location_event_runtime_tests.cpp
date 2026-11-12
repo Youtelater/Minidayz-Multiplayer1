@@ -41,7 +41,7 @@ int main() {
     assert(repeated_location);
     assert(runtime.execute_branch(repeated_location->event_uid, matched));
     assert(matched);
-    assert(runtime.location_array().height() == 6);
+    assert(runtime.location_array().height() == 7);
     assert(runtime.spawns().size() == 1);
     return 0;
 }
