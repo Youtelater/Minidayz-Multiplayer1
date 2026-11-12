@@ -23,7 +23,7 @@ bool evaluate_location_event_parameter(
         for (; end < raw.size(); ++end) {
             const char c = raw[end];
             if (escaped) escaped = false;
-            else if (c == '\\\\') escaped = true;
+            else if (c == '\\') escaped = true;
             else if (c == '"') break;
         }
         if (end >= raw.size()) return false;
