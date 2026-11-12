@@ -5605,4 +5605,23 @@ inline constexpr LocationArrayWriteSource kLocationArrayWriteSource[] = {
     {895341149396024ULL, 243292750024703ULL, 768831288023630ULL, "[20,525,222,false,null,[[0,0]]]", "[0,3]", "[4,[23,\"hotspotY\"],[0,750]]"},
     {895341149396024ULL, 243292750024703ULL, 503525251388587ULL, "[20,525,222,false,null,[[0,0]]]", "[0,0]", "[0,5]"},
 };
+struct LocationExpressionOpcodeCount { std::uint16_t opcode; std::uint32_t count; };
+inline constexpr std::size_t kLocationExpressionOpcodeCount = 7;
+inline constexpr LocationExpressionOpcodeCount kLocationExpressionOpcodeCounts[] = {
+    {0, 21814},
+    {4, 3373},
+    {5, 37},
+    {6, 103},
+    {19, 2053},
+    {20, 5517},
+    {23, 2856},
+};
+struct LocationExpressionFunctionCount { std::uint16_t function_id; std::uint32_t count; };
+inline constexpr std::size_t kLocationExpressionFunctionCount = 4;
+inline constexpr LocationExpressionFunctionCount kLocationExpressionFunctionCounts[] = {
+    {80, 727},
+    {82, 578},
+    {95, 732},
+    {150, 16},
+};
 } // namespace minidayz::stage1
