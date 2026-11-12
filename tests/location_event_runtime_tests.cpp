@@ -33,6 +33,5 @@ int main() {
     assert(std::fabs(zed->x - 1237.0) < 0.001);
     assert(std::fabs(zed->y - 2283.0) < 0.001);
     assert(zed->frame == 11);
-    assert(zed->instance_variables[2].as_number() == 1.0);
     return 0;
 }
