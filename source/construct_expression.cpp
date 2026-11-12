@@ -155,6 +155,50 @@ private:
         return true;
     }
 
+    bool skip_json_value() {
+        whitespace();
+        if (position_ >= input_.size()) return false;
+        if (input_[position_] == '"') {
+            std::string ignored;
+            return string(ignored);
+        }
+        if (input_[position_] != '[' && input_[position_] != '{') {
+            const std::size_t start = position_;
+            while (position_ < input_.size()) {
+                const char c = input_[position_];
+                if (c == ',' || c == ']' || c == '}' ||
+                    c == ' ' || c == '\\n' || c == '\\r' || c == '\\t') break;
+                ++position_;
+            }
+            return position_ > start;
+        }
+
+        std::vector<char> closing;
+        bool in_string = false;
+        bool escaped = false;
+        while (position_ < input_.size()) {
+            const char c = input_[position_++];
+            if (in_string) {
+                if (escaped) escaped = false;
+                else if (c == '\\\\') escaped = true;
+                else if (c == '"') in_string = false;
+                continue;
+            }
+            if (c == '"') {
+                in_string = true;
+            } else if (c == '[') {
+                closing.push_back(']');
+            } else if (c == '{') {
+                closing.push_back('}');
+            } else if (c == ']' || c == '}') {
+                if (closing.empty() || closing.back() != c) return false;
+                closing.pop_back();
+                if (closing.empty()) return true;
+            }
+        }
+        return false;
+    }
+
     bool expression_list(std::vector<Value>& values, std::size_t depth) {
         if (!take('[')) return false;
         whitespace();
@@ -183,7 +227,8 @@ private:
             return true;
         }
 
-        if (opcode == 4 || opcode == 5) {
+        if (opcode == 4 || opcode == 5 || opcode == 6 ||
+            opcode == 7 || opcode == 17) {
             Value left, right;
             if (!expression(left, depth + 1) || !take(',') ||
                 !expression(right, depth + 1) || !take(']')) return false;
@@ -192,8 +237,33 @@ private:
                 result = Value::from_string(left.as_string() + right.as_string());
             } else if (opcode == 4) {
                 result = Value::from_number(left.as_number() + right.as_number());
-            } else {
+            } else if (opcode == 5) {
                 result = Value::from_number(left.as_number() - right.as_number());
+            } else if (opcode == 6) {
+                result = Value::from_number(left.as_number() * right.as_number());
+            } else if (opcode == 7) {
+                result = Value::from_number(left.as_number() / right.as_number());
+            } else {
+                const bool equal = left.kind == Value::Kind::String ||
+                                   right.kind == Value::Kind::String
+                    ? left.as_string() == right.as_string()
+                    : left.as_number() == right.as_number();
+                result = Value::from_number(equal ? 1.0 : 0.0);
+            }
+            return true;
+        }
+
+        if (opcode == 18) {
+            Value condition;
+            if (!expression(condition, depth + 1) || !take(',')) return false;
+            const bool choose_true = condition.kind == Value::Kind::String
+                ? !condition.string.empty() : condition.as_number() != 0.0;
+            if (choose_true) {
+                if (!expression(result, depth + 1) || !take(',') ||
+                    !skip_json_value() || !take(']')) return false;
+            } else {
+                if (!skip_json_value() || !take(',') ||
+                    !expression(result, depth + 1) || !take(']')) return false;
             }
             return true;
         }
