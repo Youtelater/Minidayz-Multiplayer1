@@ -16,6 +16,8 @@ public:
     void clear() noexcept;
 
     Value at(int x, int y = 0, int z = 0) const;
+    bool evaluate_expression(std::uint16_t expression_id, const Value* arguments,
+                             std::size_t argument_count, Value& result) const;
     bool set_at_x(int x, Value value);
     bool set_at_xy(int x, int y, Value value);
     bool set_at_xyz(int x, int y, int z, Value value);
