@@ -12,7 +12,9 @@ std::size_t Array::offset(std::size_t x, std::size_t y, std::size_t z) const noe
 bool Array::set_size(int width, int height, int depth) {
     if (width < 0 || height < 0 || depth < 0) return false;
     if (width == 0 || height == 0 || depth == 0) {
-        width_ = height_ = depth_ = 0;
+        width_ = static_cast<std::size_t>(width);
+        height_ = static_cast<std::size_t>(height);
+        depth_ = static_cast<std::size_t>(depth);
         values_.clear();
         return true;
     }
