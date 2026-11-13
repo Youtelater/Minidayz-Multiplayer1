@@ -160,6 +160,45 @@ bool InventorySystem::remove(std::size_t index,
     return true;
 }
 
+bool InventorySystem::pickup(GroundItem& ground) noexcept {
+    if (ground.empty() || (ground.item_id == 0) != (ground.count == 0) ||
+        !valid_item(ground.item_id))
+        return false;
+    if (!add(ground.item_id, ground.count)) return false;
+    ground = {};
+    return true;
+}
+
+bool InventorySystem::drop(std::size_t index, std::uint16_t amount,
+                           GroundItem& ground) noexcept {
+    if (index >= capacity_ || slots_[index].empty()) return false;
+    if ((ground.item_id == 0) != (ground.count == 0)) return false;
+
+    const auto& source = slots_[index];
+    const std::uint16_t moving = amount == 0 ? source.count : amount;
+    const std::uint16_t stack_limit = source_max_stack(source.item_id);
+    if (moving == 0 || moving > source.count || moving > stack_limit)
+        return false;
+
+    if (!ground.empty()) {
+        if (ground.item_id != source.item_id ||
+            ground.count > stack_limit ||
+            moving > stack_limit - ground.count)
+            return false;
+    }
+
+    // All checks happen before either the inventory or ground pile is changed.
+    if (ground.empty()) {
+        ground = {source.item_id, moving};
+    } else {
+        ground.count = static_cast<std::uint16_t>(ground.count + moving);
+    }
+    auto& mutable_source = slots_[index];
+    mutable_source.count = static_cast<std::uint16_t>(mutable_source.count - moving);
+    if (mutable_source.count == 0) mutable_source = {};
+    return true;
+}
+
 bool InventorySystem::move(std::size_t from, std::size_t to,
                            std::uint16_t amount,
                            std::uint16_t max_stack) noexcept {
