@@ -14,7 +14,7 @@ the baseline limits are not presented as the perk-modified limits.
 Backpack equipment uses the original dedicated `Backpack` slot and exact
 wearable item IDs from `MDZItemTable`. Equipping consumes the backpack from
 the selected inventory slot and returns the previous pack to that same slot.
-Unequipping is refused if shrinking the inventory would strand occupied slots.
+Replacing a pack from a slot that disappears during a capacity reduction now returns the old pack to a free slot in the new grid, and fails atomically if no safe slot exists. Unequipping is refused if shrinking the inventory would strand occupied slots.
 
 This is a partial native behavior port, not a claim that every item-use effect
 or every original inventory event has been translated. Food, medicine, weapon,
