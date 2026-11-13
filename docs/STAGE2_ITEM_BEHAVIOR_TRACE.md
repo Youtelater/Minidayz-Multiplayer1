@@ -20,3 +20,8 @@ This is a partial native behavior port, not a claim that every item-use effect
 or every original inventory event has been translated. Food, medicine, weapon,
 clothing, and environmental effects remain tied to the preserved original
 event trace until their command semantics are ported.
+
+
+## CI extraction coverage
+
+The native regression workflow now runs the original event-trace exporter on every branch build. The current Mini DAYZ 1.6.0 snapshot exports 2,223 raw inventory behavior records across the five source event groups. This confirms source coverage, not full gameplay translation: food, medicine, equipment, and other actions still need their Construct command semantics ported and tested before Stage 2 can be declared complete.
