@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
+
 namespace minidayz::items {
 
 inline constexpr std::size_t kInventorySlotCount = 15;
@@ -13,6 +14,13 @@ struct InventorySlot {
     std::uint16_t item_id{};
     std::uint16_t count{};
     bool empty() const noexcept { return item_id == 0 || count == 0; }
+};
+
+// Fixed-size, pointer-free representation suitable for the game's save file.
+struct InventorySnapshot {
+    std::array<InventorySlot, kMaximumInventorySlotCount> slots{};
+    std::uint16_t capacity{static_cast<std::uint16_t>(kInventorySlotCount)};
+    std::uint16_t equipped_backpack{};
 };
 
 class InventorySystem {
@@ -38,6 +46,8 @@ public:
     const InventorySlot* slot(std::size_t index) const noexcept;
     std::uint32_t count(std::uint16_t item_id) const noexcept;
     std::size_t occupied_slots() const noexcept;
+    InventorySnapshot snapshot() const noexcept;
+    bool restore(const InventorySnapshot& snapshot) noexcept;
     void clear() noexcept { slots_ = {}; }
 
 private:
