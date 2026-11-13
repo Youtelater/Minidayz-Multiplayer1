@@ -9,3 +9,8 @@
 - The original source identifies a dedicated `Backpack` equipment slot and the `player_backpacks` visual layer.
 
 Do not infer item effects or backpack slot counts from item names. The raw source event expressions remain the authority for those values; add native constants only after extracting the matching source expression and event UID.
+
+
+## Verified build outputs
+
+The native CI run generated 405 original item definitions, resolved 329 item-to-Construct sprite mappings, and extracted 2,223 original inventory behavior event records. Both the native regression workflow and the 3DS executable build completed successfully after the inventory fixes. The 76 item IDs without an `MDZItemTable` mapping remain explicitly unresolved; no substitute art or item effects are fabricated.
