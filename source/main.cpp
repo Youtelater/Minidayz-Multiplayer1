@@ -140,34 +140,36 @@ public:
         if (input.held & KEY_DDOWN)  movement.move_y += 1.0f;
         movement.run = (input.held & KEY_B) != 0;
         const bool touch_pressed = input.touching && !touch_down_;
-        touch_down_ = input.touching;
+        const bool touch_released = !input.touching && touch_down_;
         if (touch_pressed) {
-            const int tx = input.touch.px;
-            const int ty = input.touch.py;
-            // Two-tap touch interaction: select a populated source slot, then
-            // tap an empty slot to move it or another item to swap stacks.
-            // This adapts the original drag/drop inventory interaction to the
-            // 3DS touch screen without moving items while the finger is held.
-            if (tx >= 10 && tx < 310 && ty >= 92 && ty < 221) {
-                const int col = (tx - 10) / 60;
-                const int row = (ty - 92) / 43;
-                if (col >= 0 && col < 5 && row >= 0 && row < 3) {
-                    const int tapped_slot = row * 5 + col;
-                    if (selected_inventory_slot_ < 0) {
-                        const auto* tapped = inventory_.slot(
-                            static_cast<std::size_t>(tapped_slot));
-                        if (tapped && !tapped->empty())
-                            selected_inventory_slot_ = tapped_slot;
-                    } else if (tapped_slot == selected_inventory_slot_) {
-                        selected_inventory_slot_ = -1;
-                    } else if (inventory_.move(
-                                   static_cast<std::size_t>(selected_inventory_slot_),
-                                   static_cast<std::size_t>(tapped_slot))) {
-                        selected_inventory_slot_ = -1;
-                    }
+            drag_source_slot_ = -1;
+            drag_target_slot_ = -1;
+            const int slot = inventory_slot_at(input.touch.px, input.touch.py);
+            if (slot >= 0) {
+                const auto* item = inventory_.slot(static_cast<std::size_t>(slot));
+                if (item && !item->empty()) {
+                    drag_source_slot_ = slot;
+                    drag_target_slot_ = slot;
+                    selected_inventory_slot_ = slot;
                 }
             }
         }
+        if (input.touching && drag_source_slot_ >= 0) {
+            const int target = inventory_slot_at(input.touch.px, input.touch.py);
+            if (target >= 0) drag_target_slot_ = target;
+        }
+        if (touch_released) {
+            if (drag_source_slot_ >= 0 && drag_target_slot_ >= 0 &&
+                drag_target_slot_ != drag_source_slot_) {
+                (void)inventory_.move(
+                    static_cast<std::size_t>(drag_source_slot_),
+                    static_cast<std::size_t>(drag_target_slot_));
+            }
+            drag_source_slot_ = -1;
+            drag_target_slot_ = -1;
+            selected_inventory_slot_ = -1;
+        }
+        touch_down_ = input.touching;
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
         // Source-derived survival rates are still zero until their original
@@ -350,6 +352,14 @@ public:
     }
 
 private:
+    static int inventory_slot_at(int x, int y) noexcept {
+        if (x < 10 || x >= 310 || y < 92 || y >= 221) return -1;
+        const int col = (x - 10) / 60;
+        const int row = (y - 92) / 43;
+        return col >= 0 && col < 5 && row >= 0 && row < 3
+            ? row * 5 + col : -1;
+    }
+
     void start_new_game() noexcept {
         world_seed_ = make_new_world_seed();
         player_ = minidayz::PlayerSystem(make_initial_state());
