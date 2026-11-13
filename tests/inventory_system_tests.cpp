@@ -50,13 +50,13 @@ int main() {
     assert(inventory.add(1, 1)); // source default is one per slot
 
     // Explicit split, bounded merge, and full-stack swap.
-    assert(inventory.move(3, 4, 1, 10));
+    assert(inventory.move(3, 5, 1, 10));
     assert(inventory.slot(3)->count == 1);
-    assert(inventory.slot(4)->count == 1);
-    assert(!inventory.move(3, 4, 1, 1));
-    assert(inventory.move(3, 4, 1, 10));
+    assert(inventory.slot(5)->count == 1);
+    assert(!inventory.move(3, 5, 1, 1));
+    assert(inventory.move(3, 5, 1, 10));
     assert(inventory.slot(3)->empty());
-    assert(inventory.slot(4)->count == 2);
+    assert(inventory.slot(5)->count == 2);
 
     assert(inventory.add(18, 1));
     assert(!inventory.move(2, 0, 1, 10));
