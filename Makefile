@@ -125,5 +125,6 @@ stage1-assets:
 	@python3 tools/stage1/validate_stage1.py
 	@python3 tools/stage1/build_sprite_catalog.py
 	@python3 tools/stage2/build_item_sprite_catalog.py
+	@python3 tools/stage2/extract_item_behavior_trace.py
 
 
