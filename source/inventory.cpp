@@ -1,5 +1,7 @@
 #include "minidayz/inventory.hpp"
 #include "minidayz/generated/item_catalog.hpp"
+#include "minidayz/generated/item_source_catalog.hpp"
+#include "minidayz/generated/item_sprite_catalog.hpp"
 
 #include <limits>
 
@@ -26,6 +28,34 @@ bool valid_item(std::uint16_t item_id) noexcept {
 std::uint16_t source_max_stack(std::uint16_t item_id, bool perk_cybb) noexcept {
     return perk_cybb ? std::numeric_limits<std::uint16_t>::max()
                      : source_max_stack(item_id);
+}
+
+std::uint16_t source_construct_object(std::uint16_t item_id) noexcept {
+    std::size_t first = 0;
+    std::size_t last = kSourceItemDefinitionCount;
+    while (first < last) {
+        const std::size_t middle = first + (last - first) / 2;
+        if (kSourceItemDefinitions[middle].id < item_id) first = middle + 1;
+        else last = middle;
+    }
+    if (first == kSourceItemDefinitionCount ||
+        kSourceItemDefinitions[first].id != item_id)
+        return 65535;
+    return kSourceItemDefinitions[first].construct_object;
+}
+
+std::uint16_t source_sprite_object(std::uint16_t item_id) noexcept {
+    std::size_t first = 0;
+    std::size_t last = kItemSpriteDefinitionCount;
+    while (first < last) {
+        const std::size_t middle = first + (last - first) / 2;
+        if (kItemSpriteDefinitions[middle].item_id < item_id) first = middle + 1;
+        else last = middle;
+    }
+    if (first == kItemSpriteDefinitionCount ||
+        kItemSpriteDefinitions[first].item_id != item_id)
+        return 65535;
+    return kItemSpriteDefinitions[first].object;
 }
 
 bool is_backpack_item(std::uint16_t item_id) noexcept {
