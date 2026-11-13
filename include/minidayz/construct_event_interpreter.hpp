@@ -35,7 +35,10 @@ bool evaluate_location_event_parameter(
     const stage1::LocationEventParameterSource& parameter,
     EvaluationContext& context, Value& result);
 
-bool execute_location_event_branch(std::uint64_t branch_uid,\n                                   const EventCallbacks& callbacks,\n                                   bool& branch_matched);\n
+bool execute_location_event_branch(std::uint64_t branch_uid,
+                                   const EventCallbacks& callbacks,
+                                   bool& branch_matched);
+
 using NpcFunctionConditionEvaluator = bool (*)(void* user,
     const stage1::NpcFunctionConditionSource& condition, int loop_index,
     bool previous_sibling_matched, bool& matched, int& repeat_count);
