@@ -9,6 +9,25 @@
 using namespace minidayz;
 
 namespace {
+struct NpcTestState { std::size_t conditions{}; std::size_t actions{}; };
+
+bool npc_condition(void* user, const stage1::NpcFunctionConditionSource&,
+                   int, bool, bool& matched, int& repeat_count) {
+    auto& state = *static_cast<NpcTestState*>(user);
+    ++state.conditions;
+    matched = true;
+    repeat_count = 1;
+    return true;
+}
+
+bool npc_action(void* user, const stage1::NpcFunctionActionSource& action, int) {
+    auto& state = *static_cast<NpcTestState*>(user);
+    ++state.actions;
+    return action.raw_call != nullptr;
+}
+}
+
+namespace {
 struct TestState {
     std::size_t array_writes{};
     std::size_t array_sizes{};
@@ -41,6 +60,15 @@ std::uint64_t branch_for_code(std::uint16_t code) {
         for (std::uint8_t i = 0; i < entry.tile_code_count; ++i)
             if (entry.tile_codes[i] == code) return entry.event_uid;
     }
+    NpcTestState npc_state;
+    construct::NpcFunctionCallbacks npc_callbacks{};
+    npc_callbacks.user = &npc_state;
+    npc_callbacks.evaluate_condition = npc_condition;
+    npc_callbacks.execute_action = npc_action;
+    assert(construct::execute_npc_spawn_function(npc_callbacks));
+    assert(npc_state.conditions > 0);
+    assert(npc_state.actions > 0);
+
     return 0;
 }
 }
