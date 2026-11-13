@@ -97,7 +97,7 @@ int main() {
     assert(restored.slot(0)->item_id == 1);
     assert(restored.slot(1)->item_id == 18);
     auto corrupt_snapshot = saved_inventory;
-    corrupt_snapshot.slots[19] = {1, 1};
+    corrupt_snapshot.slots[20] = {1, 1};
     assert(!restored.restore(corrupt_snapshot));
     assert(restored.capacity() == 20); // failed restore is transactional
     corrupt_snapshot = saved_inventory;
