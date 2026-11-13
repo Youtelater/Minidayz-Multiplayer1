@@ -14,3 +14,27 @@ Do not infer item effects or backpack slot counts from item names. The raw sourc
 ## Verified build outputs
 
 The native CI run generated 405 original item definitions, resolved 329 item-to-Construct sprite mappings, and extracted 2,223 original inventory behavior event records. Both the native regression workflow and the 3DS executable build completed successfully after the inventory fixes. The 76 item IDs without an `MDZItemTable` mapping remain explicitly unresolved; no substitute art or item effects are fabricated.
+
+
+## Player appearance and equipment layers verified in original source
+
+The original Construct object table defines separate player visual layers named
+`player_pants`, `player_hands`, `player_clothing`, `player_vests`,
+`player_helmets`, `player_backpacks`, and `player_weapons`. The source
+also runs `animation_redraw` after equipment-layer updates. These are distinct
+from the inventory grid and must be represented by the native player/equipment
+runtime; they are not interchangeable generic clothing slots.
+
+The native player runtime now exposes a validated `PlayerState` snapshot and
+restore path so position, survival stats, animation state, and life state can
+be persisted. Restore rejects non-finite values, invalid enum values, and
+inconsistent alive/dead state without mutating the active player.
+
+## Stage 2 completion boundary
+
+Player save-state support does not complete Stage 2. The native runtime still
+needs source-derived item-to-equipment-layer classification, equipment
+transfers between inventory and player layers, visual redraw integration,
+source-backed clothing/armor effects, exact backpack capacity rules, and
+item-use effects. Those values must be extracted from the original event
+conditions/actions before implementation; item-name guesses are not acceptable.
