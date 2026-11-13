@@ -34,11 +34,24 @@ struct SavedGame {
 bool load_saved_game(SavedGame& save) noexcept {
     std::FILE* file = std::fopen(kSavePath, "rb");
     if (!file) return false;
-    const bool read_ok = std::fread(&save, sizeof(save), 1, file) == 1;
+    const bool header_ok =
+        std::fread(&save.magic, sizeof(save.magic), 1, file) == 1 &&
+        std::fread(&save.version, sizeof(save.version), 1, file) == 1 &&
+        std::fread(&save.seed, sizeof(save.seed), 1, file) == 1;
+    bool body_ok = false;
+    if (header_ok && save.version == 1u) {
+        // Migrate the previous player-only save format without discarding it.
+        body_ok = std::fread(&save.player, sizeof(save.player), 1, file) == 1;
+        save.inventory = {};
+    } else if (header_ok && save.version == kSaveVersion) {
+        body_ok =
+            std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
+            std::fread(&save.inventory, sizeof(save.inventory), 1, file) == 1;
+    }
     const bool no_extra_data = std::fgetc(file) == EOF;
     std::fclose(file);
-    return read_ok && no_extra_data && save.magic == kSaveMagic &&
-        save.version == kSaveVersion && save.seed != 0 &&
+    return header_ok && body_ok && no_extra_data && save.magic == kSaveMagic &&
+        save.seed != 0 &&
         std::isfinite(save.player.x) && std::isfinite(save.player.y) &&
         std::isfinite(save.player.health) && std::isfinite(save.player.hunger) &&
         std::isfinite(save.player.thirst) && save.player.x >= 0.0f &&
@@ -201,7 +214,7 @@ public:
         save_elapsed_ += dt;
         if (save_elapsed_ >= 2.0f) {
             save_elapsed_ = 0.0f;
-            (void)write_saved_game(world_seed_, player_.state());
+            (void)write_saved_game(world_seed_, player_.state(), inventory_);
         }
     }
 
@@ -398,7 +411,7 @@ private:
         // Never enter a blank gameplay scene when source world generation
         // fails. Keep the menu available so the player can retry instead.
         menu_active_ = !world_ready_;
-        if (world_ready_) (void)write_saved_game(world_seed_, player_.state());
+        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_);
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
