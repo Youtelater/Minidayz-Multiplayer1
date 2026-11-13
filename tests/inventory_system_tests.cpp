@@ -68,6 +68,20 @@ int main() {
     assert(full.occupied_slots() == 15);
     assert(full.count(18) == 0);
 
+    InventorySystem backpack;
+    assert(!backpack.equip_backpack(1, 20));
+    assert(!backpack.equip_backpack(450, 15));
+    assert(backpack.equip_backpack(450, 20));
+    assert(backpack.equipped_backpack() == 450);
+    assert(backpack.capacity() == 20);
+    for (std::uint16_t id = 1; id <= 16; ++id) assert(backpack.add(id, 1));
+    assert(!backpack.unequip_backpack());
+    assert(backpack.equipped_backpack() == 450);
+    backpack.clear();
+    assert(backpack.unequip_backpack());
+    assert(backpack.equipped_backpack() == 0);
+    assert(backpack.capacity() == kInventorySlotCount);
+
     InventorySystem expanded;
     assert(expanded.set_capacity(20));
     for (std::uint16_t id = 1; id <= 20; ++id) assert(expanded.add(id, 1));

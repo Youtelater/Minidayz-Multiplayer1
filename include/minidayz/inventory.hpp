@@ -19,6 +19,10 @@ class InventorySystem {
 public:
     InventorySystem() noexcept = default;
     bool set_capacity(std::size_t capacity) noexcept;
+    // Capacity comes from a verified original item rule; never guess by name.
+    bool equip_backpack(std::uint16_t item_id, std::size_t source_capacity) noexcept;
+    bool unequip_backpack() noexcept;
+    std::uint16_t equipped_backpack() const noexcept { return equipped_backpack_; }
     std::size_t capacity() const noexcept { return capacity_; }
 
     // max_stack is supplied by source-derived item rules. The conservative
@@ -39,6 +43,7 @@ public:
 private:
     std::array<InventorySlot, kMaximumInventorySlotCount> slots_{};
     std::size_t capacity_{kInventorySlotCount};
+    std::uint16_t equipped_backpack_{};
 };
 
 } // namespace minidayz::items

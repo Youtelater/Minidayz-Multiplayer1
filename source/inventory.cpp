@@ -23,12 +23,40 @@ bool valid_item(std::uint16_t item_id) noexcept {
 
 } // namespace
 
+namespace {
+bool is_backpack_item(std::uint16_t item_id) noexcept {
+    // Item IDs/names are listed in the original l_eng_items.xml catalog.
+    switch (item_id) {
+        case 450: case 451: case 452: case 453: case 454: case 455:
+        case 457: case 458: case 459: case 460: case 461: case 462:
+        case 752: case 753: case 754: return true;
+        default: return false;
+    }
+}
+} // namespace
+
 bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
     if (capacity < kInventorySlotCount || capacity > kMaximumInventorySlotCount)
         return false;
     for (std::size_t i = capacity; i < capacity_; ++i)
         if (!slots_[i].empty()) return false;
     capacity_ = capacity;
+    if (capacity == kInventorySlotCount) equipped_backpack_ = 0;
+    return true;
+}
+
+bool InventorySystem::equip_backpack(std::uint16_t item_id,
+                                     std::size_t source_capacity) noexcept {
+    if (!is_backpack_item(item_id) || source_capacity <= kInventorySlotCount ||
+        source_capacity > kMaximumInventorySlotCount) return false;
+    if (!set_capacity(source_capacity)) return false;
+    equipped_backpack_ = item_id;
+    return true;
+}
+
+bool InventorySystem::unequip_backpack() noexcept {
+    if (!set_capacity(kInventorySlotCount)) return false;
+    equipped_backpack_ = 0;
     return true;
 }
 
