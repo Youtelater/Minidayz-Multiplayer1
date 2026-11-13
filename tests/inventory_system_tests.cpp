@@ -82,6 +82,28 @@ int main() {
     assert(backpack.equipped_backpack() == 0);
     assert(backpack.capacity() == kInventorySlotCount);
 
+    // Save snapshots round-trip all slots, capacity and equipped backpack.
+    InventorySystem persisted;
+    assert(persisted.equip_backpack(450, 20));
+    assert(persisted.add(1, 7, 10));
+    assert(persisted.add(18, 2, 5));
+    const auto saved_inventory = persisted.snapshot();
+    InventorySystem restored;
+    assert(restored.restore(saved_inventory));
+    assert(restored.capacity() == 20);
+    assert(restored.equipped_backpack() == 450);
+    assert(restored.count(1) == 7);
+    assert(restored.count(18) == 2);
+    assert(restored.slot(0)->item_id == 1);
+    assert(restored.slot(1)->item_id == 18);
+    auto corrupt_snapshot = saved_inventory;
+    corrupt_snapshot.slots[19] = {1, 1};
+    assert(!restored.restore(corrupt_snapshot));
+    assert(restored.capacity() == 20); // failed restore is transactional
+    corrupt_snapshot = saved_inventory;
+    corrupt_snapshot.slots[0] = {9999, 1};
+    assert(!restored.restore(corrupt_snapshot));
+
     InventorySystem expanded;
     assert(expanded.set_capacity(20));
     for (std::uint16_t id = 1; id <= 20; ++id) assert(expanded.add(id, 1));
