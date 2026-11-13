@@ -16,31 +16,76 @@ std::uint32_t next_random(std::uint32_t& state) noexcept {
     state ^= state << 5;
     return state;
 }
+float random_symmetric(std::uint32_t& state, float radius) noexcept {
+    const float unit = static_cast<float>(next_random(state) & 0x00ffffffu)
+        / 16777215.0f;
+    return (unit * 2.0f - 1.0f) * radius;
+}
+std::uint16_t body_for_skin(std::uint8_t skin_id) noexcept {
+    // Directly transcribed from the six Skin_id branches in Spawn_NPC.
+    switch (skin_id) {
+    case 1: return 600;
+    case 2: return 206;
+    case 3: return 582;
+    case 4: return 583;
+    case 5: return 586;
+    case 6: return 587;
+    default: return 0;
+    }
+}
 }
 
 bool NpcSystem::initialize(const WorldSystem& world) noexcept {
     reset();
     try {
-        // Object 216 is the original zed_resp_point marker, not a zombie
-        // sprite. The source Spawn_NPC function creates a body plus a separate
-        // eyes object; use the normal skin pair as the native fallback until
-        // the source callsite's skin-selection branch is evaluated.
+        // Object 216 is the original zed_resp placement marker. The source
+        // function's skin branch is supplied by its callsite; use its explicit
+        // skin-2 branch as the safe fallback for marker-only legacy callers.
         for (std::size_t i = 0; i < world.placement_count(); ++i) {
             const auto* placement = world.placement(i);
             if (!placement || placement->object != 216) continue;
-            NpcActor actor{};
-            actor.source_object = 206; // zed_normal_skin1
-            actor.eyes_object = 256;    // zed_normal_eyes
+            if (!spawn_at(placement->x, placement->y, 0.0f, 2,
+                          placement->source_uid)) {
+                reset();
+                return false;
+            }
+            auto& actor = actors_.back();
             actor.spawn_source_object = placement->object;
-            actor.x = actor.home_x = placement->x;
-            actor.y = actor.home_y = placement->y;
-            actor.random_state = static_cast<std::uint32_t>(
-                placement->source_uid ^ (placement->source_uid >> 32) ^
-                static_cast<std::uint64_t>(i + 1));
-            actors_.push_back(actor);
         }
     } catch (...) {
         reset();
+        return false;
+    }
+    return true;
+}
+
+bool NpcSystem::spawn_at(float x, float y, float spawn_offset,
+                         std::uint8_t skin_id, std::uint64_t source_uid) noexcept {
+    if (!std::isfinite(x) || !std::isfinite(y) ||
+        !std::isfinite(spawn_offset) || spawn_offset < 0.0f ||
+        spawn_offset > 10000.0f || skin_id > 6)
+        return false;
+    std::uint32_t state = static_cast<std::uint32_t>(
+        source_uid ^ (source_uid >> 32) ^ 0x9e3779b9u);
+    if (state == 0) state = 0x6d2b79f5u;
+    if (skin_id == 0)
+        skin_id = static_cast<std::uint8_t>(1u + next_random(state) % 6u);
+    const std::uint16_t body = body_for_skin(skin_id);
+    if (body == 0) return false;
+
+    NpcActor actor{};
+    actor.source_object = body;
+    actor.eyes_object = 256;
+    actor.spawn_source_object = 216;
+    actor.skin_id = skin_id;
+    actor.x = x + random_symmetric(state, spawn_offset);
+    actor.y = y + random_symmetric(state, spawn_offset);
+    actor.home_x = actor.x;
+    actor.home_y = actor.y;
+    actor.random_state = state;
+    try {
+        actors_.push_back(actor);
+    } catch (...) {
         return false;
     }
     return true;
@@ -96,7 +141,6 @@ void NpcSystem::update(float delta_seconds, float player_x, float player_y,
             actor.y += step_y;
 
         if (std::fabs(step_x) + std::fabs(step_y) > 0.01f) {
-            // Original body animation order: walk_down/up/left/right = 12..15.
             if (std::fabs(vx) > std::fabs(vy))
                 actor.animation_index = vx < 0.0f ? 14u : 15u;
             else
@@ -107,7 +151,6 @@ void NpcSystem::update(float delta_seconds, float player_x, float player_y,
             actor.animation_frame =
                 static_cast<std::uint32_t>(actor.animation_elapsed * 8.0f) % frame_count;
         } else {
-            // Preserve facing while selecting the corresponding idle animation.
             if (actor.animation_index == 12u) actor.animation_index = 0u;
             else if (actor.animation_index == 13u) actor.animation_index = 1u;
             else if (actor.animation_index == 15u) actor.animation_index = 2u;
