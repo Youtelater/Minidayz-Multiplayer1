@@ -104,6 +104,11 @@ int main() {
     corrupt_snapshot.slots[0] = {9999, 1};
     assert(!restored.restore(corrupt_snapshot));
 
+    restored.clear();
+    assert(restored.capacity() == kInventorySlotCount);
+    assert(restored.equipped_backpack() == 0);
+    assert(restored.occupied_slots() == 0);
+
     InventorySystem expanded;
     assert(expanded.set_capacity(20));
     for (std::uint16_t id = 1; id <= 20; ++id) assert(expanded.add(id, 1));
