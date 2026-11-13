@@ -221,7 +221,7 @@ def main():
     game_event_lines += ["};", "} // namespace minidayz::stage1", ""]
     game_event_output = OUTPUT.with_name("game_events_callsite_source.hpp")
     game_event_output.parent.mkdir(parents=True, exist_ok=True)
-    game_event_output.write_text("\\n".join(game_event_lines), encoding="utf-8")
+    game_event_output.write_text("\n".join(game_event_lines), encoding="utf-8")
     print(f"Extracted {len(game_event_rows)} Game_events events and {len(game_event_action_rows)} actions.")
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
