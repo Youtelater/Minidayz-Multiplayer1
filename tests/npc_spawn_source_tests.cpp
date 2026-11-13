@@ -2,6 +2,7 @@
 #include "minidayz/generated/npc_spawn_function_source.hpp"
 #include "minidayz/generated/game_events_callsite_source.hpp"
 #include "minidayz/npc_system.hpp"
+#include "minidayz/world.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -70,8 +71,6 @@ int main() {
         assert(found_event && found_action);
     }
 
-
-    // Source Spawn_NPC Skin_id branches 1..6 select these body object IDs.
     constexpr std::uint16_t expected_bodies[] = {600, 206, 582, 583, 586, 587};
     minidayz::NpcSystem npcs;
     for (std::uint8_t skin = 1; skin <= 6; ++skin) {
@@ -92,5 +91,28 @@ int main() {
     assert(random_skin && random_skin->skin_id >= 1 && random_skin->skin_id <= 6);
     assert(std::fabs(random_skin->x - 500.0f) <= 25.0f);
     assert(std::fabs(random_skin->y - 600.0f) <= 25.0f);
+
+    // Exercise the actual world-generation -> source zed_resp placements ->
+    // native actor path, rather than only testing isolated spawn_at calls.
+    minidayz::WorldSystem world;
+    assert(world.generate_from_source(0x4e504321u, "Map", 0));
+    std::size_t source_markers = 0;
+    for (std::size_t i = 0; i < world.placement_count(); ++i) {
+        const auto* placement = world.placement(i);
+        if (placement && placement->object == 216) ++source_markers;
+    }
+    assert(source_markers > 0);
+    minidayz::NpcSystem integrated;
+    assert(integrated.initialize(world));
+    assert(integrated.count() == source_markers);
+    bool has_valid_skin = false;
+    for (std::size_t i = 0; i < integrated.count(); ++i) {
+        const auto* actor = integrated.actor(i);
+        assert(actor && actor->alive && actor->eyes_object == 256);
+        assert(actor->skin_id >= 1 && actor->skin_id <= 6);
+        assert(actor->source_object == expected_bodies[actor->skin_id - 1]);
+        has_valid_skin = true;
+    }
+    assert(has_valid_skin);
     return 0;
 }
