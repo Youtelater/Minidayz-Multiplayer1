@@ -122,7 +122,7 @@ void test_original_map_layout_and_descriptors() {
         const auto* placement = world.placement(i);
         if (placement && placement->object == 216) ++source_zed_points;
     }
-    NpcSystem npcs;
+    minidayz::NpcSystem npcs;
     assert(npcs.initialize(world));
     assert(npcs.count() == source_zed_points);
     assert(npcs.count() > 0);
