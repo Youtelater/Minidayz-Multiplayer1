@@ -1,5 +1,7 @@
 #include "minidayz/inventory.hpp"
 #include "minidayz/generated/item_catalog.hpp"
+#include "minidayz/generated/item_source_catalog.hpp"
+#include "minidayz/generated/item_sprite_catalog.hpp"
 
 #include <cassert>
 #include <cstdint>
@@ -8,6 +10,8 @@ int main() {
     using namespace minidayz::items;
     static_assert(kInventorySlotCount == 15);
     static_assert(kItemDefinitionCount == 405);
+    static_assert(kSourceItemDefinitionCount == 405);
+    static_assert(kItemSpriteDefinitionCount > 0);
     assert(kItemDefinitions[0].id == 0);
     assert(kItemDefinitions[1].id == 1);
     assert(kItemDefinitions[1].name[0] != '\0');
