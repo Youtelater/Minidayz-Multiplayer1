@@ -66,10 +66,9 @@ jobs:
       - name: Run Original Location Runtime Tests
         run: ./location_event_runtime_tests
 
-      - name: Generate Original Item Catalog
-        run: python3 tools/stage2/extract_item_catalog.py
-
+      - name: Generate Original Item Catalog and Behavior Trace
         run: |
+          python3 tools/stage2/extract_item_catalog.py
           python3 tools/stage2/build_item_source_catalog.py
           python3 tools/stage2/build_item_sprite_catalog.py
           python3 tools/stage2/extract_item_behavior_trace.py
