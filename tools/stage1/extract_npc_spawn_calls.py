@@ -185,6 +185,45 @@ def main():
     if len(function_event_rows) != 399:
         raise SystemExit(f"Expected 399 Spawn_NPC event nodes, found {len(function_event_rows)}")
 
+    game_event_rows = []
+    game_event_action_rows = []
+    for sheet_name, entries in project[6]:
+        if sheet_name != "Game_events":
+            continue
+        for _, event in walk_events(entries, sheet_name):
+            actions = event[6] if len(event) > 6 and isinstance(event[6], list) else []
+            first_action = len(game_event_action_rows)
+            for action in actions:
+                if not isinstance(action, list) or len(action) < 4:
+                    continue
+                game_event_action_rows.append((int(action[3]), int(action[0]), int(action[1])))
+            game_event_rows.append((int(event[4]), first_action,
+                                    len(game_event_action_rows) - first_action))
+    if not game_event_rows or not game_event_action_rows:
+        raise SystemExit("Game_events source extraction produced no events or actions")
+    game_event_lines = [
+        "#pragma once", "#include <cstddef>", "#include <cstdint>",
+        "namespace minidayz::stage1 {",
+        "struct GameEventSource { std::uint64_t event_uid; std::uint32_t first_action, action_count; };",
+        f"inline constexpr std::size_t kGameEventSourceCount = {len(game_event_rows)};",
+        "inline constexpr GameEventSource kGameEventSource[] = {",
+    ]
+    for uid, first, count in game_event_rows:
+        game_event_lines.append(f"    {{{uid}ULL, {first}u, {count}u}},")
+    game_event_lines += [
+        "};",
+        "struct GameEventActionSource { std::uint64_t action_uid; std::int16_t object_index; std::uint16_t command_id; };",
+        f"inline constexpr std::size_t kGameEventActionSourceCount = {len(game_event_action_rows)};",
+        "inline constexpr GameEventActionSource kGameEventActionSource[] = {",
+    ]
+    for uid, obj, command in game_event_action_rows:
+        game_event_lines.append(f"    {{{uid}ULL, {obj}, {command}}},")
+    game_event_lines += ["};", "} // namespace minidayz::stage1", ""]
+    game_event_output = OUTPUT.with_name("game_events_callsite_source.hpp")
+    game_event_output.parent.mkdir(parents=True, exist_ok=True)
+    game_event_output.write_text("\\n".join(game_event_lines), encoding="utf-8")
+    print(f"Extracted {len(game_event_rows)} Game_events events and {len(game_event_action_rows)} actions.")
+
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
     print(f"Extracted {len(calls)} original {FUNCTION_NAME} callsites.")
