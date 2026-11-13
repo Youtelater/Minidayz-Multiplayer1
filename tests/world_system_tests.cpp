@@ -1,5 +1,6 @@
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/npc_system.hpp"
 
 #include <cassert>
 #include <cstdint>
@@ -113,6 +114,25 @@ void test_original_map_layout_and_descriptors() {
         }
     }
     assert(found_bunker && found_bridge);
+
+    // Spawn-point object 216 is not the visible Zed. Native actors must use
+    // the original skin/eyes pair created by Spawn_NPC.
+    std::size_t source_zed_points = 0;
+    for (std::size_t i = 0; i < world.placement_count(); ++i) {
+        const auto* placement = world.placement(i);
+        if (placement && placement->object == 216) ++source_zed_points;
+    }
+    NpcSystem npcs;
+    assert(npcs.initialize(world));
+    assert(npcs.count() == source_zed_points);
+    assert(npcs.count() > 0);
+    for (std::size_t i = 0; i < npcs.count(); ++i) {
+        const auto* actor = npcs.actor(i);
+        assert(actor && actor->alive);
+        assert(actor->spawn_source_object == 216);
+        assert(actor->source_object == 206);
+        assert(actor->eyes_object == 256);
+    }
 }
 
 void test_seed_reproducibility() {
