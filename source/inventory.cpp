@@ -23,12 +23,22 @@ bool valid_item(std::uint16_t item_id) noexcept {
 
 } // namespace
 
+bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
+    if (capacity < kInventorySlotCount || capacity > kMaximumInventorySlotCount)
+        return false;
+    for (std::size_t i = capacity; i < capacity_; ++i)
+        if (!slots_[i].empty()) return false;
+    capacity_ = capacity;
+    return true;
+}
+
 bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
                           std::uint16_t max_stack) noexcept {
     if (!valid_item(item_id) || amount == 0 || max_stack == 0) return false;
 
     std::uint32_t available = 0;
-    for (const auto& entry : slots_) {
+    for (std::size_t i = 0; i < capacity_; ++i) {
+        const auto& entry = slots_[i];
         if (entry.empty()) {
             available += max_stack;
         } else if (entry.item_id == item_id && entry.count < max_stack) {
@@ -38,7 +48,8 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
     if (available < amount) return false;
 
     std::uint32_t remaining = amount;
-    for (auto& entry : slots_) {
+    for (std::size_t i = 0; i < capacity_; ++i) {
+        auto& entry = slots_[i];
         if (entry.item_id != item_id || entry.count >= max_stack) continue;
         const auto room = static_cast<std::uint32_t>(max_stack - entry.count);
         const auto added = remaining < room ? remaining : room;
@@ -46,7 +57,8 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
         remaining -= added;
         if (remaining == 0) return true;
     }
-    for (auto& entry : slots_) {
+    for (std::size_t i = 0; i < capacity_; ++i) {
+        auto& entry = slots_[i];
         if (!entry.empty()) continue;
         const auto added = remaining < max_stack ? remaining : max_stack;
         entry.item_id = item_id;
@@ -59,7 +71,7 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
 
 bool InventorySystem::remove(std::size_t index,
                              std::uint16_t amount) noexcept {
-    if (index >= slots_.size() || amount == 0 ||
+    if (index >= capacity_ || amount == 0 ||
         slots_[index].empty() || amount > slots_[index].count) return false;
     auto& entry = slots_[index];
     entry.count = static_cast<std::uint16_t>(entry.count - amount);
@@ -69,7 +81,7 @@ bool InventorySystem::remove(std::size_t index,
 
 bool InventorySystem::move(std::size_t from, std::size_t to,
                            std::uint16_t amount) noexcept {
-    if (from >= slots_.size() || to >= slots_.size() || from == to ||
+    if (from >= capacity_ || to >= capacity_ || from == to ||
         slots_[from].empty()) return false;
     auto& source = slots_[from];
     auto& destination = slots_[to];
@@ -96,20 +108,22 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
 }
 
 const InventorySlot* InventorySystem::slot(std::size_t index) const noexcept {
-    return index < slots_.size() ? &slots_[index] : nullptr;
+    return index < capacity_ ? &slots_[index] : nullptr;
 }
 
 std::uint32_t InventorySystem::count(std::uint16_t item_id) const noexcept {
     std::uint32_t total = 0;
-    for (const auto& entry : slots_)
+    for (std::size_t i = 0; i < capacity_; ++i) {
+        const auto& entry = slots_[i];
         if (!entry.empty() && entry.item_id == item_id) total += entry.count;
+    }
     return total;
 }
 
 std::size_t InventorySystem::occupied_slots() const noexcept {
     std::size_t total = 0;
-    for (const auto& entry : slots_)
-        if (!entry.empty()) ++total;
+    for (std::size_t i = 0; i < capacity_; ++i)
+        if (!slots_[i].empty()) ++total;
     return total;
 }
 

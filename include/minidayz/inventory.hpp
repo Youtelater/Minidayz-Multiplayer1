@@ -7,6 +7,7 @@
 namespace minidayz::items {
 
 inline constexpr std::size_t kInventorySlotCount = 15;
+inline constexpr std::size_t kMaximumInventorySlotCount = 32;
 
 struct InventorySlot {
     std::uint16_t item_id{};
@@ -17,6 +18,8 @@ struct InventorySlot {
 class InventorySystem {
 public:
     InventorySystem() noexcept = default;
+    bool set_capacity(std::size_t capacity) noexcept;
+    std::size_t capacity() const noexcept { return capacity_; }
 
     // max_stack is supplied by source-derived item rules. The conservative
     // default is one item per slot until those rules are connected.
@@ -34,7 +37,8 @@ public:
     void clear() noexcept { slots_ = {}; }
 
 private:
-    std::array<InventorySlot, kInventorySlotCount> slots_{};
+    std::array<InventorySlot, kMaximumInventorySlotCount> slots_{};
+    std::size_t capacity_{kInventorySlotCount};
 };
 
 } // namespace minidayz::items

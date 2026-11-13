@@ -14,6 +14,8 @@ int main() {
 
     InventorySystem inventory;
     assert(inventory.occupied_slots() == 0);
+    assert(inventory.capacity() == kInventorySlotCount);
+    assert(!inventory.set_capacity(kMaximumInventorySlotCount + 1));
     assert(inventory.add(1, 3, 10));
     assert(inventory.count(1) == 3);
     assert(inventory.slot(0)->item_id == 1);
@@ -65,5 +67,15 @@ int main() {
     assert(!full.add(18, 1));
     assert(full.occupied_slots() == 15);
     assert(full.count(18) == 0);
+
+    InventorySystem expanded;
+    assert(expanded.set_capacity(20));
+    for (std::uint16_t id = 1; id <= 20; ++id) assert(expanded.add(id, 1));
+    assert(expanded.occupied_slots() == 20);
+    assert(expanded.slot(19)->item_id == 20);
+    assert(!expanded.set_capacity(15)); // shrinking never hides occupied items
+    expanded.clear();
+    assert(expanded.set_capacity(15));
+    assert(expanded.capacity() == 15);
     return 0;
 }
