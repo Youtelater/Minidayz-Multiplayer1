@@ -138,6 +138,32 @@ int main() {
     corrupt_snapshot.slots[0] = {9999, 1};
     assert(!restored.restore(corrupt_snapshot));
 
+    // Ground pickup/drop mirrors the original inventory transfer flow.
+    InventorySystem ground_inventory;
+    GroundItem ground_pile{18, 4};
+    assert(ground_inventory.pickup(ground_pile));
+    assert(ground_pile.empty());
+    assert(ground_inventory.count(18) == 4);
+    assert(ground_inventory.drop(0, 2, ground_pile));
+    assert(ground_pile.item_id == 18 && ground_pile.count == 2);
+    assert(ground_inventory.slot(0)->count == 1);
+    assert(ground_inventory.drop(1, 1, ground_pile));
+    assert(ground_pile.count == 3);
+    assert(!ground_inventory.drop(0, 1, ground_pile)); // original stack cap
+    assert(ground_inventory.slot(0)->count == 1);
+    assert(ground_inventory.pickup(ground_pile));
+    assert(ground_pile.empty());
+    assert(ground_inventory.count(18) == 4);
+
+    InventorySystem no_room;
+    for (std::uint16_t id = 1; id <= 15; ++id)
+        assert(no_room.add(id, 1));
+    GroundItem uncollected{18, 1};
+    assert(!no_room.pickup(uncollected));
+    assert(uncollected.item_id == 18 && uncollected.count == 1);
+    assert(!no_room.drop(0, 1, uncollected)); // different item type
+    assert(no_room.slot(0)->item_id == 1);
+
     InventorySystem expanded;
     assert(expanded.set_capacity(20));
     for (std::uint16_t id = 1; id <= 20; ++id) assert(expanded.add(id, 1));
