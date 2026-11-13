@@ -23,46 +23,99 @@ bool valid_item(std::uint16_t item_id) noexcept {
 
 } // namespace
 
-namespace {
 bool is_backpack_item(std::uint16_t item_id) noexcept {
-    // Item IDs/names are listed in the original l_eng_items.xml catalog.
+    // Exact backpack equipment IDs present in the original MDZItemTable.
+    // Civilian Tent (456) and Supplies Stash (461) are not wearable packs.
     switch (item_id) {
         case 450: case 451: case 452: case 453: case 454: case 455:
-        case 457: case 458: case 459: case 460: case 461: case 462:
-        case 752: case 753: case 754: return true;
-        default: return false;
+        case 457: case 458: case 459: case 460: case 462:
+        case 752: case 753: case 754:
+            return true;
+        default:
+            return false;
     }
 }
-} // namespace
+
+std::uint16_t source_max_stack(std::uint16_t item_id) noexcept {
+    // The item-ID groups and baseline limits are taken from the original
+    // Check_stack_size Construct function in data.deobfuscated.js.
+    // Perk-dependent expression branches are intentionally kept separate.
+    switch (item_id) {
+        case 11: case 14: case 15: case 16: case 101:
+            return 50;
+        case 18: case 5: case 6: case 7: case 26: case 32: case 33:
+        case 29: case 45: case 46: case 710: case 718: case 143: case 777:
+            return 3;
+        case 20: case 27: case 38: case 73: case 74: case 114: case 118:
+            return 5;
+        case 138: case 13:
+            return 40;
+        case 12: case 69: case 100:
+            return 60;
+        case 24: case 120: case 105: case 106: case 51: case 52: case 728:
+            return 10;
+        case 17: case 758:
+            return 30;
+        case 58: case 104:
+            return 80;
+        default:
+            return 1;
+    }
+}
 
 bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
     if (capacity < kInventorySlotCount || capacity > kMaximumInventorySlotCount)
         return false;
+    // Do not leave an equipped backpack attached to the base-capacity state.
+    if (capacity == kInventorySlotCount && equipped_backpack_ != 0)
+        return false;
     for (std::size_t i = capacity; i < capacity_; ++i)
         if (!slots_[i].empty()) return false;
     capacity_ = capacity;
-    if (capacity == kInventorySlotCount) equipped_backpack_ = 0;
     return true;
 }
 
-bool InventorySystem::equip_backpack(std::uint16_t item_id,
-                                     std::size_t source_capacity) noexcept {
-    if (!is_backpack_item(item_id) || source_capacity <= kInventorySlotCount ||
-        source_capacity > kMaximumInventorySlotCount) return false;
+bool InventorySystem::equip_backpack_from_slot(
+    std::size_t index, std::size_t source_capacity) noexcept {
+    if (index >= capacity_ || !is_backpack_item(slots_[index].item_id) ||
+        slots_[index].count != 1 ||
+        source_capacity <= kInventorySlotCount ||
+        source_capacity > kMaximumInventorySlotCount)
+        return false;
+
+    const std::uint16_t incoming = slots_[index].item_id;
+    const std::uint16_t outgoing = equipped_backpack_;
+
+    // set_capacity is transactional: it refuses to hide occupied slots.
     if (!set_capacity(source_capacity)) return false;
-    equipped_backpack_ = item_id;
+
+    slots_[index] = outgoing == 0 ? InventorySlot{} : InventorySlot{outgoing, 1};
+    equipped_backpack_ = incoming;
     return true;
 }
 
-bool InventorySystem::unequip_backpack() noexcept {
-    if (!set_capacity(kInventorySlotCount)) return false;
+bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
+    if (equipped_backpack_ == 0 || index >= kInventorySlotCount ||
+        index >= capacity_ || !slots_[index].empty())
+        return false;
+
+    // The original pack can only be returned to the inventory if shrinking
+    // to the base grid would not strand any occupied slot.
+    for (std::size_t i = kInventorySlotCount; i < capacity_; ++i)
+        if (!slots_[i].empty()) return false;
+
+    const std::uint16_t outgoing = equipped_backpack_;
+    capacity_ = kInventorySlotCount;
     equipped_backpack_ = 0;
+    slots_[index] = {outgoing, 1};
     return true;
 }
 
 bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
                           std::uint16_t max_stack) noexcept {
-    if (!valid_item(item_id) || amount == 0 || max_stack == 0) return false;
+    if (!valid_item(item_id) || amount == 0) return false;
+    if (max_stack == 0) max_stack = source_max_stack(item_id);
+    if (max_stack == 0) return false;
 
     std::uint32_t available = 0;
     for (std::size_t i = 0; i < capacity_; ++i) {
@@ -108,7 +161,8 @@ bool InventorySystem::remove(std::size_t index,
 }
 
 bool InventorySystem::move(std::size_t from, std::size_t to,
-                           std::uint16_t amount) noexcept {
+                           std::uint16_t amount,
+                           std::uint16_t max_stack) noexcept {
     if (from >= capacity_ || to >= capacity_ || from == to ||
         slots_[from].empty()) return false;
     auto& source = slots_[from];
@@ -119,7 +173,9 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
     if (destination.empty()) {
         destination = {source.item_id, moving};
     } else if (destination.item_id == source.item_id) {
-        if (moving > std::numeric_limits<std::uint16_t>::max() - destination.count)
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || destination.count > max_stack ||
+            moving > max_stack - destination.count)
             return false;
         destination.count = static_cast<std::uint16_t>(destination.count + moving);
     } else {
@@ -165,10 +221,12 @@ InventorySnapshot InventorySystem::snapshot() const noexcept {
 
 bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
     if (saved.capacity < kInventorySlotCount ||
-        saved.capacity > kMaximumInventorySlotCount) return false;
+        saved.capacity > kMaximumInventorySlotCount)
+        return false;
     if (saved.equipped_backpack != 0 &&
         (!is_backpack_item(saved.equipped_backpack) ||
-         saved.capacity <= kInventorySlotCount)) return false;
+         saved.capacity <= kInventorySlotCount))
+        return false;
 
     for (std::size_t i = 0; i < kMaximumInventorySlotCount; ++i) {
         const auto& entry = saved.slots[i];
@@ -176,7 +234,6 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
             if (!entry.empty()) return false;
             continue;
         }
-        // Reject corrupt half-empty entries and unknown source item IDs.
         if ((entry.item_id == 0) != (entry.count == 0)) return false;
         if (!entry.empty() && !valid_item(entry.item_id)) return false;
     }
