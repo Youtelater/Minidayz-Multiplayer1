@@ -15,6 +15,21 @@ int main() {
     assert(kItemDefinitions[0].id == 0);
     assert(kItemDefinitions[1].id == 1);
     assert(kItemDefinitions[1].name[0] != '\0');
+    assert(kItemSpriteDefinitionCount == 329);
+    assert(source_construct_object(1) != 65535);
+    assert(source_sprite_object(1) != 65535);
+    assert(source_construct_object(999) == 65535);
+    assert(source_sprite_object(0) == 65535);
+    for (std::size_t i = 1; i < kSourceItemDefinitionCount; ++i) {
+        assert(kSourceItemDefinitions[i - 1].id < kSourceItemDefinitions[i].id);
+    }
+    for (std::size_t i = 0; i < kItemSpriteDefinitionCount; ++i) {
+        const auto item_id = kItemSpriteDefinitions[i].item_id;
+        assert(source_sprite_object(item_id) == source_construct_object(item_id));
+        assert(source_sprite_object(item_id) != 65535);
+        if (i > 0)
+            assert(kItemSpriteDefinitions[i - 1].item_id < item_id);
+    }
 
     // Source-backed baseline limits from the original Check_stack_size event.
     assert(source_max_stack(11) == 50);
