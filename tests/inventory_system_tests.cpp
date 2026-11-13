@@ -43,7 +43,7 @@ int main() {
     assert(inventory.slot(0)->count == 5);
     assert(inventory.slot(3)->count == 7);
 
-    assert(inventory.add(18, 2));
+    assert(inventory.add(18, 2, 10));
     assert(!inventory.move(0, 2, 1));
     assert(inventory.move(0, 2));
     assert(inventory.slot(0)->item_id == 18);
