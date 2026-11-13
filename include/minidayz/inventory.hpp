@@ -30,6 +30,9 @@ struct InventorySnapshot {
 // Baseline stack limits ported from the original Check_stack_size event.
 // A later perk-aware layer can override these when perk_cybb is active.
 std::uint16_t source_max_stack(std::uint16_t item_id) noexcept;
+// Original Check_stack_size returns 31,415,926 when perk_cybb is active.
+// Native slot counts are uint16_t, so UINT16_MAX is the equivalent safe cap.
+std::uint16_t source_max_stack(std::uint16_t item_id, bool perk_cybb) noexcept;
 bool is_backpack_item(std::uint16_t item_id) noexcept;
 
 class InventorySystem {
