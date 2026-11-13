@@ -44,12 +44,14 @@ int main() {
     assert(inventory.slot(3)->count == 7);
 
     assert(inventory.add(18, 2, 10));
-    assert(!inventory.move(0, 2, 1));
-    assert(inventory.move(0, 2));
+    // A partial stack cannot merge into a different item type; moving the
+    // complete stack swaps the two occupied slots.
+    assert(!inventory.move(0, 1, 1));
+    assert(inventory.move(0, 1));
     assert(inventory.slot(0)->item_id == 18);
     assert(inventory.slot(0)->count == 2);
-    assert(inventory.slot(2)->item_id == 1);
-    assert(inventory.slot(2)->count == 5);
+    assert(inventory.slot(1)->item_id == 1);
+    assert(inventory.slot(1)->count == 5);
 
     assert(!inventory.move(15, 0));
     assert(!inventory.move(0, 0));
