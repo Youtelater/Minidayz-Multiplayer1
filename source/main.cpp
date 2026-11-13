@@ -286,10 +286,15 @@ public:
                     npc->x < camera_x - 48.0f || npc->x > camera_x + view_w + 48.0f ||
                     npc->y < camera_y - 48.0f || npc->y > camera_y + view_h + 48.0f)
                     continue;
-                if (!renderer.draw_source_sprite(npc->source_object, 0,
-                        npc->animation_frame, npc->x, npc->y, 0.55f, 0.55f))
-                    renderer.draw_solid_rect(npc->x - 4.0f, npc->y - 4.0f,
-                        8.0f, 9.0f, C2D_Color32(130, 145, 78, 255));
+                if (!renderer.draw_source_sprite(npc->source_object,
+                        npc->animation_index, npc->animation_frame,
+                        npc->x, npc->y, 0.55f, 0.55f))
+                    renderer.draw_solid_rect(npc->x - 5.0f, npc->y - 5.0f,
+                        10.0f, 12.0f, C2D_Color32(130, 145, 78, 255));
+                // The original NPC is composed from a skin sprite and a
+                // separate eyes sprite pinned to the same position.
+                (void)renderer.draw_source_sprite(npc->eyes_object, 0, 0,
+                    npc->x, npc->y, 0.55f, 0.55f);
             }
         }
 
