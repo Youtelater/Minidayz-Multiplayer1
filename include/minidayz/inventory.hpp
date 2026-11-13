@@ -48,7 +48,11 @@ public:
     std::size_t occupied_slots() const noexcept;
     InventorySnapshot snapshot() const noexcept;
     bool restore(const InventorySnapshot& snapshot) noexcept;
-    void clear() noexcept { slots_ = {}; }
+    void clear() noexcept {
+        slots_ = {};
+        capacity_ = kInventorySlotCount;
+        equipped_backpack_ = 0;
+    }
 
 private:
     std::array<InventorySlot, kMaximumInventorySlotCount> slots_{};
