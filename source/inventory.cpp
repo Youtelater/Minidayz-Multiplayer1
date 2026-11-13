@@ -155,4 +155,36 @@ std::size_t InventorySystem::occupied_slots() const noexcept {
     return total;
 }
 
+InventorySnapshot InventorySystem::snapshot() const noexcept {
+    InventorySnapshot result{};
+    result.slots = slots_;
+    result.capacity = static_cast<std::uint16_t>(capacity_);
+    result.equipped_backpack = equipped_backpack_;
+    return result;
+}
+
+bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
+    if (saved.capacity < kInventorySlotCount ||
+        saved.capacity > kMaximumInventorySlotCount) return false;
+    if (saved.equipped_backpack != 0 &&
+        (!is_backpack_item(saved.equipped_backpack) ||
+         saved.capacity <= kInventorySlotCount)) return false;
+
+    for (std::size_t i = 0; i < kMaximumInventorySlotCount; ++i) {
+        const auto& entry = saved.slots[i];
+        if (i >= saved.capacity) {
+            if (!entry.empty()) return false;
+            continue;
+        }
+        // Reject corrupt half-empty entries and unknown source item IDs.
+        if ((entry.item_id == 0) != (entry.count == 0)) return false;
+        if (!entry.empty() && !valid_item(entry.item_id)) return false;
+    }
+
+    slots_ = saved.slots;
+    capacity_ = saved.capacity;
+    equipped_backpack_ = saved.equipped_backpack;
+    return true;
+}
+
 } // namespace minidayz::items
