@@ -234,13 +234,15 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
     const std::uint16_t moving = amount == 0 ? source.count : amount;
     if (moving == 0 || moving > source.count) return false;
 
-    if (max_stack == 0) max_stack = source_max_stack(source.item_id);
-    if (max_stack == 0 || moving > max_stack) return false;
+    if (destination.empty() || destination.item_id == source.item_id) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || moving > max_stack) return false;
+    }
 
     if (destination.empty()) {
         destination = {source.item_id, moving};
     } else if (destination.item_id == source.item_id) {
-        if (max_stack == 0 || destination.count > max_stack ||
+        if (destination.count > max_stack ||
             moving > max_stack - destination.count)
             return false;
         destination.count = static_cast<std::uint16_t>(destination.count + moving);
