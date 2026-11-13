@@ -22,6 +22,8 @@ int main() {
     assert(source_max_stack(17) == 30);
     assert(source_max_stack(58) == 80);
     assert(source_max_stack(1) == 1);
+    assert(source_max_stack(18, true) == UINT16_MAX);
+    assert(source_max_stack(1, true) == UINT16_MAX);
 
     InventorySystem inventory;
     assert(inventory.occupied_slots() == 0);
@@ -48,6 +50,10 @@ int main() {
     assert(!inventory.add(84, 1));
     assert(!inventory.add(0, 1));
     assert(inventory.add(1, 1)); // source default is one per slot
+
+    // Empty destinations must also respect the source stack limit.
+    assert(inventory.add(18, 1));
+    assert(!inventory.move(4, 6, 4)); // four bandages exceed the source cap of three
 
     // Explicit split, bounded merge, and full-stack swap.
     assert(inventory.move(3, 5, 1, 10));
@@ -118,6 +124,19 @@ int main() {
     assert(extended.capacity() == kInventorySlotCount);
     assert(extended.equipped_backpack() == 0);
     assert(extended.slot(14)->item_id == 450);
+
+    // Replacing a pack from an extended slot can downsize if the old pack
+    // has a safe free return slot in the new grid.
+    InventorySystem downsize;
+    assert(downsize.add(450, 1));
+    assert(downsize.equip_backpack_from_slot(0, 22));
+    for (std::uint16_t id = 1; id <= 16; ++id) assert(downsize.add(id, 1));
+    assert(downsize.add(451, 1));
+    assert(downsize.slot(16)->item_id == 451);
+    assert(downsize.equip_backpack_from_slot(16, 20));
+    assert(downsize.capacity() == 20);
+    assert(downsize.equipped_backpack() == 451);
+    assert(downsize.count(450) == 1);
 
     // Save snapshots round-trip all slots, capacity, and equipped backpack.
     InventorySystem persisted;
