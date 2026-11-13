@@ -144,13 +144,28 @@ public:
         if (touch_pressed) {
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
-            const int slot = inventory_slot_at(input.touch.px, input.touch.py);
-            if (slot >= 0) {
-                const auto* item = inventory_.slot(static_cast<std::size_t>(slot));
-                if (item && !item->empty()) {
-                    drag_source_slot_ = slot;
-                    drag_target_slot_ = slot;
-                    selected_inventory_slot_ = slot;
+            // Page through larger backpacks without changing the 5 x 3 grid.
+            if (input.touch.py >= 223) {
+                const std::size_t page_count =
+                    (inventory_.capacity() + kInventoryPageSize - 1) /
+                    kInventoryPageSize;
+                if (input.touch.px < 160 && inventory_page_ > 0)
+                    --inventory_page_;
+                else if (input.touch.px >= 160 &&
+                         inventory_page_ + 1 < page_count)
+                    ++inventory_page_;
+                selected_inventory_slot_ = -1;
+            } else {
+                const int slot = inventory_slot_at(input.touch.px,
+                                                   input.touch.py,
+                                                   inventory_page_);
+                if (slot >= 0) {
+                    const auto* item = inventory_.slot(static_cast<std::size_t>(slot));
+                    if (item && !item->empty()) {
+                        drag_source_slot_ = slot;
+                        drag_target_slot_ = slot;
+                        selected_inventory_slot_ = slot;
+                    }
                 }
             }
         }
@@ -237,10 +252,11 @@ public:
             renderer.draw_solid_rect(x, 38.0f, 70.0f, 43.0f, C2D_Color32(8, 11, 10, 255));
             renderer.draw_solid_rect(x + 2.0f, 40.0f, 66.0f, 39.0f, C2D_Color32(47, 54, 48, 255));
         }
-        // 5 x 3 backpack grid, sized for the 320 x 240 touch screen.
+        // 5 x 3 backpack page, sized for the 320 x 240 touch screen.
+        const int page_start = static_cast<int>(inventory_page_ * kInventoryPageSize);
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 5; ++col) {
-                const int index = row * 5 + col;
+                const int index = page_start + row * 5 + col;
                 const float x = 10.0f + col * 60.0f;
                 const float y = 92.0f + row * 43.0f;
                 const bool selected = index == selected_inventory_slot_;
@@ -261,7 +277,15 @@ public:
                 }
             }
         }
-        renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 3.0f, C2D_Color32(75, 91, 70, 255));
+        const std::size_t page_count =
+            (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize;
+        char page_label[24]{};
+        std::snprintf(page_label, sizeof(page_label), "<  BACKPACK  %u/%u  >",
+            static_cast<unsigned>(inventory_page_ + 1),
+            static_cast<unsigned>(page_count));
+        renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
+                                 C2D_Color32(54, 68, 55, 255));
+        renderer.draw_text(page_label, 104.0f, 226.0f, 0.30f);
     }
 
     void render(minidayz::Renderer& renderer) noexcept override {
@@ -344,12 +368,15 @@ public:
     }
 
 private:
-    static int inventory_slot_at(int x, int y) noexcept {
+    static constexpr std::size_t kInventoryPageSize = 15;
+
+    static int inventory_slot_at(int x, int y, std::size_t page) noexcept {
         if (x < 10 || x >= 310 || y < 92 || y >= 221) return -1;
         const int col = (x - 10) / 60;
         const int row = (y - 92) / 43;
         return col >= 0 && col < 5 && row >= 0 && row < 3
-            ? row * 5 + col : -1;
+            ? static_cast<int>(page * kInventoryPageSize) + row * 5 + col
+            : -1;
     }
 
     void start_new_game() noexcept {
@@ -422,6 +449,7 @@ private:
     int selected_inventory_slot_{-1};
     int drag_source_slot_{-1};
     int drag_target_slot_{-1};
+    std::size_t inventory_page_{};
     bool touch_down_{};
 };
 
