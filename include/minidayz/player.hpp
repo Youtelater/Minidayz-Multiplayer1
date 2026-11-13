@@ -82,6 +82,11 @@ public:
     const PlayerState& state() const noexcept { return state_; }
     PlayerState& state_for_setup() noexcept { return state_; }
 
+    // PlayerState is the portable save payload. Restore rejects malformed
+    // values instead of allowing NaNs or invalid enum values into runtime.
+    PlayerState snapshot() const noexcept { return state_; }
+    bool restore(const PlayerState& saved) noexcept;
+
     PlayerMoveResult update_movement(
         const PlayerInput& input,
         float delta_seconds,
