@@ -68,8 +68,9 @@ jobs:
 
       - name: Compile Original NPC Spawn Source Tests
         run: |
-          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
-            tests/npc_spawn_source_tests.cpp -o npc_spawn_source_tests
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -ffunction-sections -fdata-sections -Iinclude \
+            source/npc_system.cpp tests/npc_spawn_source_tests.cpp \
+            -Wl,--gc-sections -o npc_spawn_source_tests
 
       - name: Run Original NPC Spawn Source Tests
         run: ./npc_spawn_source_tests
