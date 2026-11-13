@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Extract every original Construct Spawn_NPC function call and its arguments."""
 import json
+from collections import Counter
 from pathlib import Path
 
 SOURCE = Path("data/stage1/construct_project_parsed.json")
@@ -188,6 +189,12 @@ def main():
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
     print(f"Extracted {len(calls)} original {FUNCTION_NAME} callsites.")
     print(f"Function definition UID: {definitions[0][1]}")
+    condition_inventory = Counter((obj, command) for obj, command, *_ in function_condition_rows)
+    action_inventory = Counter((obj, command) for obj, command, *_ in function_action_rows)
+    print("Spawn_NPC condition ACE inventory: " + ", ".join(
+        f"{obj}:{command}x{count}" for (obj, command), count in sorted(condition_inventory.items())))
+    print("Spawn_NPC action ACE inventory: " + ", ".join(
+        f"{obj}:{command}x{count}" for (obj, command), count in sorted(action_inventory.items())))
 
 if __name__ == "__main__":
     main()
