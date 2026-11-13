@@ -35,6 +35,42 @@ PlayerSystem::PlayerSystem(const PlayerState& initial) noexcept : state_(initial
     update_life_state();
 }
 
+bool PlayerSystem::restore(const PlayerState& saved) noexcept {
+    const auto finite = [](float value) noexcept { return std::isfinite(value); };
+    if (!finite(saved.x) || !finite(saved.y) || !finite(saved.health) ||
+        !finite(saved.hunger) || !finite(saved.thirst) ||
+        !finite(saved.temperature) || !finite(saved.bleeding) ||
+        !finite(saved.infection) || !finite(saved.animation_elapsed) ||
+        saved.health < 0.0f || saved.hunger < 0.0f || saved.thirst < 0.0f ||
+        saved.bleeding < 0.0f || saved.infection < 0.0f ||
+        saved.animation_elapsed < 0.0f)
+        return false;
+
+    switch (saved.facing) {
+    case PlayerFacing::down: case PlayerFacing::up:
+    case PlayerFacing::left: case PlayerFacing::right: break;
+    default: return false;
+    }
+    switch (saved.animation) {
+    case PlayerAnimation::idle: case PlayerAnimation::walk:
+    case PlayerAnimation::run: case PlayerAnimation::dead: break;
+    default: return false;
+    }
+    switch (saved.death_reason) {
+    case PlayerDeathReason::none: case PlayerDeathReason::hunger:
+    case PlayerDeathReason::thirst: case PlayerDeathReason::cold:
+    case PlayerDeathReason::other: break;
+    default: return false;
+    }
+    if ((!saved.alive && saved.health != 0.0f) ||
+        (saved.alive && (saved.health == 0.0f ||
+                         saved.animation == PlayerAnimation::dead)))
+        return false;
+
+    state_ = saved;
+    return true;
+}
+
 float PlayerSystem::clamp(float value, float low, float high) noexcept {
     if (!std::isfinite(value)) return low;
     return std::max(low, std::min(value, high));
