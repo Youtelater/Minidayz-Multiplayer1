@@ -19,7 +19,7 @@ namespace {
 // fresh entropy for this native session. This is a per-run seed, not a claim
 // that the original browser Math.random() sequence is reproducible.
 constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-constexpr std::uint32_t kSaveVersion = 1u;
+constexpr std::uint32_t kSaveVersion = 2u;
 constexpr const char* kSavePath = "sdmc:/3ds/Minidayz/world.sav";
 constexpr const char* kSaveTempPath = "sdmc:/3ds/Minidayz/world.tmp";
 
