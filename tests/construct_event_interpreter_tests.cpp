@@ -1,5 +1,6 @@
 #include "minidayz/construct_event_interpreter.hpp"
 #include "minidayz/generated/location_event_source.hpp"
+#include "minidayz/generated/npc_spawn_function_source.hpp"
 #include "minidayz/world.hpp"
 
 #include <cassert>
