@@ -28,6 +28,7 @@ struct SavedGame {
     std::uint32_t version{kSaveVersion};
     std::uint32_t seed{};
     minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
 };
 
 bool load_saved_game(SavedGame& save) noexcept {
@@ -47,12 +48,14 @@ bool load_saved_game(SavedGame& save) noexcept {
 }
 
 bool write_saved_game(std::uint32_t seed,
-                      const minidayz::PlayerState& player) noexcept {
+                      const minidayz::PlayerState& player,
+                      const minidayz::items::InventorySystem& inventory) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     SavedGame save{};
     save.seed = seed;
     save.player = player;
+    save.inventory = inventory.snapshot();
     std::FILE* file = std::fopen(kSaveTempPath, "wb");
     if (!file) return false;
     const bool written = std::fwrite(&save, sizeof(save), 1, file) == 1 &&
@@ -89,6 +92,8 @@ public:
         : world_seed_(restored ? restored->seed : make_new_world_seed()),
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
+        if (restored && !inventory_.restore(restored->inventory))
+            inventory_.clear();
         // Preview-only movement tuning. Source-equivalent values still need
         // to be supplied by the gameplay rules port.
         // Temporary preview movement tuning only. Original source movement
@@ -109,7 +114,7 @@ public:
 
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
-            (void)write_saved_game(world_seed_, player_.state());
+            (void)write_saved_game(world_seed_, player_.state(), inventory_);
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
@@ -383,6 +388,9 @@ private:
     void start_new_game() noexcept {
         world_seed_ = make_new_world_seed();
         player_ = minidayz::PlayerSystem(make_initial_state());
+        inventory_.clear();
+        inventory_page_ = 0;
+        selected_inventory_slot_ = -1;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
         npc_ready_ = world_ready_ && npcs_.initialize(world_);
         save_elapsed_ = 0.0f;
