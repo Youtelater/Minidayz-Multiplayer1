@@ -1,32 +1,22 @@
 # Original item behavior trace
 
-This Stage 2 source exporter reads only the original single-player Construct
-project snapshot, the original English item localization table, and the
-original `MDZItemTable` object mapping.
+The source exporter reads the original Construct project snapshot, original
+English item localization, and original `MDZItemTable`. It preserves the raw
+conditions, actions, expression parameters, parent/child relationships, and
+event UIDs for inventory use, pickup, transfer, and drop.
 
-It preserves all source conditions, actions, parent/child relationships, and
-event UIDs for these original event groups:
+The native inventory port now implements the baseline stack-size groups from
+the original `Check_stack_size` function in `data.deobfuscated.js`, including
+the original item-ID groups and numeric limits. The `perk_cybb` expression
+branch is kept separate until its Construct expression semantics are mapped;
+the baseline limits are not presented as the perk-modified limits.
 
-- Using inventory items
-- Picking player items
-- Picking inventory items
-- Droppin items
-- inventory_items
+Backpack equipment uses the original dedicated `Backpack` slot and exact
+wearable item IDs from `MDZItemTable`. Equipping consumes the backpack from
+the selected inventory slot and returns the previous pack to that same slot.
+Unequipping is refused if shrinking the inventory would strand occupied slots.
 
-It also records every original item ID/name and its exact Construct object
-name when present in `MDZItemTable`.
-
-**This is source extraction, not a claim that every effect has been ported.**
-The Construct records contain numeric ACE command IDs and raw expressions.
-Those must be correlated with the original runtime/plugin command semantics
-before converting values into C++ effects. Unknown values remain unknown; do
-not add guessed hunger, thirst, healing, armor, temperature, stack, or
-backpack-capacity values.
-
-Run:
-
-```sh
-python3 tools/stage2/extract_item_behavior_trace.py
-```
-
-The output is `data/stage2/item_behavior_trace.json`.
+This is a partial native behavior port, not a claim that every item-use effect
+or every original inventory event has been translated. Food, medicine, weapon,
+clothing, and environmental effects remain tied to the preserved original
+event trace until their command semantics are ported.
