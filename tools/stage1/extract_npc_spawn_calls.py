@@ -89,11 +89,12 @@ def main():
     # Re-find the definition node without depending on event traversal indexes.
     function_node = None
     for sheet_name, entries in project[6]:
-        for event in walk_events(entries, sheet_name):
+        for _, event in walk_events(entries, sheet_name):
             conditions = event[5] if len(event) > 5 and isinstance(event[5], list) else []
-            if any(isinstance(c, list) and len(c) > 9 and c[0] == FUNCTION_OBJECT
-                   and c[1] == ON_FUNCTION and c[9]
-                   and is_function_name(c[9][0]) for c in conditions):
+            if event[4] == definitions[0][1] and any(
+                    isinstance(c, list) and len(c) > 9 and c[0] == FUNCTION_OBJECT
+                    and c[1] == ON_FUNCTION and c[9]
+                    and is_function_name(c[9][0]) for c in conditions):
                 function_node = event
                 break
         if function_node is not None:
