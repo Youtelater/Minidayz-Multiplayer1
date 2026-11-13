@@ -69,3 +69,4 @@ jobs:
           path: |
             include/minidayz/generated/npc_spawn_function_source.hpp
             include/minidayz/generated/npc_spawn_call_source.hpp
+            data/stage1/construct_project_parsed.json
