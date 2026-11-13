@@ -1,5 +1,6 @@
 #include "minidayz/generated/npc_spawn_call_source.hpp"
 #include "minidayz/generated/npc_spawn_function_source.hpp"
+#include "minidayz/generated/game_events_callsite_source.hpp"
 #include "minidayz/npc_system.hpp"
 
 #include <cassert>
@@ -11,6 +12,8 @@
 int main() {
     using namespace minidayz::stage1;
     static_assert(kNpcSpawnCallSourceCount == 162);
+    static_assert(kGameEventSourceCount > 0);
+    static_assert(kGameEventActionSourceCount > 0);
     static_assert(kNpcFunctionDefinitionEventUid == 180375540292947ULL);
     static_assert(kNpcFunctionEventSourceCount == 399);
     static_assert(kNpcFunctionConditionSourceCount > 0);
@@ -48,6 +51,25 @@ int main() {
         else ++four_argument_calls;
     }
     assert(three_argument_calls + four_argument_calls == 162);
+    for (const auto& call : kNpcSpawnCallSource) {
+        bool found_event = false;
+        bool found_action = false;
+        for (std::size_t i = 0; i < kGameEventSourceCount; ++i) {
+            const auto& event = kGameEventSource[i];
+            if (event.event_uid != call.event_uid) continue;
+            found_event = true;
+            for (std::size_t j = 0; j < event.action_count; ++j) {
+                const auto& action = kGameEventActionSource[event.first_action + j];
+                if (action.action_uid == call.action_uid &&
+                    action.object_index == 189 && action.command_id == 69) {
+                    found_action = true;
+                    break;
+                }
+            }
+        }
+        assert(found_event && found_action);
+    }
+
 
     // Source Spawn_NPC Skin_id branches 1..6 select these body object IDs.
     constexpr std::uint16_t expected_bodies[] = {600, 206, 582, 583, 586, 587};
