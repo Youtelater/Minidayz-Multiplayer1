@@ -2,7 +2,7 @@ name: Native System Regression Tests
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "npc-runtime-source-skins" ]
   pull_request:
     branches: [ "main", "master" ]
 
