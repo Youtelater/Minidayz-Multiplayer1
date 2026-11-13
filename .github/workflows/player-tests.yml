@@ -69,6 +69,11 @@ jobs:
       - name: Generate Original Item Catalog
         run: python3 tools/stage2/extract_item_catalog.py
 
+        run: |
+          python3 tools/stage2/build_item_source_catalog.py
+          python3 tools/stage2/build_item_sprite_catalog.py
+          python3 tools/stage2/extract_item_behavior_trace.py
+
       - name: Compile Item and Inventory Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
