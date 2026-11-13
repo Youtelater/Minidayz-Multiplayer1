@@ -170,7 +170,8 @@ public:
             }
         }
         if (input.touching && drag_source_slot_ >= 0) {
-            const int target = inventory_slot_at(input.touch.px, input.touch.py);
+            const int target = inventory_slot_at(input.touch.px, input.touch.py,
+                                                inventory_page_);
             if (target >= 0) drag_target_slot_ = target;
         }
         if (touch_released) {
