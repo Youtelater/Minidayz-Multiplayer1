@@ -15,6 +15,12 @@ struct InventorySlot {
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
+struct GroundItem {
+    std::uint16_t item_id{};
+    std::uint16_t count{};
+    bool empty() const noexcept { return item_id == 0 || count == 0; }
+};
+
 struct InventorySnapshot {
     std::array<InventorySlot, kMaximumInventorySlotCount> slots{};
     std::uint16_t capacity{static_cast<std::uint16_t>(kInventorySlotCount)};
@@ -45,6 +51,11 @@ public:
     bool add(std::uint16_t item_id, std::uint16_t amount,
              std::uint16_t max_stack = 0) noexcept;
     bool remove(std::size_t slot, std::uint16_t amount) noexcept;
+
+    // Ground transfers are atomic: failed pickups/drops leave both sides intact.
+    bool pickup(GroundItem& ground) noexcept;
+    bool drop(std::size_t inventory_slot, std::uint16_t amount,
+              GroundItem& ground) noexcept;
 
     // amount == 0 moves the complete source stack. Same-item merges obey the
     // original stack cap; different item types swap only as complete stacks.
