@@ -34,6 +34,11 @@ std::uint16_t source_max_stack(std::uint16_t item_id) noexcept;
 // Native slot counts are uint16_t, so UINT16_MAX is the equivalent safe cap.
 std::uint16_t source_max_stack(std::uint16_t item_id, bool perk_cybb) noexcept;
 bool is_backpack_item(std::uint16_t item_id) noexcept;
+// Exact original Construct object IDs resolved from MDZItemTable and the
+// original project object table. 65535 means the source has no mapping.
+std::uint16_t source_construct_object(std::uint16_t item_id) noexcept;
+// Object ID with original sprite frames, resolved from the source sprite catalog.
+std::uint16_t source_sprite_object(std::uint16_t item_id) noexcept;
 
 class InventorySystem {
 public:
