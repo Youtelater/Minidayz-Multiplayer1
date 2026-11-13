@@ -3,6 +3,8 @@
 #include "minidayz/world.hpp"
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
+#include "minidayz/inventory.hpp"
+#include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -225,6 +227,25 @@ public:
                     selected ? C2D_Color32(225, 190, 105, 255) : C2D_Color32(5, 8, 7, 255));
                 renderer.draw_solid_rect(x + 2.0f, y + 2.0f, 52.0f, 35.0f,
                     selected ? C2D_Color32(76, 76, 54, 255) : C2D_Color32(43, 49, 44, 255));
+                const auto* item = inventory_.slot(static_cast<std::size_t>(index));
+                if (item && !item->empty()) {
+                    const char* name = "";
+                    for (std::size_t item_index = 0;
+                         item_index < minidayz::items::kItemDefinitionCount; ++item_index) {
+                        const auto& definition = minidayz::items::kItemDefinitions[item_index];
+                        if (definition.id == item->item_id) {
+                            name = definition.name;
+                            break;
+                        }
+                    }
+                    char label[24]{};
+                    std::snprintf(label, sizeof(label), "%s", name);
+                    renderer.draw_text(label, x + 4.0f, y + 7.0f, 0.22f);
+                    char quantity[8]{};
+                    std::snprintf(quantity, sizeof(quantity), "x%u",
+                                  static_cast<unsigned>(item->count));
+                    renderer.draw_text(quantity, x + 4.0f, y + 25.0f, 0.22f);
+                }
             }
         }
         renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 3.0f, C2D_Color32(75, 91, 70, 255));
@@ -375,6 +396,7 @@ private:
     bool menu_active_{true};
     bool has_saved_game_{};
     minidayz::PlayerSystem player_;
+    minidayz::items::InventorySystem inventory_{};
     minidayz::PlayerRules preview_rules_{};
     int selected_inventory_slot_{};
 };
