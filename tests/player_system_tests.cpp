@@ -154,6 +154,48 @@ int main() {
     assert(unconfigured.state().hunger == 37.0f);
     assert(unconfigured.state().thirst == 62.0f);
 
+    // Player save/load round-trips all persistent player state and rejects
+    // corrupt numeric and enum values without modifying the live player.
+    PlayerState persisted_state{};
+    persisted_state.x = 12.5f;
+    persisted_state.y = -8.0f;
+    persisted_state.health = 73.0f;
+    persisted_state.hunger = 44.0f;
+    persisted_state.thirst = 29.0f;
+    persisted_state.temperature = -2.0f;
+    persisted_state.bleeding = 1.0f;
+    persisted_state.infection = 0.25f;
+    persisted_state.facing = PlayerFacing::left;
+    persisted_state.animation = PlayerAnimation::run;
+    persisted_state.animation_frame = 2;
+    persisted_state.animation_elapsed = 2.5f;
+    PlayerSystem save_source(persisted_state);
+    const PlayerState save_payload = save_source.snapshot();
+    PlayerSystem save_target(PlayerState{});
+    assert(save_target.restore(save_payload));
+    assert(save_target.snapshot().x == 12.5f);
+    assert(save_target.snapshot().y == -8.0f);
+    assert(save_target.snapshot().health == 73.0f);
+    assert(save_target.snapshot().hunger == 44.0f);
+    assert(save_target.snapshot().thirst == 29.0f);
+    assert(save_target.snapshot().temperature == -2.0f);
+    assert(save_target.snapshot().bleeding == 1.0f);
+    assert(save_target.snapshot().infection == 0.25f);
+    assert(save_target.snapshot().facing == PlayerFacing::left);
+    assert(save_target.snapshot().animation == PlayerAnimation::run);
+    assert(save_target.snapshot().animation_frame == 2);
+
+    PlayerState corrupt_player = save_payload;
+    corrupt_player.health = std::numeric_limits<float>::quiet_NaN();
+    assert(!save_target.restore(corrupt_player));
+    assert(save_target.state().health == 73.0f);
+    corrupt_player = save_payload;
+    corrupt_player.facing = static_cast<PlayerFacing>(255);
+    assert(!save_target.restore(corrupt_player));
+    corrupt_player = save_payload;
+    corrupt_player.alive = false;
+    assert(!save_target.restore(corrupt_player));
+
     // Stat setters clamp to the limits supplied by the caller.
     survival.adjust_hunger(200.0f, 100.0f);
     survival.adjust_thirst(-200.0f, 100.0f);
