@@ -23,6 +23,11 @@ bool valid_item(std::uint16_t item_id) noexcept {
 
 } // namespace
 
+std::uint16_t source_max_stack(std::uint16_t item_id, bool perk_cybb) noexcept {
+    return perk_cybb ? std::numeric_limits<std::uint16_t>::max()
+                     : source_max_stack(item_id);
+}
+
 bool is_backpack_item(std::uint16_t item_id) noexcept {
     // Exact backpack equipment IDs present in the original MDZItemTable.
     // Civilian Tent (456) and Supplies Stash (461) are not wearable packs.
@@ -86,10 +91,30 @@ bool InventorySystem::equip_backpack_from_slot(
     const std::uint16_t incoming = slots_[index].item_id;
     const std::uint16_t outgoing = equipped_backpack_;
 
-    // set_capacity is transactional: it refuses to hide occupied slots.
-    if (!set_capacity(source_capacity)) return false;
+    // A replacement pack may be sitting in an extended slot that disappears
+    // when the new pack has less capacity. Return the old pack to a free slot
+    // inside the new grid instead of rejecting a valid replacement or
+    // accidentally truncating inventory contents.
+    std::size_t return_slot = index;
+    if (outgoing != 0 && index >= source_capacity) {
+        return_slot = source_capacity;
+        for (std::size_t i = 0; i < source_capacity; ++i) {
+            if (i != index && slots_[i].empty()) {
+                return_slot = i;
+                break;
+            }
+        }
+        if (return_slot == source_capacity) return false;
+    }
 
-    slots_[index] = outgoing == 0 ? InventorySlot{} : InventorySlot{outgoing, 1};
+    for (std::size_t i = 0; i < capacity_; ++i) {
+        if (i == index || (outgoing != 0 && i == return_slot)) continue;
+        if (i >= source_capacity && !slots_[i].empty()) return false;
+    }
+
+    slots_[index] = {};
+    if (outgoing != 0) slots_[return_slot] = {outgoing, 1};
+    capacity_ = source_capacity;
     equipped_backpack_ = incoming;
     return true;
 }
@@ -209,10 +234,12 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
     const std::uint16_t moving = amount == 0 ? source.count : amount;
     if (moving == 0 || moving > source.count) return false;
 
+    if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+    if (max_stack == 0 || moving > max_stack) return false;
+
     if (destination.empty()) {
         destination = {source.item_id, moving};
     } else if (destination.item_id == source.item_id) {
-        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
         if (max_stack == 0 || destination.count > max_stack ||
             moving > max_stack - destination.count)
             return false;
