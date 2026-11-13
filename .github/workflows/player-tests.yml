@@ -66,6 +66,18 @@ jobs:
       - name: Run Original Location Runtime Tests
         run: ./location_event_runtime_tests
 
+      - name: Generate Original Item Catalog
+        run: python3 tools/stage2/extract_item_catalog.py
+
+      - name: Compile Item and Inventory Regression Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp tests/inventory_system_tests.cpp \
+            -o inventory_system_tests
+
+      - name: Run Item and Inventory Regression Tests
+        run: ./inventory_system_tests
+
       - name: Compile Original NPC Spawn Source Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -ffunction-sections -fdata-sections -Iinclude \
