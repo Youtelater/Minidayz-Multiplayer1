@@ -116,6 +116,7 @@ public:
         if (menu_active_) {
             bool continue_game = has_saved_game_ && (input.pressed & KEY_A) != 0;
             bool new_game = (input.pressed & KEY_X) != 0;
+            touch_down_ = input.touching;
             if (input.touching) {
                 const int tx = input.touch.px;
                 const int ty = input.touch.py;
@@ -138,15 +139,33 @@ public:
         if (input.held & KEY_DUP)    movement.move_y -= 1.0f;
         if (input.held & KEY_DDOWN)  movement.move_y += 1.0f;
         movement.run = (input.held & KEY_B) != 0;
-        if (input.touching) {
+        const bool touch_pressed = input.touching && !touch_down_;
+        touch_down_ = input.touching;
+        if (touch_pressed) {
             const int tx = input.touch.px;
             const int ty = input.touch.py;
-            // Touch-select one of the 15 backpack slots on the bottom screen.
-            if (tx >= 10 && tx < 310 && ty >= 92 && ty < 224) {
+            // Two-tap touch interaction: select a populated source slot, then
+            // tap an empty slot to move it or another item to swap stacks.
+            // This adapts the original drag/drop inventory interaction to the
+            // 3DS touch screen without moving items while the finger is held.
+            if (tx >= 10 && tx < 310 && ty >= 92 && ty < 221) {
                 const int col = (tx - 10) / 60;
                 const int row = (ty - 92) / 43;
-                if (col >= 0 && col < 5 && row >= 0 && row < 3)
-                    selected_inventory_slot_ = row * 5 + col;
+                if (col >= 0 && col < 5 && row >= 0 && row < 3) {
+                    const int tapped_slot = row * 5 + col;
+                    if (selected_inventory_slot_ < 0) {
+                        const auto* tapped = inventory_.slot(
+                            static_cast<std::size_t>(tapped_slot));
+                        if (tapped && !tapped->empty())
+                            selected_inventory_slot_ = tapped_slot;
+                    } else if (tapped_slot == selected_inventory_slot_) {
+                        selected_inventory_slot_ = -1;
+                    } else if (inventory_.move(
+                                   static_cast<std::size_t>(selected_inventory_slot_),
+                                   static_cast<std::size_t>(tapped_slot))) {
+                        selected_inventory_slot_ = -1;
+                    }
+                }
             }
         }
         player_.update_movement(movement, dt, preview_rules_,
@@ -398,7 +417,8 @@ private:
     minidayz::PlayerSystem player_;
     minidayz::items::InventorySystem inventory_{};
     minidayz::PlayerRules preview_rules_{};
-    int selected_inventory_slot_{};
+    int selected_inventory_slot_{-1};
+    bool touch_down_{};
 };
 
 } // namespace
