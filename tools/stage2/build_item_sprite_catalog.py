@@ -32,7 +32,7 @@ def main() -> None:
         raise SystemExit("Could not locate original MDZItemTable")
 
     entries: dict[int, str] = {}
-    for match in re.finditer(r'(\d+)\s*:\s*("(?:\\\\.|[^"\\\\])*")',
+    for match in re.finditer(r'(\d+)\s*:\s*("[^"]*")',
                              source[start + 1:end]):
         item_id = int(match.group(1))
         object_name = json.loads(match.group(2))
