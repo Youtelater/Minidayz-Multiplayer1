@@ -130,7 +130,12 @@ void test_original_map_layout_and_descriptors() {
         const auto* actor = npcs.actor(i);
         assert(actor && actor->alive);
         assert(actor->spawn_source_object == 216);
-        assert(actor->source_object == 206);
+        // Skin_id=0 in the original Spawn_NPC function randomly selects
+        // one of six source body objects. Verify the full mapping rather than
+        // assuming every generated NPC uses skin 2.
+        constexpr std::uint16_t skin_bodies[] = {600, 206, 582, 583, 586, 587};
+        assert(actor->skin_id >= 1 && actor->skin_id <= 6);
+        assert(actor->source_object == skin_bodies[actor->skin_id - 1]);
         assert(actor->eyes_object == 256);
     }
 }
