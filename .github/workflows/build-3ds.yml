@@ -61,3 +61,11 @@ jobs:
           path: |
             *.3dsx
             *.elf
+
+      - name: Upload generated NPC runtime source for audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: npc-runtime-source
+          path: |
+            include/minidayz/generated/npc_spawn_function_source.hpp
+            include/minidayz/generated/npc_spawn_call_source.hpp
