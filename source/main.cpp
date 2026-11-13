@@ -250,22 +250,14 @@ public:
                     selected ? C2D_Color32(76, 76, 54, 255) : C2D_Color32(43, 49, 44, 255));
                 const auto* item = inventory_.slot(static_cast<std::size_t>(index));
                 if (item && !item->empty()) {
-                    const char* name = "";
-                    for (std::size_t item_index = 0;
-                         item_index < minidayz::items::kItemDefinitionCount; ++item_index) {
-                        const auto& definition = minidayz::items::kItemDefinitions[item_index];
-                        if (definition.id == item->item_id) {
-                            name = definition.name;
-                            break;
-                        }
-                    }
-                    char label[24]{};
-                    std::snprintf(label, sizeof(label), "%s", name);
-                    renderer.draw_text(label, x + 4.0f, y + 7.0f, 0.22f);
+                    // Use the exact item ID -> Construct object mapping from
+                    // the original game's MDZItemTable.
+                    (void)renderer.draw_item_icon(item->item_id,
+                        x + 28.0f, y + 16.0f, 34.0f, 25.0f);
                     char quantity[8]{};
                     std::snprintf(quantity, sizeof(quantity), "x%u",
                                   static_cast<unsigned>(item->count));
-                    renderer.draw_text(quantity, x + 4.0f, y + 25.0f, 0.22f);
+                    renderer.draw_text(quantity, x + 4.0f, y + 27.0f, 0.20f);
                 }
             }
         }

@@ -1,5 +1,6 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
+#include "minidayz/generated/item_sprite_catalog.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -133,6 +134,28 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  const float draw_y=y-selected->origin_y*selected->height*sy;
  return draw_sprite(slot,selected->image,draw_x,draw_y,
                      sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth);
+}
+bool Renderer::draw_item_icon(std::uint16_t item_id,float center_x,float center_y,
+                              float max_width,float max_height) noexcept {
+ std::size_t first=0, last=items::kItemSpriteDefinitionCount;
+ while(first<last) {
+  const std::size_t middle=first+(last-first)/2;
+  if(items::kItemSpriteDefinitions[middle].item_id<item_id) first=middle+1;
+  else last=middle;
+ }
+ if(first>=items::kItemSpriteDefinitionCount ||
+    items::kItemSpriteDefinitions[first].item_id!=item_id) return false;
+ const std::uint16_t object=items::kItemSpriteDefinitions[first].object;
+ const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,0,0};
+ const auto* begin=stage1::kSpriteFrames;
+ const auto* end=begin+stage1::kSpriteFrameCount;
+ const auto* frame=std::lower_bound(begin,end,key,[](const stage1::SpriteFrameDef& item,const auto& wanted){
+  return std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{item.object,item.animation,item.frame}<wanted;
+ });
+ if(frame==end||frame->object!=object||frame->animation!=0||frame->frame!=0 ||
+    frame->width<=0.0f||frame->height<=0.0f) return false;
+ const float scale=std::min(max_width/frame->width,max_height/frame->height);
+ return draw_source_sprite(object,0,0,center_x,center_y,scale,scale,0.2f);
 }
 bool Engine::initialize() noexcept {
  gfxInitDefault();

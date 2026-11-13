@@ -21,6 +21,7 @@ public:
  void unload_sheet(std::size_t slot) noexcept; void unload_all() noexcept;
  bool draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx=1.0f,float sy=1.0f,float rotation=0.0f,float depth=0.5f) noexcept;
  bool draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f) noexcept;
+ bool draw_item_icon(std::uint16_t item_id,float center_x,float center_y,float max_width,float max_height) noexcept;
  void set_camera(float x,float y) noexcept { camera_x_=x; camera_y_=y; C2D_ViewReset(); C2D_ViewTranslate(-x,-y); }
  void reset_camera() noexcept { set_camera(0.0f,0.0f); }
 private:

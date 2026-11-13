@@ -124,5 +124,6 @@ stage1-assets:
 	@python3 tools/stage1/audit_event_groups.py data/stage1/construct_project_parsed.json --out data/stage1/event_groups.csv
 	@python3 tools/stage1/validate_stage1.py
 	@python3 tools/stage1/build_sprite_catalog.py
+	@python3 tools/stage2/build_item_sprite_catalog.py
 
 
