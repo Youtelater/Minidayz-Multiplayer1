@@ -1,5 +1,6 @@
 #include "minidayz/construct_event_interpreter.hpp"
 #include "minidayz/generated/location_event_source.hpp"
+#include "minidayz/generated/npc_spawn_function_source.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -128,6 +129,88 @@ bool execute_location_event_branch(std::uint64_t branch_uid,
     }
     if (branch_index == stage1::kLocationEventSourceCount) return false;
     return execute_node(branch_index, 0, true, callbacks, 0, branch_matched);
+}
+
+
+namespace {
+
+bool execute_npc_node(std::size_t node_index, int inherited_loop_index,
+                      bool previous_sibling_matched,
+                      const NpcFunctionCallbacks& callbacks,
+                      std::size_t recursion_depth, bool& node_matched) {
+    constexpr std::size_t max_depth = 64;
+    node_matched = false;
+    if (recursion_depth > max_depth ||
+        node_index >= stage1::kNpcFunctionEventSourceCount) return false;
+    const auto& node = stage1::kNpcFunctionEventSource[node_index];
+    if (node.disabled) return true;
+
+    int repeat_count = 1;
+    bool repeated = false;
+    for (std::size_t i = 0; i < node.condition_count; ++i) {
+        const auto& condition =
+            stage1::kNpcFunctionConditionSource[node.first_condition + i];
+        if (condition.object_index == -1 && condition.command_id == 70) {
+            if (previous_sibling_matched) return true;
+            continue;
+        }
+        if (!callbacks.evaluate_condition) return false;
+        bool matched = false;
+        int requested_repeat_count = 1;
+        if (!callbacks.evaluate_condition(callbacks.user, condition,
+                                          inherited_loop_index,
+                                          previous_sibling_matched, matched,
+                                          requested_repeat_count)) return false;
+        if (!matched) return true;
+        if (condition.object_index == -1 && condition.command_id == 123) {
+            repeated = true;
+            repeat_count = requested_repeat_count;
+            if (repeat_count <= 0) return true;
+        }
+    }
+
+    node_matched = true;
+    const int iterations = repeated ? repeat_count : 1;
+    for (int iteration = 0; iteration < iterations; ++iteration) {
+        const int loop_index = repeated ? iteration : inherited_loop_index;
+        for (std::size_t i = 0; i < node.action_count; ++i) {
+            if (!callbacks.execute_action ||
+                !callbacks.execute_action(callbacks.user,
+                    stage1::kNpcFunctionActionSource[node.first_action + i],
+                    loop_index)) return false;
+        }
+        bool previous_child_matched = true;
+        for (std::size_t child = 0;
+             child < stage1::kNpcFunctionEventSourceCount; ++child) {
+            if (stage1::kNpcFunctionEventSource[child].parent_index != node_index)
+                continue;
+            bool child_matched = false;
+            if (!execute_npc_node(child, loop_index, previous_child_matched,
+                                  callbacks, recursion_depth + 1,
+                                  child_matched)) return false;
+            previous_child_matched = child_matched;
+        }
+    }
+    return true;
+}
+
+} // namespace
+
+bool execute_npc_spawn_function(const NpcFunctionCallbacks& callbacks) {
+    if (stage1::kNpcFunctionEventSourceCount == 0 ||
+        stage1::kNpcFunctionEventSource[0].parent_index != 0xffffffffu)
+        return false;
+    bool previous_sibling_matched = true;
+    for (std::size_t child = 1;
+         child < stage1::kNpcFunctionEventSourceCount; ++child) {
+        if (stage1::kNpcFunctionEventSource[child].parent_index != 0)
+            continue;
+        bool child_matched = false;
+        if (!execute_npc_node(child, 0, previous_sibling_matched,
+                              callbacks, 1, child_matched)) return false;
+        previous_sibling_matched = child_matched;
+    }
+    return true;
 }
 
 } // namespace minidayz::construct
