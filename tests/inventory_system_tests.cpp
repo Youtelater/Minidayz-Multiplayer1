@@ -51,9 +51,14 @@ int main() {
     assert(!inventory.add(0, 1));
     assert(inventory.add(1, 1)); // source default is one per slot
 
-    // Empty destinations must also respect the source stack limit.
-    assert(inventory.add(18, 1));
-    assert(!inventory.move(4, 6, 4)); // four bandages exceed the source cap of three
+    // Empty destinations must also respect the source stack limit,
+    // including stacks imported with an explicit non-source override.
+    InventorySystem stack_guard;
+    assert(stack_guard.add(18, 4, 10));
+    assert(stack_guard.slot(0)->count == 4);
+    assert(!stack_guard.move(0, 1)); // default source cap is three
+    assert(stack_guard.slot(0)->count == 4);
+    assert(stack_guard.slot(1)->empty());
 
     // Explicit split, bounded merge, and full-stack swap.
     assert(inventory.move(3, 5, 1, 10));
