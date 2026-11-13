@@ -1,6 +1,7 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
 
 #include <algorithm>
@@ -101,6 +102,7 @@ public:
         preview_rules_.min_temperature = -10.0f;
         preview_rules_.max_temperature = 10.0f;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
+        if (world_ready_) npc_ready_ = npcs_.initialize(world_);
     }
 
     void on_exit() noexcept override {
@@ -150,6 +152,8 @@ public:
         // Source-derived survival rates are still zero until their original
         // event cadence is resolved; the update path is now live and ready.
         player_.update_survival(dt, preview_rules_);
+        if (npc_ready_) npcs_.update(dt, player_.state().x, player_.state().y,
+                                     &WorldPreviewScene::blocked, this);
         save_elapsed_ += dt;
         if (save_elapsed_ >= 2.0f) {
             save_elapsed_ = 0.0f;
@@ -275,6 +279,20 @@ public:
 
         }
 
+        if (npc_ready_) {
+            for (std::size_t i = 0; i < npcs_.count(); ++i) {
+                const auto* npc = npcs_.actor(i);
+                if (!npc || !npc->alive ||
+                    npc->x < camera_x - 48.0f || npc->x > camera_x + view_w + 48.0f ||
+                    npc->y < camera_y - 48.0f || npc->y > camera_y + view_h + 48.0f)
+                    continue;
+                if (!renderer.draw_source_sprite(npc->source_object, 0,
+                        npc->animation_frame, npc->x, npc->y, 0.55f, 0.55f))
+                    renderer.draw_solid_rect(npc->x - 4.0f, npc->y - 4.0f,
+                        8.0f, 9.0f, C2D_Color32(130, 145, 78, 255));
+            }
+        }
+
         const bool sprite_drawn = p.alive &&
             renderer.draw_source_sprite(minidayz::kSourcePlayerObject,
                 player_.source_animation_index(), player_.source_animation_frame(),
@@ -291,6 +309,7 @@ private:
         world_seed_ = make_new_world_seed();
         player_ = minidayz::PlayerSystem(make_initial_state());
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
+        npc_ready_ = world_ready_ && npcs_.initialize(world_);
         save_elapsed_ = 0.0f;
         has_saved_game_ = false;
         // Never enter a blank gameplay scene when source world generation
@@ -343,9 +362,11 @@ private:
     }
 
     minidayz::WorldSystem world_{};
+    minidayz::NpcSystem npcs_{};
     std::uint32_t world_seed_{};
     float save_elapsed_{};
     bool world_ready_{};
+    bool npc_ready_{};
     bool menu_active_{true};
     bool has_saved_game_{};
     minidayz::PlayerSystem player_;
