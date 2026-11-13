@@ -420,6 +420,8 @@ private:
     minidayz::items::InventorySystem inventory_{};
     minidayz::PlayerRules preview_rules_{};
     int selected_inventory_slot_{-1};
+    int drag_source_slot_{-1};
+    int drag_target_slot_{-1};
     bool touch_down_{};
 };
 
