@@ -325,6 +325,19 @@ public:
             drag_target_equipment_slot_ = -1;
         }
         touch_down_ = input.touching;
+        // A backpack can shrink the inventory back to its 15-slot base. Keep
+        // the visible page and selection inside the new capacity immediately.
+        const std::size_t valid_page_count =
+            (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize;
+        if (inventory_page_ >= valid_page_count)
+            inventory_page_ = valid_page_count - 1;
+        if (selected_inventory_slot_ >= static_cast<int>(inventory_.capacity()))
+            selected_inventory_slot_ = -1;
+        if (drag_source_slot_ >= static_cast<int>(inventory_.capacity())) {
+            drag_source_slot_ = -1;
+            drag_target_slot_ = -1;
+            drag_target_equipment_slot_ = -1;
+        }
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
         // Source-derived survival rates are still zero until their original
