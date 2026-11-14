@@ -100,7 +100,11 @@ int main() {
     assert(condition_equipment.snapshot().conditions[
         static_cast<std::size_t>(EquipmentSlot::head)] == 65);
     EquipmentSystem condition_restored;
-    assert(condition_restored.restore(condition_equipment.snapshot()));
+    const auto conditioned_equipment_snapshot = condition_equipment.snapshot();
+    assert(condition_restored.restore(conditioned_equipment_snapshot));
+    auto bad_equipment_condition = conditioned_equipment_snapshot;
+    bad_equipment_condition.conditions[static_cast<std::size_t>(EquipmentSlot::head)] = 101;
+    assert(!condition_restored.restore(bad_equipment_condition));
     assert(condition_restored.unequip_to_inventory(
         condition_inventory, EquipmentSlot::head, 0));
     assert(condition_inventory.slot(0)->condition == 65);
