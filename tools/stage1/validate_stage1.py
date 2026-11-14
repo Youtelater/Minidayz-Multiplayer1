@@ -47,7 +47,7 @@ def main() -> int:
     if rebuilt != parsed_bytes:
         fail("reassembled project does not exactly match the ordered source snapshot chunks")
 
-    parsed_text = parsed_path.read_text(encoding="utf-8")
+    parsed_text = parsed_path.read_text(encoding="utf-8-sig")
     parsed_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", parsed_text)
     try:
         root = json.loads(parsed_text)
