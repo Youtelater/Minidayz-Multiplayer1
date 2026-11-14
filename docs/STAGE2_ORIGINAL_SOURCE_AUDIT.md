@@ -1,6 +1,7 @@
 # Stage 2 original-source audit
 
 - Authoritative original source: `Minidayz-Multiplayer-main/data.js` (original deobfuscated Construct export in this repository).
+- Verified source size: 12,442,669 bytes; SHA-256: `1678ecbfb4e2cb50d431afe732772f5ef9fc86e27ed6fe96de4f8fbdfb045b75`.
 - Original project title/version: Mini DAYZ 1.6.0.
 - The original source contains the `Check_stack_size` event and `perk_cybb` branch.
 - Original item IDs and Construct object names are mapped by `MDZItemTable`; localized names are in `l_eng_items.xml`.
