@@ -8,6 +8,7 @@ on:
 
 jobs:
   player-tests:
+    # Rebuild source-backed inventory, equipment, and save-migration regression tests.
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
