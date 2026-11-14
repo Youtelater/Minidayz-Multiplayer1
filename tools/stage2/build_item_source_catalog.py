@@ -7,7 +7,7 @@ fields are deliberately not synthesized here: their authoritative values
 must be translated from the original event conditions/actions.
 """
 from __future__ import annotations
-import json, re, re, xml.etree.ElementTree as ET
+import json, re, xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
