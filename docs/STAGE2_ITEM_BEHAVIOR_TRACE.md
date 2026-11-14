@@ -3,7 +3,8 @@
 The source exporter reads the original Construct project snapshot, original
 English item localization, and original `MDZItemTable`. It preserves the raw
 conditions, actions, expression parameters, parent/child relationships, and
-event UIDs for inventory use, pickup, transfer, and drop.
+event UIDs for inventory use, pickup, transfer, drop, backpack-space checks,
+backpack-item checks, and the backpack drop path.
 
 The native inventory port now implements the baseline stack-size groups from
 the original `Check_stack_size` function in `data.deobfuscated.js`, including
@@ -27,4 +28,4 @@ are implemented.
 
 ## CI extraction coverage
 
-The native regression workflow now runs the original event-trace exporter on every branch build. The current Mini DAYZ 1.6.0 snapshot exports the raw inventory behavior records across seven source event groups, including both original item activation functions. The 40 direct item-use stat rows are generated separately and tested natively. Original item condition (instance variable 6) is now carried through inventory, ground, equipment and save/load transfers; stacks with different condition values do not merge. Default values are extracted for 168 item IDs from original map instances (two IDs start at zero); unmapped IDs currently default to 100. The equipment exporter also produces 63 original item property rows, including flat protection and clothing warmth values. Remaining work includes conditional perk bonuses, item-specific secondary effects, durability, backpack capacity, and wiring armor/temperature values into the full combat and weather runtime.
+The native regression workflow now runs the original event-trace exporter on every branch build. The current Mini DAYZ 1.6.0 snapshot exports raw inventory behavior across 13 original event groups, including `Check_space_backpack`, `Check_item_backpack`, `Check_space_inventory`, `Drop_slot`, and both backpack-drop branches, as well as both original item activation functions. The 40 direct item-use stat rows are generated separately and tested natively. Original item condition (instance variable 6) is now carried through inventory, ground, equipment and save/load transfers; stacks with different condition values do not merge. Default values are extracted for 168 item IDs from original map instances (two IDs start at zero); unmapped IDs currently default to 100. The equipment exporter also produces 63 original item property rows, including flat protection and clothing warmth values. Remaining work includes translating the newly captured backpack event conditions/actions into runtime behavior, proving the exact backpack storage/capacity rules before enabling capacity changes, conditional perk bonuses, item-specific secondary effects, durability, and wiring armor/temperature values into the full combat and weather runtime.
