@@ -48,7 +48,7 @@ def main() -> int:
         fail("authoritative original data.deobfuscated.js is missing")
     original_bytes = original_path.read_bytes()
     if rebuilt != original_bytes:
-        fail("source snapshot chunks do not exactly match the authoritative original data.js")
+        fail("source snapshot chunks do not exactly match root-level data.deobfuscated.js")
 
     parsed_text = parsed_path.read_text(encoding="utf-8-sig")
     parsed_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", parsed_text)
@@ -60,7 +60,7 @@ def main() -> int:
     except Exception as exc:
         fail(f"cannot parse original or extracted Construct project: {exc}")
     if root != original_root:
-        fail("extracted Construct project differs from the authoritative original data.js")
+        fail("extracted Construct project differs from root-level data.deobfuscated.js")
     project = root.get("project") if isinstance(root, dict) else None
     if not isinstance(project, list) or len(project) < 17:
         fail("parsed source is not a complete supported Construct project")
