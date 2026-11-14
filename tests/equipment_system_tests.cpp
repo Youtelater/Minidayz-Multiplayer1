@@ -129,6 +129,13 @@ int main() {
         condition_inventory, EquipmentSlot::head, 0));
     assert(condition_inventory.slot(0)->condition == 65);
 
+    assert(condition_equipment.damage_condition(EquipmentSlot::head, 25));
+    assert(condition_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::head)] == 40);
+    assert(condition_equipment.damage_condition(EquipmentSlot::head, 40));
+    assert(condition_equipment.equipped(EquipmentSlot::head) == 0);
+    assert(!condition_equipment.damage_condition(EquipmentSlot::head, 1));
+
     // Failed replacement must leave both inventory and equipment unchanged.
     EquipmentSystem atomic;
     InventorySystem full;
