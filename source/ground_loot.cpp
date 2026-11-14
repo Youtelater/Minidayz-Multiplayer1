@@ -32,6 +32,16 @@ bool GroundLootSystem::drop_from_inventory(
     return true;
 }
 
+bool GroundLootSystem::drop_equipped_backpack(
+    InventorySystem& inventory, float x, float y) noexcept {
+    if (count_ >= entries_.size() || !std::isfinite(x) || !std::isfinite(y))
+        return false;
+    GroundItem dropped{};
+    if (!inventory.drop_equipped_backpack(dropped)) return false;
+    entries_[count_++] = {dropped, x, y};
+    return true;
+}
+
 const GroundLootEntry* GroundLootSystem::nearest(
     float x, float y, float radius) const noexcept {
     if (!std::isfinite(x) || !std::isfinite(y) ||
