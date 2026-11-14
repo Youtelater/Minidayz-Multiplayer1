@@ -115,6 +115,10 @@ PlayerArmorProtection EquipmentSystem::protection() const noexcept {
     return result;
 }
 
+void EquipmentSystem::apply_damage(PlayerSystem& player, float amount) const noexcept {
+    player.apply_damage(amount, protection());
+}
+
 float EquipmentSystem::temperature_offset() const noexcept {
     // Exact clothing term used by the original Player_temperature event:
     // (outerwear warmth - helmet warmth) / pants warmth.
