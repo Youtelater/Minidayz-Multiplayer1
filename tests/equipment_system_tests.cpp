@@ -2,6 +2,7 @@
 
 #include <cassert>
 
+using namespace minidayz;
 using namespace minidayz::items;
 
 int main() {
