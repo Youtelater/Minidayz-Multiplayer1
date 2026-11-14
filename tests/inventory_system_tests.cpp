@@ -275,6 +275,26 @@ int main() {
     assert(replacement.slot(16)->condition == 55);
     assert(replacement.count(450) == 1);
 
+    // Replacing a backpack from the last extended slot must work even when
+    // every other inventory slot is occupied: the outgoing backpack can use
+    // the incoming backpack's vacated slot. This is an important no-free-slot
+    // atomic replacement edge case.
+    InventorySystem full_replacement;
+    assert(full_replacement.add(450, 1, 0, 55));
+    assert(full_replacement.equip_backpack_from_slot(0));
+    for (std::uint16_t id = 1; id <= 25; ++id)
+        assert(full_replacement.add(id, 1));
+    assert(full_replacement.occupied_slots() == 25);
+    assert(full_replacement.add(451, 1, 0, 65));
+    assert(full_replacement.slot(25)->item_id == 451);
+    assert(full_replacement.occupied_slots() == 26);
+    assert(full_replacement.equip_backpack_from_slot(25));
+    assert(full_replacement.equipped_backpack() == 451);
+    assert(full_replacement.equipped_backpack_condition() == 65);
+    assert(full_replacement.slot(25)->item_id == 450);
+    assert(full_replacement.slot(25)->condition == 55);
+    assert(full_replacement.occupied_slots() == 26);
+
     // Save snapshots round-trip all slots, capacity, and equipped backpack.
     InventorySystem persisted;
     assert(persisted.add(450, 1));
