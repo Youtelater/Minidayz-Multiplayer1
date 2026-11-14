@@ -8,7 +8,7 @@ on:
 
 jobs:
   player-tests:
-    # Rebuild source-backed inventory, item condition, equipment, and save-migration regression tests.
+    # Rebuild source-backed inventory, item condition, equipment, and legacy-save migration regression tests.
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
