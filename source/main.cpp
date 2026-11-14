@@ -138,14 +138,26 @@ bool load_saved_game(SavedGame& save) noexcept {
     }
     const bool no_extra_data = std::fgetc(file) == EOF;
     std::fclose(file);
-    return header_ok && body_ok && no_extra_data && save.magic == kSaveMagic &&
+    const bool header_and_body_valid =
+        header_ok && body_ok && no_extra_data && save.magic == kSaveMagic &&
         save.seed != 0 &&
         std::isfinite(save.player.x) && std::isfinite(save.player.y) &&
-        std::isfinite(save.player.health) && std::isfinite(save.player.hunger) &&
-        std::isfinite(save.player.thirst) && save.player.x >= 0.0f &&
-        save.player.y >= 0.0f &&
+        save.player.x >= 0.0f && save.player.y >= 0.0f &&
         save.player.x <= minidayz::WorldSystem::kSourceMapWidth &&
         save.player.y <= minidayz::WorldSystem::kSourceMapHeight;
+    if (!header_and_body_valid) return false;
+
+    // Validate every persisted subsystem before offering Continue. Previously
+    // malformed inventory/equipment/loot could pass the file check and then be
+    // silently cleared by the scene constructor, producing a partial restore.
+    minidayz::PlayerSystem player_validation(save.player);
+    minidayz::items::InventorySystem inventory_validation;
+    minidayz::items::EquipmentSystem equipment_validation;
+    minidayz::items::GroundLootSystem ground_loot_validation;
+    return player_validation.restore(save.player) &&
+        inventory_validation.restore(save.inventory) &&
+        equipment_validation.restore(save.equipment) &&
+        ground_loot_validation.restore(save.ground_loot);
 }
 
 bool write_saved_game(std::uint32_t seed,
