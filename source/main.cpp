@@ -347,13 +347,8 @@ public:
         }
         if (touch_released) {
             if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
-                const auto* dragged = inventory_.slot(
-                    static_cast<std::size_t>(drag_source_slot_));
-                const std::size_t capacity = dragged
-                    ? minidayz::items::source_backpack_capacity(dragged->item_id) : 0;
-                if (capacity > minidayz::items::kInventorySlotCount &&
-                    inventory_.equip_backpack_from_slot(
-                        static_cast<std::size_t>(drag_source_slot_), capacity)) {
+                if (inventory_.equip_backpack_from_slot(
+                        static_cast<std::size_t>(drag_source_slot_))) {
                     selected_inventory_slot_ = -1;
                 }
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
