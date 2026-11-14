@@ -78,7 +78,7 @@ def main() -> None:
             raise SystemExit(f"Missing original source input: {path}")
 
     source_text = PROJECT.read_text(encoding="utf-8")
-    source_text = re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-", source_text)
+    source_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", source_text)
     project = json.loads(source_text)
     sheets = project.get("project", [None] * 7)[6]
     game_events = next((sheet for sheet in sheets
