@@ -101,34 +101,31 @@ bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
 PlayerArmorProtection EquipmentSystem::protection() const noexcept {
     PlayerArmorProtection result{};
     SourceItemProtection item{};
-    const auto condition_factor = [&](EquipmentSlot slot) noexcept {
-        return static_cast<float>(state_.conditions[static_cast<std::size_t>(slot)]) / 100.0f;
-    };
+    // Original Construct Player_get_hit reads the equipped items' flat
+    // protection instance variables; it does not scale them by condition.
     if (source_item_protection(equipped(EquipmentSlot::head), item))
-        result.helmet = item.helmet * condition_factor(EquipmentSlot::head);
+        result.helmet = item.helmet;
     if (source_item_protection(equipped(EquipmentSlot::outerwear), item))
-        result.outerwear = item.outerwear * condition_factor(EquipmentSlot::outerwear);
+        result.outerwear = item.outerwear;
     if (source_item_protection(equipped(EquipmentSlot::vest), item))
-        result.vest = item.vest * condition_factor(EquipmentSlot::vest);
+        result.vest = item.vest;
     if (source_item_protection(equipped(EquipmentSlot::pants), item))
-        result.pants = item.pants * condition_factor(EquipmentSlot::pants);
+        result.pants = item.pants;
     return result;
 }
 
 float EquipmentSystem::temperature_offset() const noexcept {
     SourceItemProtection item{};
-    const auto condition_factor = [&](EquipmentSlot slot) noexcept {
-        return static_cast<float>(state_.conditions[static_cast<std::size_t>(slot)]) / 100.0f;
-    };
+    // Original Player_temperature uses the flat item warmth values.
     float helmet_warmth = 0.0f;
     float outerwear_warmth = 0.0f;
     float pants_warmth = 0.0f;
     if (source_item_protection(equipped(EquipmentSlot::head), item))
-        helmet_warmth = item.warmth * condition_factor(EquipmentSlot::head);
+        helmet_warmth = item.warmth;
     if (source_item_protection(equipped(EquipmentSlot::outerwear), item))
-        outerwear_warmth = item.warmth * condition_factor(EquipmentSlot::outerwear);
+        outerwear_warmth = item.warmth;
     if (source_item_protection(equipped(EquipmentSlot::pants), item))
-        pants_warmth = item.warmth * condition_factor(EquipmentSlot::pants);
+        pants_warmth = item.warmth;
     if (pants_warmth <= 0.0f) return 0.0f;
     return (outerwear_warmth - helmet_warmth) / pants_warmth;
 }
