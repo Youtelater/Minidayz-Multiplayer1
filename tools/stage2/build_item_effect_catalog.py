@@ -70,7 +70,7 @@ def direct_effects(event):
 def main():
     if not PROJECT.is_file():
         raise SystemExit(f"Missing original Construct project: {PROJECT}")
-    project_text = PROJECT.read_text(encoding="utf-8")
+    project_text = PROJECT.read_text(encoding="utf-8-sig")
     project_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", project_text)
     project = json.loads(project_text)
     sheets = project.get("project", [None] * 7)[6]
