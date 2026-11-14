@@ -9,20 +9,23 @@ The native player equipment layer uses original 1.6.0 item IDs and `MDZItemTable
 - Vest: IDs 400-405, 408, and CBRN suit IDs 410-412.
 - Pants: IDs 300-307.
 - Hands / held weapon: original firearm and melee IDs 103, 107-108, 151-216, 230-246, 785.
-- Backpack remains the dedicated inventory equipment slot because it changes inventory capacity.
+- Backpack is a dedicated inventory equipment slot because it controls the 11-slot inventory extension.
 
-The original player damage event subtracts four flat protection values. The generator now emits 63 source equipment-property rows from original Map/TD item instances. It reads variable 8 for clothing warmth and variables 12, 13, 14, and 15 for helmet, outerwear, vest, and pants protection respectively. These values are emitted per item ID and summed by EquipmentSystem::protection(). PlayerSystem has an armor-aware damage overload that applies the original flat reduction. Clothing warmth is also extracted from item variable 8; EquipmentSystem::temperature_offset() ports the original Player_temperature term `(outerwear - helmet) / pants`, excluding the separate Day_cold value. Separate footwear and glove equipment slots are not invented; items without an original equipment slot are rejected.
+The original player damage event subtracts four flat protection values. The generator emits 63 source equipment-property rows from original Map/TD item instances. It reads variable 8 for clothing warmth and variables 12, 13, 14, and 15 for helmet, outerwear, vest, and pants protection respectively. These values are emitted per item ID and summed by EquipmentSystem::protection(). Clothing warmth is also extracted from item variable 8; EquipmentSystem::temperature_offset() ports the original Player_temperature clothing term `(outerwear - helmet) / pants`, excluding the separate Day_cold value. Separate footwear and glove equipment slots are not invented; items without an original equipment slot are rejected.
 
 ## Runtime behavior
 
 - Dragging a single compatible item onto one of the five source equipment slots equips it.
 - Replacing equipment returns the previous item to inventory atomically.
-- Tapping an occupied clothing/held slot returns its item to a free/merge-compatible inventory slot.
-- The backpack appears in the equipment row and can be unequipped by tapping it. The original `Items_update` function renders Backpack storage slots 1-11, so all wearable backpack items use the source-backed 11-slot extension (26 total inventory slots including the 15 base slots). The generator verifies those exact indices on every build. The 3DS touch drag handler now calls the source-controlled equip API directly; tapping the backpack equipment slot unequips it only when the extended slots are empty. Older saves with guessed capacity values are normalized safely on load. Item condition (original instance variable 6) is preserved through inventory stacks, ground transfers, equipment swaps, backpack swaps and save/load. The source map provides default condition values for 168 item IDs; unrepresented IDs currently fall back to 100 until their original instance data is located.
-- Equipment and per-item condition are included in save version 4; player-only, inventory-only and version-3 equipment saves are migrated.
-- Player rendering draws original sprite objects by animation name, then layers pants, outerwear, vest, helmet, backpack, and held weapon.
+- Tapping an occupied clothing/held slot returns its item to an available inventory slot.
+- The backpack equipment slot is separate from the 15 base inventory slots. The original `Items_update` function renders Backpack storage slots 1-11, giving 26 total inventory slots when a wearable backpack is equipped. The build generator verifies those exact source indices.
+- Backpack unequip returns the pack only to one of the 15 base inventory slots. It is refused while any of the 11 backpack storage slots are occupied. The UI does not mistake a free backpack-storage slot for a valid unequip destination.
+- Replacing a backpack from an extended slot preserves the old pack in the same surviving slot when possible; otherwise it uses a free slot in the resulting grid or fails atomically.
+- Older snapshots with guessed capacity values are normalized safely on restore. Item condition (original instance variable 6) is preserved through inventory stacks, ground transfers, equipment swaps, backpack swaps and save/load.
+- Equipment and per-item condition are included in save version 5. Player-only, inventory-only, version-3 equipment, and version-4 equipment/ inventory saves are migrated; version 5 also persists ground loot.
+- Player rendering draws original sprite objects by animation name, then layers pants, clothing, vest, helmet, backpack, and held weapon.
 - The generated source sprite catalog provides the exact Construct object for each mapped item.
 
-## Still required before Stage 2 completion
+## Remaining before Stage 2 completion
 
-Item condition storage and persistence are implemented using original instance variable 6; the source condition loss/repair rules still need to be ported. Backpack capacity and the remaining item actions also still need their original Construct semantics and save/load behavior. The armor-aware damage API is ready, but it still needs to be connected to the Stage 3 NPC hit path when that combat path is implemented. The temperature offset still needs to be combined with the source Day_cold/weather value. Values must not be guessed.
+Item condition storage and persistence are implemented using original instance variable 6; the source condition loss/repair rules still need to be ported. The armor-aware damage API is ready, but it still needs to be connected to the complete original combat path. The temperature offset still needs to be combined with the source Day_cold/weather value. World loot spawning and the remaining item actions still need their original Construct semantics. Values must not be guessed.
