@@ -27,7 +27,6 @@ def main() -> None:
         rows.append((text_id, value.strip()))
     if not rows:
         raise SystemExit("Original UI localization contains no text entries")
-    rows.sort()
     lines = [
         "#pragma once",
         "#include <cstddef>",
