@@ -205,6 +205,25 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
     return false;
 }
 
+bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
+                                  std::uint16_t amount,
+                                  std::uint16_t max_stack) noexcept {
+    if (index >= capacity_ || !valid_item(item_id) || amount == 0)
+        return false;
+    if (max_stack == 0) max_stack = source_max_stack(item_id);
+    if (max_stack == 0 || amount > max_stack) return false;
+    auto& entry = slots_[index];
+    if (entry.empty()) {
+        entry = {item_id, amount};
+        return true;
+    }
+    if (entry.item_id != item_id || entry.count > max_stack ||
+        amount > max_stack - entry.count)
+        return false;
+    entry.count = static_cast<std::uint16_t>(entry.count + amount);
+    return true;
+}
+
 bool InventorySystem::remove(std::size_t index,
                              std::uint16_t amount) noexcept {
     if (index >= capacity_ || amount == 0 ||
