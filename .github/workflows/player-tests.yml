@@ -32,7 +32,7 @@ jobs:
       - name: Generate Original World Source Tables
         run: |
           python3 tools/stage1/reassemble_snapshot.py
-          python3 tools/stage1/extract_construct.py Minidayz-Multiplayer-main/data.js --out data/stage1
+          python3 tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
           python3 tools/stage1/extract_location_templates.py
           python3 tools/stage1/extract_npc_spawn_calls.py
 
@@ -75,6 +75,7 @@ jobs:
           python3 tools/stage2/extract_item_behavior_trace.py
           python3 tools/stage2/build_item_effect_catalog.py
           python3 tools/stage2/build_item_equipment_catalog.py
+          python3 tools/stage2/build_backpack_capacity_catalog.py
 
       - name: Compile Item and Inventory Regression Tests
         run: |
