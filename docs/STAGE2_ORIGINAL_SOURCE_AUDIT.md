@@ -68,3 +68,9 @@ and their event-driven visibility/behavior still require porting and testing.
 Use the original UI XML, `gui_*` sprite sheets, Construct object table, and
 event conditions/actions as the references for that work. Do not substitute
 generic panels or guessed text/IDs.
+
+The original UI XML contains 597 text records. IDs 451–475 intentionally occur
+twice in separate UI sections (tutorial descriptions and contextual action
+labels); the generated catalog preserves document order and duplicate
+occurrences instead of rejecting or collapsing them. Call
+`source_ui_text(id, occurrence)` when a specific repeated ID is needed.
