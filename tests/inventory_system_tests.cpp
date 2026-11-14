@@ -254,7 +254,7 @@ int main() {
     corrupt_snapshot.slots[0].count =
         static_cast<std::uint16_t>(source_max_stack(18) + 1);
     assert(!restored.restore(corrupt_snapshot));
-    assert(restored.capacity() == 20);
+    assert(restored.capacity() == kInventorySlotCount);
     assert(restored.count(18) == 2);
 
     InventorySystem wear_inventory;
