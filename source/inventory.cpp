@@ -350,9 +350,7 @@ bool InventorySystem::move_to_backpack(std::size_t inventory_index,
                                        std::size_t backpack_index,
                                        std::uint16_t amount,
                                        std::uint16_t max_stack) noexcept {
-    if (inventory_index >= capacity_ || backpack_index >= backpack_capacity_ ||
-        inventory_index >= kMaximumInventorySlotCount ||
-        backpack_slots_[backpack_index].empty() && slots_[inventory_index].empty())
+    if (inventory_index >= capacity_ || backpack_index >= backpack_capacity_)
         return false;
     auto& source = slots_[inventory_index];
     auto& destination = backpack_slots_[backpack_index];
