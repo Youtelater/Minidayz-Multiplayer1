@@ -67,6 +67,35 @@ def direct_effects(event):
             effects[STAT_FIELDS[variable]] += float(value[1])
     return effects
 
+def conditional_perk_effects(event):
+    """Extract original literal true-branch bonuses; perk activation is resolved by the caller."""
+    bonuses = {"hamster_hunger": 0.0, "camel_thirst": 0.0}
+    actions = event[6] if len(event) > 6 and isinstance(event[6], list) else []
+    for action in actions:
+        if not isinstance(action, list) or len(action) < 6 or action[0:2] != [181, 83]:
+            continue
+        params = action[5]
+        variable = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 10), None)
+        value = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 7), None)
+        if not isinstance(value, list) or len(value) != 4 or value[0] != 18:
+            continue
+        condition, when_true, when_false = value[1:]
+        if (not isinstance(condition, list) or len(condition) != 3 or condition[0] != 12 or
+            condition[1] not in ([23, "perk_hamster"], [23, "perk_camel"])):
+            raise SystemExit(f"Unsupported conditional item-use expression: {value}")
+        if condition[2] != [0, 2]:
+            raise SystemExit(f"Unexpected source perk threshold expression: {value}")
+        if (not isinstance(when_true, list) or len(when_true) != 2 or when_true[0] != 0 or
+            not isinstance(when_true[1], (int, float)) or when_false != [0, 0]):
+            raise SystemExit(f"Unsupported conditional item-use bonus branches: {value}")
+        perk = condition[1][1]
+        expected_variable = 13 if perk == "perk_hamster" else 14
+        if variable != expected_variable:
+            raise SystemExit(f"Perk bonus targets unexpected player stat {variable}: {value}")
+        key = "hamster_hunger" if perk == "perk_hamster" else "camel_thirst"
+        bonuses[key] += float(when_true[1])
+    return bonuses
+
 def main():
     if not PROJECT.is_file():
         raise SystemExit(f"Missing original Construct project: {PROJECT}")
@@ -91,13 +120,14 @@ def main():
             if item_id is None:
                 continue
             effect = direct_effects(event)
-            if not any(effect.values()):
+            bonuses = conditional_perk_effects(event)
+            if not any(effect.values()) and not any(bonuses.values()):
                 continue
             key = (item_id, secondary)
             if key in seen:
                 raise SystemExit(f"Duplicate direct item-use effect: {key}")
             seen.add(key)
-            rows.append((item_id, secondary, effect))
+            rows.append((item_id, secondary, effect, bonuses))
 
     rows.sort(key=lambda row: (row[0], row[1]))
     if len(rows) != 40:
@@ -106,12 +136,12 @@ def main():
     lines = [
         "#pragma once", "#include <cstddef>", "#include <cstdint>",
         "namespace minidayz::items {",
-        "struct ItemUseEffectDefinition { std::uint16_t item_id; bool secondary; float hunger, thirst, health, temperature; };",
+        "struct ItemUseEffectDefinition { std::uint16_t item_id; bool secondary; float hunger, thirst, health, temperature, hamster_hunger_bonus, camel_thirst_bonus; };",
         f"inline constexpr std::size_t kItemUseEffectDefinitionCount = {len(rows)};",
         "inline constexpr ItemUseEffectDefinition kItemUseEffectDefinitions[] = {",
     ]
-    for item_id, secondary, effect in rows:
-        values = [effect["hunger"], effect["thirst"], effect["health"], effect["temperature"]]
+    for item_id, secondary, effect, bonuses in rows:
+        values = [effect["hunger"], effect["thirst"], effect["health"], effect["temperature"], bonuses["hamster_hunger"], bonuses["camel_thirst"]]
         def cpp_float(value: float) -> str:
             text = f"{value:.9g}"
             if "." not in text and "e" not in text:
@@ -122,7 +152,7 @@ def main():
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Generated {len(rows)} direct source item-use effects from original activation events")
+    print(f"Generated {len(rows)} source item-use effects, including conditional perk bonuses")
 
 if __name__ == "__main__":
     main()
