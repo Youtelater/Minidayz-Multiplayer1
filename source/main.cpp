@@ -252,7 +252,7 @@ public:
         save_elapsed_ += dt;
         if (save_elapsed_ >= 2.0f) {
             save_elapsed_ = 0.0f;
-            (void)write_saved_game(world_seed_, player_.state(), inventory_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_);
         }
     }
 
@@ -502,7 +502,7 @@ private:
         // Never enter a blank gameplay scene when source world generation
         // fails. Keep the menu available so the player can retry instead.
         menu_active_ = !world_ready_;
-        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_);
+        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_);
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
