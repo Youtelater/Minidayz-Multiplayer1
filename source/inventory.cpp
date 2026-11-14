@@ -423,7 +423,9 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
             continue;
         }
         if ((entry.item_id == 0) != (entry.count == 0)) return false;
-        if (!entry.empty() && !valid_item(entry.item_id))
+        if (!entry.empty() &&
+            (!valid_item(entry.item_id) ||
+             entry.count > source_max_stack(entry.item_id)))
             return false;
     }
 
