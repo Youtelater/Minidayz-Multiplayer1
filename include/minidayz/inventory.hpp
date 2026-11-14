@@ -88,6 +88,9 @@ public:
     bool move_from_backpack(std::size_t backpack_slot, std::size_t inventory_slot,
                             std::uint16_t amount = 0,
                             std::uint16_t max_stack = 0) noexcept;
+    bool move_backpack(std::size_t from, std::size_t to,
+                       std::uint16_t amount = 0,
+                       std::uint16_t max_stack = 0) noexcept;
 
     // max_stack == 0 selects the original game's baseline rule for item_id.
     bool add(std::uint16_t item_id, std::uint16_t amount,
