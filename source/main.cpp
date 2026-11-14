@@ -69,6 +69,12 @@ minidayz::items::EquipmentSnapshot migrate_equipment_v3(
     return result;
 }
 
+bool consume_legacy_padding(std::FILE* file, std::size_t bytes) noexcept {
+    unsigned char padding[3]{};
+    return bytes <= sizeof(padding) &&
+        (bytes == 0 || std::fread(padding, 1, bytes, file) == bytes);
+}
+
 bool load_saved_game(SavedGame& save) noexcept {
     std::FILE* file = std::fopen(kSavePath, "rb");
     if (!file) return false;
@@ -81,6 +87,7 @@ bool load_saved_game(SavedGame& save) noexcept {
         // Migrate the previous player-only save format without discarding it.
         body_ok = std::fread(&save.player, sizeof(save.player), 1, file) == 1;
         save.inventory = {};
+        save.equipment = {};
     } else if (header_ok && (save.version == 2u || save.version == 3u)) {
         LegacyInventorySnapshotV3 legacy_inventory{};
         body_ok =
@@ -93,6 +100,13 @@ bool load_saved_game(SavedGame& save) noexcept {
             if (body_ok) save.equipment = migrate_equipment_v3(legacy_equipment);
         } else {
             save.equipment = {};
+        }
+        if (body_ok) {
+            const std::size_t legacy_bytes = 3 * sizeof(std::uint32_t) +
+                sizeof(minidayz::PlayerState) + sizeof(LegacyInventorySnapshotV3) +
+                (save.version == 3u ? sizeof(LegacyEquipmentSnapshotV3) : 0);
+            const std::size_t padding = (4 - (legacy_bytes % 4)) % 4;
+            body_ok = consume_legacy_padding(file, padding);
         }
     } else if (header_ok && save.version == kSaveVersion) {
         body_ok =
