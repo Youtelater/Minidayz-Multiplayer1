@@ -37,7 +37,7 @@ def main() -> None:
         "inline constexpr SourceUiText kSourceUiTexts[] = {",
     ]
     for text_id, value in rows:
-        lines.append(f"    {{{text_id}, {json.dumps(value, ensure_ascii=False)}},")
+        lines.append("    {" + str(text_id) + ", " + json.dumps(value, ensure_ascii=False) + "},")
     lines += [
         "};",
         "inline constexpr const char* source_ui_text(std::uint16_t id, std::size_t occurrence = 0) noexcept {",
