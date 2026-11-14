@@ -4,6 +4,7 @@
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/inventory.hpp"
+#include "minidayz/equipment.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -19,7 +20,7 @@ namespace {
 // fresh entropy for this native session. This is a per-run seed, not a claim
 // that the original browser Math.random() sequence is reproducible.
 constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-constexpr std::uint32_t kSaveVersion = 2u;
+constexpr std::uint32_t kSaveVersion = 3u;
 constexpr const char* kSavePath = "sdmc:/3ds/Minidayz/world.sav";
 constexpr const char* kSaveTempPath = "sdmc:/3ds/Minidayz/world.tmp";
 
@@ -29,6 +30,7 @@ struct SavedGame {
     std::uint32_t seed{};
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
 };
 
 bool load_saved_game(SavedGame& save) noexcept {
@@ -43,10 +45,16 @@ bool load_saved_game(SavedGame& save) noexcept {
         // Migrate the previous player-only save format without discarding it.
         body_ok = std::fread(&save.player, sizeof(save.player), 1, file) == 1;
         save.inventory = {};
-    } else if (header_ok && save.version == kSaveVersion) {
+    } else if (header_ok && save.version == 2u) {
         body_ok =
             std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
             std::fread(&save.inventory, sizeof(save.inventory), 1, file) == 1;
+        save.equipment = {};
+    } else if (header_ok && save.version == kSaveVersion) {
+        body_ok =
+            std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
+            std::fread(&save.inventory, sizeof(save.inventory), 1, file) == 1 &&
+            std::fread(&save.equipment, sizeof(save.equipment), 1, file) == 1;
     }
     const bool no_extra_data = std::fgetc(file) == EOF;
     std::fclose(file);
@@ -62,13 +70,15 @@ bool load_saved_game(SavedGame& save) noexcept {
 
 bool write_saved_game(std::uint32_t seed,
                       const minidayz::PlayerState& player,
-                      const minidayz::items::InventorySystem& inventory) noexcept {
+                      const minidayz::items::InventorySystem& inventory,
+                      const minidayz::items::EquipmentSystem& equipment) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     SavedGame save{};
     save.seed = seed;
     save.player = player;
     save.inventory = inventory.snapshot();
+    save.equipment = equipment.snapshot();
     std::FILE* file = std::fopen(kSaveTempPath, "wb");
     if (!file) return false;
     const bool written = std::fwrite(&save, sizeof(save), 1, file) == 1 &&
@@ -107,6 +117,8 @@ public:
           player_(restored ? restored->player : make_initial_state()) {
         if (restored && !inventory_.restore(restored->inventory))
             inventory_.clear();
+        if (restored && !equipment_.restore(restored->equipment))
+            equipment_.clear();
         // Preview-only movement tuning. Source-equivalent values still need
         // to be supplied by the gameplay rules port.
         // Temporary preview movement tuning only. Original source movement
@@ -127,7 +139,7 @@ public:
 
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
-            (void)write_saved_game(world_seed_, player_.state(), inventory_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_);
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
@@ -162,6 +174,18 @@ public:
         if (touch_pressed) {
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
+            drag_target_equipment_slot_ = -1;
+            const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
+            if (equipment_target >= 0) {
+                const auto slot = static_cast<minidayz::items::EquipmentSlot>(equipment_target);
+                const auto equipped = equipment_.equipped(slot);
+                if (equipped != 0) {
+                    // Tapping an occupied equipment slot removes it back into
+                    // the backpack; failed transfers leave it equipped.
+                    (void)equipment_.unequip_to_inventory(inventory_, slot, 0);
+                    selected_inventory_slot_ = -1;
+                }
+            }
             // Page through larger backpacks without changing the 5 x 3 grid.
             if (input.touch.py >= 223) {
                 const std::size_t page_count =
@@ -188,19 +212,31 @@ public:
             }
         }
         if (input.touching && drag_source_slot_ >= 0) {
-            const int target = inventory_slot_at(input.touch.px, input.touch.py,
-                                                inventory_page_);
-            if (target >= 0) drag_target_slot_ = target;
+            const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
+            if (equipment_target >= 0) {
+                drag_target_equipment_slot_ = equipment_target;
+                drag_target_slot_ = -1;
+            } else {
+                drag_target_equipment_slot_ = -1;
+                const int target = inventory_slot_at(input.touch.px, input.touch.py,
+                                                    inventory_page_);
+                if (target >= 0) drag_target_slot_ = target;
+            }
         }
         if (touch_released) {
-            if (drag_source_slot_ >= 0 && drag_target_slot_ >= 0 &&
-                drag_target_slot_ != drag_source_slot_) {
+            if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
+                (void)equipment_.equip_from_inventory(
+                    inventory_, static_cast<std::size_t>(drag_source_slot_),
+                    static_cast<minidayz::items::EquipmentSlot>(drag_target_equipment_slot_));
+            } else if (drag_source_slot_ >= 0 && drag_target_slot_ >= 0 &&
+                       drag_target_slot_ != drag_source_slot_) {
                 (void)inventory_.move(
                     static_cast<std::size_t>(drag_source_slot_),
                     static_cast<std::size_t>(drag_target_slot_));
             }
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
+            drag_target_equipment_slot_ = -1;
             selected_inventory_slot_ = -1;
         }
         touch_down_ = input.touching;
@@ -264,12 +300,18 @@ public:
             (preview_rules_.max_temperature - preview_rules_.min_temperature);
         meter(244.0f, temperature_ratio * 100.0f, 100.0f,
               C2D_Color32(75, 180, 165, 255));
-        // Equipment / quick-access row. Empty slots stay empty until the
-        // item and equipment systems are connected to source definitions.
-        for (int i = 0; i < 4; ++i) {
-            const float x = 10.0f + i * 77.0f;
-            renderer.draw_solid_rect(x, 38.0f, 70.0f, 43.0f, C2D_Color32(8, 11, 10, 255));
-            renderer.draw_solid_rect(x + 2.0f, 40.0f, 66.0f, 39.0f, C2D_Color32(47, 54, 48, 255));
+        // Source equipment slots: head, outerwear, vest, pants, hands,
+        // feet and weapon. Drag an item onto a slot to equip; tap to remove.
+        static constexpr const char* equipment_labels[] = {"HEAD","COAT","VEST","PANTS","HANDS","FEET","WEAPON"};
+        for (std::size_t i = 0; i < minidayz::items::kEquipmentSlotCount; ++i) {
+            const float x = 8.0f + static_cast<float>(i) * 44.0f;
+            renderer.draw_solid_rect(x, 38.0f, 42.0f, 43.0f, C2D_Color32(8, 11, 10, 255));
+            renderer.draw_solid_rect(x + 2.0f, 40.0f, 38.0f, 39.0f, C2D_Color32(47, 54, 48, 255));
+            const auto item_id = equipment_.equipped(static_cast<minidayz::items::EquipmentSlot>(i));
+            if (item_id != 0)
+                (void)renderer.draw_item_icon(item_id, x + 21.0f, 55.0f, 29.0f, 23.0f);
+            else
+                renderer.draw_text(equipment_labels[i], x + 3.0f, 53.0f, 0.19f);
         }
         // 5 x 3 backpack page, sized for the 320 x 240 touch screen.
         const int page_start = static_cast<int>(inventory_page_ * kInventoryPageSize);
@@ -389,6 +431,13 @@ public:
 private:
     static constexpr std::size_t kInventoryPageSize = 15;
 
+    static int equipment_slot_at(int x, int y) noexcept {
+        if (y < 38 || y >= 81 || x < 8 || x >= 316) return -1;
+        const int index = (x - 8) / 44;
+        return index >= 0 && index < static_cast<int>(minidayz::items::kEquipmentSlotCount)
+            ? index : -1;
+    }
+
     static int inventory_slot_at(int x, int y, std::size_t page) noexcept {
         if (x < 10 || x >= 310 || y < 92 || y >= 221) return -1;
         const int col = (x - 10) / 60;
@@ -402,6 +451,7 @@ private:
         world_seed_ = make_new_world_seed();
         player_ = minidayz::PlayerSystem(make_initial_state());
         inventory_.clear();
+        equipment_.clear();
         inventory_page_ = 0;
         selected_inventory_slot_ = -1;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
@@ -467,10 +517,12 @@ private:
     bool has_saved_game_{};
     minidayz::PlayerSystem player_;
     minidayz::items::InventorySystem inventory_{};
+    minidayz::items::EquipmentSystem equipment_{};
     minidayz::PlayerRules preview_rules_{};
     int selected_inventory_slot_{-1};
     int drag_source_slot_{-1};
     int drag_target_slot_{-1};
+    int drag_target_equipment_slot_{-1};
     std::size_t inventory_page_{};
     bool touch_down_{};
 };
