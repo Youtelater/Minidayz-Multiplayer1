@@ -76,6 +76,8 @@ public:
                      std::uint16_t amount, std::uint16_t max_stack = 0,
                      std::uint8_t condition = kUseSourceItemCondition) noexcept;
     bool remove(std::size_t slot, std::uint16_t amount) noexcept;
+    // Apply source condition loss; an item is destroyed when condition reaches zero.
+    bool damage_condition(std::size_t slot, std::uint8_t loss) noexcept;
 
     // Ground transfers are atomic: failed pickups/drops leave both sides intact.
     bool pickup(GroundItem& ground, std::uint16_t max_stack = 0) noexcept;
