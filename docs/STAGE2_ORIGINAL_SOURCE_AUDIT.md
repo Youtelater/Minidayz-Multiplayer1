@@ -13,13 +13,13 @@ Do not infer item effects or backpack slot counts from item names. The raw sourc
 
 ## Verified build outputs
 
-The native CI run generated 405 original item definitions, resolved 329 item-to-Construct sprite mappings, and extracted 3,680 original inventory behavior event records. The native regression workflow passed on commit `61e84b901f5845b49aadf07f3001a9f180b2d4de`; 3DS build verification for the latest source-path corrections is pending. The 76 item IDs without an `MDZItemTable` mapping remain explicitly unresolved; no substitute art or item effects are fabricated.
+The native CI run generated 405 original item definitions, resolved 329 item-to-Construct sprite mappings, and extracted 3,680 original inventory behavior event records. The native regression workflow passed on commit `075a11d74f87ccb62cf3dbe5ff2f12ca9eff59b8` (run `43628112641`). The matching 3DS build for that commit is still being verified; do not mark Step 1 complete until it passes. The 76 item IDs without an `MDZItemTable` mapping remain explicitly unresolved; no substitute art or item effects are fabricated.
 
 
 ## Original companion-file and artwork inventory
 
 - The authoritative item object table is `Minidayz-Multiplayer-main/mp_itemtable.js`; the source-backed item names, UI strings, and player feedback are in `l_eng_items.xml`, `l_eng_ui.xml`, and `l_eng_log.xml` respectively. The repository contains 28 original `l_*.xml` localization files across the supported languages.
-- The repository contains 1,854 PNG files under the original `assets/gfx` artwork directory. The Construct sprite-frame extractor resolves original frame references against that directory and fails on missing or byte-conflicting candidates rather than silently substituting artwork.
+- The repository contains 2,149 PNG files under the original root-level `assets/gfx` artwork directory. The Construct sprite-frame extractor resolves original frame references against that directory and fails on missing or byte-conflicting candidates rather than silently substituting artwork.
 - The Makefile's `stage1-assets` target rebuilds the snapshot from the original `data.js`, extracts directly from that same file, validates the generated source inventory, and builds the original sprite and item catalogs. The item behavior, effect, and equipment catalogs are also part of this target.
 
 ## Player appearance and equipment layers verified in original source
