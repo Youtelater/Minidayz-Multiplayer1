@@ -10,6 +10,7 @@ XML = ROOT / "Minidayz-Multiplayer-main/l_eng_items.xml"
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_equipment_catalog.hpp"
 # The original player hit event reads these four item instance variables.
+WARMTH_VARIABLE = 8
 PROTECTION_VARIABLES = (12, 13, 14, 15)
 EQUIPMENT_RANGES = ((133, 136), (250, 277), (300, 307), (350, 368), (400, 415))
 
@@ -44,16 +45,19 @@ def main():
                 item_id = first_value(values, 16)
                 if not isinstance(item_id, int) or item_id not in item_ids or not is_equipment(item_id):
                     continue
+                warmth_value = first_value(values, WARMTH_VARIABLE)
+                warmth = float(warmth_value) if isinstance(warmth_value, (int, float)) else 0.0
                 protection = tuple(
                     float(value) if isinstance((value := first_value(values, variable)), (int, float)) else 0.0
                     for variable in PROTECTION_VARIABLES
                 )
-                if not any(protection):
+                if warmth == 0.0 and not any(protection):
                     continue
                 previous = properties.get(item_id)
-                if previous is not None and previous != protection:
-                    raise SystemExit(f"Conflicting original armor values for item {item_id}: {previous} vs {protection}")
-                properties[item_id] = protection
+                values_tuple = (warmth, *protection)
+                if previous is not None and previous != values_tuple:
+                    raise SystemExit(f"Conflicting original equipment values for item {item_id}: {previous} vs {values_tuple}")
+                properties[item_id] = values_tuple
 
     rows = sorted(properties.items())
     if len(rows) < 30:
@@ -61,7 +65,7 @@ def main():
     lines = [
         "#pragma once", "#include <cstddef>", "#include <cstdint>",
         "namespace minidayz::items {",
-        "struct SourceItemProtection { std::uint16_t item_id; float helmet, outerwear, vest, pants; };",
+        "struct SourceItemProtection { std::uint16_t item_id; float warmth, helmet, outerwear, vest, pants; };",
         f"inline constexpr std::size_t kSourceItemProtectionCount = {len(rows)};",
         "inline constexpr SourceItemProtection kSourceItemProtection[] = {",
     ]
