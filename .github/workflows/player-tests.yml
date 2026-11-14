@@ -94,6 +94,15 @@ jobs:
       - name: Run Player Equipment Regression Tests
         run: ./equipment_system_tests
 
+      - name: Compile Ground Loot Regression Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp source/ground_loot.cpp tests/ground_loot_tests.cpp \
+            -o ground_loot_tests
+
+      - name: Run Ground Loot Regression Tests
+        run: ./ground_loot_tests
+
       - name: Compile Original Item Use Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
