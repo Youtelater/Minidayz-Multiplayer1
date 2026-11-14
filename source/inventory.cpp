@@ -401,8 +401,7 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
         saved.equipped_backpack_condition > 100)
         return false;
     if (saved.equipped_backpack != 0 &&
-        (!is_backpack_item(saved.equipped_backpack) ||
-         saved.capacity <= kInventorySlotCount))
+        !is_backpack_item(saved.equipped_backpack))
         return false;
     if (saved.equipped_backpack == 0 &&
         saved.equipped_backpack_condition != 100)
@@ -422,8 +421,24 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
             return false;
     }
 
+    // Migrate older saves that persisted guessed backpack sizes (or retained
+    // an empty expanded grid after unequipping) to the exact original layout.
+    std::size_t restored_capacity = saved.capacity;
+    if (saved.equipped_backpack != 0) {
+        restored_capacity = source_backpack_capacity(saved.equipped_backpack);
+        if (restored_capacity <= kInventorySlotCount ||
+            restored_capacity > kMaximumInventorySlotCount)
+            return false;
+        for (std::size_t i = restored_capacity; i < saved.capacity; ++i)
+            if (!saved.slots[i].empty()) return false;
+    } else {
+        restored_capacity = kInventorySlotCount;
+        for (std::size_t i = restored_capacity; i < saved.capacity; ++i)
+            if (!saved.slots[i].empty()) return false;
+    }
+
     slots_ = saved.slots;
-    capacity_ = saved.capacity;
+    capacity_ = restored_capacity;
     equipped_backpack_ = saved.equipped_backpack;
     equipped_backpack_condition_ = saved.equipped_backpack_condition;
     return true;
