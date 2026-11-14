@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 ITEMS = ROOT / "Minidayz-Multiplayer-main/l_eng_items.xml"
-ITEM_TABLE = ROOT / "mp_itemtable.js"
+ITEM_TABLE = ROOT / "Minidayz-Multiplayer-main/mp_itemtable.js"
 OUTPUT = ROOT / "data/stage2/item_behavior_trace.json"
 
 TARGETS = {
@@ -128,7 +128,7 @@ def main() -> None:
         "source": {
             "project": "data/stage1/construct_project_parsed.json",
             "item_names": "Minidayz-Multiplayer-main/l_eng_items.xml",
-            "item_objects": "mp_itemtable.js",
+            "item_objects": "Minidayz-Multiplayer-main/mp_itemtable.js",
         },
         "item_count": len(item_rows),
         "items": [
