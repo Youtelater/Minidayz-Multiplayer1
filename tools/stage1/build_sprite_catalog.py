@@ -33,7 +33,7 @@ def main() -> int:
     if not SOURCE.is_file():
         raise SystemExit("Missing parsed Construct source; run reassemble_snapshot.py and extract_construct.py first")
     script_digest = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    source_text = SOURCE.read_text(encoding="utf-8")
+    source_text = SOURCE.read_text(encoding="utf-8-sig")
     source_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", source_text)
     project = json.loads(source_text)
     objects = project["project"][3]
