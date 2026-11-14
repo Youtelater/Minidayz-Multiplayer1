@@ -7,7 +7,13 @@ namespace minidayz::items {
 
 bool source_item_use_effect(std::uint16_t item_id, bool secondary,
                             ItemUseEffect& effect) noexcept {
-    std::size_t first = 0;
+    return source_item_use_effect(item_id, secondary, ItemUsePerks{}, effect);
+}
+
+bool source_item_use_effect(std::uint16_t item_id, bool secondary,
+                            const ItemUsePerks& perks,
+                            ItemUseEffect& effect) noexcept {
+    std::size_t first =;
     std::size_t last = kItemUseEffectDefinitionCount;
     while (first < last) {
         const std::size_t middle = first + (last - first) / 2;
@@ -22,6 +28,8 @@ bool source_item_use_effect(std::uint16_t item_id, bool secondary,
     const auto& row = kItemUseEffectDefinitions[first];
     if (row.item_id != item_id || row.secondary != secondary) return false;
     effect = {row.hunger, row.thirst, row.health, row.temperature};
+    if (perks.hamster_active) effect.hunger += row.hamster_hunger_bonus;
+    if (perks.camel_active) effect.thirst += row.camel_thirst_bonus;
     return true;
 }
 
@@ -29,12 +37,12 @@ bool use_item_from_inventory(InventorySystem& inventory,
                              std::size_t inventory_slot,
                              PlayerSystem& player,
                              const PlayerRules& rules,
-                             bool secondary) noexcept {
+                             bool secondary, const ItemUsePerks& perks) noexcept {
     const auto* item = inventory.slot(inventory_slot);
     if (!item || item->empty() || !player.state().alive) return false;
 
     ItemUseEffect effect{};
-    if (!source_item_use_effect(item->item_id, secondary, effect)) return false;
+    if (!source_item_use_effect(item->item_id, secondary, perks, effect)) return false;
     if (!inventory.remove(inventory_slot, 1)) return false;
 
     if (effect.hunger != 0.0f && rules.max_hunger > 0.0f)
