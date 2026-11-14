@@ -191,6 +191,23 @@ bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
     return true;
 }
 
+bool InventorySystem::drop_equipped_backpack(GroundItem& ground) noexcept {
+    if (equipped_backpack_ == 0 || !is_backpack_item(equipped_backpack_) ||
+        (ground.item_id == 0) != (ground.count == 0) || !ground.empty())
+        return false;
+
+    // Never discard items that would become inaccessible when the backpack
+    // is removed. This is a safety guard for the native inventory model.
+    for (std::size_t i = kInventorySlotCount; i < capacity_; ++i)
+        if (!slots_[i].empty()) return false;
+
+    ground = {equipped_backpack_, 1, equipped_backpack_condition_};
+    capacity_ = kInventorySlotCount;
+    equipped_backpack_ = 0;
+    equipped_backpack_condition_ = 100;
+    return true;
+}
+
 bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
                           std::uint16_t max_stack,
                           std::uint8_t condition) noexcept {
