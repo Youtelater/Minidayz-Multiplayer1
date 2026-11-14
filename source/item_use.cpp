@@ -13,7 +13,7 @@ bool source_item_use_effect(std::uint16_t item_id, bool secondary,
 bool source_item_use_effect(std::uint16_t item_id, bool secondary,
                             const ItemUsePerks& perks,
                             ItemUseEffect& effect) noexcept {
-    std::size_t first =;
+    std::size_t first = 0;
     std::size_t last = kItemUseEffectDefinitionCount;
     while (first < last) {
         const std::size_t middle = first + (last - first) / 2;
