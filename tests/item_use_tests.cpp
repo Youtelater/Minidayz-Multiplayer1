@@ -17,6 +17,21 @@ int main() {
     assert(effect.hunger == 25.0f && effect.thirst == 10.0f);
     assert(!source_item_use_effect(456, false, effect));
 
+    // Original item_activate expressions add +10 hunger for perk_hamster
+    // and +10 thirst for perk_camel when their source conditions evaluate true.
+    ItemUsePerks hamster{};
+    hamster.hamster_active = true;
+    assert(source_item_use_effect(1, false, hamster, effect));
+    assert(effect.hunger == 40.0f && effect.thirst == 5.0f);
+    assert(source_item_use_effect(2, false, hamster, effect));
+    assert(effect.hunger == 30.0f);
+    ItemUsePerks camel{};
+    camel.camel_active = true;
+    assert(source_item_use_effect(8, false, camel, effect));
+    assert(effect.thirst == 40.0f);
+    assert(source_item_use_effect(8, false, effect));
+    assert(effect.thirst == 30.0f);
+
     PlayerState initial{};
     initial.health = 50.0f;
     initial.hunger = 10.0f;
@@ -55,5 +70,20 @@ int main() {
     assert(inventory.add(25, 1));
     assert(use_item_from_inventory(inventory, 0, player, rules));
     assert(player.state().temperature == 10.0f);
+
+    // The perk bonus is applied before the same source stat clamp and item consumption.
+    PlayerState perk_state{};
+    perk_state.health = 100.0f;
+    perk_state.hunger = 10.0f;
+    perk_state.thirst = 0.0f;
+    perk_state.alive = true;
+    PlayerSystem perk_player(perk_state);
+    InventorySystem perk_inventory;
+    assert(perk_inventory.add(1, 1));
+    assert(use_item_from_inventory(perk_inventory, 0, perk_player, rules,
+                                   false, hamster));
+    assert(perk_player.state().hunger == 50.0f);
+    assert(perk_player.state().thirst == 5.0f);
+    assert(perk_inventory.count(1) == 0);
     return 0;
 }
