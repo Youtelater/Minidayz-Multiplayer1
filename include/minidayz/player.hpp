@@ -31,6 +31,13 @@ struct PlayerState {
 // Numeric movement/survival tuning is injected from source-equivalent rules.
 // The preview scene may use clearly labeled temporary movement values, but
 // source survival rates must remain unset until their event cadence is traced.
+struct PlayerArmorProtection {
+    float helmet{};
+    float outerwear{};
+    float vest{};
+    float pants{};
+};
+
 struct PlayerRules {
     float walk_speed{};
     float run_speed{};
@@ -105,6 +112,7 @@ public:
     }
 
     void apply_damage(float amount) noexcept;
+    void apply_damage(float amount, const PlayerArmorProtection& protection) noexcept;
     void apply_damage(float amount, PlayerDeathReason cause) noexcept;
     void kill(PlayerDeathReason reason) noexcept;
     void heal(float amount, float max_health) noexcept;
