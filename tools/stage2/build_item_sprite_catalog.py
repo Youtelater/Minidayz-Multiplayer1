@@ -41,7 +41,7 @@ def main() -> None:
             raise SystemExit(f"Duplicate item sprite mapping: {item_id}")
         entries[item_id] = object_name
 
-    project_text = PROJECT.read_text(encoding="utf-8")
+    project_text = PROJECT.read_text(encoding="utf-8-sig")
     project_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", project_text)
     project = json.loads(project_text)
     objects = project["project"][3]
