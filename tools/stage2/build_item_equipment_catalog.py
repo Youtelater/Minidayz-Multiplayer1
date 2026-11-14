@@ -86,11 +86,11 @@ def source_repairs(project, items_by_name):
             params = candidate[5]
             variable = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 10), None)
             value = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 7), None)
-            if variable != 6 or not isinstance(value, list) or len(value) != 2 or value[0] != 4:
+            if variable != 6 or not isinstance(value, list) or len(value) != 3 or value[0] != 4:
                 continue
-            if not isinstance(value[1], list) or len(value[1]) != 2:
+            if not isinstance(value[1], list) or not isinstance(value[2], list):
                 continue
-            left, right = value[1]
+            left, right = value[1], value[2]
             if left == [21, 1030, False, None, 6] and isinstance(right, list) and len(right) == 2 and right[0] == 0:
                 gains.append(right[1])
         if len(gains) != 1 or not isinstance(gains[0], int) or gains[0] <= 0 or gains[0] > 100:
