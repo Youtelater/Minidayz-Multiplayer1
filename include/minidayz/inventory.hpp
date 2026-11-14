@@ -55,11 +55,9 @@ public:
 
     bool set_capacity(std::size_t capacity) noexcept;
 
-    // Backpack equipment is a real equipment slot: equip consumes the item
-    // from the chosen inventory slot and swaps the previously equipped pack
-    // back into that slot. source_capacity must come from original source data.
-    bool equip_backpack_from_slot(std::size_t inventory_slot,
-                                  std::size_t source_capacity) noexcept;
+    // Backpack equipment is a real equipment slot. Capacity is resolved
+    // internally from the original Construct UI catalog; callers cannot guess it.
+    bool equip_backpack_from_slot(std::size_t inventory_slot) noexcept;
     bool unequip_backpack_to_slot(std::size_t inventory_slot) noexcept;
     std::uint16_t equipped_backpack() const noexcept { return equipped_backpack_; }
     std::uint8_t equipped_backpack_condition() const noexcept {
