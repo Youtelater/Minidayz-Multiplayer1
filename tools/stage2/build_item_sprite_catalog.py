@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import re
-import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,7 +21,7 @@ def main() -> None:
     if not ITEM_TABLE.is_file() or not PROJECT.is_file():
         raise SystemExit("Missing original mp_itemtable.js or parsed Construct project")
 
-    source = ITEM_TABLE.read_text(encoding="utf-8")
+    source = ITEM_TABLE.read_text(encoding="utf-8-sig")
     # The original export escaped even the JavaScript property name as Unicode.
     source = re.sub(r"\\u([0-9a-fA-F]{4})",
                     lambda match: chr(int(match.group(1), 16)), source)
