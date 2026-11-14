@@ -23,7 +23,7 @@ def cf(x):
 
 def main():
     ap=argparse.ArgumentParser()
-    ap.add_argument("source",nargs="?",default="data.deobfuscated.js")
+    ap.add_argument("source",nargs="?",default="Minidayz-Multiplayer-main/data.js")
     ap.add_argument("--out",default="data/stage1")
     a=ap.parse_args(); root,p=load(a.source); out=Path(a.out);out.mkdir(parents=True,exist_ok=True)
     objects=p[3]; layouts=[];layers=[];instances=[];animations=[];image_refs=[]
