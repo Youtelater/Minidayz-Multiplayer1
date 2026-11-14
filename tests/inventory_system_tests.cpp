@@ -282,6 +282,21 @@ int main() {
     assert(restored.capacity() == 26);
     assert(restored.count(18) == 2);
 
+    // Legacy guessed capacities migrate to the exact source-defined backpack grid.
+    auto legacy_pack_save = saved_inventory;
+    legacy_pack_save.capacity = 20;
+    InventorySystem migrated_pack;
+    assert(migrated_pack.restore(legacy_pack_save));
+    assert(migrated_pack.capacity() == 26);
+    legacy_pack_save.slots[20] = {1, 1}; // hidden outside the legacy saved capacity
+    assert(!migrated_pack.restore(legacy_pack_save));
+
+    InventorySnapshot stale_empty_expansion{};
+    stale_empty_expansion.capacity = 20;
+    InventorySystem migrated_empty;
+    assert(migrated_empty.restore(stale_empty_expansion));
+    assert(migrated_empty.capacity() == kInventorySlotCount);
+
     InventorySystem wear_inventory;
     assert(wear_inventory.add(251, 1, 0, 65));
     assert(wear_inventory.damage_condition(0, 20));
