@@ -102,6 +102,12 @@ int main() {
     assert(armor_values.pants == 2.0f);
     assert(std::fabs(armor.temperature_offset() - (5.0f / 7.0f)) < 0.0001f);
 
+    PlayerState equipment_damage_state{};
+    equipment_damage_state.health = 100.0f;
+    PlayerSystem equipment_damage_player(equipment_damage_state);
+    armor.apply_damage(equipment_damage_player, 20.0f);
+    assert(equipment_damage_player.state().health == 91.0f);
+
     PlayerState protected_state{};
     protected_state.health = 100.0f;
     protected_state.alive = true;
