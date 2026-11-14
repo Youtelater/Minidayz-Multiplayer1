@@ -202,17 +202,67 @@ int main() {
     assert(protected_pack.drop_equipped_backpack(protected_ground));
     assert(protected_ground.item_id == 450);
 
-    // Exact wearable backpack IDs and exclusions from original item localization
-    // plus MDZItemTable. The Civilian Tent and Supplies Stash are not wearable.
+    // Exact wearable backpack IDs and exclusions from original item localization,
+    // MDZItemTable, and the original Drop_backpack event (which includes "red box").
     for (const auto id : {450, 451, 452, 453, 454, 455, 457, 458, 459, 460,
-                          462, 752, 753, 754})
+                          461, 462, 752, 753, 754})
         assert(is_backpack_item(id));
     assert(!is_backpack_item(456)); // Civilian Tent
-    assert(!is_backpack_item(461)); // Supplies Stash
     assert(!is_backpack_item(1));
-    // No capacities are fabricated while the original event expressions are unresolved.
-    for (const auto id : {450, 451, 457, 754, 456, 461, 1})
+    // Normal inventory expansion remains unresolved. The four separate
+    // backpack containers below are decoded from original Array 198/234 sizes.
+    for (const auto id : {450, 451, 457, 462, 752, 753, 754, 1})
         assert(source_backpack_capacity(id) == 0);
+    assert(source_backpack_storage_capacity(458) == 2); // barsetka
+    assert(source_backpack_storage_capacity(459) == 4); // J kuabao
+    assert(source_backpack_storage_capacity(460) == 4); // Y kuabao
+    assert(source_backpack_storage_capacity(461) == 6); // red box
+    assert(source_backpack_storage_capacity(450) == 0);
+
+    // The original game stores these four special bags in separate
+    // parallel item/count arrays (Construct Array objects 198 and 234).
+    InventorySystem bag_storage;
+    assert(bag_storage.add(458, 1));
+    assert(bag_storage.equip_backpack_from_slot(0));
+    assert(bag_storage.backpack_capacity() == 2);
+    assert(bag_storage.add_to_backpack(18, 2));
+    assert(bag_storage.backpack_count(18) == 2);
+    assert(bag_storage.backpack_occupied_slots() == 1);
+    assert(!bag_storage.unequip_backpack_to_slot(0)); // never strand bag contents
+    auto bag_snapshot = bag_storage.snapshot();
+    InventorySystem bag_restored;
+    assert(bag_restored.restore(bag_snapshot));
+    assert(bag_restored.backpack_capacity() == 2);
+    assert(bag_restored.backpack_count(18) == 2);
+    assert(bag_restored.move_from_backpack(0, 0));
+    assert(bag_restored.backpack_count(18) == 0);
+    assert(bag_restored.count(18) == 2);
+    assert(bag_restored.unequip_backpack_to_slot(0));
+
+    InventorySystem bag_swap;
+    assert(bag_swap.add(459, 1));
+    assert(bag_swap.equip_backpack_from_slot(0));
+    assert(bag_swap.backpack_capacity() == 4);
+    assert(bag_swap.add_to_backpack(18, 2));
+    assert(bag_swap.add(458, 1));
+    assert(bag_swap.equip_backpack_from_slot(0));
+    assert(bag_swap.equipped_backpack() == 458);
+    assert(bag_swap.backpack_capacity() == 2);
+    assert(bag_swap.backpack_count(18) == 2);
+    assert(bag_swap.add(459, 1));
+    assert(bag_swap.equip_backpack_from_slot(0));
+    assert(bag_swap.backpack_capacity() == 4);
+    assert(bag_swap.backpack_count(18) == 2);
+
+    InventorySystem red_box;
+    assert(red_box.add(461, 1));
+    assert(red_box.equip_backpack_from_slot(0));
+    assert(red_box.backpack_capacity() == 6);
+    assert(red_box.add_to_backpack(18, 6));
+    GroundItem full_bag_drop{};
+    assert(!red_box.drop_equipped_backpack(full_bag_drop));
+    assert(red_box.backpack_occupied_slots() == 2);
+    assert(!red_box.add_to_backpack(18, 100)); // no silent overflow
 
     InventorySystem backpack;
     assert(backpack.add(1, 1));
