@@ -254,6 +254,15 @@ int main() {
     assert(bag_swap.backpack_capacity() == 4);
     assert(bag_swap.backpack_count(18) == 2);
 
+    InventorySystem bag_internal_move;
+    assert(bag_internal_move.add(458, 1));
+    assert(bag_internal_move.equip_backpack_from_slot(0));
+    assert(bag_internal_move.add_to_backpack(18, 2));
+    assert(bag_internal_move.add_to_backpack(19, 1));
+    assert(bag_internal_move.move_backpack(0, 1));
+    assert(bag_internal_move.backpack_slot(0)->item_id == 19);
+    assert(bag_internal_move.backpack_slot(1)->item_id == 18);
+
     InventorySystem red_box;
     assert(red_box.add(461, 1));
     assert(red_box.equip_backpack_from_slot(0));
