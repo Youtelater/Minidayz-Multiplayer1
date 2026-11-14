@@ -22,6 +22,24 @@ std::uint32_t facing_offset(PlayerFacing facing) noexcept {
 
 } // namespace
 
+PlayerRules source_survival_rules(SurvivalDifficulty difficulty) noexcept {
+    PlayerRules rules{};
+    rules.max_health = 100.0f;
+    rules.max_hunger = 100.0f;
+    rules.max_thirst = 100.0f;
+    float source_rate_per_five_seconds = 0.75f;
+    switch (difficulty) {
+    case SurvivalDifficulty::novice: source_rate_per_five_seconds = 0.5f; break;
+    case SurvivalDifficulty::regular: source_rate_per_five_seconds = 0.75f; break;
+    case SurvivalDifficulty::veteran: source_rate_per_five_seconds = 1.0f; break;
+    }
+    // Original Game_events sets Novice/Regular/Veteran_starving and _thirsty
+    // to 0.5/0.75/1.0; Foodlimit and Waterlimit multiply by five seconds.
+    rules.hunger_drain_per_second = source_rate_per_five_seconds / 5.0f;
+    rules.thirst_drain_per_second = source_rate_per_five_seconds / 5.0f;
+    return rules;
+}
+
 PlayerSystem::PlayerSystem(const PlayerState& initial) noexcept : state_(initial) {
     state_.x = finite_or_zero(state_.x);
     state_.y = finite_or_zero(state_.y);
