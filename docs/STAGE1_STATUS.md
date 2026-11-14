@@ -40,7 +40,7 @@
 
 ## Reproducible extraction
 
-The complete parsed source snapshot is stored in ordered chunks under `data/stage1/source_snapshot/`. Before any extraction, `tools/stage1/reassemble_snapshot.py` now compares the concatenated snapshot byte-for-byte with the authoritative root `data.deobfuscated.js` export. It stops the build on any mismatch (including byte count and SHA-256 diagnostics), and only then writes `data/stage1/construct_project_parsed.json`. This prevents stale or altered snapshot data from silently becoming the gameplay source. Reassemble and regenerate the indexes and inventories with:
+The complete parsed source snapshot is stored in ordered chunks under `data/stage1/source_snapshot/`. `tools/stage1/reassemble_snapshot.py` now treats the root `data.deobfuscated.js` export as the sole authority and regenerates every snapshot chunk from its exact bytes on each build. It replaces stale chunks, removes obsolete extra chunks, verifies the reconstructed bytes, and writes `data/stage1/construct_project_parsed.json`. This repairs incomplete snapshots instead of allowing them to silently become the gameplay source. Reassemble and regenerate the indexes and inventories with:
 
 ```sh
 python tools/stage1/reassemble_snapshot.py
