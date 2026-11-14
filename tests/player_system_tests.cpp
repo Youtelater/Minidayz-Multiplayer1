@@ -7,6 +7,15 @@
 using namespace minidayz;
 
 int main() {
+    const auto novice_rules = source_survival_rules(SurvivalDifficulty::novice);
+    const auto regular_rules = source_survival_rules(SurvivalDifficulty::regular);
+    const auto veteran_rules = source_survival_rules(SurvivalDifficulty::veteran);
+    assert(novice_rules.hunger_drain_per_second == 0.1f);
+    assert(novice_rules.thirst_drain_per_second == 0.1f);
+    assert(regular_rules.hunger_drain_per_second == 0.15f);
+    assert(regular_rules.thirst_drain_per_second == 0.15f);
+    assert(veteran_rules.hunger_drain_per_second == 0.2f);
+    assert(veteran_rules.thirst_drain_per_second == 0.2f);
     PlayerState state{};
     state.health = 5.0f;
     state.hunger = 0.0f;
