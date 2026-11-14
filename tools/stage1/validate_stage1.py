@@ -127,7 +127,7 @@ def main() -> int:
 
     print("Stage 1 validation PASSED")
     print(json.dumps(checks, indent=2))
-    print(f"Verified {len(parts)} ordered snapshot chunks ({len(parsed_bytes):,} bytes).")
+    print(f"Verified {len(parts)} ordered snapshot chunks ({len(rebuilt):,} bytes).")
     if not args.skip_assets:
         print(f"Verified source artwork for {len(refs)} image-frame references.")
     return 0
