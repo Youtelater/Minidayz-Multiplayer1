@@ -106,7 +106,7 @@ def main():
     with (out/"ace_reference_inventory.csv").open("w",newline="",encoding="utf-8") as f:
         w=csv.DictWriter(f,fieldnames=["kind","object_index","object_name","object_type_id","command_id","occurrences"])
         w.writeheader(); w.writerows(ace_rows)
-    manifest=dict(source=Path(a.source).name,source_bytes=Path(a.source).stat().st_size,
+    manifest=dict(source=Path(a.source).as_posix(),source_bytes=Path(a.source).stat().st_size,
         project_sections=len(p),version=p[16],canvas=[p[10],p[11]],objects=len(objects),
         layouts=layouts,layers=len(layers),instances=len(instances),animations=len(animations),
         image_frame_references=len(image_refs),audio_resources=len(audio),event_sheets=sheets,
