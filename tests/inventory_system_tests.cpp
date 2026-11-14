@@ -219,6 +219,14 @@ int main() {
     assert(backpack.capacity() == 26);
     assert(!backpack.unequip_backpack_to_slot(0)); // target occupied
 
+    // A backpack is one equipment instance, never a multi-count stack.
+    InventorySystem stacked_backpack;
+    assert(stacked_backpack.add(450, 2, 2));
+    assert(!stacked_backpack.equip_backpack_from_slot(0));
+    assert(stacked_backpack.count(450) == 2);
+    assert(stacked_backpack.capacity() == kInventorySlotCount);
+    assert(!stacked_backpack.equip_backpack_from_slot(32));
+
     // Replacing a pack returns the old pack to the same inventory slot.
     assert(backpack.add(451, 1));
     assert(backpack.equip_backpack_from_slot(1));
@@ -246,15 +254,17 @@ int main() {
     // Every original wearable backpack uses the same 11-slot storage grid.
     // Replacing a pack from an extended slot preserves the old pack atomically.
     InventorySystem replacement;
-    assert(replacement.add(450, 1));
+    assert(replacement.add(450, 1, 0, 55));
     assert(replacement.equip_backpack_from_slot(0));
     for (std::uint16_t id = 1; id <= 16; ++id) assert(replacement.add(id, 1));
-    assert(replacement.add(451, 1));
+    assert(replacement.add(451, 1, 0, 65));
     assert(replacement.slot(16)->item_id == 451);
     assert(replacement.equip_backpack_from_slot(16));
     assert(replacement.capacity() == 26);
     assert(replacement.equipped_backpack() == 451);
+    assert(replacement.equipped_backpack_condition() == 65);
     assert(replacement.slot(16)->item_id == 450);
+    assert(replacement.slot(16)->condition == 55);
     assert(replacement.count(450) == 1);
 
     // Save snapshots round-trip all slots, capacity, and equipped backpack.
