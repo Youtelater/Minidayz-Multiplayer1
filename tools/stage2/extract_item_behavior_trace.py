@@ -28,6 +28,10 @@ TARGETS = {
     3890676334551161: "item_activate2",
     240035455345341: "Check_space_backpack",
     6633395042052185: "Check_item_backpack",
+    2324199594797496: "Check_space_inventory",
+    967333361312322: "Drop_slot",
+    596668192020376: "Drop_backpack_item_id_123",
+    620158115450093: "Drop_backpack_named_container",
 }
 
 
