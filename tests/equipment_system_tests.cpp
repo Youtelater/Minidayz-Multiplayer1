@@ -65,6 +65,16 @@ int main() {
     assert(protection.vest == 20.0f);
     assert(!source_item_protection(450, protection));
 
+    EquipmentSlot source_slot{};
+    assert(EquipmentSystem::source_slot_for_item(410, source_slot));
+    assert(source_slot == EquipmentSlot::vest);
+    assert(EquipmentSystem::source_slot_for_item(411, source_slot));
+    assert(source_slot == EquipmentSlot::vest);
+    assert(EquipmentSystem::source_slot_for_item(412, source_slot));
+    assert(source_slot == EquipmentSlot::vest);
+    assert(EquipmentSystem::source_slot_for_item(409, source_slot));
+    assert(source_slot == EquipmentSlot::outerwear);
+
     EquipmentSystem armor;
     InventorySystem armor_inventory;
     assert(armor_inventory.add(251, 1));
