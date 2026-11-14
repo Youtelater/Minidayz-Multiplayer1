@@ -287,9 +287,7 @@ bool InventorySystem::pickup(GroundItem& ground, std::uint16_t max_stack) noexce
         !valid_item(ground.item_id))
         return false;
     if (max_stack == 0) max_stack = source_max_stack(ground.item_id);
-    // GroundItem represents one original world stack. Do not silently split
-    // malformed/oversized world piles during pickup; leave them untouched.
-    if (max_stack == 0 || ground.count > max_stack) return false;
+    if (max_stack == 0) return false;
     const std::uint8_t condition = ground.condition == kUseSourceItemCondition
         ? source_default_condition(ground.item_id) : ground.condition;
     if (condition > 100 || !add(ground.item_id, ground.count, max_stack, condition))
