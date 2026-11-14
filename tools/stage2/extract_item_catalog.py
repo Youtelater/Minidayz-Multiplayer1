@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Generate the Stage 2 item catalog from the original English item XML."""
+"""Generate the Stage 2 item catalog from the root-level original English item XML."""
 from __future__ import annotations
 import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "Minidayz-Multiplayer-main/l_eng_items.xml"
+SOURCE = ROOT / "l_eng_items.xml"
 OUTPUT = ROOT / "include/minidayz/generated/item_catalog.hpp"
 
 def main() -> None:
     if not SOURCE.is_file():
-        raise SystemExit(f"Original item catalog is missing: {SOURCE}")
+        raise SystemExit(f"Root-level original item catalog is missing: {SOURCE}")
     root = ET.parse(SOURCE).getroot()
     rows: list[tuple[int, str]] = []
     seen: set[int] = set()
