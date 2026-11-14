@@ -72,6 +72,7 @@ jobs:
           python3 tools/stage2/build_item_source_catalog.py
           python3 tools/stage2/build_item_sprite_catalog.py
           python3 tools/stage2/extract_item_behavior_trace.py
+          python3 tools/stage2/build_item_effect_catalog.py
 
       - name: Compile Item and Inventory Regression Tests
         run: |
@@ -90,6 +91,15 @@ jobs:
 
       - name: Run Player Equipment Regression Tests
         run: ./equipment_system_tests
+
+      - name: Compile Original Item Use Regression Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/player.cpp source/inventory.cpp source/item_use.cpp tests/item_use_tests.cpp \
+            -o item_use_tests
+
+      - name: Run Original Item Use Regression Tests
+        run: ./item_use_tests
 
       - name: Compile Original NPC Spawn Source Tests
         run: |
