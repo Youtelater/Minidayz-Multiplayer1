@@ -153,6 +153,21 @@ bool EquipmentSystem::equip_from_inventory(
     return true;
 }
 
+bool EquipmentSystem::damage_condition(
+    EquipmentSlot slot, std::uint8_t loss) noexcept {
+    const auto index = static_cast<std::size_t>(slot);
+    if (index >= state_.item_ids.size() || state_.item_ids[index] == 0 ||
+        loss == 0) return false;
+    if (loss >= state_.conditions[index]) {
+        state_.item_ids[index] = 0;
+        state_.conditions[index] = 100;
+    } else {
+        state_.conditions[index] = static_cast<std::uint8_t>(
+            state_.conditions[index] - loss);
+    }
+    return true;
+}
+
 bool EquipmentSystem::unequip_to_inventory(
     InventorySystem& inventory, EquipmentSlot equipment_slot,
     std::size_t inventory_slot) noexcept {
