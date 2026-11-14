@@ -254,27 +254,31 @@ bool InventorySystem::remove(std::size_t index,
     return true;
 }
 
-bool InventorySystem::pickup(GroundItem& ground) noexcept {
+bool InventorySystem::pickup(GroundItem& ground, std::uint16_t max_stack) noexcept {
     if (ground.empty() || (ground.item_id == 0) != (ground.count == 0) ||
         !valid_item(ground.item_id))
         return false;
+    if (max_stack == 0) max_stack = source_max_stack(ground.item_id);
+    if (max_stack == 0 || ground.count > max_stack) return false;
     const std::uint8_t condition = ground.condition == kUseSourceItemCondition
         ? source_default_condition(ground.item_id) : ground.condition;
-    if (condition > 100 || !add(ground.item_id, ground.count, 0, condition))
+    if (condition > 100 || !add(ground.item_id, ground.count, max_stack, condition))
         return false;
     ground = {};
     return true;
 }
 
 bool InventorySystem::drop(std::size_t index, std::uint16_t amount,
-                           GroundItem& ground) noexcept {
+                           GroundItem& ground, std::uint16_t max_stack) noexcept {
     if (index >= capacity_ || slots_[index].empty()) return false;
     if ((ground.item_id == 0) != (ground.count == 0)) return false;
 
     const auto& source = slots_[index];
     const std::uint16_t moving = amount == 0 ? source.count : amount;
-    const std::uint16_t stack_limit = source_max_stack(source.item_id);
-    if (moving == 0 || moving > source.count || moving > stack_limit)
+    const std::uint16_t stack_limit = max_stack == 0
+        ? source_max_stack(source.item_id) : max_stack;
+    if (stack_limit == 0 || moving == 0 || moving > source.count ||
+        moving > stack_limit)
         return false;
 
     if (!ground.empty()) {
