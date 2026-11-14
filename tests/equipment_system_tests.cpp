@@ -174,6 +174,51 @@ int main() {
     assert(repair_equipment.equipped(EquipmentSlot::head) == 0);
     assert(!repair_equipment.restore_condition(EquipmentSlot::head, 100));
 
+    // Original outerwear repair events: duct tape +15, epoxy glue +25,
+    // sewing kit +50, with the source's 100-condition cap and item use.
+    EquipmentSystem repaired_outerwear;
+    InventorySystem repair_materials;
+    assert(repair_materials.add(355, 1, 0, 40));
+    assert(repair_materials.add(39, 1));   // Duct Tape
+    assert(repair_materials.add(122, 1));  // Epoxy Glue
+    assert(repair_materials.add(35, 1));   // Sewing Kit
+    assert(repaired_outerwear.equip_from_inventory(
+        repair_materials, 0, EquipmentSlot::outerwear));
+    assert(repaired_outerwear.repair_outerwear_from_inventory(repair_materials, 1));
+    assert(repaired_outerwear.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::outerwear)] == 55);
+    assert(repair_materials.count(39) == 0);
+    assert(repaired_outerwear.repair_outerwear_from_inventory(repair_materials, 2));
+    assert(repaired_outerwear.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::outerwear)] == 80);
+    assert(repair_materials.count(122) == 0);
+    assert(repaired_outerwear.repair_outerwear_from_inventory(repair_materials, 3));
+    assert(repaired_outerwear.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::outerwear)] == 100);
+    assert(repair_materials.count(35) == 0);
+    assert(!repaired_outerwear.repair_outerwear_from_inventory(repair_materials, 3));
+
+    // Repair clamps at 100 and never consumes a material for full or broken gear.
+    EquipmentSystem clamped_outerwear;
+    InventorySystem clamp_materials;
+    assert(clamp_materials.add(355, 1, 0, 95));
+    assert(clamp_materials.add(39, 1));
+    assert(clamped_outerwear.equip_from_inventory(
+        clamp_materials, 0, EquipmentSlot::outerwear));
+    assert(clamped_outerwear.repair_outerwear_from_inventory(clamp_materials, 1));
+    assert(clamped_outerwear.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::outerwear)] == 100);
+    assert(clamp_materials.count(39) == 0);
+
+    EquipmentSystem broken_outerwear;
+    InventorySystem broken_materials;
+    assert(broken_materials.add(355, 1, 0, 0));
+    assert(broken_materials.add(39, 1));
+    assert(broken_outerwear.equip_from_inventory(
+        broken_materials, 0, EquipmentSlot::outerwear));
+    assert(!broken_outerwear.repair_outerwear_from_inventory(broken_materials, 1));
+    assert(broken_materials.count(39) == 1);
+
     // Failed replacement must leave both inventory and equipment unchanged.
     EquipmentSystem atomic;
     InventorySystem full;
