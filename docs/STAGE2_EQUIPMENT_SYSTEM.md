@@ -25,4 +25,4 @@ The original player damage event subtracts four flat protection values. The gene
 
 ## Still required before Stage 2 completion
 
-Clothing condition/durability, backpack capacity, the remaining item actions, and their save/load behavior still need to be ported from the original Construct variables and events. The armor-aware damage API is ready, but it still needs to be connected to the Stage 3 NPC hit path when that combat path is implemented. The temperature offset still needs to be combined with the source Day_cold/weather value. Values must not be guessed.
+Item condition storage and persistence are implemented using original instance variable 6; the source condition loss/repair rules still need to be ported. Backpack capacity and the remaining item actions also still need their original Construct semantics and save/load behavior. The armor-aware damage API is ready, but it still needs to be connected to the Stage 3 NPC hit path when that combat path is implemented. The temperature offset still needs to be combined with the source Day_cold/weather value. Values must not be guessed.
