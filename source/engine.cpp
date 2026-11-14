@@ -135,6 +135,23 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  return draw_sprite(slot,selected->image,draw_x,draw_y,
                      sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth);
 }
+bool Renderer::draw_source_animation(std::uint16_t object,const char* animation_name,
+                                      std::uint32_t frame,float x,float y,
+                                      float sx,float sy,float depth,float rotation) noexcept {
+ if(!animation_name||!animation_name[0]) return false;
+ const auto* begin=stage1::kSpriteAnimations;
+ const auto* end=begin+stage1::kSpriteAnimationCount;
+ const auto* found=std::lower_bound(begin,end,object,
+  [](const stage1::SpriteAnimationDef& item,std::uint16_t wanted){return item.object<wanted;});
+ for(;found!=end&&found->object==object;++found){
+  if(std::strcmp(found->name,animation_name)!=0) continue;
+  if(found->frame_count==0) return false;
+  const std::uint32_t selected=found->loop?frame%found->frame_count:
+      std::min(frame,found->frame_count-1);
+  return draw_source_sprite(object,found->animation,selected,x,y,sx,sy,depth,rotation);
+ }
+ return false;
+}
 bool Renderer::draw_item_icon(std::uint16_t item_id,float center_x,float center_y,
                               float max_width,float max_height) noexcept {
  std::size_t first=0, last=items::kItemSpriteDefinitionCount;
