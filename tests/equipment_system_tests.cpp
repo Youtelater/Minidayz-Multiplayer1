@@ -15,12 +15,10 @@ int main() {
     assert(slot == EquipmentSlot::outerwear);
     assert(EquipmentSystem::source_slot_for_item(402, slot));
     assert(slot == EquipmentSlot::vest);
-    assert(EquipmentSystem::source_slot_for_item(137, slot));
-    assert(slot == EquipmentSlot::hands);
-    assert(EquipmentSystem::source_slot_for_item(140, slot));
-    assert(slot == EquipmentSlot::feet);
     assert(EquipmentSystem::source_slot_for_item(158, slot));
-    assert(slot == EquipmentSlot::weapon);
+    assert(slot == EquipmentSlot::hands);
+    assert(!EquipmentSystem::source_slot_for_item(137, slot)); // gloves are not a source equipment slot
+    assert(!EquipmentSystem::source_slot_for_item(140, slot)); // no source footwear slot
     assert(!EquipmentSystem::source_slot_for_item(456, slot)); // civilian tent
 
     InventorySystem inventory;
