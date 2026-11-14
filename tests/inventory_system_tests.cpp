@@ -172,7 +172,7 @@ int main() {
 
     InventorySystem conditioned_pack;
     assert(conditioned_pack.add(450, 1, 0, 55));
-    assert(conditioned_pack.equip_backpack_from_slot(0, source_backpack_capacity(450)));
+    assert(conditioned_pack.equip_backpack_from_slot(0));
     assert(conditioned_pack.equipped_backpack_condition() == 55);
     auto pack_snapshot = conditioned_pack.snapshot();
     InventorySystem pack_restored;
@@ -209,9 +209,11 @@ int main() {
     InventorySystem backpack;
     assert(backpack.add(1, 1));
     assert(backpack.add(450, 1));
-    assert(!backpack.equip_backpack_from_slot(0, 20));
-    assert(!backpack.equip_backpack_from_slot(1, 15));
-    assert(backpack.equip_backpack_from_slot(1, source_backpack_capacity(450)));
+    assert(!backpack.equip_backpack_from_slot(0));
+    assert(backpack.add(456, 1)); // Civilian Tent is not wearable.
+    assert(!backpack.equip_backpack_from_slot(2));
+    assert(backpack.remove(2, 1));
+    assert(backpack.equip_backpack_from_slot(1));
     assert(backpack.slot(1)->empty());
     assert(backpack.equipped_backpack() == 450);
     assert(backpack.capacity() == 26);
@@ -219,7 +221,7 @@ int main() {
 
     // Replacing a pack returns the old pack to the same inventory slot.
     assert(backpack.add(451, 1));
-    assert(backpack.equip_backpack_from_slot(1, source_backpack_capacity(451)));
+    assert(backpack.equip_backpack_from_slot(1));
     assert(backpack.equipped_backpack() == 451);
     assert(backpack.capacity() == 26);
     assert(backpack.slot(1)->item_id == 450);
@@ -228,7 +230,7 @@ int main() {
     // Extended slots block unequip until their contents have been moved out.
     InventorySystem extended;
     assert(extended.add(450, 1));
-    assert(extended.equip_backpack_from_slot(0, source_backpack_capacity(450)));
+    assert(extended.equip_backpack_from_slot(0));
     for (std::uint16_t id = 1; id <= 15; ++id)
         assert(extended.add(id, 1));
     assert(extended.add(16, 1));
@@ -245,11 +247,11 @@ int main() {
     // Replacing a pack from an extended slot preserves the old pack atomically.
     InventorySystem replacement;
     assert(replacement.add(450, 1));
-    assert(replacement.equip_backpack_from_slot(0, source_backpack_capacity(450)));
+    assert(replacement.equip_backpack_from_slot(0));
     for (std::uint16_t id = 1; id <= 16; ++id) assert(replacement.add(id, 1));
     assert(replacement.add(451, 1));
     assert(replacement.slot(16)->item_id == 451);
-    assert(replacement.equip_backpack_from_slot(16, source_backpack_capacity(451)));
+    assert(replacement.equip_backpack_from_slot(16));
     assert(replacement.capacity() == 26);
     assert(replacement.equipped_backpack() == 451);
     assert(replacement.slot(16)->item_id == 450);
@@ -258,7 +260,7 @@ int main() {
     // Save snapshots round-trip all slots, capacity, and equipped backpack.
     InventorySystem persisted;
     assert(persisted.add(450, 1));
-    assert(persisted.equip_backpack_from_slot(0, source_backpack_capacity(450)));
+    assert(persisted.equip_backpack_from_slot(0));
     assert(persisted.add(18, 2));
     const auto saved_inventory = persisted.snapshot();
     InventorySystem restored;
