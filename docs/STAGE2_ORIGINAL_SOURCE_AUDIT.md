@@ -1,7 +1,6 @@
 # Stage 2 original-source audit
 
 - Authoritative original source: root-level `data.deobfuscated.js` (14,558,329-byte deobfuscated Construct export; the original version for this port).
-- Verified source size: 12,442,669 bytes; SHA-256: `1678ecbfb4e2cb50d431afe732772f5ef9fc86e27ed6fe96de4f8fbdfb045b75`.
 - Original project title/version: Mini DAYZ 1.6.0.
 - The original source contains the `Check_stack_size` event and `perk_cybb` branch.
 - Original item IDs and Construct object names are mapped by root-level `mp_itemtable.js`; localized names are in root-level `l_eng_items.xml`.
@@ -13,13 +12,13 @@ Do not infer item effects or backpack slot counts from item names. The raw sourc
 
 ## Verified build outputs
 
-The native CI run generated 405 original item definitions, resolved 329 item-to-Construct sprite mappings, and extracted 3,680 original inventory behavior event records. The native regression workflow passed on commit `075a11d74f87ccb62cf3dbe5ff2f12ca9eff59b8` (run `43628112641`). The matching 3DS build for that commit is still being verified; do not mark Step 1 complete until it passes. The 76 item IDs without an `MDZItemTable` mapping remain explicitly unresolved; no substitute art or item effects are fabricated.
+The native regression workflow passed on commit `9dd896b738c078b44fbe59933c01f0e4b20571f4` (run `43634698519`) after switching the pipeline back to the root-level `data.deobfuscated.js`, `mp_itemtable.js`, and localization files. Its world, item/inventory, equipment, ground-loot, item-use, NPC-spawn, and player test steps all completed successfully. The matching 3DS build is still being verified; do not mark Step 1 complete until it passes.
 
 
 ## Original companion-file and artwork inventory
 
 - The authoritative item object table is root-level `mp_itemtable.js`; item names, UI strings, player feedback, and item descriptions are in root-level `l_eng_items.xml`, `l_eng_ui.xml`, `l_eng_log.xml`, and `l_eng_new.xml`. The root contains 30 original localization XML files across the supported languages.
-- The root-level original artwork inventory contains 1,854 PNGs under `assets/gfx/`, 167 under `images/`, and 295 under `gfx/` (2,316 images total). The Construct sprite-frame extractor resolves the exact source references against root-level artwork and does not consult `Minidayz-Multiplayer-main/` or generated `romfs/` content. The Construct sprite-frame extractor resolves original frame references against that directory and fails on missing or byte-conflicting candidates rather than silently substituting artwork.
+- The root-level original artwork inventory contains 1,854 PNGs under `assets/gfx/`, 167 under `images/`, and 295 under `gfx/` (2,316 images total). The Construct sprite-frame extractor resolves exact source references against root-level artwork and fails on missing or byte-conflicting candidates rather than silently substituting artwork.
 - The Makefile's `stage1-assets` target rebuilds the snapshot from root-level `data.deobfuscated.js`, extracts directly from that same file, validates the generated source inventory, and builds the original sprite and item catalogs. The item behavior, effect, and equipment catalogs are also part of this target.
 
 ## Player appearance and equipment layers verified in original source
