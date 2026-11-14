@@ -35,7 +35,7 @@ def main():
         raise SystemExit("Original MDZItemTable missing")
     object_names = {
         int(match.group(1)): json.loads(match.group(2))
-        for match in re.finditer(r'(\\d+)\\s*:\\s*("[^"]*")', table[start + 1:end])
+        for match in re.finditer(r'(\d+)\s*:\s*("[^"]*")', table[start + 1:end])
     }
     project = json.loads(PROJECT.read_text(encoding="utf-8"))
     objects = project["project"][3]
