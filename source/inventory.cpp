@@ -1,4 +1,7 @@
 #include "minidayz/inventory.hpp"
+#include "minidayz/item_repair.hpp"
+
+#include <algorithm>
 #include "minidayz/generated/item_catalog.hpp"
 #include "minidayz/generated/item_source_catalog.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
@@ -288,6 +291,30 @@ bool InventorySystem::remove(std::size_t index,
     auto& entry = slots_[index];
     entry.count = static_cast<std::uint16_t>(entry.count - amount);
     if (entry.count == 0) entry = {};
+    return true;
+}
+
+bool InventorySystem::repair_equipped_backpack_from_inventory_slot(
+    std::size_t material_slot) noexcept {
+    const auto* material = slot(material_slot);
+    if (!material || material->empty() || equipped_backpack_ == 0 ||
+        equipped_backpack_condition_ == 0 || equipped_backpack_condition_ >= 100)
+        return false;
+
+    std::uint8_t gain = 0;
+    if (!source_item_repair_gain(material->item_id,
+                                 SourceRepairTarget::backpack, gain))
+        return false;
+    const auto repaired = static_cast<std::uint8_t>(
+        std::min<unsigned>(100, static_cast<unsigned>(equipped_backpack_condition_) + gain));
+    const auto before = snapshot();
+    if (!remove(material_slot, 1)) return false;
+    equipped_backpack_condition_ = repaired;
+    // Keep the operation atomic if inventory removal semantics ever change.
+    if (equipped_backpack_condition_ != repaired) {
+        (void)restore(before);
+        return false;
+    }
     return true;
 }
 
