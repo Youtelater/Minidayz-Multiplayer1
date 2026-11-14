@@ -31,7 +31,7 @@ def main():
     source_text = SOURCE.read_text(encoding="utf-8")
     # Match extract_construct.load(): the original Construct export contains
     # whitespace between unary minus and numeric literals, which JSON rejects.
-    source_text = re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-", source_text)
+    source_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", source_text)
     root = json.loads(source_text)
     project = root["project"]
     calls = []
