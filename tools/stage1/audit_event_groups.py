@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 def load_project(path):
-    source = Path(path).read_text(encoding="utf-8")
+    source = Path(path).read_text(encoding="utf-8-sig")
     source = re.sub(r'(?<![A-Za-z0-9_.])-\s+(?=\d)', '-', source)
     root = json.loads(source)
     project = root.get("project") if isinstance(root, dict) else None
