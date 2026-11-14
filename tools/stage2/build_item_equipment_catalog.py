@@ -45,7 +45,7 @@ def main():
                     continue
                 # Item instances store their original MDZ item ID in variable 16.
                 item_id = first_value(values, 16)
-                if not isinstance(item_id, int) or item_id not in item_ids:
+                if not isinstance(item_id, int) or item_id <= 0 or item_id not in item_ids:
                     continue
 
                 condition_value = first_value(values, 6)
