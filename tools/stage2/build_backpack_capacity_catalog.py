@@ -41,7 +41,7 @@ def main() -> None:
     project = json.loads(source)
     sheets = project["project"][6]
     matches = [event for sheet in sheets for event in events(sheet[1])
-               if function_name(event) == "Items_update"]
+               if function_name(event) == "Items_update" and len(event[5]) == 1]
     if len(matches) != 1:
         raise SystemExit(f"Expected one original Items_update function, found {len(matches)}")
     item_update = matches[0]
