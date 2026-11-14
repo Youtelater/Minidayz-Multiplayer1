@@ -4,10 +4,11 @@ namespace minidayz::items {
 
 bool EquipmentSystem::source_slot_for_item(std::uint16_t id,
                                            EquipmentSlot& slot) noexcept {
-    // IDs are taken from the original l_eng_items.xml and checked against
-    // MDZItemTable. Unclassified items are deliberately not equipable.
-    if ((id >= 250 && id <= 277) || (id >= 133 && id <= 136) ||
-        id == 748 || id == 787) {
+    // The original Player_get_hit and Drop_* events identify helmet,
+    // outerwear, vest and pants as separate protection slots. The original
+    // Hands activation category is the held-weapon slot.
+    if ((id >= 133 && id <= 136) || (id >= 250 && id <= 277) ||
+        id == 748 || id == 786 || id == 787) {
         slot = EquipmentSlot::head;
         return true;
     }
@@ -24,17 +25,9 @@ bool EquipmentSystem::source_slot_for_item(std::uint16_t id,
         slot = EquipmentSlot::pants;
         return true;
     }
-    if (id == 137 || id == 701 || id == 757) {
-        slot = EquipmentSlot::hands;
-        return true;
-    }
-    if (id == 139 || id == 140 || id == 141 || id == 700) {
-        slot = EquipmentSlot::feet;
-        return true;
-    }
     if ((id >= 151 && id <= 216) || (id >= 230 && id <= 246) ||
         id == 103 || id == 107 || id == 108 || id == 785) {
-        slot = EquipmentSlot::weapon;
+        slot = EquipmentSlot::hands;
         return true;
     }
     return false;
@@ -52,14 +45,31 @@ std::uint16_t EquipmentSystem::equipped(EquipmentSlot slot) const noexcept {
 }
 
 bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
-    for (std::size_t i = 0; i < saved.item_ids.size(); ++i) {
-        if (saved.item_ids[i] == 0) continue;
-        const auto slot = static_cast<EquipmentSlot>(i);
-        if (!item_fits_slot(saved.item_ids[i], slot)) return false;
-        for (std::size_t j = i + 1; j < saved.item_ids.size(); ++j)
-            if (saved.item_ids[i] == saved.item_ids[j]) return false;
+    EquipmentSnapshot normalized = saved;
+    // Migrate the first native save's provisional feet/weapon slots into the
+    // original game's outerwear/hands slots when those are otherwise empty.
+    const auto feet = static_cast<std::size_t>(EquipmentSlot::feet);
+    const auto weapon = static_cast<std::size_t>(EquipmentSlot::weapon);
+    const auto outerwear = static_cast<std::size_t>(EquipmentSlot::outerwear);
+    const auto hands = static_cast<std::size_t>(EquipmentSlot::hands);
+    if (normalized.item_ids[feet] != 0) {
+        if (normalized.item_ids[outerwear] != 0) return false;
+        normalized.item_ids[outerwear] = normalized.item_ids[feet];
+        normalized.item_ids[feet] = 0;
     }
-    state_ = saved;
+    if (normalized.item_ids[weapon] != 0) {
+        if (normalized.item_ids[hands] != 0) return false;
+        normalized.item_ids[hands] = normalized.item_ids[weapon];
+        normalized.item_ids[weapon] = 0;
+    }
+    for (std::size_t i = 0; i < normalized.item_ids.size(); ++i) {
+        if (normalized.item_ids[i] == 0) continue;
+        const auto slot = static_cast<EquipmentSlot>(i);
+        if (!item_fits_slot(normalized.item_ids[i], slot)) return false;
+        for (std::size_t j = i + 1; j < normalized.item_ids.size(); ++j)
+            if (normalized.item_ids[i] == normalized.item_ids[j]) return false;
+    }
+    state_ = normalized;
     return true;
 }
 
