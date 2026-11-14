@@ -41,6 +41,8 @@ public:
 
     std::uint16_t equipped(EquipmentSlot slot) const noexcept;
     PlayerArmorProtection protection() const noexcept;
+    // Apply the original flat armor subtraction to incoming player damage.
+    void apply_damage(PlayerSystem& player, float amount) const noexcept;
     // Original Player_temperature clothing term, excluding Day_cold.
     float temperature_offset() const noexcept;
     const EquipmentSnapshot& snapshot() const noexcept { return state_; }
