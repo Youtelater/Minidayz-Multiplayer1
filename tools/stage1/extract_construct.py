@@ -8,7 +8,7 @@ from collections import Counter
 from pathlib import Path
 
 def load(path):
-    s=Path(path).read_text(encoding="utf-8")
+    s=Path(path).read_text(encoding="utf-8-sig")
     s=re.sub(r'(?<![A-Za-z0-9_.])-\s+(?=\d)','-',s)
     root=json.loads(s)
     if not isinstance(root,dict) or not isinstance(root.get("project"),list):
