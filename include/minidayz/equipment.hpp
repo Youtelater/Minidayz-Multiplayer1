@@ -52,6 +52,8 @@ public:
                               std::size_t inventory_slot,
                               EquipmentSlot equipment_slot) noexcept;
     bool damage_condition(EquipmentSlot slot, std::uint8_t loss) noexcept;
+    // Apply an absolute condition value decoded from a source repair action.
+    bool restore_condition(EquipmentSlot slot, std::uint8_t condition) noexcept;
     bool unequip_to_inventory(InventorySystem& inventory,
                               EquipmentSlot equipment_slot,
                               std::size_t inventory_slot) noexcept;
