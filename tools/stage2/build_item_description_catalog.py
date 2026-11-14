@@ -37,7 +37,7 @@ def main() -> None:
         "inline constexpr SourceItemDescription kSourceItemDescriptions[] = {",
     ]
     for item_id, description in sorted(descriptions.items()):
-        lines.append(f"    {{{item_id}, {json.dumps(description, ensure_ascii=False)}},")
+        lines.append("    {" + str(item_id) + ", " + json.dumps(description, ensure_ascii=False) + "},")
     lines += ["};", f"inline constexpr std::size_t kItemsWithoutSourceDescription = {len(missing)};",
               "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
