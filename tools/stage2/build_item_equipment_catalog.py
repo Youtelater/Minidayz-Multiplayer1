@@ -13,9 +13,9 @@ OUTPUT = ROOT / "include/minidayz/generated/item_equipment_catalog.hpp"
 CONDITION_OUTPUT = ROOT / "include/minidayz/generated/item_condition_catalog.hpp"
 REPAIR_OUTPUT = ROOT / "include/minidayz/generated/item_outerwear_repair_catalog.hpp"
 REPAIR_EVENTS = {
-    5373788036138533: ("outerwear_tape", "Duct Tape"),
-    846519070449764: ("outerwear_glue", "Epoxy Glue"),
-    987128523726831: ("Patch_outerwear", "Sewing Kit"),
+    5373788036138533: ("outerwear_tape", "Duct Tape", 969950014104242),
+    846519070449764: ("outerwear_glue", "Epoxy Glue", 170518958309748),
+    987128523726831: ("Patch_outerwear", "Sewing Kit", 423981573339098),
 }
 # Original player events read these item instance variables.
 WARMTH_VARIABLE = 8
@@ -54,7 +54,7 @@ def source_outerwear_repairs(project, items_by_name):
     if game is None:
         raise SystemExit("Original Game_events sheet missing for outerwear repairs")
     rows = []
-    for uid, (label, item_name) in REPAIR_EVENTS.items():
+    for uid, (label, item_name, gain_event_uid) in REPAIR_EVENTS.items():
         event = find_event(game[1], uid)
         if event is None:
             raise SystemExit(f"Missing original outerwear repair event {uid}")
@@ -69,19 +69,23 @@ def source_outerwear_repairs(project, items_by_name):
         item_id = items_by_name.get(item_name)
         if item_id is None:
             raise SystemExit(f"Original item name missing for repair material: {item_name}")
+        gain_event = find_event(game[1], gain_event_uid)
+        if gain_event is None:
+            raise SystemExit(f"Missing original repair amount event {gain_event_uid}")
         gains = []
-        for node in walk_events(event):
-            for action in node[6] if isinstance(node[6], list) else []:
-                if not isinstance(action, list) or len(action) < 6 or action[0:2] != [1030, 88]:
-                    continue
-                params = action[5]
-                variable = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 10), None)
-                value = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 7), None)
-                if variable != 6 or not isinstance(value, list) or len(value) != 2 or value[0] != 4:
-                    continue
-                left, right = value[1]
-                if left == [21, 1030, False, None, 6] and isinstance(right, list) and len(right) == 2 and right[0] == 0:
-                    gains.append(right[1])
+        for action in gain_event[6] if isinstance(gain_event[6], list) else []:
+            if not isinstance(action, list) or len(action) < 6 or action[0:2] != [1030, 88]:
+                continue
+            params = action[5]
+            variable = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 10), None)
+            value = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 7), None)
+            if variable != 6 or not isinstance(value, list) or len(value) != 2 or value[0] != 4:
+                continue
+            if not isinstance(value[1], list) or len(value[1]) != 2:
+                continue
+            left, right = value[1]
+            if left == [21, 1030, False, None, 6] and isinstance(right, list) and len(right) == 2 and right[0] == 0:
+                gains.append(right[1])
         if len(gains) != 1 or not isinstance(gains[0], int) or gains[0] <= 0 or gains[0] > 100:
             raise SystemExit(f"Unexpected original repair gain for {label}: {gains}")
         rows.append((item_id, gains[0], label))
