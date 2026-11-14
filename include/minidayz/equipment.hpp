@@ -1,6 +1,7 @@
 #pragma once
 
 #include "minidayz/inventory.hpp"
+#include "minidayz/player.hpp"
 
 #include <array>
 #include <cstddef>
@@ -32,6 +33,7 @@ public:
                                      EquipmentSlot& slot) noexcept;
 
     std::uint16_t equipped(EquipmentSlot slot) const noexcept;
+    PlayerArmorProtection protection() const noexcept;
     const EquipmentSnapshot& snapshot() const noexcept { return state_; }
     bool restore(const EquipmentSnapshot& saved) noexcept;
 
