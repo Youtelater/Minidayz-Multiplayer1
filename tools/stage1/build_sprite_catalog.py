@@ -8,6 +8,7 @@ modified. Frame order in each output atlas is recorded in sprite_catalog.hpp.
 """
 from __future__ import annotations
 import hashlib, json, re, shutil, subprocess, sys, tempfile
+import re
 from collections import OrderedDict
 from pathlib import Path
 
@@ -33,7 +34,7 @@ def main() -> int:
     if not SOURCE.is_file():
         raise SystemExit("Missing parsed Construct source; run reassemble_snapshot.py and extract_construct.py first")
     script_digest = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    project = json.loads(SOURCE.read_text(encoding="utf-8"))
+    project = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", SOURCE.read_text(encoding="utf-8")))
     objects = project["project"][3]
     # Preserve first-seen source-sheet and frame order from the original object
     # and animation arrays. Deduplicate only identical source rectangles.
