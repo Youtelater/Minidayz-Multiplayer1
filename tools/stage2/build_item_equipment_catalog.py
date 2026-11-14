@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract armor values from original Construct item instances in the maps."""
+"""Extract original equipment and default-condition data from Construct map instances."""
 from __future__ import annotations
 import json
 import xml.etree.ElementTree as ET
@@ -9,7 +9,8 @@ ROOT = Path(__file__).resolve().parents[2]
 XML = ROOT / "Minidayz-Multiplayer-main/l_eng_items.xml"
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_equipment_catalog.hpp"
-# The original player hit event reads these four item instance variables.
+CONDITION_OUTPUT = ROOT / "include/minidayz/generated/item_condition_catalog.hpp"
+# Original player events read these item instance variables.
 WARMTH_VARIABLE = 8
 PROTECTION_VARIABLES = (12, 13, 14, 15)
 EQUIPMENT_RANGES = ((133, 136), (250, 277), (300, 307), (350, 368), (400, 415))
@@ -32,6 +33,7 @@ def main():
     }
     project = json.loads(PROJECT.read_text(encoding="utf-8"))
     properties = {}
+    item_conditions = {}
     for layout in project["project"][5]:
         for layer in layout[6]:
             instances = layer[14] if len(layer) > 14 and isinstance(layer[14], list) else []
@@ -43,7 +45,23 @@ def main():
                     continue
                 # Item instances store their original MDZ item ID in variable 16.
                 item_id = first_value(values, 16)
-                if not isinstance(item_id, int) or item_id not in item_ids or not is_equipment(item_id):
+                if not isinstance(item_id, int) or item_id not in item_ids:
+                    continue
+
+                condition_value = first_value(values, 6)
+                if isinstance(condition_value, (int, float)):
+                    condition = int(condition_value)
+                    if condition < 0 or condition > 100:
+                        raise SystemExit(f"Invalid original item condition for {item_id}: {condition}")
+                    previous_condition = item_conditions.get(item_id)
+                    if previous_condition is not None and previous_condition != condition:
+                        raise SystemExit(
+                            f"Conflicting original item condition for {item_id}: "
+                            f"{previous_condition} vs {condition}"
+                        )
+                    item_conditions[item_id] = condition
+
+                if not is_equipment(item_id):
                     continue
                 warmth_value = first_value(values, WARMTH_VARIABLE)
                 warmth = float(warmth_value) if isinstance(warmth_value, (int, float)) else 0.0
@@ -53,15 +71,18 @@ def main():
                 )
                 if warmth == 0.0 and not any(protection):
                     continue
-                previous = properties.get(item_id)
                 values_tuple = (warmth, *protection)
+                previous = properties.get(item_id)
                 if previous is not None and previous != values_tuple:
-                    raise SystemExit(f"Conflicting original equipment values for item {item_id}: {previous} vs {values_tuple}")
+                    raise SystemExit(
+                        f"Conflicting original equipment values for item {item_id}: "
+                        f"{previous} vs {values_tuple}"
+                    )
                 properties[item_id] = values_tuple
 
     rows = sorted(properties.items())
     if len(rows) < 30:
-        raise SystemExit(f"Unexpectedly low source armor coverage: {len(rows)}")
+        raise SystemExit(f"Unexpectedly low source equipment coverage: {len(rows)}")
     lines = [
         "#pragma once", "#include <cstddef>", "#include <cstdint>",
         "namespace minidayz::items {",
@@ -78,9 +99,28 @@ def main():
             formatted.append(text + "f")
         lines.append(f"    {{{item_id}, {', '.join(formatted)}}},")
     lines += ["};", "} // namespace minidayz::items", ""]
+
+    condition_rows = sorted(item_conditions.items())
+    if len(condition_rows) < 150:
+        raise SystemExit(f"Unexpectedly low original item condition coverage: {len(condition_rows)}")
+    condition_lines = [
+        "#pragma once", "#include <cstddef>", "#include <cstdint>",
+        "namespace minidayz::items {",
+        "struct SourceItemCondition { std::uint16_t item_id; std::uint8_t condition; };",
+        f"inline constexpr std::size_t kSourceItemConditionCount = {len(condition_rows)};",
+        "inline constexpr SourceItemCondition kSourceItemConditions[] = {",
+    ]
+    for item_id, condition in condition_rows:
+        condition_lines.append(f"    {{{item_id}, {condition}}},")
+    condition_lines += ["};", "} // namespace minidayz::items", ""]
+
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Generated {len(rows)} original equipment property rows (warmth/protection) from map instances")
+    CONDITION_OUTPUT.write_text("\n".join(condition_lines), encoding="utf-8")
+    print(
+        f"Generated {len(rows)} original equipment property rows and "
+        f"{len(condition_rows)} item condition defaults"
+    )
 
 if __name__ == "__main__":
     main()
