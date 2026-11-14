@@ -24,8 +24,8 @@ TARGETS = {
     1529638233252698: "Picking inventory items",
     594580094599696: "Droppin items",
     3439113896437199: "inventory_items",
-    3112397055840946: "item_activate",
-    6084778030682197: "item_activate2",
+    8381242860269222: "item_activate",
+    3890676334551161: "item_activate2",
 }
 
 
