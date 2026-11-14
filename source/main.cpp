@@ -8,6 +8,7 @@
 #include "minidayz/item_use.hpp"
 #include "minidayz/ground_loot.hpp"
 #include "minidayz/generated/item_catalog.hpp"
+#include "minidayz/generated/ui_catalog.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -515,7 +516,7 @@ public:
             if (has_saved_game_) {
                 renderer.draw_solid_rect(18.0f, 78.0f, 284.0f, 54.0f,
                                          C2D_Color32(62, 92, 66, 255));
-                renderer.draw_text("CONTINUE", 92.0f, 96.0f, 0.55f);
+                renderer.draw_text(minidayz::ui::source_ui_text(2), 92.0f, 96.0f, 0.55f);
             } else {
                 renderer.draw_solid_rect(18.0f, 78.0f, 284.0f, 54.0f,
                                          C2D_Color32(55, 65, 58, 255));
@@ -523,7 +524,7 @@ public:
             }
             renderer.draw_solid_rect(18.0f, 145.0f, 284.0f, 57.0f,
                                      C2D_Color32(110, 75, 49, 255));
-            renderer.draw_text("NEW GAME", 92.0f, 165.0f, 0.55f);
+            renderer.draw_text(minidayz::ui::source_ui_text(1), 92.0f, 165.0f, 0.55f);
             if (!world_ready_)
                 renderer.draw_text("WORLD GENERATION FAILED - RETRY NEW GAME", 18.0f, 204.0f, 0.27f);
             renderer.draw_text("A: Continue   X: New Game", 18.0f, 216.0f, 0.32f);
