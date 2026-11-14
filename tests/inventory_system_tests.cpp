@@ -126,6 +126,15 @@ int main() {
     assert(conditioned_ground.empty());
     assert(condition_inventory.slot(2)->condition == 40);
 
+    const auto conditioned_snapshot = condition_inventory.snapshot();
+    InventorySystem condition_restored;
+    assert(condition_restored.restore(conditioned_snapshot));
+    assert(condition_restored.slot(2)->condition == 40);
+    assert(condition_restored.slot(1)->condition == 100);
+    auto bad_condition_snapshot = conditioned_snapshot;
+    bad_condition_snapshot.slots[2].condition = 101;
+    assert(!condition_restored.restore(bad_condition_snapshot));
+
     InventorySystem conditioned_pack;
     assert(conditioned_pack.add(450, 1, 0, 55));
     assert(conditioned_pack.equip_backpack_from_slot(0, 20));
