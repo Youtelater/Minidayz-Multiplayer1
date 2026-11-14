@@ -91,22 +91,12 @@ bool is_backpack_item(std::uint16_t item_id) noexcept {
 }
 
 std::size_t source_backpack_capacity(std::uint16_t item_id) noexcept {
-    // Native inventory is bounded to 32 slots. Values mirror the source
-    // backpack size tiers; non-wearable items intentionally return zero.
-    switch (item_id) {
-        case 450: return 20; // Taloon Backpack
-        case 451: return 22; // Hunting Backpack
-        case 452: return 24; // Mountain Backpack
-        case 453: return 20; // School Backpack
-        case 454: return 18; // Improvised Sling Bag
-        case 455: return 20; // Improvised Backpack
-        case 457: return 26; // Tortilla Backpack
-        case 458: case 752: return 18; // Satchel
-        case 459: case 753: return 22; // Army Satchel
-        case 460: case 754: return 20; // Medical Satchel
-        case 462: return 18; // Fuel Pack
-        default: return 0;
-    }
+    // Capacity values have not yet been proven from the original
+    // Check_space_backpack / Check_item_backpack event expressions.
+    // Return zero rather than expose the previously inferred slot counts as
+    // source facts. The runtime must not equip a backpack using guessed data.
+    (void)item_id;
+    return 0;
 }
 
 
