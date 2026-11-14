@@ -78,6 +78,12 @@ int main() {
     assert(protection.vest == 20.0f);
     assert(EquipmentSystem::source_slot_for_item(409, source_slot));
     assert(source_slot == EquipmentSlot::outerwear);
+    InventorySystem cbrn_inventory;
+    EquipmentSystem cbrn_equipment;
+    assert(cbrn_inventory.add(410, 1));
+    assert(cbrn_equipment.equip_from_inventory(
+        cbrn_inventory, 0, EquipmentSlot::vest));
+    assert(cbrn_equipment.protection().vest == 10.0f);
 
     EquipmentSystem armor;
     InventorySystem armor_inventory;
