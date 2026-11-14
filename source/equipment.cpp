@@ -213,6 +213,7 @@ bool EquipmentSystem::repair_from_inventory(
             equipment_slot = EquipmentSlot::pants;
             break;
         case SourceRepairTarget::backpack:
+        default:
             return false;
     }
     const auto equipment_index = static_cast<std::size_t>(equipment_slot);
