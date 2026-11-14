@@ -182,7 +182,9 @@ public:
                 if (equipped != 0) {
                     // Tapping an occupied equipment slot removes it back into
                     // the backpack; failed transfers leave it equipped.
-                    (void)equipment_.unequip_to_inventory(inventory_, slot, 0);
+                    const std::size_t destination = first_available_inventory_slot(equipped);
+                    if (destination < inventory_.capacity())
+                        (void)equipment_.unequip_to_inventory(inventory_, slot, destination);
                     selected_inventory_slot_ = -1;
                 }
             }
@@ -436,6 +438,16 @@ private:
         const int index = (x - 8) / 44;
         return index >= 0 && index < static_cast<int>(minidayz::items::kEquipmentSlotCount)
             ? index : -1;
+    }
+
+    std::size_t first_available_inventory_slot(std::uint16_t item_id) const noexcept {
+        const auto limit = minidayz::items::source_max_stack(item_id);
+        for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
+            const auto* item = inventory_.slot(i);
+            if (!item || item->empty()) return i;
+            if (item->item_id == item_id && item->count < limit) return i;
+        }
+        return inventory_.capacity();
     }
 
     static int inventory_slot_at(int x, int y, std::size_t page) noexcept {
