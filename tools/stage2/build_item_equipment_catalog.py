@@ -80,7 +80,7 @@ def main():
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Generated {len(rows)} exact original item armor values from map instances")
+    print(f"Generated {len(rows)} original equipment property rows (warmth/protection) from map instances")
 
 if __name__ == "__main__":
     main()
