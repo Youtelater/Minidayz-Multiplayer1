@@ -109,7 +109,12 @@ def main():
     ]
     for item_id, secondary, effect in rows:
         values = [effect["hunger"], effect["thirst"], effect["health"], effect["temperature"]]
-        formatted = ", ".join(f"{v:.9g}f" for v in values)
+        def cpp_float(value: float) -> str:
+            text = f"{value:.9g}"
+            if "." not in text and "e" not in text:
+                text += ".0"
+            return text + "f"
+        formatted = ", ".join(cpp_float(v) for v in values)
         lines.append(f"    {{{item_id}, {str(secondary).lower()}, {formatted}}},")
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
