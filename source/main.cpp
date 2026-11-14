@@ -298,7 +298,7 @@ public:
         }
         if (input.touching && drag_source_slot_ >= 0) {
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
-            if (equipment_target >= 0 && equipment_target < 5) {
+            if (equipment_target >= 0 && equipment_target < 6) {
                 drag_target_equipment_slot_ = equipment_target;
                 drag_target_slot_ = -1;
             } else {
@@ -309,7 +309,17 @@ public:
             }
         }
         if (touch_released) {
-            if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
+            if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
+                const auto* dragged = inventory_.slot(
+                    static_cast<std::size_t>(drag_source_slot_));
+                const std::size_t capacity = dragged
+                    ? minidayz::items::source_backpack_capacity(dragged->item_id) : 0;
+                if (capacity > minidayz::items::kInventorySlotCount &&
+                    inventory_.equip_backpack_from_slot(
+                        static_cast<std::size_t>(drag_source_slot_), capacity)) {
+                    selected_inventory_slot_ = -1;
+                }
+            } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
                 if (equipment_.equip_from_inventory(
                     inventory_, static_cast<std::size_t>(drag_source_slot_),
                     static_cast<minidayz::items::EquipmentSlot>(drag_target_equipment_slot_)))
