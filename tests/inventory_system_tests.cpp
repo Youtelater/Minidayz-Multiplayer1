@@ -205,6 +205,11 @@ int main() {
     assert(source_backpack_capacity(456) == 0);
     assert(source_backpack_capacity(461) == 0);
     assert(source_backpack_capacity(1) == 0);
+    for (const std::uint16_t id : {450, 451, 452, 453, 454, 455, 457,
+                                   458, 459, 460, 462, 752, 753, 754}) {
+        assert(source_construct_object(id) != 65535);
+        assert(source_sprite_object(id) != 65535);
+    }
 
     InventorySystem backpack;
     assert(backpack.add(1, 1));
