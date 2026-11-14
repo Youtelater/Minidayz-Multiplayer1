@@ -265,6 +265,17 @@ void PlayerSystem::apply_damage(float amount) noexcept {
     apply_damage(amount, PlayerDeathReason::other);
 }
 
+void PlayerSystem::apply_damage(float amount,
+                                const PlayerArmorProtection& protection) noexcept {
+    const float armor = std::max(0.0f,
+        finite_or_zero(protection.helmet) +
+        finite_or_zero(protection.outerwear) +
+        finite_or_zero(protection.vest) +
+        finite_or_zero(protection.pants));
+    apply_damage(std::max(0.0f, finite_or_zero(amount) - armor),
+                 PlayerDeathReason::other);
+}
+
 void PlayerSystem::apply_damage(float amount, PlayerDeathReason cause) noexcept {
     if (!state_.alive || !std::isfinite(amount) || amount <= 0.0f) return;
     state_.health = std::max(0.0f, state_.health - amount);
