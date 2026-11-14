@@ -172,7 +172,7 @@ int main() {
 
     InventorySystem conditioned_pack;
     assert(conditioned_pack.add(450, 1, 0, 55));
-    assert(conditioned_pack.equip_backpack_from_slot(0, 20));
+    assert(conditioned_pack.equip_backpack_from_slot(0, source_backpack_capacity(450)));
     assert(conditioned_pack.equipped_backpack_condition() == 55);
     auto pack_snapshot = conditioned_pack.snapshot();
     InventorySystem pack_restored;
@@ -187,11 +187,21 @@ int main() {
     assert(!is_backpack_item(456)); // Civilian Tent
     assert(!is_backpack_item(461)); // Supplies Stash
     assert(!is_backpack_item(1));
-    // Unknown capacities must remain unresolved until traced from the original events.
-    assert(source_backpack_capacity(450) == 0);
-    assert(source_backpack_capacity(451) == 0);
-    assert(source_backpack_capacity(457) == 0);
-    assert(source_backpack_capacity(754) == 0);
+    // The original Items_update function exposes Backpack storage slots 1-11.
+    assert(source_backpack_capacity(450) == 26);
+    assert(source_backpack_capacity(451) == 26);
+    assert(source_backpack_capacity(452) == 26);
+    assert(source_backpack_capacity(453) == 26);
+    assert(source_backpack_capacity(454) == 26);
+    assert(source_backpack_capacity(455) == 26);
+    assert(source_backpack_capacity(457) == 26);
+    assert(source_backpack_capacity(458) == 26);
+    assert(source_backpack_capacity(459) == 26);
+    assert(source_backpack_capacity(460) == 26);
+    assert(source_backpack_capacity(462) == 26);
+    assert(source_backpack_capacity(752) == 26);
+    assert(source_backpack_capacity(753) == 26);
+    assert(source_backpack_capacity(754) == 26);
     assert(source_backpack_capacity(456) == 0);
     assert(source_backpack_capacity(461) == 0);
     assert(source_backpack_capacity(1) == 0);
@@ -201,24 +211,24 @@ int main() {
     assert(backpack.add(450, 1));
     assert(!backpack.equip_backpack_from_slot(0, 20));
     assert(!backpack.equip_backpack_from_slot(1, 15));
-    assert(backpack.equip_backpack_from_slot(1, 20));
+    assert(backpack.equip_backpack_from_slot(1, source_backpack_capacity(450)));
     assert(backpack.slot(1)->empty());
     assert(backpack.equipped_backpack() == 450);
-    assert(backpack.capacity() == 20);
+    assert(backpack.capacity() == 26);
     assert(!backpack.unequip_backpack_to_slot(0)); // target occupied
 
     // Replacing a pack returns the old pack to the same inventory slot.
     assert(backpack.add(451, 1));
-    assert(backpack.equip_backpack_from_slot(1, 22));
+    assert(backpack.equip_backpack_from_slot(1, source_backpack_capacity(451)));
     assert(backpack.equipped_backpack() == 451);
-    assert(backpack.capacity() == 22);
+    assert(backpack.capacity() == 26);
     assert(backpack.slot(1)->item_id == 450);
     assert(backpack.slot(1)->count == 1);
 
     // Extended slots block unequip until their contents have been moved out.
     InventorySystem extended;
     assert(extended.add(450, 1));
-    assert(extended.equip_backpack_from_slot(0, 22));
+    assert(extended.equip_backpack_from_slot(0, source_backpack_capacity(450)));
     for (std::uint16_t id = 1; id <= 15; ++id)
         assert(extended.add(id, 1));
     assert(extended.add(16, 1));
@@ -231,32 +241,33 @@ int main() {
     assert(extended.equipped_backpack() == 0);
     assert(extended.slot(14)->item_id == 450);
 
-    // Replacing a pack from an extended slot can downsize if the old pack
-    // has a safe free return slot in the new grid.
-    InventorySystem downsize;
-    assert(downsize.add(450, 1));
-    assert(downsize.equip_backpack_from_slot(0, 22));
-    for (std::uint16_t id = 1; id <= 16; ++id) assert(downsize.add(id, 1));
-    assert(downsize.add(451, 1));
-    assert(downsize.slot(16)->item_id == 451);
-    assert(downsize.equip_backpack_from_slot(16, 20));
-    assert(downsize.capacity() == 20);
-    assert(downsize.equipped_backpack() == 451);
-    assert(downsize.count(450) == 1);
+    // Every original wearable backpack uses the same 11-slot storage grid.
+    // Replacing a pack from an extended slot preserves the old pack atomically.
+    InventorySystem replacement;
+    assert(replacement.add(450, 1));
+    assert(replacement.equip_backpack_from_slot(0, source_backpack_capacity(450)));
+    for (std::uint16_t id = 1; id <= 16; ++id) assert(replacement.add(id, 1));
+    assert(replacement.add(451, 1));
+    assert(replacement.slot(16)->item_id == 451);
+    assert(replacement.equip_backpack_from_slot(16, source_backpack_capacity(451)));
+    assert(replacement.capacity() == 26);
+    assert(replacement.equipped_backpack() == 451);
+    assert(replacement.slot(16)->item_id == 450);
+    assert(replacement.count(450) == 1);
 
     // Save snapshots round-trip all slots, capacity, and equipped backpack.
     InventorySystem persisted;
     assert(persisted.add(450, 1));
-    assert(persisted.equip_backpack_from_slot(0, 20));
+    assert(persisted.equip_backpack_from_slot(0, source_backpack_capacity(450)));
     assert(persisted.add(18, 2));
     const auto saved_inventory = persisted.snapshot();
     InventorySystem restored;
     assert(restored.restore(saved_inventory));
-    assert(restored.capacity() == 20);
+    assert(restored.capacity() == 26);
     assert(restored.equipped_backpack() == 450);
     assert(restored.count(18) == 2);
     auto corrupt_snapshot = saved_inventory;
-    corrupt_snapshot.slots[20] = {1, 1};
+    corrupt_snapshot.slots[26] = {1, 1};
     assert(!restored.restore(corrupt_snapshot));
     assert(restored.capacity() == 20);
     corrupt_snapshot = saved_inventory;
