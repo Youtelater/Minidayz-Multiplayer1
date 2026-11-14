@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Extract the supplied original Construct export into machine-readable and C++ data.
-Usage: python tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
+Usage: python tools/stage1/extract_construct.py Minidayz-Multiplayer-main/data.js --out data/stage1
 Does not read romfs/, raw/, c2injt.js, or any MP JSON file.
 """
 import argparse,csv,json,re
