@@ -181,6 +181,33 @@ int main() {
     assert(pack_restored.unequip_backpack_to_slot(0));
     assert(pack_restored.slot(0)->condition == 55);
 
+    // Original Drop_slot exposes a Backpack drop path. Preserve the item's
+    // source condition and do not strand items in extended inventory slots.
+    InventorySystem dropped_pack;
+    assert(dropped_pack.add(450, 1, 0, 55));
+    assert(dropped_pack.equip_backpack_from_slot(0, 20));
+    GroundItem backpack_ground{};
+    assert(dropped_pack.drop_equipped_backpack(backpack_ground));
+    assert(backpack_ground.item_id == 450);
+    assert(backpack_ground.count == 1);
+    assert(backpack_ground.condition == 55);
+    assert(dropped_pack.equipped_backpack() == 0);
+    assert(dropped_pack.capacity() == kInventorySlotCount);
+
+    InventorySystem protected_pack;
+    assert(protected_pack.add(450, 1));
+    assert(protected_pack.equip_backpack_from_slot(0, 20));
+    for (std::uint16_t id = 1; id <= 16; ++id)
+        assert(protected_pack.add(id, 1));
+    GroundItem protected_ground{};
+    assert(!protected_pack.drop_equipped_backpack(protected_ground));
+    assert(protected_ground.empty());
+    assert(protected_pack.equipped_backpack() == 450);
+    assert(protected_pack.capacity() == 20);
+    assert(protected_pack.remove(15, 1));
+    assert(protected_pack.drop_equipped_backpack(protected_ground));
+    assert(protected_ground.item_id == 450);
+
     // Exact wearable backpack IDs from the original MDZItemTable.
     assert(is_backpack_item(450));
     assert(is_backpack_item(754));
