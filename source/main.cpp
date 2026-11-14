@@ -208,13 +208,12 @@ public:
         // Temporary preview movement tuning only. Original source movement
         // values are not guessed; they will replace these when the movement
         // event/ACE trace is complete.
+        preview_rules_ = minidayz::source_survival_rules(
+            minidayz::SurvivalDifficulty::regular);
         preview_rules_.walk_speed = 72.0f;
         preview_rules_.run_speed = 108.0f;
         preview_rules_.collision_half_width = 5.0f;
         preview_rules_.collision_half_height = 7.0f;
-        preview_rules_.max_health = 100.0f;
-        preview_rules_.max_hunger = 100.0f;
-        preview_rules_.max_thirst = 100.0f;
         preview_rules_.min_temperature = -10.0f;
         preview_rules_.max_temperature = 10.0f;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
@@ -376,8 +375,6 @@ public:
         }
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
-        // Source-derived survival rates are still zero until their original
-        // event cadence is resolved; the update path is now live and ready.
         player_.update_survival(dt, preview_rules_);
         if (npc_ready_) npcs_.update(dt, player_.state().x, player_.state().y,
                                      &WorldPreviewScene::blocked, this);
