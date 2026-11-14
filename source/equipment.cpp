@@ -92,17 +92,9 @@ bool EquipmentSystem::unequip_to_inventory(
     if (slot_index >= state_.item_ids.size() ||
         state_.item_ids[slot_index] == 0)
         return false;
-    const auto old_inventory = inventory.snapshot();
     const std::uint16_t outgoing_id = state_.item_ids[slot_index];
-    if (!inventory.add(outgoing_id, 1)) return false;
-    // add() may stack into an existing slot, so the requested target is
-    // intentionally a placement hint only when that slot is empty.
-    (void)inventory_slot;
+    if (!inventory.add_to_slot(inventory_slot, outgoing_id, 1)) return false;
     state_.item_ids[slot_index] = 0;
-    if (!inventory.restore(inventory.snapshot())) {
-        (void)inventory.restore(old_inventory);
-        return false;
-    }
     return true;
 }
 
