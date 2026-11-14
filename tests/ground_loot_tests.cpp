@@ -52,7 +52,7 @@ int main() {
     // then dropped into the same world-loot system with its condition intact.
     InventorySystem pack_inventory;
     assert(pack_inventory.add(450, 1, 0, 42));
-    assert(pack_inventory.equip_backpack_from_slot(0, 0));
+    assert(pack_inventory.equip_backpack_from_slot(0));
     assert(pack_inventory.equipped_backpack() == 450);
     assert(pack_inventory.capacity() == kInventorySlotCount);
     auto pack_snapshot = pack_inventory.snapshot();
@@ -70,7 +70,7 @@ int main() {
     // A full ground-loot array must leave the equipped backpack untouched.
     InventorySystem full_pack;
     assert(full_pack.add(450, 1));
-    assert(full_pack.equip_backpack_from_slot(0, 0));
+    assert(full_pack.equip_backpack_from_slot(0));
     GroundLootSystem full_ground;
     for (std::size_t i = 0; i < kMaximumGroundLootItems; ++i)
         assert(full_ground.add({1, 1, 100}, static_cast<float>(i), 0.0f));
