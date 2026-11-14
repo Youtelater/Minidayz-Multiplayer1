@@ -25,6 +25,7 @@ struct InventorySnapshot {
     std::array<InventorySlot, kMaximumInventorySlotCount> slots{};
     std::uint16_t capacity{static_cast<std::uint16_t>(kInventorySlotCount)};
     std::uint16_t equipped_backpack{};
+    std::uint8_t equipped_backpack_condition{100};
 };
 
 // Baseline stack limits ported from the original Check_stack_size event.
@@ -53,14 +54,19 @@ public:
                                   std::size_t source_capacity) noexcept;
     bool unequip_backpack_to_slot(std::size_t inventory_slot) noexcept;
     std::uint16_t equipped_backpack() const noexcept { return equipped_backpack_; }
+    std::uint8_t equipped_backpack_condition() const noexcept {
+        return equipped_backpack_condition_;
+    }
     std::size_t capacity() const noexcept { return capacity_; }
 
     // max_stack == 0 selects the original game's baseline rule for item_id.
     bool add(std::uint16_t item_id, std::uint16_t amount,
-             std::uint16_t max_stack = 0) noexcept;
+             std::uint16_t max_stack = 0,
+             std::uint8_t condition = 100) noexcept;
     // Place or merge into one exact slot without silently choosing another.
     bool add_to_slot(std::size_t slot, std::uint16_t item_id,
-                     std::uint16_t amount, std::uint16_t max_stack = 0) noexcept;
+                     std::uint16_t amount, std::uint16_t max_stack = 0,
+                     std::uint8_t condition = 100) noexcept;
     bool remove(std::size_t slot, std::uint16_t amount) noexcept;
 
     // Ground transfers are atomic: failed pickups/drops leave both sides intact.
@@ -89,6 +95,7 @@ private:
     std::array<InventorySlot, kMaximumInventorySlotCount> slots_{};
     std::size_t capacity_{kInventorySlotCount};
     std::uint16_t equipped_backpack_{};
+    std::uint8_t equipped_backpack_condition_{100};
 };
 
 } // namespace minidayz::items
