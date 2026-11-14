@@ -6,7 +6,7 @@ conditions, actions, expression parameters, parent/child relationships, and
 event UIDs for inventory use, pickup, transfer, and drop.
 
 The native inventory port now implements the baseline stack-size groups from
-the original `Check_stack_size` function in `Minidayz-Multiplayer-main/data.js`, including
+the original `Check_stack_size` function in `data.deobfuscated.js`, including
 the original item-ID groups and numeric limits. The `perk_cybb` expression
 branch is kept separate until its Construct expression semantics are mapped;
 the baseline limits are not presented as the perk-modified limits.
