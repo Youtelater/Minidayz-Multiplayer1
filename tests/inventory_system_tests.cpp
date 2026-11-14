@@ -413,5 +413,33 @@ int main() {
     assert(repair_inventory.count(251) == 0);
     assert(!repair_inventory.restore_condition(0, 100));
 
+    // The original backpack repair menu supports duct tape (+15) and epoxy glue (+25).
+    InventorySystem backpack_repair;
+    assert(backpack_repair.add(450, 1, 0, 40));
+    assert(backpack_repair.add(39, 1));
+    assert(backpack_repair.add(122, 1));
+    assert(backpack_repair.equip_backpack_from_slot(0));
+    assert(backpack_repair.repair_equipped_backpack_from_inventory_slot(1));
+    assert(backpack_repair.equipped_backpack_condition() == 55);
+    assert(backpack_repair.count(39) == 0);
+    assert(backpack_repair.repair_equipped_backpack_from_inventory_slot(2));
+    assert(backpack_repair.equipped_backpack_condition() == 80);
+    assert(backpack_repair.count(122) == 0);
+    assert(!backpack_repair.repair_equipped_backpack_from_inventory_slot(2));
+
+    InventorySystem full_backpack_repair;
+    assert(full_backpack_repair.add(450, 1, 0, 100));
+    assert(full_backpack_repair.add(39, 1));
+    assert(full_backpack_repair.equip_backpack_from_slot(0));
+    assert(!full_backpack_repair.repair_equipped_backpack_from_inventory_slot(1));
+    assert(full_backpack_repair.count(39) == 1);
+
+    InventorySystem wrong_backpack_repair;
+    assert(wrong_backpack_repair.add(450, 1, 0, 40));
+    assert(wrong_backpack_repair.add(35, 1));
+    assert(wrong_backpack_repair.equip_backpack_from_slot(0));
+    assert(!wrong_backpack_repair.repair_equipped_backpack_from_inventory_slot(1));
+    assert(wrong_backpack_repair.count(35) == 1);
+
     return 0;
 }
