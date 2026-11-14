@@ -7,6 +7,7 @@ namespace minidayz {
 enum class PlayerFacing : std::uint8_t { down, up, left, right };
 enum class PlayerAnimation : std::uint8_t { idle, walk, run, dead };
 enum class PlayerDeathReason : std::uint8_t { none, hunger, thirst, cold, other };
+enum class SurvivalDifficulty : std::uint8_t { novice, regular, veteran };
 
 // Object 679 is the default player skin (player_skin_def_2) in the extracted inventory.
 inline constexpr std::uint16_t kSourcePlayerObject = 679;
@@ -31,6 +32,10 @@ struct PlayerState {
 // Numeric movement/survival tuning is injected from source-equivalent rules.
 // The preview scene may use clearly labeled temporary movement values, but
 // source survival rates must remain unset until their event cadence is traced.
+// Source rates are expressed per second after converting the original
+// five-second hunger/thirst cadence into the native frame-time update.
+PlayerRules source_survival_rules(SurvivalDifficulty difficulty) noexcept;
+
 struct PlayerArmorProtection {
     float helmet{};
     float outerwear{};
