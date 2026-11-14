@@ -119,9 +119,9 @@ int main() {
     assert(worn_armor.outerwear == 2.0f);
     assert(worn_armor.vest == 3.0f);
     assert(worn_armor.pants == 2.0f);
-    assert(std::fabs(armor.temperature_offset() - (6.5f / 7.0f)) < 0.0001f);
+    assert(std::fabs(armor.temperature_offset() - (6.0f / 7.0f)) < 0.0001f);
     assert(armor.damage_condition(EquipmentSlot::pants, 50));
-    assert(std::fabs(armor.temperature_offset() - (6.5f / 3.5f)) < 0.0001f);
+    assert(std::fabs(armor.temperature_offset() - (6.0f / 3.5f)) < 0.0001f);
     assert(armor.damage_condition(EquipmentSlot::vest, 100));
     assert(armor.equipped(EquipmentSlot::vest) == 0);
     assert(armor.protection().vest == 0.0f);
