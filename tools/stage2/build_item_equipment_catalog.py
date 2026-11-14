@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-XML = ROOT / "Minidayz-Multiplayer-main/l_eng_items.xml"
+XML = ROOT / "l_eng_items.xml"
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_equipment_catalog.hpp"
 CONDITION_OUTPUT = ROOT / "include/minidayz/generated/item_condition_catalog.hpp"
