@@ -293,8 +293,9 @@ public:
             if (equipment_target >= 0) {
                 if (equipment_target == 5) {
                     const auto backpack = inventory_.equipped_backpack();
-                    const std::size_t destination = first_available_inventory_slot(backpack);
-                    if (backpack != 0 && destination < inventory_.capacity())
+                    const std::size_t destination =
+                        first_available_base_inventory_slot(backpack);
+                    if (backpack != 0 && destination < minidayz::items::kInventorySlotCount)
                         (void)inventory_.unequip_backpack_to_slot(destination);
                     selected_inventory_slot_ = -1;
                 } else {
@@ -656,6 +657,19 @@ private:
             if (item->item_id == item_id && item->count < limit) return i;
         }
         return inventory_.capacity();
+    }
+
+    // The original backpack equipment slot is outside the 15 base slots.
+    // Unequipping must return it to a base slot; an empty backpack-storage
+    // slot cannot be used as the destination while shrinking the grid.
+    std::size_t first_available_base_inventory_slot(std::uint16_t item_id) const noexcept {
+        const auto limit = minidayz::items::source_max_stack(item_id);
+        for (std::size_t i = 0; i < minidayz::items::kInventorySlotCount; ++i) {
+            const auto* item = inventory_.slot(i);
+            if (!item || item->empty()) return i;
+            if (item->item_id == item_id && item->count < limit) return i;
+        }
+        return minidayz::items::kInventorySlotCount;
     }
 
     static int inventory_slot_at(int x, int y, std::size_t page) noexcept {
