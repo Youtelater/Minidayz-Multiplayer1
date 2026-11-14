@@ -15,7 +15,7 @@ int main() {
     assert(ground.count() == 1);
 
     const auto* closest = ground.nearest(102.0f, 200.0f, 5.0f);
-    assert(closest && closest->item.item_id == 1 && closest->item.count == 2);
+    assert(closest && closest->item.item_id == 11 && closest->item.count == 2);
     assert(!ground.pickup_nearest(inventory, 110.0f, 200.0f, 5.0f));
     assert(ground.pickup_nearest(inventory, 102.0f, 200.0f, 5.0f));
     assert(ground.count() == 0 && inventory.count(11) == 3);
