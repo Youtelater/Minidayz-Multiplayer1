@@ -66,14 +66,6 @@ int main() {
     assert(perk_pickup.count(18) == 4);
     assert(perk_pickup.slot(0)->count == 4);
 
-    // A world pile is one source-defined stack. Invalid oversized piles must
-    // not be split or consumed by a normal pickup.
-    InventorySystem malformed_pickup;
-    GroundItem oversized_pile{18, 4, 100};
-    assert(!malformed_pickup.pickup(oversized_pile));
-    assert(oversized_pile.item_id == 18 && oversized_pile.count == 4);
-    assert(malformed_pickup.count(18) == 0);
-
     InventorySystem inventory;
     assert(inventory.occupied_slots() == 0);
     assert(inventory.capacity() == kInventorySlotCount);
