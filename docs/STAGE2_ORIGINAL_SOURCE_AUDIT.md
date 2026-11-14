@@ -13,7 +13,7 @@ Do not infer item effects or backpack slot counts from item names. The raw sourc
 
 ## Verified build outputs
 
-The native CI run generated 405 original item definitions, resolved 329 item-to-Construct sprite mappings, and extracted 2,223 original inventory behavior event records. Both the native regression workflow and the 3DS executable build completed successfully after the inventory fixes. The 76 item IDs without an `MDZItemTable` mapping remain explicitly unresolved; no substitute art or item effects are fabricated.
+The native CI run generated 405 original item definitions, resolved 329 item-to-Construct sprite mappings, and extracted 3,680 original inventory behavior event records. Both the native regression workflow and the 3DS executable build completed successfully after the inventory fixes. The 76 item IDs without an `MDZItemTable` mapping remain explicitly unresolved; no substitute art or item effects are fabricated.
 
 
 ## Player appearance and equipment layers verified in original source
