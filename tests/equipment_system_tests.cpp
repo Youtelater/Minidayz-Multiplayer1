@@ -152,6 +152,22 @@ int main() {
     assert(condition_equipment.equipped(EquipmentSlot::head) == 0);
     assert(!condition_equipment.damage_condition(EquipmentSlot::head, 1));
 
+    // Repair uses an absolute source-derived value and never resurrects a broken item.
+    EquipmentSystem repair_equipment;
+    InventorySystem repair_source;
+    assert(repair_source.add(251, 1, 0, 35));
+    assert(repair_equipment.equip_from_inventory(
+        repair_source, 0, EquipmentSlot::head));
+    assert(repair_equipment.restore_condition(EquipmentSlot::head, 80));
+    assert(repair_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::head)] == 80);
+    assert(!repair_equipment.restore_condition(EquipmentSlot::head, 80));
+    assert(!repair_equipment.restore_condition(EquipmentSlot::head, 34));
+    assert(!repair_equipment.restore_condition(EquipmentSlot::head, 101));
+    assert(repair_equipment.damage_condition(EquipmentSlot::head, 80));
+    assert(repair_equipment.equipped(EquipmentSlot::head) == 0);
+    assert(!repair_equipment.restore_condition(EquipmentSlot::head, 100));
+
     // Failed replacement must leave both inventory and equipment unchanged.
     EquipmentSystem atomic;
     InventorySystem full;
