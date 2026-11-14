@@ -397,5 +397,21 @@ int main() {
     assert(exact_slot.add_to_slot(5, 18, 1));
     assert(exact_slot.add_to_slot(5, 18, 1));
     assert(exact_slot.slot(5)->count == 2);
+    // Source-driven durability repair accepts only a validated higher value.
+    InventorySystem repair_inventory;
+    assert(repair_inventory.add(251, 1, 0, 40));
+    assert(repair_inventory.restore_condition(0, 75));
+    assert(repair_inventory.slot(0)->condition == 75);
+    assert(!repair_inventory.restore_condition(0, 75));
+    assert(!repair_inventory.restore_condition(0, 39));
+    assert(!repair_inventory.restore_condition(0, 101));
+    assert(!repair_inventory.restore_condition(15, 100));
+    assert(repair_inventory.count(251) == 1);
+    assert(repair_inventory.damage_condition(0, 74));
+    assert(repair_inventory.slot(0)->condition == 1);
+    assert(repair_inventory.damage_condition(0, 1));
+    assert(repair_inventory.count(251) == 0);
+    assert(!repair_inventory.restore_condition(0, 100));
+
     return 0;
 }
