@@ -74,17 +74,22 @@ bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
     if (normalized.item_ids[feet] != 0) {
         if (normalized.item_ids[outerwear] != 0) return false;
         normalized.item_ids[outerwear] = normalized.item_ids[feet];
+        normalized.conditions[outerwear] = normalized.conditions[feet];
         normalized.item_ids[feet] = 0;
+        normalized.conditions[feet] = 100;
     }
     if (normalized.item_ids[weapon] != 0) {
         if (normalized.item_ids[hands] != 0) return false;
         normalized.item_ids[hands] = normalized.item_ids[weapon];
+        normalized.conditions[hands] = normalized.conditions[weapon];
         normalized.item_ids[weapon] = 0;
+        normalized.conditions[weapon] = 100;
     }
     for (std::size_t i = 0; i < normalized.item_ids.size(); ++i) {
         if (normalized.item_ids[i] == 0) continue;
         const auto slot = static_cast<EquipmentSlot>(i);
-        if (!item_fits_slot(normalized.item_ids[i], slot)) return false;
+        if (!item_fits_slot(normalized.item_ids[i], slot) ||
+            normalized.conditions[i] > 100) return false;
         for (std::size_t j = i + 1; j < normalized.item_ids.size(); ++j)
             if (normalized.item_ids[i] == normalized.item_ids[j]) return false;
     }
@@ -133,13 +138,17 @@ bool EquipmentSystem::equip_from_inventory(
 
     const auto old_inventory = inventory.snapshot();
     const std::uint16_t incoming_id = incoming->item_id;
+    const std::uint8_t incoming_condition = incoming->condition;
     const std::uint16_t outgoing_id = state_.item_ids[slot_index];
+    const std::uint8_t outgoing_condition = state_.conditions[slot_index];
     if (!inventory.remove(inventory_slot, 1)) return false;
-    if (outgoing_id != 0 && !inventory.add(outgoing_id, 1)) {
+    if (outgoing_id != 0 &&
+        !inventory.add(outgoing_id, 1, 0, outgoing_condition)) {
         (void)inventory.restore(old_inventory);
         return false;
     }
     state_.item_ids[slot_index] = incoming_id;
+    state_.conditions[slot_index] = incoming_condition;
     return true;
 }
 
@@ -151,8 +160,11 @@ bool EquipmentSystem::unequip_to_inventory(
         state_.item_ids[slot_index] == 0)
         return false;
     const std::uint16_t outgoing_id = state_.item_ids[slot_index];
-    if (!inventory.add_to_slot(inventory_slot, outgoing_id, 1)) return false;
+    const std::uint8_t outgoing_condition = state_.conditions[slot_index];
+    if (!inventory.add_to_slot(inventory_slot, outgoing_id, 1, 0,
+                               outgoing_condition)) return false;
     state_.item_ids[slot_index] = 0;
+    state_.conditions[slot_index] = 100;
     return true;
 }
 
