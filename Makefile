@@ -41,19 +41,18 @@ include $(DEVKITARM)/3ds_rules
 #-----------------------------------------------------------------
 # COMPILATION FLAGS
 #-----------------------------------------------------------------
-INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
-			   -I$(TOPDIR)/$(ROMFS) \
-			   -I/opt/devkitpro/libctru/include \
-			   -I$(PORTLIBS)/include \
-			   -I$(DEVKITARM)/arm-none-eabi/include
+# Keep project-relative paths rooted at TOPDIR; preserve absolute SDK paths.
+INCLUDE		:= $(foreach dir,$(INCLUDES),$(if $(filter /%,$(dir)),-I$(dir),-I$(TOPDIR)/$(dir))) \
+		   -I$(TOPDIR)/$(ROMFS) \
+		   -I$(DEVKITARM)/arm-none-eabi/include
 
 ARCH		:= -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=cp15
 
 # Added -DMSGPACK_NO_BOOST to prevent looking for external boost headers
 CFLAGS		:= -g -Wall -O2 -mword-relocations \
-			   -ffunction-sections \
-			   $(ARCH) $(DEFINES) -DMSGPACK_NO_BOOST \
-			   $(INCLUDE)
+		   -ffunction-sections \
+		   $(ARCH) $(DEFINES) -DMSGPACK_NO_BOOST \
+		   $(INCLUDE)
 
 CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti
 
@@ -65,7 +64,7 @@ LIBS		:= -lcitro2d -lcitro3d -lctru -lz -lm
 
 # Collect all files inside romfs to track dependencies accurately
 # Escape spaces so GNU Make treats each ROMFS filename as one prerequisite.
-ROMFS_FILES := $(shell find "$(ROMFS)" -type f -printf '%p\n' 2>/dev/null | sed 's/ /\\ /g')
+ROMFS_FILES := $(shell find "$(ROMFS)" -type f -printf '%p\\n' 2>/dev/null | sed 's/ /\\\\ /g')
 
 #-----------------------------------------------------------------
 # MAIN RULES
@@ -129,5 +128,3 @@ stage1-assets:
 	@python3 tools/stage2/extract_item_behavior_trace.py
 	@python3 tools/stage2/build_item_effect_catalog.py
 	@python3 tools/stage2/build_item_equipment_catalog.py
-
-
