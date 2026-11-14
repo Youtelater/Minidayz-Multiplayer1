@@ -9,6 +9,9 @@ namespace minidayz::items {
 inline constexpr std::size_t kInventorySlotCount = 15;
 inline constexpr std::size_t kMaximumInventorySlotCount = 32;
 
+inline constexpr std::uint8_t kUseSourceItemCondition = 255;
+std::uint8_t source_default_condition(std::uint16_t item_id) noexcept;
+
 struct InventorySlot {
     std::uint16_t item_id{};
     std::uint16_t count{};
@@ -19,7 +22,7 @@ struct InventorySlot {
 struct GroundItem {
     std::uint16_t item_id{};
     std::uint16_t count{};
-    std::uint8_t condition{100}; // Preserved when dropped/picked up.
+    std::uint8_t condition{kUseSourceItemCondition}; // Resolve from original item variable 6 on pickup.
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
@@ -64,11 +67,11 @@ public:
     // max_stack == 0 selects the original game's baseline rule for item_id.
     bool add(std::uint16_t item_id, std::uint16_t amount,
              std::uint16_t max_stack = 0,
-             std::uint8_t condition = 100) noexcept;
+             std::uint8_t condition = kUseSourceItemCondition) noexcept;
     // Place or merge into one exact slot without silently choosing another.
     bool add_to_slot(std::size_t slot, std::uint16_t item_id,
                      std::uint16_t amount, std::uint16_t max_stack = 0,
-                     std::uint8_t condition = 100) noexcept;
+                     std::uint8_t condition = kUseSourceItemCondition) noexcept;
     bool remove(std::size_t slot, std::uint16_t amount) noexcept;
 
     // Ground transfers are atomic: failed pickups/drops leave both sides intact.
