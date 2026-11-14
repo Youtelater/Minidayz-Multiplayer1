@@ -400,7 +400,7 @@ public:
                 : equipment_.snapshot().conditions[i];
             if (item_id != 0) {
                 (void)renderer.draw_item_icon(item_id, x + 25.0f, 55.0f, 34.0f, 25.0f);
-                if (condition < 100) {
+                if (condition > 0 && condition < 100) {
                     renderer.draw_solid_rect(x + 5.0f, 77.0f, 40.0f, 2.0f,
                                              C2D_Color32(30, 30, 30, 255));
                     renderer.draw_solid_rect(x + 5.0f, 77.0f,
@@ -433,7 +433,7 @@ public:
                     std::snprintf(quantity, sizeof(quantity), "x%u",
                                   static_cast<unsigned>(item->count));
                     renderer.draw_text(quantity, x + 4.0f, y + 27.0f, 0.20f);
-                    if (item->condition < 100) {
+                    if (item->condition > 0 && item->condition < 100) {
                         renderer.draw_solid_rect(x + 6.0f, y + 35.0f, 44.0f, 2.0f,
                                                  C2D_Color32(30, 30, 30, 255));
                         renderer.draw_solid_rect(x + 6.0f, y + 35.0f,
