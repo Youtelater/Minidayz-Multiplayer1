@@ -111,7 +111,7 @@ int main() {
     // these three non-wearable IDs start at zero; ordinary items start at 100.
     assert(source_default_condition(1) == 0);
     assert(source_default_condition(75) == 0);
-    assert(source_default_condition(320) == 0);
+    assert(source_default_condition(320) == 100); // Not an original localized item ID.
     assert(source_default_condition(18) == 100);
     InventorySystem source_condition_defaults;
     assert(source_condition_defaults.add(1, 1));
