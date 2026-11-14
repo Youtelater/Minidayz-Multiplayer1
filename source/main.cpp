@@ -22,7 +22,7 @@ namespace {
 // fresh entropy for this native session. This is a per-run seed, not a claim
 // that the original browser Math.random() sequence is reproducible.
 constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-constexpr std::uint32_t kSaveVersion = 5u;
+constexpr std::uint32_t kSaveVersion = 6u;
 constexpr const char* kSavePath = "sdmc:/3ds/Minidayz/world.sav";
 constexpr const char* kSaveTempPath = "sdmc:/3ds/Minidayz/world.tmp";
 
@@ -37,12 +37,21 @@ struct LegacyInventorySnapshotV3 {
     std::uint16_t equipped_backpack{};
 };
 
+struct LegacyInventorySnapshotV5 {
+    std::array<minidayz::items::InventorySlot,
+               minidayz::items::kMaximumInventorySlotCount> slots{};
+    std::uint16_t capacity{static_cast<std::uint16_t>(minidayz::items::kInventorySlotCount)};
+    std::uint16_t equipped_backpack{};
+    std::uint8_t equipped_backpack_condition{100};
+};
+
 struct LegacyEquipmentSnapshotV3 {
     std::array<std::uint16_t, minidayz::items::kEquipmentSlotCount> item_ids{};
 };
 
 static_assert(sizeof(LegacyInventorySlotV3) == 4, "v3 inventory slot ABI changed");
 static_assert(sizeof(LegacyInventorySnapshotV3) == 132, "v3 inventory snapshot ABI changed");
+static_assert(sizeof(LegacyInventorySnapshotV5) == 198, "v5 inventory snapshot ABI changed");
 static_assert(sizeof(LegacyEquipmentSnapshotV3) == 14, "v3 equipment snapshot ABI changed");
 
 struct SavedGame {
@@ -62,12 +71,28 @@ minidayz::items::InventorySnapshot migrate_inventory_v3(
     result.equipped_backpack = legacy.equipped_backpack;
     result.equipped_backpack_condition = legacy.equipped_backpack == 0
         ? 100 : minidayz::items::source_default_condition(legacy.equipped_backpack);
-    for (std::size_t i = 0; i < legacy.slots.size(); ++i) {
+    result.backpack_capacity = static_cast<std::uint8_t>(
+        minidayz::items::source_backpack_storage_capacity(legacy.equipped_backpack));
+    for (std::size_t i = 0; i < legacy.slots.size(); ++i) {}
         const auto item_id = legacy.slots[i].item_id;
         const auto condition = item_id == 0
             ? 100 : minidayz::items::source_default_condition(item_id);
         result.slots[i] = {item_id, legacy.slots[i].count, condition};
     }
+    return result;
+}
+
+minidayz::items::InventorySnapshot migrate_inventory_v5(
+    const LegacyInventorySnapshotV5& legacy) noexcept {
+    minidayz::items::InventorySnapshot result{};
+    result.slots = legacy.slots;
+    result.capacity = legacy.capacity;
+    result.equipped_backpack = legacy.equipped_backpack;
+    result.equipped_backpack_condition = legacy.equipped_backpack_condition;
+    // v5 had no separate container payload; initialize its source-defined
+    // capacity with empty contents when migrating an equipped special bag.
+    result.backpack_capacity = static_cast<std::uint8_t>(
+        minidayz::items::source_backpack_storage_capacity(legacy.equipped_backpack));
     return result;
 }
 
@@ -122,13 +147,23 @@ bool load_saved_game(SavedGame& save) noexcept {
             body_ok = consume_legacy_padding(file, padding);
         }
     } else if (header_ok && save.version == 4u) {
-        // Version 4 persisted player, inventory and equipment; ground loot was
-        // not part of that format, so it starts empty when migrated.
+        // Version 4 used the pre-container inventory layout and had no loot.
+        LegacyInventorySnapshotV5 legacy_inventory{};
         body_ok =
             std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
-            std::fread(&save.inventory, sizeof(save.inventory), 1, file) == 1 &&
+            std::fread(&legacy_inventory, sizeof(legacy_inventory), 1, file) == 1 &&
             std::fread(&save.equipment, sizeof(save.equipment), 1, file) == 1;
+        if (body_ok) save.inventory = migrate_inventory_v5(legacy_inventory);
         save.ground_loot = {};
+    } else if (header_ok && save.version == 5u) {
+        // Version 5 added ground loot but still had no separate backpack data.
+        LegacyInventorySnapshotV5 legacy_inventory{};
+        body_ok =
+            std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
+            std::fread(&legacy_inventory, sizeof(legacy_inventory), 1, file) == 1 &&
+            std::fread(&save.equipment, sizeof(save.equipment), 1, file) == 1 &&
+            std::fread(&save.ground_loot, sizeof(save.ground_loot), 1, file) == 1;
+        if (body_ok) save.inventory = migrate_inventory_v5(legacy_inventory);
     } else if (header_ok && save.version == kSaveVersion) {
         body_ok =
             std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
