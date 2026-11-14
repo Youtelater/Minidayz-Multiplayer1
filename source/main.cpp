@@ -21,9 +21,24 @@ namespace {
 // fresh entropy for this native session. This is a per-run seed, not a claim
 // that the original browser Math.random() sequence is reproducible.
 constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-constexpr std::uint32_t kSaveVersion = 3u;
+constexpr std::uint32_t kSaveVersion = 4u;
 constexpr const char* kSavePath = "sdmc:/3ds/Minidayz/world.sav";
 constexpr const char* kSaveTempPath = "sdmc:/3ds/Minidayz/world.tmp";
+
+struct LegacyInventorySlotV3 {
+    std::uint16_t item_id{};
+    std::uint16_t count{};
+};
+
+struct LegacyInventorySnapshotV3 {
+    std::array<LegacyInventorySlotV3, minidayz::items::kMaximumInventorySlotCount> slots{};
+    std::uint16_t capacity{static_cast<std::uint16_t>(minidayz::items::kInventorySlotCount)};
+    std::uint16_t equipped_backpack{};
+};
+
+struct LegacyEquipmentSnapshotV3 {
+    std::array<std::uint16_t, minidayz::items::kEquipmentSlotCount> item_ids{};
+};
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
@@ -33,6 +48,26 @@ struct SavedGame {
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
 };
+
+minidayz::items::InventorySnapshot migrate_inventory_v3(
+    const LegacyInventorySnapshotV3& legacy) noexcept {
+    minidayz::items::InventorySnapshot result{};
+    result.capacity = legacy.capacity;
+    result.equipped_backpack = legacy.equipped_backpack;
+    result.equipped_backpack_condition = 100;
+    for (std::size_t i = 0; i < legacy.slots.size(); ++i) {
+        result.slots[i] = {legacy.slots[i].item_id, legacy.slots[i].count, 100};
+    }
+    return result;
+}
+
+minidayz::items::EquipmentSnapshot migrate_equipment_v3(
+    const LegacyEquipmentSnapshotV3& legacy) noexcept {
+    minidayz::items::EquipmentSnapshot result{};
+    result.item_ids = legacy.item_ids;
+    result.conditions.fill(100);
+    return result;
+}
 
 bool load_saved_game(SavedGame& save) noexcept {
     std::FILE* file = std::fopen(kSavePath, "rb");
@@ -46,11 +81,19 @@ bool load_saved_game(SavedGame& save) noexcept {
         // Migrate the previous player-only save format without discarding it.
         body_ok = std::fread(&save.player, sizeof(save.player), 1, file) == 1;
         save.inventory = {};
-    } else if (header_ok && save.version == 2u) {
+    } else if (header_ok && (save.version == 2u || save.version == 3u)) {
+        LegacyInventorySnapshotV3 legacy_inventory{};
         body_ok =
             std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
-            std::fread(&save.inventory, sizeof(save.inventory), 1, file) == 1;
-        save.equipment = {};
+            std::fread(&legacy_inventory, sizeof(legacy_inventory), 1, file) == 1;
+        if (body_ok) save.inventory = migrate_inventory_v3(legacy_inventory);
+        if (body_ok && save.version == 3u) {
+            LegacyEquipmentSnapshotV3 legacy_equipment{};
+            body_ok = std::fread(&legacy_equipment, sizeof(legacy_equipment), 1, file) == 1;
+            if (body_ok) save.equipment = migrate_equipment_v3(legacy_equipment);
+        } else {
+            save.equipment = {};
+        }
     } else if (header_ok && save.version == kSaveVersion) {
         body_ok =
             std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
