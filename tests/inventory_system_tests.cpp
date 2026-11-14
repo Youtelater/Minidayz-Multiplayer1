@@ -262,6 +262,14 @@ int main() {
     corrupt_snapshot.slots[0] = {9999, 1};
     assert(!restored.restore(corrupt_snapshot));
 
+    InventorySystem wear_inventory;
+    assert(wear_inventory.add(251, 1, 0, 65));
+    assert(wear_inventory.damage_condition(0, 20));
+    assert(wear_inventory.slot(0)->condition == 45);
+    assert(wear_inventory.damage_condition(0, 45));
+    assert(wear_inventory.slot(0)->empty());
+    assert(!wear_inventory.damage_condition(0, 1));
+
     // Ground pickup/drop mirrors the original inventory transfer flow.
     InventorySystem ground_inventory;
     GroundItem ground_pile{18, 4};
