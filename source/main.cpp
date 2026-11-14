@@ -58,9 +58,13 @@ minidayz::items::InventorySnapshot migrate_inventory_v3(
     minidayz::items::InventorySnapshot result{};
     result.capacity = legacy.capacity;
     result.equipped_backpack = legacy.equipped_backpack;
-    result.equipped_backpack_condition = 100;
+    result.equipped_backpack_condition = legacy.equipped_backpack == 0
+        ? 100 : minidayz::items::source_default_condition(legacy.equipped_backpack);
     for (std::size_t i = 0; i < legacy.slots.size(); ++i) {
-        result.slots[i] = {legacy.slots[i].item_id, legacy.slots[i].count, 100};
+        const auto item_id = legacy.slots[i].item_id;
+        const auto condition = item_id == 0
+            ? 100 : minidayz::items::source_default_condition(item_id);
+        result.slots[i] = {item_id, legacy.slots[i].count, condition};
     }
     return result;
 }
@@ -69,7 +73,10 @@ minidayz::items::EquipmentSnapshot migrate_equipment_v3(
     const LegacyEquipmentSnapshotV3& legacy) noexcept {
     minidayz::items::EquipmentSnapshot result{};
     result.item_ids = legacy.item_ids;
-    result.conditions.fill(100);
+    for (std::size_t i = 0; i < legacy.item_ids.size(); ++i) {
+        result.conditions[i] = legacy.item_ids[i] == 0
+            ? 100 : minidayz::items::source_default_condition(legacy.item_ids[i]);
+    }
     return result;
 }
 
