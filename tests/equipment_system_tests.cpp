@@ -1,6 +1,7 @@
 #include "minidayz/equipment.hpp"
 
 #include <cassert>
+#include <cmath>
 
 using namespace minidayz;
 using namespace minidayz::items;
@@ -50,12 +51,15 @@ int main() {
     // Original map instance variables supply exact flat armor protection.
     SourceItemProtection protection{};
     assert(source_item_protection(251, protection));
+    assert(protection.warmth == 2.0f);
     assert(protection.helmet == 4.0f);
     assert(source_item_protection(355, protection));
+    assert(protection.warmth == 7.0f);
     assert(protection.outerwear == 2.0f);
     assert(source_item_protection(402, protection));
     assert(protection.vest == 3.0f);
     assert(source_item_protection(303, protection));
+    assert(protection.warmth == 7.0f);
     assert(protection.pants == 2.0f);
     assert(source_item_protection(408, protection));
     assert(protection.vest == 20.0f);
@@ -76,6 +80,7 @@ int main() {
     assert(armor_values.outerwear == 2.0f);
     assert(armor_values.vest == 3.0f);
     assert(armor_values.pants == 2.0f);
+    assert(std::fabs(armor.temperature_offset() - (5.0f / 7.0f)) < 0.0001f);
 
     PlayerState protected_state{};
     protected_state.health = 100.0f;
