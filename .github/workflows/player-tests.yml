@@ -73,6 +73,7 @@ jobs:
           python3 tools/stage2/build_item_sprite_catalog.py
           python3 tools/stage2/extract_item_behavior_trace.py
           python3 tools/stage2/build_item_effect_catalog.py
+          python3 tools/stage2/build_item_equipment_catalog.py
 
       - name: Compile Item and Inventory Regression Tests
         run: |
@@ -86,7 +87,7 @@ jobs:
       - name: Compile Player Equipment Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
-            source/inventory.cpp source/equipment.cpp tests/equipment_system_tests.cpp \
+            source/player.cpp source/inventory.cpp source/equipment.cpp tests/equipment_system_tests.cpp \
             -o equipment_system_tests
 
       - name: Run Player Equipment Regression Tests
