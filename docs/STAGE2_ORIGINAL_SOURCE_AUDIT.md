@@ -22,9 +22,9 @@ Keep these descriptions absent unless another root-level original source provide
 
 ## Extraction and build audit
 
-The Stage 1 extraction pipeline rebuilds its snapshot byte-for-byte from root-level `data.deobfuscated.js`, parses the Construct project, validates generated inventories against the parsed original, and resolves original frame references against root-level artwork. The Stage 2 item, sprite, inventory behavior, direct-use effect, and equipment catalogs are generated from root-level source inputs.
+The Stage 1 extraction pipeline rebuilds its snapshot byte-for-byte from root-level `data.deobfuscated.js`, parses the Construct project, validates generated inventories against the parsed original, and resolves original frame references against root-level artwork. The Stage 2 item-name, item-description, sprite, inventory behavior, direct-use effect, and equipment catalogs are generated from root-level source inputs. The new description generator preserves all 528 original description records and reports the 20 missing item descriptions and 143 extra description IDs without inventing or reassigning text.
 
-The item-name catalog helper was corrected to read root-level `l_eng_items.xml`; it must never read from the excluded newer-version directory. The stack-size behavior documentation likewise references the root-level Construct export.
+The item-name catalog helper was corrected to read root-level `l_eng_items.xml`; the item-description catalog is generated from root-level `l_eng_new.xml`. Neither helper reads from the excluded newer-version directory. The stack-size behavior documentation likewise references the root-level Construct export.
 
 ## Original gameplay/UI evidence captured
 
