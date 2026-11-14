@@ -79,6 +79,9 @@ public:
     // Apply an absolute condition value decoded from a source repair action.
     // This deliberately does not invent repair amounts or repair eligibility.
     bool restore_condition(std::size_t slot, std::uint8_t condition) noexcept;
+    // Repair the equipped backpack using an original source repair material.
+    bool repair_equipped_backpack_from_inventory_slot(
+        std::size_t material_slot) noexcept;
 
     // Ground transfers are atomic: failed pickups/drops leave both sides intact.
     bool pickup(GroundItem& ground, std::uint16_t max_stack = 0) noexcept;
