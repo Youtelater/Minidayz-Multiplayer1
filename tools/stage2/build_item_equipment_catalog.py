@@ -11,6 +11,12 @@ XML = ROOT / "l_eng_items.xml"
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_equipment_catalog.hpp"
 CONDITION_OUTPUT = ROOT / "include/minidayz/generated/item_condition_catalog.hpp"
+REPAIR_OUTPUT = ROOT / "include/minidayz/generated/item_outerwear_repair_catalog.hpp"
+REPAIR_EVENTS = {
+    5373788036138533: ("outerwear_tape", "Duct Tape"),
+    846519070449764: ("outerwear_glue", "Epoxy Glue"),
+    987128523726831: ("Patch_outerwear", "Sewing Kit"),
+}
 # Original player events read these item instance variables.
 WARMTH_VARIABLE = 8
 PROTECTION_VARIABLES = (12, 13, 14, 15)
@@ -24,14 +30,73 @@ def first_value(values, index):
 def is_equipment(item_id):
     return any(low <= item_id <= high for low, high in EQUIPMENT_RANGES)
 
+def find_event(entries, uid):
+    for event in entries if isinstance(entries, list) else []:
+        if isinstance(event, list) and len(event) > 7 and event[0] == 0:
+            if event[4] == uid:
+                return event
+            found = find_event(event[7], uid)
+            if found is not None:
+                return found
+    return None
+
+def walk_events(event):
+    if not isinstance(event, list) or len(event) < 8 or event[0] != 0:
+        return
+    yield event
+    for child in event[7] if isinstance(event[7], list) else []:
+        yield from walk_events(child)
+
+def source_outerwear_repairs(project, items_by_name):
+    sheets = project.get("project", [None] * 7)[6]
+    game = next((sheet for sheet in sheets if isinstance(sheet, list) and
+                 sheet and sheet[0] == "Game_events"), None)
+    if game is None:
+        raise SystemExit("Original Game_events sheet missing for outerwear repairs")
+    rows = []
+    for uid, (label, item_name) in REPAIR_EVENTS.items():
+        event = find_event(game[1], uid)
+        if event is None:
+            raise SystemExit(f"Missing original outerwear repair event {uid}")
+        conditions = event[5] if len(event) > 5 and isinstance(event[5], list) else []
+        if not any(
+            isinstance(condition, list) and len(condition) > 9 and
+            condition[0] == 292 and condition[1] == 71 and
+            condition[9] == [[10, 0], [8, 0], [7, [2, label]]]
+            for condition in conditions
+        ):
+            raise SystemExit(f"Outerwear repair event {uid} no longer matches {label}")
+        item_id = items_by_name.get(item_name)
+        if item_id is None:
+            raise SystemExit(f"Original item name missing for repair material: {item_name}")
+        gains = []
+        for node in walk_events(event):
+            for action in node[6] if isinstance(node[6], list) else []:
+                if not isinstance(action, list) or len(action) < 6 or action[0:2] != [1030, 88]:
+                    continue
+                params = action[5]
+                variable = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 10), None)
+                value = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 7), None)
+                if variable != 6 or not isinstance(value, list) or len(value) != 2 or value[0] != 4:
+                    continue
+                left, right = value[1]
+                if left == [21, 1030, False, None, 6] and isinstance(right, list) and len(right) == 2 and right[0] == 0:
+                    gains.append(right[1])
+        if len(gains) != 1 or not isinstance(gains[0], int) or gains[0] <= 0 or gains[0] > 100:
+            raise SystemExit(f"Unexpected original repair gain for {label}: {gains}")
+        rows.append((item_id, gains[0], label))
+    rows.sort()
+    if len({item_id for item_id, _, _ in rows}) != len(rows):
+        raise SystemExit("Duplicate item ID in original outerwear repair materials")
+    return rows
+
 def main():
     for path in (XML, PROJECT):
         if not path.is_file():
             raise SystemExit(f"Missing original source: {path}")
-    item_ids = {
-        int(item.findtext("id", "-1").strip())
-        for item in ET.parse(XML).getroot().findall("item")
-    }
+    xml_items = ET.parse(XML).getroot().findall("item")
+    item_ids = {int(item.findtext("id", "-1").strip()) for item in xml_items}
+    items_by_name = {item.findtext("name", "").strip(): int(item.findtext("id", "-1").strip()) for item in xml_items}
     project_text = PROJECT.read_text(encoding="utf-8-sig")
     project_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", project_text)
     project = json.loads(project_text)
@@ -104,6 +169,7 @@ def main():
     lines += ["};", "} // namespace minidayz::items", ""]
 
     condition_rows = sorted(item_conditions.items())
+    repair_rows = source_outerwear_repairs(project, items_by_name)
     if len(condition_rows) < 150:
         raise SystemExit(f"Unexpectedly low original item condition coverage: {len(condition_rows)}")
     condition_lines = [
@@ -120,9 +186,21 @@ def main():
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
     CONDITION_OUTPUT.write_text("\n".join(condition_lines), encoding="utf-8")
+    repair_lines = [
+        "#pragma once", "#include <cstddef>", "#include <cstdint>",
+        "namespace minidayz::items {",
+        "struct SourceOuterwearRepair { std::uint16_t item_id; std::uint8_t condition_gain; };",
+        f"inline constexpr std::size_t kSourceOuterwearRepairCount = {len(repair_rows)};",
+        "inline constexpr SourceOuterwearRepair kSourceOuterwearRepairs[] = {",
+    ]
+    for item_id, gain, _label in repair_rows:
+        repair_lines.append(f"    {{{item_id}, {gain}}},")
+    repair_lines += ["};", "} // namespace minidayz::items", ""]
+    REPAIR_OUTPUT.write_text("\n".join(repair_lines), encoding="utf-8")
     print(
         f"Generated {len(rows)} original equipment property rows and "
-        f"{len(condition_rows)} item condition defaults"
+        f"{len(condition_rows)} item condition defaults and "
+        f"{len(repair_rows)} source outerwear repair materials"
     )
 
 if __name__ == "__main__":
