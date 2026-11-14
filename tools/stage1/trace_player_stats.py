@@ -68,7 +68,7 @@ def main():
     parser.add_argument("--out", default="data/stage1/player_stats_trace")
     args = parser.parse_args()
 
-    source_text = Path(args.input).read_text(encoding="utf-8")
+    source_text = Path(args.input).read_text(encoding="utf-8-sig")
     source_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", source_text)
     root = json.loads(source_text)
     project = root.get("project")
