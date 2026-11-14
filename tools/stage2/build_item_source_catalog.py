@@ -25,7 +25,7 @@ def main():
         if i in names: raise SystemExit(f"Duplicate item id {i}")
         names[i]=item.findtext("name","").strip()
     if len(names)!=405 or 0 not in names: raise SystemExit(f"Unexpected item count: {len(names)}")
-    src=re.sub(r"\\u([0-9a-fA-F]{4})",lambda m:chr(int(m.group(1),16)),TABLE.read_text(encoding="utf-8"))
+    src=re.sub(r"\\u([0-9a-fA-F]{4})",lambda m:chr(int(m.group(1),16)),TABLE.read_text(encoding="utf-8-sig"))
     marker=src.find("MDZItemTable"); start=src.find("{",marker); end=src.find("}",start)
     if min(marker,start,end)<0: raise SystemExit("Original MDZItemTable missing")
     object_names={int(m.group(1)):json.loads(m.group(2)) for m in re.finditer(r'(\d+)\s*:\s*("[^"]*")',src[start+1:end])}
