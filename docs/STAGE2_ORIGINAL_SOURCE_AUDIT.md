@@ -1,6 +1,6 @@
 # Stage 2 original-source audit
 
-- Authoritative original source: `data.deobfuscated.js` (Library file, 14,558,316 bytes).
+- Authoritative original source: `Minidayz-Multiplayer-main/data.js` (original deobfuscated Construct export in this repository).
 - SHA-256: `b5e15cfad3106b56457bc13c4169e59b4ff0308035912330bf144b86238571d3`.
 - Original project title/version: Mini DAYZ 1.6.0.
 - The original source contains the `Check_stack_size` event and `perk_cybb` branch.
