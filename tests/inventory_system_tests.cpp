@@ -107,6 +107,19 @@ int main() {
     assert(full.occupied_slots() == 15);
     assert(full.count(18) == 0);
 
+    // Original item variable 6 has item-specific defaults in the source map:
+    // these three non-wearable IDs start at zero; ordinary items start at 100.
+    assert(source_default_condition(1) == 0);
+    assert(source_default_condition(75) == 0);
+    assert(source_default_condition(320) == 0);
+    assert(source_default_condition(18) == 100);
+    InventorySystem source_condition_defaults;
+    assert(source_condition_defaults.add(1, 1));
+    assert(source_condition_defaults.slot(0)->condition == 0);
+    GroundItem default_condition_ground{1, 1};
+    assert(source_condition_defaults.pickup(default_condition_ground));
+    assert(source_condition_defaults.slot(1)->condition == 0);
+
     // Original item variable 6 is condition; it must survive stacking,
     // moving, ground transfers, backpack swaps and save snapshots.
     InventorySystem condition_inventory;
