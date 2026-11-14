@@ -79,7 +79,8 @@ std::uint16_t source_sprite_object(std::uint16_t item_id) noexcept {
 
 bool is_backpack_item(std::uint16_t item_id) noexcept {
     // Exact backpack equipment IDs present in the original MDZItemTable.
-    // Civilian Tent (456) and Supplies Stash (461) are not wearable packs.
+    // Civilian Tent (456) is excluded. The original Drop_backpack event
+    // explicitly recognizes "red box" (item 461) as an equipped container.
     switch (item_id) {
         case 450: case 451: case 452: case 453: case 454: case 455:
         case 457: case 458: case 459: case 460: case 461: case 462:
