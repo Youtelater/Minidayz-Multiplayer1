@@ -266,11 +266,16 @@ public:
         }
         // L drops the selected stack at the player's feet; R picks up the
         // nearest ground stack. Ground transfers are atomic and persisted.
-        if ((input.pressed & KEY_L) && selected_inventory_slot_ >= 0) {
-            if (ground_loot_.drop_from_inventory(
-                    inventory_, static_cast<std::size_t>(selected_inventory_slot_),
-                    0, player_.state().x, player_.state().y))
-                selected_inventory_slot_ = -1;
+        if (input.pressed & KEY_L) {
+            if (selected_inventory_slot_ >= 0) {
+                if (ground_loot_.drop_from_inventory(
+                        inventory_, static_cast<std::size_t>(selected_inventory_slot_),
+                        0, player_.state().x, player_.state().y))
+                    selected_inventory_slot_ = -1;
+            } else if (inventory_.equipped_backpack() != 0) {
+                (void)ground_loot_.drop_equipped_backpack(
+                    inventory_, player_.state().x, player_.state().y);
+            }
         }
         if (input.pressed & KEY_R)
             (void)ground_loot_.pickup_nearest(
@@ -349,12 +354,12 @@ public:
             if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
                 const auto* dragged = inventory_.slot(
                     static_cast<std::size_t>(drag_source_slot_));
-                const std::size_t capacity = dragged
-                    ? minidayz::items::source_backpack_capacity(dragged->item_id) : 0;
-                if (capacity > minidayz::items::kInventorySlotCount &&
-                    inventory_.equip_backpack_from_slot(
-                        static_cast<std::size_t>(drag_source_slot_), capacity)) {
-                    selected_inventory_slot_ = -1;
+                if (dragged && minidayz::items::is_backpack_item(dragged->item_id)) {
+                    const std::size_t capacity =
+                        minidayz::items::source_backpack_capacity(dragged->item_id);
+                    if (inventory_.equip_backpack_from_slot(
+                            static_cast<std::size_t>(drag_source_slot_), capacity))
+                        selected_inventory_slot_ = -1;
                 }
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
                 if (equipment_.equip_from_inventory(

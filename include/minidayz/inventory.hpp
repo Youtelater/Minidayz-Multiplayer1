@@ -56,11 +56,14 @@ public:
     bool set_capacity(std::size_t capacity) noexcept;
 
     // Backpack equipment is a real equipment slot: equip consumes the item
-    // from the chosen inventory slot and swaps the previously equipped pack
-    // back into that slot. source_capacity must come from original source data.
+    // from the chosen inventory slot and swaps the previous pack into that slot.
+    // source_capacity == 0 equips without changing storage until original data
+    // proves the capacity; nonzero values must come from the original source.
     bool equip_backpack_from_slot(std::size_t inventory_slot,
                                   std::size_t source_capacity) noexcept;
     bool unequip_backpack_to_slot(std::size_t inventory_slot) noexcept;
+    // Drop the equipped backpack into the world; refuses to strand occupied extended slots.
+    bool drop_equipped_backpack(GroundItem& ground) noexcept;
     std::uint16_t equipped_backpack() const noexcept { return equipped_backpack_; }
     std::uint8_t equipped_backpack_condition() const noexcept {
         return equipped_backpack_condition_;

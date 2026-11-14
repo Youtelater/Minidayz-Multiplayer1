@@ -29,7 +29,7 @@ def main():
     marker=src.find("MDZItemTable"); start=src.find("{",marker); end=src.find("}",start)
     if min(marker,start,end)<0: raise SystemExit("Original MDZItemTable missing")
     object_names={int(m.group(1)):json.loads(m.group(2)) for m in re.finditer(r'(\d+)\s*:\s*("[^"]*")',src[start+1:end])}
-    project=json.loads(PROJECT.read_text(encoding="utf-8"))
+    project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", PROJECT.read_text(encoding="utf-8")))
     objects=project["project"][3]
     indices={}
     for n,obj in enumerate(objects):

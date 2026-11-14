@@ -15,7 +15,10 @@ def fail(message: str) -> None:
 
 def read_json(path: Path):
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        source_text = path.read_text(encoding="utf-8")
+        # Match extract_construct.py while keeping the byte-exact snapshot check.
+        source_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", source_text)
+        return json.loads(source_text)
     except Exception as exc:
         fail(f"cannot parse {path.relative_to(ROOT)}: {exc}")
 

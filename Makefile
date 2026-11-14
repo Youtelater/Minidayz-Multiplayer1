@@ -41,19 +41,18 @@ include $(DEVKITARM)/3ds_rules
 #-----------------------------------------------------------------
 # COMPILATION FLAGS
 #-----------------------------------------------------------------
-INCLUDE		:= $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
-			   -I$(TOPDIR)/$(ROMFS) \
-			   -I/opt/devkitpro/libctru/include \
-			   -I$(PORTLIBS)/include \
-			   -I$(DEVKITARM)/arm-none-eabi/include
+# Keep project-relative paths rooted at TOPDIR; preserve absolute SDK paths.
+INCLUDE		:= $(foreach dir,$(INCLUDES),$(if $(filter /%,$(dir)),-I$(dir),-I$(TOPDIR)/$(dir))) \
+		   -I$(TOPDIR)/$(ROMFS) \
+		   -I$(DEVKITARM)/arm-none-eabi/include
 
 ARCH		:= -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=cp15
 
 # Added -DMSGPACK_NO_BOOST to prevent looking for external boost headers
 CFLAGS		:= -g -Wall -O2 -mword-relocations \
-			   -ffunction-sections \
-			   $(ARCH) $(DEFINES) -DMSGPACK_NO_BOOST \
-			   $(INCLUDE)
+		   -ffunction-sections \
+		   $(ARCH) $(DEFINES) -DMSGPACK_NO_BOOST \
+		   $(INCLUDE)
 
 CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti
 
@@ -129,5 +128,3 @@ stage1-assets:
 	@python3 tools/stage2/extract_item_behavior_trace.py
 	@python3 tools/stage2/build_item_effect_catalog.py
 	@python3 tools/stage2/build_item_equipment_catalog.py
-
-

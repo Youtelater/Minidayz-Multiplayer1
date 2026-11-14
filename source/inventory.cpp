@@ -140,9 +140,16 @@ bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
 bool InventorySystem::equip_backpack_from_slot(
     std::size_t index, std::size_t source_capacity) noexcept {
     if (index >= capacity_ || !is_backpack_item(slots_[index].item_id) ||
-        slots_[index].count != 1 || slots_[index].condition > 100 ||
-        source_capacity <= kInventorySlotCount ||
-        source_capacity > kMaximumInventorySlotCount)
+        slots_[index].count != 1 || slots_[index].condition > 100)
+        return false;
+
+    // Zero means the original source has not established a capacity value.
+    // Equip the visual/equipment item without changing storage in that case.
+    const std::size_t target_capacity =
+        source_capacity == 0 ? capacity_ : source_capacity;
+    if (target_capacity < kInventorySlotCount ||
+        target_capacity > kMaximumInventorySlotCount ||
+        (source_capacity != 0 && target_capacity == kInventorySlotCount))
         return false;
 
     const std::uint16_t incoming = slots_[index].item_id;
@@ -151,25 +158,25 @@ bool InventorySystem::equip_backpack_from_slot(
     const std::uint8_t outgoing_condition = equipped_backpack_condition_;
 
     std::size_t return_slot = index;
-    if (outgoing != 0 && index >= source_capacity) {
-        return_slot = source_capacity;
-        for (std::size_t i = 0; i < source_capacity; ++i) {
+    if (outgoing != 0 && index >= target_capacity) {
+        return_slot = target_capacity;
+        for (std::size_t i = 0; i < target_capacity; ++i) {
             if (i != index && slots_[i].empty()) {
                 return_slot = i;
                 break;
             }
         }
-        if (return_slot == source_capacity) return false;
+        if (return_slot == target_capacity) return false;
     }
 
     for (std::size_t i = 0; i < capacity_; ++i) {
         if (i == index || (outgoing != 0 && i == return_slot)) continue;
-        if (i >= source_capacity && !slots_[i].empty()) return false;
+        if (i >= target_capacity && !slots_[i].empty()) return false;
     }
 
     slots_[index] = {};
     if (outgoing != 0) slots_[return_slot] = {outgoing, 1, outgoing_condition};
-    capacity_ = source_capacity;
+    capacity_ = target_capacity;
     equipped_backpack_ = incoming;
     equipped_backpack_condition_ = incoming_condition;
     return true;
@@ -188,6 +195,23 @@ bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
     equipped_backpack_ = 0;
     equipped_backpack_condition_ = 100;
     slots_[index] = {outgoing, 1, condition};
+    return true;
+}
+
+bool InventorySystem::drop_equipped_backpack(GroundItem& ground) noexcept {
+    if (equipped_backpack_ == 0 || !is_backpack_item(equipped_backpack_) ||
+        (ground.item_id == 0) != (ground.count == 0) || !ground.empty())
+        return false;
+
+    // Never discard items that would become inaccessible when the backpack
+    // is removed. This is a safety guard for the native inventory model.
+    for (std::size_t i = kInventorySlotCount; i < capacity_; ++i)
+        if (!slots_[i].empty()) return false;
+
+    ground = {equipped_backpack_, 1, equipped_backpack_condition_};
+    capacity_ = kInventorySlotCount;
+    equipped_backpack_ = 0;
+    equipped_backpack_condition_ = 100;
     return true;
 }
 
@@ -398,8 +422,7 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
         saved.equipped_backpack_condition > 100)
         return false;
     if (saved.equipped_backpack != 0 &&
-        (!is_backpack_item(saved.equipped_backpack) ||
-         saved.capacity <= kInventorySlotCount))
+        !is_backpack_item(saved.equipped_backpack))
         return false;
     if (saved.equipped_backpack == 0 &&
         saved.equipped_backpack_condition != 100)

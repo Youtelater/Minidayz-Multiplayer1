@@ -6,16 +6,16 @@ Stage 2 is a source-backed port of the original Mini DAYZ 1.6.0 item, inventory,
 
 - The original English item localization and MDZItemTable generate a catalog preserving all 405 original item IDs and gaps.
 - The original sprite catalog resolves 329 item IDs to exact Construct object identities; 76 IDs remain explicitly unmapped rather than receiving substitute art.
-- InventorySystem provides 15 base slots, up to 32 native slots, atomic additions, source stack limits, removal, moving, swapping, splitting, ground pickup/drop, and backpack equipment state.
+- InventorySystem provides 15 base slots, up to 32 native slots, atomic additions, source stack limits, removal, moving, swapping, splitting, ground pickup/drop, and backpack equipment state. The 3DS UI can equip/unequip source-listed backpacks and drop an equipped pack into world loot; unresolved capacity does not expand storage.
 - The original Check_stack_size baseline groups are ported. The perk_cybb branch returns 31,415,926 in the source; the native uint16_t stack representation safely caps that at UINT16_MAX.
 - Item condition (original instance variable 6) is preserved through inventory, ground transfers, equipment, and save snapshots; preservation is not evidence of an original condition-based protection multiplier.
 - Forty direct literal stat-effect rows are extracted from original item_activate and item_activate2 events.
 - Sixty-three original equipment property rows provide clothing warmth and flat armor protection; 168 item IDs have source-map condition defaults.
-- Raw Construct inventory behavior records are exported with their source event UIDs and conditions/actions for further porting.
+- Raw Construct inventory behavior records are exported with their source event UIDs and conditions/actions for further porting, including the original backpack-space, backpack-item, backpack drop, and equipment-slot event paths.
 
 ## Remaining before Stage 2 completion
 
-- Extract and implement exact per-backpack capacity values and original backpack equip/replace/unequip behavior. The native capacity lookup now deliberately returns unresolved (zero) instead of exposing inferred capacities as original facts.
+- Translate the extracted original backpack-space, backpack-item, Drop_slot, and Drop_backpack event logic into the runtime. The native capacity lookup deliberately remains unresolved (zero); do not enable guessed per-pack capacity values.
 - Port source item-condition wear, repair, and other durability rules.
 - Port conditional perk bonuses and remaining item-specific secondary effects without guessing expression semantics.
 - Complete loot spawning, world pickup/drop interaction, and item actions in the actual game runtime.

@@ -40,7 +40,7 @@ def main() -> None:
             raise SystemExit(f"Duplicate item sprite mapping: {item_id}")
         entries[item_id] = object_name
 
-    project = json.loads(PROJECT.read_text(encoding="utf-8"))
+    project = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", PROJECT.read_text(encoding="utf-8")))
     objects = project["project"][3]
     object_indices: dict[str, int] = {}
     for index, obj in enumerate(objects):
