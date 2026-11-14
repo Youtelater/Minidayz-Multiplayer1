@@ -331,15 +331,23 @@ int main() {
     assert(!no_room.drop(0, 1, uncollected)); // different item type
     assert(no_room.slot(0)->item_id == 1);
 
+    // Capacity cannot be fabricated by a caller: only equipping an
+    // original wearable backpack grants the source-defined 11 extra slots.
     InventorySystem expanded;
-    assert(expanded.set_capacity(20));
-    for (std::uint16_t id = 1; id <= 20; ++id) assert(expanded.add(id, 1));
-    assert(expanded.occupied_slots() == 20);
-    assert(expanded.slot(19)->item_id == 20);
-    assert(!expanded.set_capacity(15));
+    assert(!expanded.set_capacity(20));
+    assert(expanded.capacity() == kInventorySlotCount);
+    for (std::uint16_t id = 1; id <= kInventorySlotCount; ++id)
+        assert(expanded.add(id, 1));
+    assert(!expanded.add(16, 1));
+    assert(expanded.occupied_slots() == kInventorySlotCount);
+    assert(expanded.set_capacity(kInventorySlotCount));
     expanded.clear();
-    assert(expanded.set_capacity(15));
-    assert(expanded.capacity() == 15);
+    assert(expanded.capacity() == kInventorySlotCount);
+    assert(expanded.add(450, 1));
+    assert(expanded.equip_backpack_from_slot(0));
+    assert(!expanded.set_capacity(kInventorySlotCount));
+    assert(!expanded.set_capacity(20));
+    assert(expanded.capacity() == 26);
 
     // Exact-slot placement is used when returning equipment to the backpack.
     InventorySystem exact_slot;
