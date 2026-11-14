@@ -53,10 +53,18 @@ int main() {
     assert(!perk_ground.drop(0, 0, perk_drop));
     assert(perk_ground.drop(0, 0, perk_drop, source_max_stack(18, true)));
     assert(perk_drop.count == 4);
+    InventorySystem baseline_pickup;
+    GroundItem baseline_pile{18, 4, 100};
+    assert(baseline_pickup.pickup(baseline_pile));
+    assert(baseline_pickup.count(18) == 4);
+    assert(baseline_pickup.slot(0)->count == 3);
+    assert(baseline_pickup.slot(1)->count == 1);
+
     InventorySystem perk_pickup;
-    assert(!perk_pickup.pickup(perk_drop));
-    assert(perk_pickup.pickup(perk_drop, source_max_stack(18, true)));
+    GroundItem perk_pile{18, 4, 100};
+    assert(perk_pickup.pickup(perk_pile, source_max_stack(18, true)));
     assert(perk_pickup.count(18) == 4);
+    assert(perk_pickup.slot(0)->count == 4);
 
     InventorySystem inventory;
     assert(inventory.occupied_slots() == 0);
