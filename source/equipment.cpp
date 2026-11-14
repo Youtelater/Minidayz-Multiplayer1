@@ -1,4 +1,5 @@
 #include "minidayz/equipment.hpp"
+#include "minidayz/generated/item_equipment_catalog.hpp"
 
 namespace minidayz::items {
 
@@ -44,6 +45,24 @@ std::uint16_t EquipmentSystem::equipped(EquipmentSlot slot) const noexcept {
     return index < state_.item_ids.size() ? state_.item_ids[index] : 0;
 }
 
+bool source_item_protection(std::uint16_t item_id,
+                            SourceItemProtection& protection) noexcept {
+    std::size_t first = 0;
+    std::size_t last = kSourceItemProtectionCount;
+    while (first < last) {
+        const std::size_t middle = first + (last - first) / 2;
+        if (kSourceItemProtection[middle].item_id < item_id)
+            first = middle + 1;
+        else
+            last = middle;
+    }
+    if (first >= kSourceItemProtectionCount ||
+        kSourceItemProtection[first].item_id != item_id)
+        return false;
+    protection = kSourceItemProtection[first];
+    return true;
+}
+
 bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
     EquipmentSnapshot normalized = saved;
     // Migrate the first native save's provisional feet/weapon slots into the
@@ -71,6 +90,20 @@ bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
     }
     state_ = normalized;
     return true;
+}
+
+PlayerArmorProtection EquipmentSystem::protection() const noexcept {
+    PlayerArmorProtection result{};
+    SourceItemProtection item{};
+    if (source_item_protection(equipped(EquipmentSlot::head), item))
+        result.helmet = item.helmet;
+    if (source_item_protection(equipped(EquipmentSlot::outerwear), item))
+        result.outerwear = item.outerwear;
+    if (source_item_protection(equipped(EquipmentSlot::vest), item))
+        result.vest = item.vest;
+    if (source_item_protection(equipped(EquipmentSlot::pants), item))
+        result.pants = item.pants;
+    return result;
 }
 
 bool EquipmentSystem::equip_from_inventory(
