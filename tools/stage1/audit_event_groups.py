@@ -9,7 +9,6 @@ import argparse
 import csv
 import json
 import re
-import re
 from pathlib import Path
 
 def load_project(path):
