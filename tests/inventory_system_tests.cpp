@@ -208,9 +208,11 @@ int main() {
     assert(protected_pack.drop_equipped_backpack(protected_ground));
     assert(protected_ground.item_id == 450);
 
-    // Exact wearable backpack IDs from the original MDZItemTable.
-    assert(is_backpack_item(450));
-    assert(is_backpack_item(754));
+    // Exact wearable backpack IDs and exclusions from original item localization
+    // plus MDZItemTable. The Civilian Tent and Supplies Stash are not wearable.
+    for (const auto id : {450, 451, 452, 453, 454, 455, 457, 458, 459, 460,
+                          462, 752, 753, 754})
+        assert(is_backpack_item(id));
     assert(!is_backpack_item(456)); // Civilian Tent
     assert(!is_backpack_item(461)); // Supplies Stash
     assert(!is_backpack_item(1));
