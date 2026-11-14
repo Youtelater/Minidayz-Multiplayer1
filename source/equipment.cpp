@@ -99,10 +99,11 @@ bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
 }
 
 PlayerArmorProtection EquipmentSystem::protection() const noexcept {
+    // The original Construct Player_get_hit path reads the flat protection
+    // instance variables. Item condition is persisted separately; the source
+    // does not multiply protection by condition.
     PlayerArmorProtection result{};
     SourceItemProtection item{};
-    // Original Construct Player_get_hit reads the equipped items' flat
-    // protection instance variables; it does not scale them by condition.
     if (source_item_protection(equipped(EquipmentSlot::head), item))
         result.helmet = item.helmet;
     if (source_item_protection(equipped(EquipmentSlot::outerwear), item))
@@ -115,8 +116,9 @@ PlayerArmorProtection EquipmentSystem::protection() const noexcept {
 }
 
 float EquipmentSystem::temperature_offset() const noexcept {
+    // Exact clothing term used by the original Player_temperature event:
+    // (outerwear warmth - helmet warmth) / pants warmth.
     SourceItemProtection item{};
-    // Original Player_temperature uses the flat item warmth values.
     float helmet_warmth = 0.0f;
     float outerwear_warmth = 0.0f;
     float pants_warmth = 0.0f;
