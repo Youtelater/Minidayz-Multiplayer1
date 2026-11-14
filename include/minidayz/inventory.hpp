@@ -11,6 +11,7 @@ inline constexpr std::size_t kMaximumInventorySlotCount = 32;
 
 inline constexpr std::uint8_t kUseSourceItemCondition = 255;
 std::uint8_t source_default_condition(std::uint16_t item_id) noexcept;
+bool source_item_exists(std::uint16_t item_id) noexcept;
 
 struct InventorySlot {
     std::uint16_t item_id{};
