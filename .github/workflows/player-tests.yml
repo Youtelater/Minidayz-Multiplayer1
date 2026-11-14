@@ -82,6 +82,15 @@ jobs:
       - name: Run Item and Inventory Regression Tests
         run: ./inventory_system_tests
 
+      - name: Compile Player Equipment Regression Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp source/equipment.cpp tests/equipment_system_tests.cpp \
+            -o equipment_system_tests
+
+      - name: Run Player Equipment Regression Tests
+        run: ./equipment_system_tests
+
       - name: Compile Original NPC Spawn Source Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -ffunction-sections -fdata-sections -Iinclude \
