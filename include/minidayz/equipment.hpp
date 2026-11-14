@@ -22,6 +22,9 @@ inline constexpr std::size_t kEquipmentSlotCount =
 
 struct EquipmentSnapshot {
     std::array<std::uint16_t, kEquipmentSlotCount> item_ids{};
+    std::array<std::uint8_t, kEquipmentSlotCount> conditions{
+        100, 100, 100, 100, 100, 100, 100
+    };
 };
 
 bool source_item_protection(std::uint16_t item_id,
