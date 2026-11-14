@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -76,7 +77,9 @@ def main() -> None:
         if not path.is_file():
             raise SystemExit(f"Missing original source input: {path}")
 
-    project = json.loads(PROJECT.read_text(encoding="utf-8"))
+    source_text = PROJECT.read_text(encoding="utf-8")
+    source_text = re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-", source_text)
+    project = json.loads(source_text)
     sheets = project.get("project", [None] * 7)[6]
     game_events = next((sheet for sheet in sheets
                         if isinstance(sheet, list) and sheet and sheet[0] == "Game_events"), None)
