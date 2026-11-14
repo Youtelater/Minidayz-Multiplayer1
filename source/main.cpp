@@ -360,8 +360,8 @@ public:
             (preview_rules_.max_temperature - preview_rules_.min_temperature);
         meter(244.0f, temperature_ratio * 100.0f, 100.0f,
               C2D_Color32(75, 180, 165, 255));
-        // Source equipment slots: head, outerwear, vest, pants, hands,
-        // feet and weapon. Drag an item onto a slot to equip; tap to remove.
+        // Original equipment categories: helmet, outerwear, vest, pants,
+        // held weapon, plus the separate backpack slot.
         static constexpr const char* equipment_labels[] = {"HELMET","COAT","VEST","PANTS","HANDS","PACK"};
         for (std::size_t i = 0; i < 6; ++i) {
             const float x = 5.0f + static_cast<float>(i) * 52.0f;
@@ -370,10 +370,21 @@ public:
             const auto item_id = i == 5
                 ? inventory_.equipped_backpack()
                 : equipment_.equipped(static_cast<minidayz::items::EquipmentSlot>(i));
-            if (item_id != 0)
+            const auto condition = i == 5
+                ? inventory_.equipped_backpack_condition()
+                : equipment_.snapshot().conditions[i];
+            if (item_id != 0) {
                 (void)renderer.draw_item_icon(item_id, x + 25.0f, 55.0f, 34.0f, 25.0f);
-            else
+                if (condition < 100) {
+                    renderer.draw_solid_rect(x + 5.0f, 77.0f, 40.0f, 2.0f,
+                                             C2D_Color32(30, 30, 30, 255));
+                    renderer.draw_solid_rect(x + 5.0f, 77.0f,
+                        40.0f * static_cast<float>(condition) / 100.0f, 2.0f,
+                        C2D_Color32(190, 170, 85, 255));
+                }
+            } else {
                 renderer.draw_text(equipment_labels[i], x + 3.0f, 53.0f, 0.18f);
+            }
         }
         // 5 x 3 backpack page, sized for the 320 x 240 touch screen.
         const int page_start = static_cast<int>(inventory_page_ * kInventoryPageSize);
@@ -397,6 +408,13 @@ public:
                     std::snprintf(quantity, sizeof(quantity), "x%u",
                                   static_cast<unsigned>(item->count));
                     renderer.draw_text(quantity, x + 4.0f, y + 27.0f, 0.20f);
+                    if (item->condition < 100) {
+                        renderer.draw_solid_rect(x + 6.0f, y + 35.0f, 44.0f, 2.0f,
+                                                 C2D_Color32(30, 30, 30, 255));
+                        renderer.draw_solid_rect(x + 6.0f, y + 35.0f,
+                            44.0f * static_cast<float>(item->condition) / 100.0f, 2.0f,
+                            C2D_Color32(190, 170, 85, 255));
+                    }
                 }
             }
         }
