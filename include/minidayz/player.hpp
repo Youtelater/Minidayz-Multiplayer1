@@ -30,8 +30,8 @@ struct PlayerState {
 };
 
 // Numeric movement/survival tuning is injected from source-equivalent rules.
-// The preview scene may use clearly labeled temporary movement values, but
-// source survival rates must remain unset until their event cadence is traced.
+// Movement remains preview-tuned; survival drain rates use the extracted
+// original difficulty values and five-second source cadence.
 // Source rates are expressed per second after converting the original
 // five-second hunger/thirst cadence into the native frame-time update.
 PlayerRules source_survival_rules(SurvivalDifficulty difficulty) noexcept;
