@@ -43,16 +43,24 @@ def main() -> int:
     if not parsed_path.is_file():
         fail("reassembled Construct project is missing")
     rebuilt = b"".join(p.read_bytes() for p in parts)
-    parsed_bytes = parsed_path.read_bytes()
-    if rebuilt != parsed_bytes:
-        fail("reassembled project does not exactly match the ordered source snapshot chunks")
+    original_path = ROOT / "Minidayz-Multiplayer-main/data.js"
+    if not original_path.is_file():
+        fail("authoritative original Minidayz-Multiplayer-main/data.js is missing")
+    original_bytes = original_path.read_bytes()
+    if rebuilt != original_bytes:
+        fail("source snapshot chunks do not exactly match the authoritative original data.js")
 
     parsed_text = parsed_path.read_text(encoding="utf-8-sig")
     parsed_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", parsed_text)
     try:
         root = json.loads(parsed_text)
+        original_text = original_path.read_text(encoding="utf-8-sig")
+        original_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", original_text)
+        original_root = json.loads(original_text)
     except Exception as exc:
-        fail(f"cannot parse {parsed_path.relative_to(ROOT)}: {exc}")
+        fail(f"cannot parse original or extracted Construct project: {exc}")
+    if root != original_root:
+        fail("extracted Construct project differs from the authoritative original data.js")
     project = root.get("project") if isinstance(root, dict) else None
     if not isinstance(project, list) or len(project) < 17:
         fail("parsed source is not a complete supported Construct project")
