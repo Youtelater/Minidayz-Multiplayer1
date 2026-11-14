@@ -111,6 +111,21 @@ int main() {
     protected_player.apply_damage(5.0f, armor_values);
     assert(protected_player.state().health == 91.0f);
 
+    // Worn equipment loses protective and warmth value in proportion to
+    // its persisted condition; a destroyed item contributes no benefit.
+    assert(armor.damage_condition(EquipmentSlot::head, 50));
+    const auto worn_armor = armor.protection();
+    assert(worn_armor.helmet == 2.0f);
+    assert(worn_armor.outerwear == 2.0f);
+    assert(worn_armor.vest == 3.0f);
+    assert(worn_armor.pants == 2.0f);
+    assert(std::fabs(armor.temperature_offset() - (6.5f / 7.0f)) < 0.0001f);
+    assert(armor.damage_condition(EquipmentSlot::pants, 50));
+    assert(std::fabs(armor.temperature_offset() - (6.5f / 3.5f)) < 0.0001f);
+    assert(armor.damage_condition(EquipmentSlot::vest, 100));
+    assert(armor.equipped(EquipmentSlot::vest) == 0);
+    assert(armor.protection().vest == 0.0f);
+
     // Item condition survives equipping, snapshots and unequipping.
     InventorySystem condition_inventory;
     EquipmentSystem condition_equipment;
