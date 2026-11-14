@@ -26,6 +26,10 @@ bool valid_item(std::uint16_t item_id) noexcept {
 
 } // namespace
 
+bool source_item_exists(std::uint16_t item_id) noexcept {
+    return valid_item(item_id);
+}
+
 std::uint8_t source_default_condition(std::uint16_t item_id) noexcept {
     std::size_t first = 0;
     std::size_t last = kSourceItemConditionCount;
