@@ -540,6 +540,37 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
     return true;
 }
 
+bool InventorySystem::move_backpack(std::size_t from, std::size_t to,
+                                      std::uint16_t amount,
+                                      std::uint16_t max_stack) noexcept {
+    if (from >= backpack_capacity_ || to >= backpack_capacity_ || from == to ||
+        backpack_slots_[from].empty()) return false;
+    auto& source = backpack_slots_[from];
+    auto& destination = backpack_slots_[to];
+    const std::uint16_t moving = amount == 0 ? source.count : amount;
+    if (moving == 0 || moving > source.count) return false;
+    if (destination.empty()) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || moving > max_stack) return false;
+        destination = {source.item_id, moving, source.condition};
+    } else if (destination.item_id == source.item_id &&
+               destination.condition == source.condition) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || destination.count > max_stack ||
+            moving > max_stack - destination.count) return false;
+        destination.count = static_cast<std::uint16_t>(destination.count + moving);
+    } else {
+        if (moving != source.count) return false;
+        const InventorySlot temporary = destination;
+        destination = source;
+        source = temporary;
+        return true;
+    }
+    source.count = static_cast<std::uint16_t>(source.count - moving);
+    if (source.count == 0) source = {};
+    return true;
+}
+
 const InventorySlot* InventorySystem::slot(std::size_t index) const noexcept {
     return index < capacity_ ? &slots_[index] : nullptr;
 }
