@@ -1,55 +1,35 @@
 #!/usr/bin/env python3
 """Extract armor values from original Construct item instances in the maps."""
 from __future__ import annotations
-import json, re, xml.etree.ElementTree as ET
+import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 XML = ROOT / "Minidayz-Multiplayer-main/l_eng_items.xml"
-TABLE = ROOT / "mp_itemtable.js"
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_equipment_catalog.hpp"
 # The original player hit event reads these four item instance variables.
 PROTECTION_VARIABLES = (12, 13, 14, 15)
+EQUIPMENT_RANGES = ((133, 136), (250, 277), (300, 307), (350, 368), (400, 415))
 
 def first_value(values, index):
     if index >= len(values) or not isinstance(values[index], list) or not values[index]:
         return None
     return values[index][0]
 
+def is_equipment(item_id):
+    return any(low <= item_id <= high for low, high in EQUIPMENT_RANGES)
+
 def main():
-    for path in (XML, TABLE, PROJECT):
+    for path in (XML, PROJECT):
         if not path.is_file():
             raise SystemExit(f"Missing original source: {path}")
     item_ids = {
         int(item.findtext("id", "-1").strip())
         for item in ET.parse(XML).getroot().findall("item")
     }
-    table = re.sub(r"\\u([0-9a-fA-F]{4})",
-                   lambda m: chr(int(m.group(1), 16)),
-                   TABLE.read_text(encoding="utf-8"))
-    marker = table.find("MDZItemTable")
-    start = table.find("{", marker)
-    end = table.find("}", start)
-    if min(marker, start, end) < 0:
-        raise SystemExit("Original MDZItemTable missing")
-    object_names = {
-        int(match.group(1)): json.loads(match.group(2))
-        for match in re.finditer(r'(\d+)\s*:\s*("[^"]*")', table[start + 1:end])
-    }
     project = json.loads(PROJECT.read_text(encoding="utf-8"))
-    objects = project["project"][3]
-    object_indices = {}
-    for index, obj in enumerate(objects):
-        if isinstance(obj, list) and obj and isinstance(obj[0], str):
-            object_indices.setdefault(obj[0], index)
-    object_to_item = {}
-    for item_id, object_name in object_names.items():
-        if item_id in item_ids:
-            object_index = object_indices.get(object_name)
-            if object_index is not None:
-                object_to_item[object_index] = item_id
-
     properties = {}
     for layout in project["project"][5]:
         for layer in layout[6]:
@@ -57,17 +37,12 @@ def main():
             for instance in instances:
                 if not isinstance(instance, list) or len(instance) < 4:
                     continue
-                object_index = instance[1]
-                item_id = object_to_item.get(object_index)
                 values = instance[3]
-                if item_id is None or not isinstance(values, list):
+                if not isinstance(values, list):
                     continue
-                if not (133 <= item_id <= 136 or 250 <= item_id <= 277 or
-                        300 <= item_id <= 307 or 350 <= item_id <= 368 or
-                        400 <= item_id <= 415):
-                    continue
-                instance_item_id = first_value(values, 16)
-                if instance_item_id != item_id:
+                # Item instances store their original MDZ item ID in variable 16.
+                item_id = first_value(values, 16)
+                if not isinstance(item_id, int) or item_id not in item_ids or not is_equipment(item_id):
                     continue
                 protection = tuple(
                     float(value) if isinstance((value := first_value(values, variable)), (int, float)) else 0.0
