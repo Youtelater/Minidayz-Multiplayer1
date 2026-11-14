@@ -127,5 +127,6 @@ stage1-assets:
 	@python3 tools/stage2/build_item_sprite_catalog.py
 	@python3 tools/stage2/build_item_source_catalog.py
 	@python3 tools/stage2/extract_item_behavior_trace.py
+	@python3 tools/stage2/build_item_effect_catalog.py
 
 
