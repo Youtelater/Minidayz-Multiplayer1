@@ -32,7 +32,7 @@ def main():
         int(item.findtext("id", "-1").strip())
         for item in ET.parse(XML).getroot().findall("item")
     }
-    project_text = PROJECT.read_text(encoding="utf-8")
+    project_text = PROJECT.read_text(encoding="utf-8-sig")
     project_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", project_text)
     project = json.loads(project_text)
     properties = {}
