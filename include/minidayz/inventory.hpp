@@ -58,6 +58,9 @@ public:
     // max_stack == 0 selects the original game's baseline rule for item_id.
     bool add(std::uint16_t item_id, std::uint16_t amount,
              std::uint16_t max_stack = 0) noexcept;
+    // Place or merge into one exact slot without silently choosing another.
+    bool add_to_slot(std::size_t slot, std::uint16_t item_id,
+                     std::uint16_t amount, std::uint16_t max_stack = 0) noexcept;
     bool remove(std::size_t slot, std::uint16_t amount) noexcept;
 
     // Ground transfers are atomic: failed pickups/drops leave both sides intact.
