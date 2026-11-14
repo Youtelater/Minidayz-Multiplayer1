@@ -6,6 +6,7 @@
 #include "minidayz/inventory.hpp"
 #include "minidayz/equipment.hpp"
 #include "minidayz/item_use.hpp"
+#include "minidayz/ground_loot.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -21,7 +22,7 @@ namespace {
 // fresh entropy for this native session. This is a per-run seed, not a claim
 // that the original browser Math.random() sequence is reproducible.
 constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-constexpr std::uint32_t kSaveVersion = 4u;
+constexpr std::uint32_t kSaveVersion = 5u;
 constexpr const char* kSavePath = "sdmc:/3ds/Minidayz/world.sav";
 constexpr const char* kSaveTempPath = "sdmc:/3ds/Minidayz/world.tmp";
 
@@ -51,6 +52,7 @@ struct SavedGame {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
+    minidayz::items::GroundLootSnapshot ground_loot{};
 };
 
 minidayz::items::InventorySnapshot migrate_inventory_v3(
@@ -119,11 +121,20 @@ bool load_saved_game(SavedGame& save) noexcept {
             const std::size_t padding = (4 - (legacy_bytes % 4)) % 4;
             body_ok = consume_legacy_padding(file, padding);
         }
-    } else if (header_ok && save.version == kSaveVersion) {
+    } else if (header_ok && save.version == 4u) {
+        // Version 4 persisted player, inventory and equipment; ground loot was
+        // not part of that format, so it starts empty when migrated.
         body_ok =
             std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
             std::fread(&save.inventory, sizeof(save.inventory), 1, file) == 1 &&
             std::fread(&save.equipment, sizeof(save.equipment), 1, file) == 1;
+        save.ground_loot = {};
+    } else if (header_ok && save.version == kSaveVersion) {
+        body_ok =
+            std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
+            std::fread(&save.inventory, sizeof(save.inventory), 1, file) == 1 &&
+            std::fread(&save.equipment, sizeof(save.equipment), 1, file) == 1 &&
+            std::fread(&save.ground_loot, sizeof(save.ground_loot), 1, file) == 1;
     }
     const bool no_extra_data = std::fgetc(file) == EOF;
     std::fclose(file);
@@ -140,7 +151,8 @@ bool load_saved_game(SavedGame& save) noexcept {
 bool write_saved_game(std::uint32_t seed,
                       const minidayz::PlayerState& player,
                       const minidayz::items::InventorySystem& inventory,
-                      const minidayz::items::EquipmentSystem& equipment) noexcept {
+                      const minidayz::items::EquipmentSystem& equipment,
+                      const minidayz::items::GroundLootSystem& ground_loot) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     SavedGame save{};
@@ -148,6 +160,7 @@ bool write_saved_game(std::uint32_t seed,
     save.player = player;
     save.inventory = inventory.snapshot();
     save.equipment = equipment.snapshot();
+    save.ground_loot = ground_loot.snapshot();
     std::FILE* file = std::fopen(kSaveTempPath, "wb");
     if (!file) return false;
     const bool written = std::fwrite(&save, sizeof(save), 1, file) == 1 &&
@@ -188,6 +201,8 @@ public:
             inventory_.clear();
         if (restored && !equipment_.restore(restored->equipment))
             equipment_.clear();
+        if (restored && !ground_loot_.restore(restored->ground_loot))
+            ground_loot_.clear();
         // Preview-only movement tuning. Source-equivalent values still need
         // to be supplied by the gameplay rules port.
         // Temporary preview movement tuning only. Original source movement
@@ -208,7 +223,7 @@ public:
 
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_);
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
@@ -238,6 +253,17 @@ public:
                 static_cast<std::size_t>(selected_inventory_slot_));
             if (!selected || selected->empty()) selected_inventory_slot_ = -1;
         }
+        // L drops the selected stack at the player's feet; R picks up the
+        // nearest ground stack. Ground transfers are atomic and persisted.
+        if ((input.pressed & KEY_L) && selected_inventory_slot_ >= 0) {
+            if (ground_loot_.drop_from_inventory(
+                    inventory_, static_cast<std::size_t>(selected_inventory_slot_),
+                    0, player_.state().x, player_.state().y))
+                selected_inventory_slot_ = -1;
+        }
+        if (input.pressed & KEY_R)
+            (void)ground_loot_.pickup_nearest(
+                inventory_, player_.state().x, player_.state().y, 36.0f);
         minidayz::PlayerInput movement{};
         movement.move_x = static_cast<float>(input.circle.dx) / 156.0f;
         movement.move_y = -static_cast<float>(input.circle.dy) / 156.0f;
@@ -474,7 +500,7 @@ public:
             static_cast<unsigned>(page_count));
         renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                  C2D_Color32(54, 68, 55, 255));
-        renderer.draw_text("A USE  X ALT", 14.0f, 226.0f, 0.20f);
+        renderer.draw_text("A USE X ALT L DROP R PICK", 14.0f, 226.0f, 0.18f);
         renderer.draw_text(page_label, 104.0f, 226.0f, 0.30f);
     }
 
@@ -525,6 +551,16 @@ public:
             }
 
 
+        }
+
+        for (std::size_t i = 0; i < ground_loot_.count(); ++i) {
+            const auto* loot = ground_loot_.entry(i);
+            if (!loot || loot->x < camera_x - 24.0f ||
+                loot->x > camera_x + view_w + 24.0f ||
+                loot->y < camera_y - 24.0f ||
+                loot->y > camera_y + view_h + 24.0f) continue;
+            (void)renderer.draw_item_icon(loot->item.item_id,
+                loot->x, loot->y, 18.0f, 18.0f);
         }
 
         if (npc_ready_) {
@@ -632,6 +668,7 @@ private:
         player_ = minidayz::PlayerSystem(make_initial_state());
         inventory_.clear();
         equipment_.clear();
+        ground_loot_.clear();
         inventory_page_ = 0;
         selected_inventory_slot_ = -1;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
@@ -698,6 +735,7 @@ private:
     minidayz::PlayerSystem player_;
     minidayz::items::InventorySystem inventory_{};
     minidayz::items::EquipmentSystem equipment_{};
+    minidayz::items::GroundLootSystem ground_loot_{};
     minidayz::PlayerRules preview_rules_{};
     int selected_inventory_slot_{-1};
     int drag_source_slot_{-1};
