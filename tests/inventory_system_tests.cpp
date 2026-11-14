@@ -243,6 +243,7 @@ int main() {
         assert(extended.add(id, 1));
     assert(extended.add(16, 1));
     assert(extended.slot(15)->item_id == 16);
+    assert(!extended.unequip_backpack_to_slot(15)); // backpack storage is not a base destination
     assert(extended.remove(14, 1));
     assert(!extended.unequip_backpack_to_slot(14));
     assert(extended.remove(15, 1));
