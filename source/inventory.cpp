@@ -128,13 +128,14 @@ std::uint16_t source_max_stack(std::uint16_t item_id) noexcept {
 }
 
 bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
-    if (capacity < kInventorySlotCount || capacity > kMaximumInventorySlotCount)
+    // Capacity is a consequence of the equipped source backpack, not a
+    // caller-selected upgrade. Keep this compatibility setter constrained
+    // to the two states that can be produced by the original game.
+    const std::size_t source_capacity = equipped_backpack_ == 0
+        ? kInventorySlotCount
+        : source_backpack_capacity(equipped_backpack_);
+    if (capacity != source_capacity || capacity != capacity_)
         return false;
-    if (capacity == kInventorySlotCount && equipped_backpack_ != 0)
-        return false;
-    for (std::size_t i = capacity; i < capacity_; ++i)
-        if (!slots_[i].empty()) return false;
-    capacity_ = capacity;
     return true;
 }
 
