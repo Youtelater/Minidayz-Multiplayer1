@@ -73,7 +73,7 @@ minidayz::items::InventorySnapshot migrate_inventory_v3(
         ? 100 : minidayz::items::source_default_condition(legacy.equipped_backpack);
     result.backpack_capacity = static_cast<std::uint8_t>(
         minidayz::items::source_backpack_storage_capacity(legacy.equipped_backpack));
-    for (std::size_t i = 0; i < legacy.slots.size(); ++i) {}
+    for (std::size_t i = 0; i < legacy.slots.size(); ++i) {
         const auto item_id = legacy.slots[i].item_id;
         const auto condition = item_id == 0
             ? 100 : minidayz::items::source_default_condition(item_id);
