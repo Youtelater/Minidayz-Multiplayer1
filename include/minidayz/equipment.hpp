@@ -38,6 +38,8 @@ public:
 
     std::uint16_t equipped(EquipmentSlot slot) const noexcept;
     PlayerArmorProtection protection() const noexcept;
+    // Original Player_temperature clothing term, excluding Day_cold.
+    float temperature_offset() const noexcept;
     const EquipmentSnapshot& snapshot() const noexcept { return state_; }
     bool restore(const EquipmentSnapshot& saved) noexcept;
 
