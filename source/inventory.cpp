@@ -268,6 +268,16 @@ bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
     return true;
 }
 
+bool InventorySystem::damage_condition(
+    std::size_t slot_index, std::uint8_t loss) noexcept {
+    if (slot_index >= capacity_ || slots_[slot_index].empty() || loss == 0)
+        return false;
+    auto& item = slots_[slot_index];
+    if (loss >= item.condition) item = {};
+    else item.condition = static_cast<std::uint8_t>(item.condition - loss);
+    return true;
+}
+
 bool InventorySystem::remove(std::size_t index,
                              std::uint16_t amount) noexcept {
     if (index >= capacity_ || amount == 0 ||
