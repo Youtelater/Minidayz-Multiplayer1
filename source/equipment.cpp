@@ -86,10 +86,10 @@ bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
         normalized.conditions[weapon] = 100;
     }
     for (std::size_t i = 0; i < normalized.item_ids.size(); ++i) {
+        if (normalized.conditions[i] > 100) return false;
         if (normalized.item_ids[i] == 0) continue;
         const auto slot = static_cast<EquipmentSlot>(i);
-        if (!item_fits_slot(normalized.item_ids[i], slot) ||
-            normalized.conditions[i] > 100) return false;
+        if (!item_fits_slot(normalized.item_ids[i], slot)) return false;
         for (std::size_t j = i + 1; j < normalized.item_ids.size(); ++j)
             if (normalized.item_ids[i] == normalized.item_ids[j]) return false;
     }
