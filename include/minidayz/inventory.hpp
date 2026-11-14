@@ -76,6 +76,9 @@ public:
     bool remove(std::size_t slot, std::uint16_t amount) noexcept;
     // Apply source condition loss; an item is destroyed when condition reaches zero.
     bool damage_condition(std::size_t slot, std::uint8_t loss) noexcept;
+    // Apply an absolute condition value decoded from a source repair action.
+    // This deliberately does not invent repair amounts or repair eligibility.
+    bool restore_condition(std::size_t slot, std::uint8_t condition) noexcept;
 
     // Ground transfers are atomic: failed pickups/drops leave both sides intact.
     bool pickup(GroundItem& ground, std::uint16_t max_stack = 0) noexcept;
