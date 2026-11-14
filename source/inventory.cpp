@@ -138,9 +138,11 @@ bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
     return true;
 }
 
-bool InventorySystem::equip_backpack_from_slot(
-    std::size_t index, std::size_t source_capacity) noexcept {
-    if (index >= capacity_ || !is_backpack_item(slots_[index].item_id) ||
+bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
+    if (index >= capacity_) return false;
+    const std::size_t source_capacity =
+        source_backpack_capacity(slots_[index].item_id);
+    if (!is_backpack_item(slots_[index].item_id) ||
         slots_[index].count != 1 || slots_[index].condition > 100 ||
         source_capacity <= kInventorySlotCount ||
         source_capacity > kMaximumInventorySlotCount)
