@@ -11,7 +11,7 @@ XML = ROOT / "l_eng_items.xml"
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_equipment_catalog.hpp"
 CONDITION_OUTPUT = ROOT / "include/minidayz/generated/item_condition_catalog.hpp"
-REPAIR_OUTPUT = ROOT / "include/minidayz/generated/item_outerwear_repair_catalog.hpp"
+REPAIR_OUTPUT = ROOT / "include/minidayz/generated/item_repair_catalog.hpp"
 REPAIR_EVENTS = {
     8157650840631157: ("pants_tape", "Duct Tape", "pants"),
     5373788036138533: ("outerwear_tape", "Duct Tape", "outerwear"),
