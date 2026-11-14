@@ -2,6 +2,7 @@
 """Extract original equipment and default-condition data from Construct map instances."""
 from __future__ import annotations
 import json
+import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -31,7 +32,9 @@ def main():
         int(item.findtext("id", "-1").strip())
         for item in ET.parse(XML).getroot().findall("item")
     }
-    project = json.loads(PROJECT.read_text(encoding="utf-8"))
+    project_text = PROJECT.read_text(encoding="utf-8")
+    project_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", project_text)
+    project = json.loads(project_text)
     properties = {}
     item_conditions = {}
     for layout in project["project"][5]:
