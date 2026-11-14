@@ -186,15 +186,21 @@ public:
             drag_target_equipment_slot_ = -1;
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
             if (equipment_target >= 0) {
-                const auto slot = static_cast<minidayz::items::EquipmentSlot>(equipment_target);
-                const auto equipped = equipment_.equipped(slot);
-                if (equipped != 0) {
-                    // Tapping an occupied equipment slot removes it back into
-                    // the backpack; failed transfers leave it equipped.
-                    const std::size_t destination = first_available_inventory_slot(equipped);
-                    if (destination < inventory_.capacity())
-                        (void)equipment_.unequip_to_inventory(inventory_, slot, destination);
+                if (equipment_target == 5) {
+                    const auto backpack = inventory_.equipped_backpack();
+                    const std::size_t destination = first_available_inventory_slot(backpack);
+                    if (backpack != 0 && destination < inventory_.capacity())
+                        (void)inventory_.unequip_backpack_to_slot(destination);
                     selected_inventory_slot_ = -1;
+                } else {
+                    const auto slot = static_cast<minidayz::items::EquipmentSlot>(equipment_target);
+                    const auto equipped = equipment_.equipped(slot);
+                    if (equipped != 0) {
+                        const std::size_t destination = first_available_inventory_slot(equipped);
+                        if (destination < inventory_.capacity())
+                            (void)equipment_.unequip_to_inventory(inventory_, slot, destination);
+                        selected_inventory_slot_ = -1;
+                    }
                 }
             }
             // Page through larger backpacks without changing the 5 x 3 grid.
@@ -224,7 +230,7 @@ public:
         }
         if (input.touching && drag_source_slot_ >= 0) {
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
-            if (equipment_target >= 0) {
+            if (equipment_target >= 0 && equipment_target < 5) {
                 drag_target_equipment_slot_ = equipment_target;
                 drag_target_slot_ = -1;
             } else {
@@ -313,16 +319,18 @@ public:
               C2D_Color32(75, 180, 165, 255));
         // Source equipment slots: head, outerwear, vest, pants, hands,
         // feet and weapon. Drag an item onto a slot to equip; tap to remove.
-        static constexpr const char* equipment_labels[] = {"HEAD","COAT","VEST","PANTS","HANDS","FEET","WEAPON"};
-        for (std::size_t i = 0; i < minidayz::items::kEquipmentSlotCount; ++i) {
-            const float x = 8.0f + static_cast<float>(i) * 44.0f;
-            renderer.draw_solid_rect(x, 38.0f, 42.0f, 43.0f, C2D_Color32(8, 11, 10, 255));
-            renderer.draw_solid_rect(x + 2.0f, 40.0f, 38.0f, 39.0f, C2D_Color32(47, 54, 48, 255));
-            const auto item_id = equipment_.equipped(static_cast<minidayz::items::EquipmentSlot>(i));
+        static constexpr const char* equipment_labels[] = {"HELMET","COAT","VEST","PANTS","HANDS","PACK"};
+        for (std::size_t i = 0; i < 6; ++i) {
+            const float x = 5.0f + static_cast<float>(i) * 52.0f;
+            renderer.draw_solid_rect(x, 38.0f, 50.0f, 43.0f, C2D_Color32(8, 11, 10, 255));
+            renderer.draw_solid_rect(x + 2.0f, 40.0f, 46.0f, 39.0f, C2D_Color32(47, 54, 48, 255));
+            const auto item_id = i == 5
+                ? inventory_.equipped_backpack()
+                : equipment_.equipped(static_cast<minidayz::items::EquipmentSlot>(i));
             if (item_id != 0)
-                (void)renderer.draw_item_icon(item_id, x + 21.0f, 55.0f, 29.0f, 23.0f);
+                (void)renderer.draw_item_icon(item_id, x + 25.0f, 55.0f, 34.0f, 25.0f);
             else
-                renderer.draw_text(equipment_labels[i], x + 3.0f, 53.0f, 0.19f);
+                renderer.draw_text(equipment_labels[i], x + 3.0f, 53.0f, 0.18f);
         }
         // 5 x 3 backpack page, sized for the 320 x 240 touch screen.
         const int page_start = static_cast<int>(inventory_page_ * kInventoryPageSize);
@@ -452,15 +460,28 @@ public:
                 (void)renderer.draw_source_animation(object, animation_name,
                     p.animation_frame, p.x, p.y, 0.55f, 0.55f, 0.42f);
             };
-            // Match the original Construct layer order: player, pants,
-            // hands, clothing, vests, helmets, backpacks, weapons.
+            // Match the original player equipment layers: pants, clothing,
+            // vest, helmet, backpack, then the held weapon.
             draw_equipped_layer(equipment_.equipped(minidayz::items::EquipmentSlot::pants));
-            draw_equipped_layer(equipment_.equipped(minidayz::items::EquipmentSlot::hands));
             draw_equipped_layer(equipment_.equipped(minidayz::items::EquipmentSlot::outerwear));
             draw_equipped_layer(equipment_.equipped(minidayz::items::EquipmentSlot::vest));
             draw_equipped_layer(equipment_.equipped(minidayz::items::EquipmentSlot::head));
             draw_equipped_layer(inventory_.equipped_backpack());
-            draw_equipped_layer(equipment_.equipped(minidayz::items::EquipmentSlot::weapon));
+            const auto held_weapon = equipment_.equipped(minidayz::items::EquipmentSlot::hands);
+            if (held_weapon != 0) {
+                const auto object = minidayz::items::source_sprite_object(held_weapon);
+                if (object != 65535) {
+                    char weapon_animation[24]{};
+                    const char* candidates[] = {"pistol", "axe", "twohand", "idle", "run"};
+                    for (const char* prefix : candidates) {
+                        std::snprintf(weapon_animation, sizeof(weapon_animation), "%s_%s",
+                                      prefix, direction);
+                        if (renderer.draw_source_animation(object, weapon_animation,
+                                p.animation_frame, p.x, p.y, 0.55f, 0.55f, 0.42f))
+                            break;
+                    }
+                }
+            }
         }
         if (!sprite_drawn) {
             renderer.draw_solid_rect(p.x - 5.0f, p.y - 5.0f, 10.0f, 12.0f,
@@ -473,10 +494,9 @@ private:
     static constexpr std::size_t kInventoryPageSize = 15;
 
     static int equipment_slot_at(int x, int y) noexcept {
-        if (y < 38 || y >= 81 || x < 8 || x >= 316) return -1;
-        const int index = (x - 8) / 44;
-        return index >= 0 && index < static_cast<int>(minidayz::items::kEquipmentSlotCount)
-            ? index : -1;
+        if (y < 38 || y >= 81 || x < 5 || x >= 315) return -1;
+        const int index = (x - 5) / 52;
+        return index >= 0 && index < 6 ? index : -1;
     }
 
     std::size_t first_available_inventory_slot(std::uint16_t item_id) const noexcept {
