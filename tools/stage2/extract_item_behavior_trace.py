@@ -101,7 +101,7 @@ def main() -> None:
     if len(item_rows) != 405:
         raise SystemExit(f"Expected 405 original item names, found {len(item_rows)}")
 
-    table = ITEM_TABLE.read_text(encoding="utf-8")
+    table = ITEM_TABLE.read_text(encoding="utf-8-sig")
     table = re.sub(r"\\u([0-9a-fA-F]{4})",
                    lambda m: chr(int(m.group(1), 16)), table)
     marker = table.find("MDZItemTable")
