@@ -4,7 +4,7 @@ from hashlib import sha256
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
-source = root / "Minidayz-Multiplayer-main/data.js"
+source = root / "data.deobfuscated.js"
 snapshot = root / "data/stage1/source_snapshot"
 target = root / "data/stage1/construct_project_parsed.json"
 chunk_size = 650_000
@@ -39,12 +39,12 @@ if [part.name for part in parts] != expected_names:
 
 snapshot_bytes = b"".join(part.read_bytes() for part in parts)
 if snapshot_bytes != original_bytes:
-    raise SystemExit("Internal error: regenerated snapshot does not match Minidayz-Multiplayer-main/data.js")
+    raise SystemExit("Internal error: regenerated snapshot does not match data.deobfuscated.js")
 
 target.write_bytes(original_bytes)
 print(
     f"Rebuilt {len(parts)} snapshot chunks directly from authoritative "
-    f"Minidayz-Multiplayer-main/data.js ({len(original_bytes):,} bytes, "
+    f"data.deobfuscated.js ({len(original_bytes):,} bytes, "
     f"sha256={sha256(original_bytes).hexdigest()})"
 )
 print(f"Wrote exact source to {target.relative_to(root)}")
