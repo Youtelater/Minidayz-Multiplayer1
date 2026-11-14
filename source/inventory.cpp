@@ -307,14 +307,8 @@ bool InventorySystem::repair_equipped_backpack_from_inventory_slot(
         return false;
     const auto repaired = static_cast<std::uint8_t>(
         std::min<unsigned>(100, static_cast<unsigned>(equipped_backpack_condition_) + gain));
-    const auto before = snapshot();
     if (!remove(material_slot, 1)) return false;
     equipped_backpack_condition_ = repaired;
-    // Keep the operation atomic if inventory removal semantics ever change.
-    if (equipped_backpack_condition_ != repaired) {
-        (void)restore(before);
-        return false;
-    }
     return true;
 }
 
