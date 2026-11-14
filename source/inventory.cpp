@@ -284,6 +284,8 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
     if (moving == 0 || moving > source.count) return false;
 
     if (destination.empty()) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || moving > max_stack) return false;
         destination = {source.item_id, moving, source.condition};
     } else if (destination.item_id == source.item_id &&
                destination.condition == source.condition) {
