@@ -187,10 +187,11 @@ int main() {
     assert(!is_backpack_item(456)); // Civilian Tent
     assert(!is_backpack_item(461)); // Supplies Stash
     assert(!is_backpack_item(1));
-    assert(source_backpack_capacity(450) == 20);
-    assert(source_backpack_capacity(451) == 22);
-    assert(source_backpack_capacity(457) == 26);
-    assert(source_backpack_capacity(754) == 20);
+    // Unknown capacities must remain unresolved until traced from the original events.
+    assert(source_backpack_capacity(450) == 0);
+    assert(source_backpack_capacity(451) == 0);
+    assert(source_backpack_capacity(457) == 0);
+    assert(source_backpack_capacity(754) == 0);
     assert(source_backpack_capacity(456) == 0);
     assert(source_backpack_capacity(461) == 0);
     assert(source_backpack_capacity(1) == 0);
