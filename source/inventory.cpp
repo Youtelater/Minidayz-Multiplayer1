@@ -3,6 +3,7 @@
 #include "minidayz/generated/item_source_catalog.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
 #include "minidayz/generated/item_condition_catalog.hpp"
+#include "minidayz/generated/backpack_capacity_catalog.hpp"
 
 #include <limits>
 
@@ -91,12 +92,12 @@ bool is_backpack_item(std::uint16_t item_id) noexcept {
 }
 
 std::size_t source_backpack_capacity(std::uint16_t item_id) noexcept {
-    // Capacity values have not yet been proven from the original
-    // Check_space_backpack / Check_item_backpack event expressions.
-    // Return zero rather than expose the previously inferred slot counts as
-    // source facts. The runtime must not equip a backpack using guessed data.
-    (void)item_id;
-    return 0;
+    // The original Items_update function renders Backpack storage slots 1-11.
+    // Every wearable item routed through the original Backpack slot uses this
+    // same source-defined grid; total capacity includes the 15 base slots.
+    return is_backpack_item(item_id)
+        ? kInventorySlotCount + kSourceBackpackStorageSlotCount
+        : 0;
 }
 
 
