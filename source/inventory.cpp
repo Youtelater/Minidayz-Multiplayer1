@@ -272,6 +272,15 @@ bool InventorySystem::damage_condition(
     return true;
 }
 
+bool InventorySystem::restore_condition(
+    std::size_t slot_index, std::uint8_t condition) noexcept {
+    if (slot_index >= capacity_ || slots_[slot_index].empty() ||
+        condition > 100 || condition <= slots_[slot_index].condition)
+        return false;
+    slots_[slot_index].condition = condition;
+    return true;
+}
+
 bool InventorySystem::remove(std::size_t index,
                              std::uint16_t amount) noexcept {
     if (index >= capacity_ || amount == 0 ||
