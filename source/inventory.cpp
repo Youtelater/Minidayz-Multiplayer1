@@ -79,10 +79,11 @@ std::uint16_t source_sprite_object(std::uint16_t item_id) noexcept {
 
 bool is_backpack_item(std::uint16_t item_id) noexcept {
     // Exact backpack equipment IDs present in the original MDZItemTable.
-    // Civilian Tent (456) and Supplies Stash (461) are not wearable packs.
+    // Civilian Tent (456) is excluded. The original Drop_backpack event
+    // explicitly recognizes "red box" (item 461) as an equipped container.
     switch (item_id) {
         case 450: case 451: case 452: case 453: case 454: case 455:
-        case 457: case 458: case 459: case 460: case 462:
+        case 457: case 458: case 459: case 460: case 461: case 462:
         case 752: case 753: case 754:
             return true;
         default:
@@ -91,12 +92,24 @@ bool is_backpack_item(std::uint16_t item_id) noexcept {
 }
 
 std::size_t source_backpack_capacity(std::uint16_t item_id) noexcept {
-    // Capacity values have not yet been proven from the original
-    // Check_space_backpack / Check_item_backpack event expressions.
-    // Return zero rather than expose the previously inferred slot counts as
-    // source facts. The runtime must not equip a backpack using guessed data.
+    // The standard inventory-expansion rules for the original backpack items
+    // remain under source audit. Do not infer them from the separate bag arrays.
     (void)item_id;
     return 0;
+}
+
+std::size_t source_backpack_storage_capacity(std::uint16_t item_id) noexcept {
+    // Exact original event mappings:
+    // 458 barsetka -> Array 198/234 size 2 (perk_kb == 1).
+    // 459 J kuabao -> Array 198/234 size 4 (perk_kb == 2).
+    // 460 Y kuabao -> Array 198/234 size 4 (perk_kb == 3).
+    // 461 red box -> Array 198/234 size 6 (perk_jtcl == 1).
+    switch (item_id) {
+        case 458: return 2;
+        case 459: case 460: return 4;
+        case 461: return 6;
+        default: return 0;
+    }
 }
 
 
@@ -137,13 +150,28 @@ bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
     return true;
 }
 
-bool InventorySystem::equip_backpack_from_slot(
-    std::size_t index, std::size_t source_capacity) noexcept {
+bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
     if (index >= capacity_ || !is_backpack_item(slots_[index].item_id) ||
-        slots_[index].count != 1 || slots_[index].condition > 100 ||
-        source_capacity <= kInventorySlotCount ||
-        source_capacity > kMaximumInventorySlotCount)
+        slots_[index].count != 1 || slots_[index].condition > 100)
         return false;
+
+    // Zero means the original source has not established a capacity value.
+    // Equip the visual/equipment item without changing storage in that case.
+    const std::size_t source_capacity = source_backpack_capacity(slots_[index].item_id);
+    const std::size_t target_capacity =
+        source_capacity == 0 ? capacity_ : source_capacity;
+    const std::size_t target_backpack_capacity =
+        source_backpack_storage_capacity(slots_[index].item_id);
+    if (target_capacity < kInventorySlotCount ||
+        target_capacity > kMaximumInventorySlotCount ||
+        (source_capacity != 0 && target_capacity == kInventorySlotCount) ||
+        target_backpack_capacity > kMaximumBackpackSlotCount)
+        return false;
+    // A smaller or non-container replacement cannot strand items in the old
+    // bag. Preserve the overlapping slots when changing to a larger bag.
+    for (std::size_t i = target_backpack_capacity;
+         i < backpack_capacity_; ++i)
+        if (!backpack_slots_[i].empty()) return false;
 
     const std::uint16_t incoming = slots_[index].item_id;
     const std::uint8_t incoming_condition = slots_[index].condition;
@@ -151,25 +179,29 @@ bool InventorySystem::equip_backpack_from_slot(
     const std::uint8_t outgoing_condition = equipped_backpack_condition_;
 
     std::size_t return_slot = index;
-    if (outgoing != 0 && index >= source_capacity) {
-        return_slot = source_capacity;
-        for (std::size_t i = 0; i < source_capacity; ++i) {
+    if (outgoing != 0 && index >= target_capacity) {
+        return_slot = target_capacity;
+        for (std::size_t i = 0; i < target_capacity; ++i) {
             if (i != index && slots_[i].empty()) {
                 return_slot = i;
                 break;
             }
         }
-        if (return_slot == source_capacity) return false;
+        if (return_slot == target_capacity) return false;
     }
 
     for (std::size_t i = 0; i < capacity_; ++i) {
         if (i == index || (outgoing != 0 && i == return_slot)) continue;
-        if (i >= source_capacity && !slots_[i].empty()) return false;
+        if (i >= target_capacity && !slots_[i].empty()) return false;
     }
 
     slots_[index] = {};
     if (outgoing != 0) slots_[return_slot] = {outgoing, 1, outgoing_condition};
-    capacity_ = source_capacity;
+    capacity_ = target_capacity;
+    for (std::size_t i = target_backpack_capacity;
+         i < kMaximumBackpackSlotCount; ++i)
+        backpack_slots_[i] = {};
+    backpack_capacity_ = target_backpack_capacity;
     equipped_backpack_ = incoming;
     equipped_backpack_condition_ = incoming_condition;
     return true;
@@ -181,13 +213,38 @@ bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
         return false;
     for (std::size_t i = kInventorySlotCount; i < capacity_; ++i)
         if (!slots_[i].empty()) return false;
+    for (std::size_t i = 0; i < backpack_capacity_; ++i)
+        if (!backpack_slots_[i].empty()) return false;
 
     const std::uint16_t outgoing = equipped_backpack_;
     const std::uint8_t condition = equipped_backpack_condition_;
     capacity_ = kInventorySlotCount;
     equipped_backpack_ = 0;
     equipped_backpack_condition_ = 100;
+    backpack_slots_ = {};
+    backpack_capacity_ = 0;
     slots_[index] = {outgoing, 1, condition};
+    return true;
+}
+
+bool InventorySystem::drop_equipped_backpack(GroundItem& ground) noexcept {
+    if (equipped_backpack_ == 0 || !is_backpack_item(equipped_backpack_) ||
+        (ground.item_id == 0) != (ground.count == 0) || !ground.empty())
+        return false;
+
+    // Never discard items that would become inaccessible when the backpack
+    // is removed. This is a safety guard for the native inventory model.
+    for (std::size_t i = kInventorySlotCount; i < capacity_; ++i)
+        if (!slots_[i].empty()) return false;
+    for (std::size_t i = 0; i < backpack_capacity_; ++i)
+        if (!backpack_slots_[i].empty()) return false;
+
+    ground = {equipped_backpack_, 1, equipped_backpack_condition_};
+    capacity_ = kInventorySlotCount;
+    equipped_backpack_ = 0;
+    equipped_backpack_condition_ = 100;
+    backpack_slots_ = {};
+    backpack_capacity_ = 0;
     return true;
 }
 
@@ -233,6 +290,127 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
         if (remaining == 0) return true;
     }
     return false;
+}
+
+bool InventorySystem::add_to_backpack(std::uint16_t item_id,
+                                         std::uint16_t amount,
+                                         std::uint16_t max_stack,
+                                         std::uint8_t condition) noexcept {
+    if (backpack_capacity_ == 0 || !valid_item(item_id) || amount == 0)
+        return false;
+    if (condition == kUseSourceItemCondition)
+        condition = source_default_condition(item_id);
+    if (condition > 100) return false;
+    if (max_stack == 0) max_stack = source_max_stack(item_id);
+    if (max_stack == 0) return false;
+
+    std::uint32_t available = 0;
+    for (std::size_t i = 0; i < backpack_capacity_; ++i) {
+        const auto& entry = backpack_slots_[i];
+        if (entry.empty()) available += max_stack;
+        else if (entry.item_id == item_id && entry.condition == condition &&
+                 entry.count < max_stack)
+            available += static_cast<std::uint32_t>(max_stack - entry.count);
+    }
+    if (available < amount) return false;
+
+    std::uint32_t remaining = amount;
+    for (std::size_t i = 0; i < backpack_capacity_; ++i) {
+        auto& entry = backpack_slots_[i];
+        if (entry.item_id != item_id || entry.condition != condition ||
+            entry.count >= max_stack) continue;
+        const auto room = static_cast<std::uint32_t>(max_stack - entry.count);
+        const auto added = remaining < room ? remaining : room;
+        entry.count = static_cast<std::uint16_t>(entry.count + added);
+        remaining -= added;
+        if (remaining == 0) return true;
+    }
+    for (std::size_t i = 0; i < backpack_capacity_; ++i) {
+        auto& entry = backpack_slots_[i];
+        if (!entry.empty()) continue;
+        const auto added = remaining < max_stack ? remaining : max_stack;
+        entry = {item_id, static_cast<std::uint16_t>(added), condition};
+        remaining -= added;
+        if (remaining == 0) return true;
+    }
+    return false;
+}
+
+bool InventorySystem::remove_from_backpack(std::size_t index,
+                                           std::uint16_t amount) noexcept {
+    if (index >= backpack_capacity_ || amount == 0 ||
+        backpack_slots_[index].empty() ||
+        amount > backpack_slots_[index].count) return false;
+    auto& entry = backpack_slots_[index];
+    entry.count = static_cast<std::uint16_t>(entry.count - amount);
+    if (entry.count == 0) entry = {};
+    return true;
+}
+
+bool InventorySystem::move_to_backpack(std::size_t inventory_index,
+                                       std::size_t backpack_index,
+                                       std::uint16_t amount,
+                                       std::uint16_t max_stack) noexcept {
+    if (inventory_index >= capacity_ || backpack_index >= backpack_capacity_)
+        return false;
+    auto& source = slots_[inventory_index];
+    auto& destination = backpack_slots_[backpack_index];
+    if (source.empty()) return false;
+    const std::uint16_t moving = amount == 0 ? source.count : amount;
+    if (moving == 0 || moving > source.count) return false;
+    if (destination.empty()) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || moving > max_stack) return false;
+        destination = {source.item_id, moving, source.condition};
+    } else if (destination.item_id == source.item_id &&
+               destination.condition == source.condition) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || destination.count > max_stack ||
+            moving > max_stack - destination.count) return false;
+        destination.count = static_cast<std::uint16_t>(destination.count + moving);
+    } else {
+        if (moving != source.count) return false;
+        const InventorySlot temporary = destination;
+        destination = source;
+        source = temporary;
+        return true;
+    }
+    source.count = static_cast<std::uint16_t>(source.count - moving);
+    if (source.count == 0) source = {};
+    return true;
+}
+
+bool InventorySystem::move_from_backpack(std::size_t backpack_index,
+                                         std::size_t inventory_index,
+                                         std::uint16_t amount,
+                                         std::uint16_t max_stack) noexcept {
+    if (backpack_index >= backpack_capacity_ || inventory_index >= capacity_)
+        return false;
+    auto& source = backpack_slots_[backpack_index];
+    auto& destination = slots_[inventory_index];
+    if (source.empty()) return false;
+    const std::uint16_t moving = amount == 0 ? source.count : amount;
+    if (moving == 0 || moving > source.count) return false;
+    if (destination.empty()) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || moving > max_stack) return false;
+        destination = {source.item_id, moving, source.condition};
+    } else if (destination.item_id == source.item_id &&
+               destination.condition == source.condition) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || destination.count > max_stack ||
+            moving > max_stack - destination.count) return false;
+        destination.count = static_cast<std::uint16_t>(destination.count + moving);
+    } else {
+        if (moving != source.count) return false;
+        const InventorySlot temporary = destination;
+        destination = source;
+        source = temporary;
+        return true;
+    }
+    source.count = static_cast<std::uint16_t>(source.count - moving);
+    if (source.count == 0) source = {};
+    return true;
 }
 
 bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
@@ -363,8 +541,59 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
     return true;
 }
 
+bool InventorySystem::move_backpack(std::size_t from, std::size_t to,
+                                      std::uint16_t amount,
+                                      std::uint16_t max_stack) noexcept {
+    if (from >= backpack_capacity_ || to >= backpack_capacity_ || from == to ||
+        backpack_slots_[from].empty()) return false;
+    auto& source = backpack_slots_[from];
+    auto& destination = backpack_slots_[to];
+    const std::uint16_t moving = amount == 0 ? source.count : amount;
+    if (moving == 0 || moving > source.count) return false;
+    if (destination.empty()) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || moving > max_stack) return false;
+        destination = {source.item_id, moving, source.condition};
+    } else if (destination.item_id == source.item_id &&
+               destination.condition == source.condition) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || destination.count > max_stack ||
+            moving > max_stack - destination.count) return false;
+        destination.count = static_cast<std::uint16_t>(destination.count + moving);
+    } else {
+        if (moving != source.count) return false;
+        const InventorySlot temporary = destination;
+        destination = source;
+        source = temporary;
+        return true;
+    }
+    source.count = static_cast<std::uint16_t>(source.count - moving);
+    if (source.count == 0) source = {};
+    return true;
+}
+
 const InventorySlot* InventorySystem::slot(std::size_t index) const noexcept {
     return index < capacity_ ? &slots_[index] : nullptr;
+}
+
+const InventorySlot* InventorySystem::backpack_slot(std::size_t index) const noexcept {
+    return index < backpack_capacity_ ? &backpack_slots_[index] : nullptr;
+}
+
+std::size_t InventorySystem::backpack_occupied_slots() const noexcept {
+    std::size_t total = 0;
+    for (std::size_t i = 0; i < backpack_capacity_; ++i)
+        if (!backpack_slots_[i].empty()) ++total;
+    return total;
+}
+
+std::uint32_t InventorySystem::backpack_count(std::uint16_t item_id) const noexcept {
+    std::uint32_t total = 0;
+    for (std::size_t i = 0; i < backpack_capacity_; ++i) {
+        const auto& entry = backpack_slots_[i];
+        if (!entry.empty() && entry.item_id == item_id) total += entry.count;
+    }
+    return total;
 }
 
 std::uint32_t InventorySystem::count(std::uint16_t item_id) const noexcept {
@@ -389,6 +618,8 @@ InventorySnapshot InventorySystem::snapshot() const noexcept {
     result.capacity = static_cast<std::uint16_t>(capacity_);
     result.equipped_backpack = equipped_backpack_;
     result.equipped_backpack_condition = equipped_backpack_condition_;
+    result.backpack_slots = backpack_slots_;
+    result.backpack_capacity = static_cast<std::uint8_t>(backpack_capacity_);
     return result;
 }
 
@@ -398,12 +629,30 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
         saved.equipped_backpack_condition > 100)
         return false;
     if (saved.equipped_backpack != 0 &&
-        (!is_backpack_item(saved.equipped_backpack) ||
-         saved.capacity <= kInventorySlotCount))
+        !is_backpack_item(saved.equipped_backpack))
         return false;
     if (saved.equipped_backpack == 0 &&
         saved.equipped_backpack_condition != 100)
         return false;
+    const std::size_t expected_backpack_capacity =
+        source_backpack_storage_capacity(saved.equipped_backpack);
+    if (saved.backpack_capacity != expected_backpack_capacity &&
+        !(saved.backpack_capacity == 0 && expected_backpack_capacity != 0))
+        return false;
+
+    for (std::size_t i = 0; i < kMaximumBackpackSlotCount; ++i) {
+        const auto& entry = saved.backpack_slots[i];
+        if (entry.condition > 100) return false;
+        if (i >= expected_backpack_capacity) {
+            if (!entry.empty()) return false;
+            continue;
+        }
+        if ((entry.item_id == 0) != (entry.count == 0)) return false;
+        if (!entry.empty() &&
+            (!valid_item(entry.item_id) ||
+             entry.count > source_max_stack(entry.item_id)))
+            return false;
+    }
 
     for (std::size_t i = 0; i < kMaximumInventorySlotCount; ++i) {
         const auto& entry = saved.slots[i];
@@ -423,6 +672,8 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
     capacity_ = saved.capacity;
     equipped_backpack_ = saved.equipped_backpack;
     equipped_backpack_condition_ = saved.equipped_backpack_condition;
+    backpack_slots_ = saved.backpack_slots;
+    backpack_capacity_ = expected_backpack_capacity;
     return true;
 }
 

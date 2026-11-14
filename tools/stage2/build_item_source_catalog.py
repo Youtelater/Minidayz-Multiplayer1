@@ -11,14 +11,17 @@ import json, re, xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
-XML=ROOT/"Minidayz-Multiplayer-main/l_eng_items.xml"
+XML=ROOT/"l_eng_items.xml"
+BUNDLED_XML=ROOT/"Minidayz-Multiplayer-main/l_eng_items.xml"
 TABLE=ROOT/"mp_itemtable.js"
 PROJECT=ROOT/"data/stage1/construct_project_parsed.json"
 OUT=ROOT/"include/minidayz/generated/item_source_catalog.hpp"
 
 def main():
-    for p in (XML,TABLE,PROJECT):
+    for p in (XML,BUNDLED_XML,TABLE,PROJECT):
         if not p.is_file(): raise SystemExit(f"Missing original source: {p}")
+    if XML.read_bytes() != BUNDLED_XML.read_bytes():
+        raise SystemExit("Root and bundled original item catalogs differ")
     names={}
     for item in ET.parse(XML).getroot().findall("item"):
         i=int(item.findtext("id","-1").strip())
@@ -29,7 +32,7 @@ def main():
     marker=src.find("MDZItemTable"); start=src.find("{",marker); end=src.find("}",start)
     if min(marker,start,end)<0: raise SystemExit("Original MDZItemTable missing")
     object_names={int(m.group(1)):json.loads(m.group(2)) for m in re.finditer(r'(\d+)\s*:\s*("[^"]*")',src[start+1:end])}
-    project=json.loads(PROJECT.read_text(encoding="utf-8"))
+    project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", PROJECT.read_text(encoding="utf-8")))
     objects=project["project"][3]
     indices={}
     for n,obj in enumerate(objects):

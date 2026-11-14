@@ -170,10 +170,13 @@ int main() {
     bad_condition_snapshot.slots[2].condition = 101;
     assert(!condition_restored.restore(bad_condition_snapshot));
 
+    // Backpack capacity remains unresolved in the original event translation.
+    // Equip/swap/unequip/drop must therefore work without changing base storage.
     InventorySystem conditioned_pack;
     assert(conditioned_pack.add(450, 1, 0, 55));
-    assert(conditioned_pack.equip_backpack_from_slot(0, 20));
+    assert(conditioned_pack.equip_backpack_from_slot(0));
     assert(conditioned_pack.equipped_backpack_condition() == 55);
+    assert(conditioned_pack.capacity() == kInventorySlotCount);
     auto pack_snapshot = conditioned_pack.snapshot();
     InventorySystem pack_restored;
     assert(pack_restored.restore(pack_snapshot));
@@ -181,84 +184,128 @@ int main() {
     assert(pack_restored.unequip_backpack_to_slot(0));
     assert(pack_restored.slot(0)->condition == 55);
 
-    // Exact wearable backpack IDs from the original MDZItemTable.
-    assert(is_backpack_item(450));
-    assert(is_backpack_item(754));
+    InventorySystem dropped_pack;
+    assert(dropped_pack.add(450, 1, 0, 55));
+    assert(dropped_pack.equip_backpack_from_slot(0));
+    GroundItem backpack_ground{};
+    assert(dropped_pack.drop_equipped_backpack(backpack_ground));
+    assert(backpack_ground.item_id == 450);
+    assert(backpack_ground.count == 1);
+    assert(backpack_ground.condition == 55);
+    assert(dropped_pack.equipped_backpack() == 0);
+    assert(dropped_pack.capacity() == kInventorySlotCount);
+
+    InventorySystem protected_pack;
+    assert(protected_pack.add(450, 1));
+    assert(protected_pack.equip_backpack_from_slot(0));
+    GroundItem protected_ground{};
+    assert(protected_pack.drop_equipped_backpack(protected_ground));
+    assert(protected_ground.item_id == 450);
+
+    // Exact wearable backpack IDs and exclusions from original item localization,
+    // MDZItemTable, and the original Drop_backpack event (which includes "red box").
+    for (const auto id : {450, 451, 452, 453, 454, 455, 457, 458, 459, 460,
+                          461, 462, 752, 753, 754})
+        assert(is_backpack_item(id));
     assert(!is_backpack_item(456)); // Civilian Tent
-    assert(!is_backpack_item(461)); // Supplies Stash
     assert(!is_backpack_item(1));
-    // Unknown capacities must remain unresolved until traced from the original events.
-    assert(source_backpack_capacity(450) == 0);
-    assert(source_backpack_capacity(451) == 0);
-    assert(source_backpack_capacity(457) == 0);
-    assert(source_backpack_capacity(754) == 0);
-    assert(source_backpack_capacity(456) == 0);
-    assert(source_backpack_capacity(461) == 0);
-    assert(source_backpack_capacity(1) == 0);
+    // Normal inventory expansion remains unresolved. The four separate
+    // backpack containers below are decoded from original Array 198/234 sizes.
+    for (const auto id : {450, 451, 457, 462, 752, 753, 754, 1})
+        assert(source_backpack_capacity(id) == 0);
+    assert(source_backpack_storage_capacity(458) == 2); // barsetka
+    assert(source_backpack_storage_capacity(459) == 4); // J kuabao
+    assert(source_backpack_storage_capacity(460) == 4); // Y kuabao
+    assert(source_backpack_storage_capacity(461) == 6); // red box
+    assert(source_backpack_storage_capacity(450) == 0);
+
+    // The original game stores these four special bags in separate
+    // parallel item/count arrays (Construct Array objects 198 and 234).
+    InventorySystem bag_storage;
+    assert(bag_storage.add(458, 1));
+    assert(bag_storage.equip_backpack_from_slot(0));
+    assert(bag_storage.backpack_capacity() == 2);
+    assert(bag_storage.add_to_backpack(18, 2));
+    assert(bag_storage.backpack_count(18) == 2);
+    assert(bag_storage.backpack_occupied_slots() == 1);
+    assert(!bag_storage.unequip_backpack_to_slot(0)); // never strand bag contents
+    auto bag_snapshot = bag_storage.snapshot();
+    InventorySystem bag_restored;
+    assert(bag_restored.restore(bag_snapshot));
+    assert(bag_restored.backpack_capacity() == 2);
+    assert(bag_restored.backpack_count(18) == 2);
+    assert(bag_restored.move_from_backpack(0, 0));
+    assert(bag_restored.backpack_count(18) == 0);
+    assert(bag_restored.count(18) == 2);
+    assert(bag_restored.unequip_backpack_to_slot(1));
+
+    InventorySystem bag_swap;
+    assert(bag_swap.add(459, 1));
+    assert(bag_swap.equip_backpack_from_slot(0));
+    assert(bag_swap.backpack_capacity() == 4);
+    assert(bag_swap.add_to_backpack(18, 2));
+    assert(bag_swap.add(458, 1));
+    assert(bag_swap.equip_backpack_from_slot(0));
+    assert(bag_swap.equipped_backpack() == 458);
+    assert(bag_swap.backpack_capacity() == 2);
+    assert(bag_swap.backpack_count(18) == 2);
+    assert(bag_swap.add(459, 1));
+    assert(bag_swap.equip_backpack_from_slot(0));
+    assert(bag_swap.backpack_capacity() == 4);
+    assert(bag_swap.backpack_count(18) == 2);
+
+    InventorySystem bag_internal_move;
+    assert(bag_internal_move.add(458, 1));
+    assert(bag_internal_move.equip_backpack_from_slot(0));
+    assert(bag_internal_move.add_to_backpack(18, 2));
+    assert(bag_internal_move.add_to_backpack(19, 1));
+    assert(bag_internal_move.move_backpack(0, 1));
+    assert(bag_internal_move.backpack_slot(0)->item_id == 19);
+    assert(bag_internal_move.backpack_slot(1)->item_id == 18);
+
+    InventorySystem red_box;
+    assert(red_box.add(461, 1));
+    assert(red_box.equip_backpack_from_slot(0));
+    assert(red_box.backpack_capacity() == 6);
+    assert(red_box.add_to_backpack(18, 6));
+    GroundItem full_bag_drop{};
+    assert(!red_box.drop_equipped_backpack(full_bag_drop));
+    assert(red_box.backpack_occupied_slots() == 2);
+    assert(!red_box.add_to_backpack(18, 100)); // no silent overflow
 
     InventorySystem backpack;
     assert(backpack.add(1, 1));
     assert(backpack.add(450, 1));
-    assert(!backpack.equip_backpack_from_slot(0, 20));
-    assert(!backpack.equip_backpack_from_slot(1, 15));
-    assert(backpack.equip_backpack_from_slot(1, 20));
+    assert(!backpack.equip_backpack_from_slot(0));
+    assert(backpack.equip_backpack_from_slot(1));
     assert(backpack.slot(1)->empty());
     assert(backpack.equipped_backpack() == 450);
-    assert(backpack.capacity() == 20);
+    assert(backpack.capacity() == kInventorySlotCount);
     assert(!backpack.unequip_backpack_to_slot(0)); // target occupied
 
     // Replacing a pack returns the old pack to the same inventory slot.
     assert(backpack.add(451, 1));
-    assert(backpack.equip_backpack_from_slot(1, 22));
+    assert(backpack.equip_backpack_from_slot(1));
     assert(backpack.equipped_backpack() == 451);
-    assert(backpack.capacity() == 22);
+    assert(backpack.capacity() == kInventorySlotCount);
     assert(backpack.slot(1)->item_id == 450);
     assert(backpack.slot(1)->count == 1);
-
-    // Extended slots block unequip until their contents have been moved out.
-    InventorySystem extended;
-    assert(extended.add(450, 1));
-    assert(extended.equip_backpack_from_slot(0, 22));
-    for (std::uint16_t id = 1; id <= 15; ++id)
-        assert(extended.add(id, 1));
-    assert(extended.add(16, 1));
-    assert(extended.slot(15)->item_id == 16);
-    assert(extended.remove(14, 1));
-    assert(!extended.unequip_backpack_to_slot(14));
-    assert(extended.remove(15, 1));
-    assert(extended.unequip_backpack_to_slot(14));
-    assert(extended.capacity() == kInventorySlotCount);
-    assert(extended.equipped_backpack() == 0);
-    assert(extended.slot(14)->item_id == 450);
-
-    // Replacing a pack from an extended slot can downsize if the old pack
-    // has a safe free return slot in the new grid.
-    InventorySystem downsize;
-    assert(downsize.add(450, 1));
-    assert(downsize.equip_backpack_from_slot(0, 22));
-    for (std::uint16_t id = 1; id <= 16; ++id) assert(downsize.add(id, 1));
-    assert(downsize.add(451, 1));
-    assert(downsize.slot(16)->item_id == 451);
-    assert(downsize.equip_backpack_from_slot(16, 20));
-    assert(downsize.capacity() == 20);
-    assert(downsize.equipped_backpack() == 451);
-    assert(downsize.count(450) == 1);
 
     // Save snapshots round-trip all slots, capacity, and equipped backpack.
     InventorySystem persisted;
     assert(persisted.add(450, 1));
-    assert(persisted.equip_backpack_from_slot(0, 20));
+    assert(persisted.equip_backpack_from_slot(0));
     assert(persisted.add(18, 2));
     const auto saved_inventory = persisted.snapshot();
     InventorySystem restored;
     assert(restored.restore(saved_inventory));
-    assert(restored.capacity() == 20);
+    assert(restored.capacity() == kInventorySlotCount);
     assert(restored.equipped_backpack() == 450);
     assert(restored.count(18) == 2);
     auto corrupt_snapshot = saved_inventory;
     corrupt_snapshot.slots[20] = {1, 1};
     assert(!restored.restore(corrupt_snapshot));
-    assert(restored.capacity() == 20);
+    assert(restored.capacity() == kInventorySlotCount);
     corrupt_snapshot = saved_inventory;
     corrupt_snapshot.slots[0] = {9999, 1};
     assert(!restored.restore(corrupt_snapshot));
@@ -266,7 +313,7 @@ int main() {
     corrupt_snapshot.slots[0].count =
         static_cast<std::uint16_t>(source_max_stack(18) + 1);
     assert(!restored.restore(corrupt_snapshot));
-    assert(restored.capacity() == 20);
+    assert(restored.capacity() == kInventorySlotCount);
     assert(restored.count(18) == 2);
 
     InventorySystem wear_inventory;

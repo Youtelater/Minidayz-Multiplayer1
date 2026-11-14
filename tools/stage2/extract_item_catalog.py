@@ -6,12 +6,15 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "Minidayz-Multiplayer-main/l_eng_items.xml"
+SOURCE = ROOT / "l_eng_items.xml"
+BUNDLED_SOURCE = ROOT / "Minidayz-Multiplayer-main/l_eng_items.xml"
 OUTPUT = ROOT / "include/minidayz/generated/item_catalog.hpp"
 
 def main() -> None:
-    if not SOURCE.is_file():
-        raise SystemExit(f"Original item catalog is missing: {SOURCE}")
+    if not SOURCE.is_file() or not BUNDLED_SOURCE.is_file():
+        raise SystemExit("Original root or bundled item catalog is missing")
+    if SOURCE.read_bytes() != BUNDLED_SOURCE.read_bytes():
+        raise SystemExit("Root and bundled original item catalogs differ")
     root = ET.parse(SOURCE).getroot()
     rows: list[tuple[int, str]] = []
     seen: set[int] = set()

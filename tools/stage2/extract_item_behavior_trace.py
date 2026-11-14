@@ -2,7 +2,7 @@
 """Export original inventory-item behavior events without inventing gameplay data.
 
 The trace preserves Construct condition/action records and source event UIDs for
-all item use, pickup, inventory transfer, and drop event groups. A later C++
+all item use, pickup, inventory transfer, drop, and backpack checks. A later C++
 translation must map command IDs and expressions to verified runtime behavior.
 """
 from __future__ import annotations
@@ -26,6 +26,12 @@ TARGETS = {
     3439113896437199: "inventory_items",
     8381242860269222: "item_activate",
     3890676334551161: "item_activate2",
+    240035455345341: "Check_space_backpack",
+    6633395042052185: "Check_item_backpack",
+    2324199594797496: "Check_space_inventory",
+    967333361312322: "Drop_slot",
+    596668192020376: "Drop_backpack_item_id_123",
+    620158115450093: "Drop_backpack_named_container",
 }
 
 
@@ -41,7 +47,7 @@ def parts(event):
     return uid, name, conditions, actions, children
 
 
-def find_groups(entries, found):
+def find_groups(entries, found, source_sheet):
     for event in entries if isinstance(entries, list) else []:
         p = parts(event)
         if p is None:
@@ -50,8 +56,8 @@ def find_groups(entries, found):
         if uid in TARGETS:
             if uid in found:
                 raise SystemExit(f"Duplicate source event group UID: {uid}")
-            found[uid] = event
-        find_groups(children, found)
+            found[uid] = (event, source_sheet)
+        find_groups(children, found, source_sheet)
 
 
 def flatten(event, parent_uid=0, depth=0):
@@ -76,15 +82,20 @@ def main() -> None:
         if not path.is_file():
             raise SystemExit(f"Missing original source input: {path}")
 
-    project = json.loads(PROJECT.read_text(encoding="utf-8"))
+    project = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", PROJECT.read_text(encoding="utf-8")))
     sheets = project.get("project", [None] * 7)[6]
-    game_events = next((sheet for sheet in sheets
-                        if isinstance(sheet, list) and sheet and sheet[0] == "Game_events"), None)
-    if not game_events or len(game_events) < 2:
-        raise SystemExit("Original Game_events sheet not found")
+    if not isinstance(sheets, list):
+        raise SystemExit("Original event sheets not found")
 
+    # Backpack validation functions live on the original GUI sheet, while the
+    # pickup/drop groups live on Game_events. Search every original event sheet
+    # so the trace does not silently omit those source functions.
     found = {}
-    find_groups(game_events[1], found)
+    for sheet in sheets:
+        if not isinstance(sheet, list) or len(sheet) < 2 or not isinstance(sheet[0], str):
+            continue
+        find_groups(sheet[1], found, sheet[0])
+
     missing = set(TARGETS) - set(found)
     if missing:
         raise SystemExit(f"Missing original inventory event groups: {sorted(missing)}")
@@ -114,10 +125,12 @@ def main() -> None:
 
     groups = []
     for uid, label in TARGETS.items():
-        rows = list(flatten(found[uid]))
+        event, source_sheet = found[uid]
+        rows = list(flatten(event))
         groups.append({
             "source_uid": uid,
             "source_name": label,
+            "source_sheet": source_sheet,
             "event_count": len(rows),
             "events": rows,
         })

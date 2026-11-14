@@ -7,6 +7,7 @@ in the raw behavior trace until their semantics are ported.
 """
 from __future__ import annotations
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -69,7 +70,7 @@ def direct_effects(event):
 def main():
     if not PROJECT.is_file():
         raise SystemExit(f"Missing original Construct project: {PROJECT}")
-    project = json.loads(PROJECT.read_text(encoding="utf-8"))
+    project = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", PROJECT.read_text(encoding="utf-8")))
     sheets = project.get("project", [None] * 7)[6]
     game = next((s for s in sheets if isinstance(s, list) and s and s[0] == "Game_events"), None)
     if not game:

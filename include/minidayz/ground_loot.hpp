@@ -26,6 +26,8 @@ public:
     bool add(const GroundItem& item, float x, float y) noexcept;
     bool drop_from_inventory(InventorySystem& inventory, std::size_t slot,
                              std::uint16_t amount, float x, float y) noexcept;
+    bool drop_equipped_backpack(InventorySystem& inventory,
+                                float x, float y) noexcept;
     bool pickup_nearest(InventorySystem& inventory, float x, float y,
                         float radius) noexcept;
 
