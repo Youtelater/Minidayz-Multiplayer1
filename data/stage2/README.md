@@ -6,7 +6,7 @@ Stage 2 is a source-backed port of the original Mini DAYZ 1.6.0 item, inventory,
 
 - The original English item localization and MDZItemTable generate a catalog preserving all 405 original item IDs and gaps.
 - The original sprite catalog resolves 329 item IDs to exact Construct object identities; 76 IDs remain explicitly unmapped rather than receiving substitute art.
-- InventorySystem provides 15 base slots, up to 32 native slots, atomic additions, source stack limits, removal, moving, swapping, splitting, ground pickup/drop, and backpack equipment state.
+- InventorySystem provides 15 base slots, up to 32 native slots, atomic additions, source stack limits, removal, moving, swapping, splitting, ground pickup/drop, and backpack equipment state. The 3DS UI can equip/unequip source-listed backpacks and drop an equipped pack into world loot; unresolved capacity does not expand storage.
 - The original Check_stack_size baseline groups are ported. The perk_cybb branch returns 31,415,926 in the source; the native uint16_t stack representation safely caps that at UINT16_MAX.
 - Item condition (original instance variable 6) is preserved through inventory, ground transfers, equipment, and save snapshots; preservation is not evidence of an original condition-based protection multiplier.
 - Forty direct literal stat-effect rows are extracted from original item_activate and item_activate2 events.
