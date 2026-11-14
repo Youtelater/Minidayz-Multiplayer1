@@ -15,7 +15,7 @@ OUTPUT = ROOT / "include" / "minidayz" / "generated" / "ui_catalog.hpp"
 def main() -> None:
     if not SOURCE.is_file() or not BUNDLED_SOURCE.is_file():
         raise SystemExit("Original root or bundled English UI localization is missing")
-    normalize = lambda value: value.replace("\\r\\n", "\\n").replace("\\r", "\\n")
+    normalize = lambda value: value.replace("\r\n", "\n").replace("\r", "\n")
     if normalize(SOURCE.read_text(encoding="utf-8")) != normalize(
             BUNDLED_SOURCE.read_text(encoding="utf-8")):
         raise SystemExit("Root and bundled original UI localization files differ")
