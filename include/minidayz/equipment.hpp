@@ -2,6 +2,7 @@
 
 #include "minidayz/inventory.hpp"
 #include "minidayz/player.hpp"
+#include "minidayz/generated/item_equipment_catalog.hpp"
 
 #include <array>
 #include <cstddef>
@@ -22,6 +23,9 @@ inline constexpr std::size_t kEquipmentSlotCount =
 struct EquipmentSnapshot {
     std::array<std::uint16_t, kEquipmentSlotCount> item_ids{};
 };
+
+bool source_item_protection(std::uint16_t item_id,
+                            SourceItemProtection& protection) noexcept;
 
 class EquipmentSystem {
 public:
