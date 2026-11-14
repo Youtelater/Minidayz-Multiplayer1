@@ -74,7 +74,6 @@ bool is_backpack_item(std::uint16_t item_id) noexcept {
 std::uint16_t source_max_stack(std::uint16_t item_id) noexcept {
     // The item-ID groups and baseline limits are taken from the original
     // Check_stack_size Construct function in data.deobfuscated.js.
-    // Perk-dependent expression branches are intentionally kept separate.
     switch (item_id) {
         case 11: case 14: case 15: case 16: case 101:
             return 50;
@@ -101,7 +100,6 @@ std::uint16_t source_max_stack(std::uint16_t item_id) noexcept {
 bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
     if (capacity < kInventorySlotCount || capacity > kMaximumInventorySlotCount)
         return false;
-    // Do not leave an equipped backpack attached to the base-capacity state.
     if (capacity == kInventorySlotCount && equipped_backpack_ != 0)
         return false;
     for (std::size_t i = capacity; i < capacity_; ++i)
@@ -113,18 +111,16 @@ bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
 bool InventorySystem::equip_backpack_from_slot(
     std::size_t index, std::size_t source_capacity) noexcept {
     if (index >= capacity_ || !is_backpack_item(slots_[index].item_id) ||
-        slots_[index].count != 1 ||
+        slots_[index].count != 1 || slots_[index].condition > 100 ||
         source_capacity <= kInventorySlotCount ||
         source_capacity > kMaximumInventorySlotCount)
         return false;
 
     const std::uint16_t incoming = slots_[index].item_id;
+    const std::uint8_t incoming_condition = slots_[index].condition;
     const std::uint16_t outgoing = equipped_backpack_;
+    const std::uint8_t outgoing_condition = equipped_backpack_condition_;
 
-    // A replacement pack may be sitting in an extended slot that disappears
-    // when the new pack has less capacity. Return the old pack to a free slot
-    // inside the new grid instead of rejecting a valid replacement or
-    // accidentally truncating inventory contents.
     std::size_t return_slot = index;
     if (outgoing != 0 && index >= source_capacity) {
         return_slot = source_capacity;
@@ -143,9 +139,10 @@ bool InventorySystem::equip_backpack_from_slot(
     }
 
     slots_[index] = {};
-    if (outgoing != 0) slots_[return_slot] = {outgoing, 1};
+    if (outgoing != 0) slots_[return_slot] = {outgoing, 1, outgoing_condition};
     capacity_ = source_capacity;
     equipped_backpack_ = incoming;
+    equipped_backpack_condition_ = incoming_condition;
     return true;
 }
 
@@ -153,22 +150,22 @@ bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
     if (equipped_backpack_ == 0 || index >= kInventorySlotCount ||
         index >= capacity_ || !slots_[index].empty())
         return false;
-
-    // The original pack can only be returned to the inventory if shrinking
-    // to the base grid would not strand any occupied slot.
     for (std::size_t i = kInventorySlotCount; i < capacity_; ++i)
         if (!slots_[i].empty()) return false;
 
     const std::uint16_t outgoing = equipped_backpack_;
+    const std::uint8_t condition = equipped_backpack_condition_;
     capacity_ = kInventorySlotCount;
     equipped_backpack_ = 0;
-    slots_[index] = {outgoing, 1};
+    equipped_backpack_condition_ = 100;
+    slots_[index] = {outgoing, 1, condition};
     return true;
 }
 
 bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
-                          std::uint16_t max_stack) noexcept {
-    if (!valid_item(item_id) || amount == 0) return false;
+                          std::uint16_t max_stack,
+                          std::uint8_t condition) noexcept {
+    if (!valid_item(item_id) || amount == 0 || condition > 100) return false;
     if (max_stack == 0) max_stack = source_max_stack(item_id);
     if (max_stack == 0) return false;
 
@@ -177,7 +174,8 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
         const auto& entry = slots_[i];
         if (entry.empty()) {
             available += max_stack;
-        } else if (entry.item_id == item_id && entry.count < max_stack) {
+        } else if (entry.item_id == item_id && entry.condition == condition &&
+                   entry.count < max_stack) {
             available += static_cast<std::uint32_t>(max_stack - entry.count);
         }
     }
@@ -186,7 +184,8 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
     std::uint32_t remaining = amount;
     for (std::size_t i = 0; i < capacity_; ++i) {
         auto& entry = slots_[i];
-        if (entry.item_id != item_id || entry.count >= max_stack) continue;
+        if (entry.item_id != item_id || entry.condition != condition ||
+            entry.count >= max_stack) continue;
         const auto room = static_cast<std::uint32_t>(max_stack - entry.count);
         const auto added = remaining < room ? remaining : room;
         entry.count = static_cast<std::uint16_t>(entry.count + added);
@@ -197,8 +196,7 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
         auto& entry = slots_[i];
         if (!entry.empty()) continue;
         const auto added = remaining < max_stack ? remaining : max_stack;
-        entry.item_id = item_id;
-        entry.count = static_cast<std::uint16_t>(added);
+        entry = {item_id, static_cast<std::uint16_t>(added), condition};
         remaining -= added;
         if (remaining == 0) return true;
     }
@@ -207,18 +205,20 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
 
 bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
                                   std::uint16_t amount,
-                                  std::uint16_t max_stack) noexcept {
-    if (index >= capacity_ || !valid_item(item_id) || amount == 0)
+                                  std::uint16_t max_stack,
+                                  std::uint8_t condition) noexcept {
+    if (index >= capacity_ || !valid_item(item_id) || amount == 0 ||
+        condition > 100)
         return false;
     if (max_stack == 0) max_stack = source_max_stack(item_id);
     if (max_stack == 0 || amount > max_stack) return false;
     auto& entry = slots_[index];
     if (entry.empty()) {
-        entry = {item_id, amount};
+        entry = {item_id, amount, condition};
         return true;
     }
-    if (entry.item_id != item_id || entry.count > max_stack ||
-        amount > max_stack - entry.count)
+    if (entry.item_id != item_id || entry.condition != condition ||
+        entry.count > max_stack || amount > max_stack - entry.count)
         return false;
     entry.count = static_cast<std::uint16_t>(entry.count + amount);
     return true;
@@ -236,9 +236,9 @@ bool InventorySystem::remove(std::size_t index,
 
 bool InventorySystem::pickup(GroundItem& ground) noexcept {
     if (ground.empty() || (ground.item_id == 0) != (ground.count == 0) ||
-        !valid_item(ground.item_id))
+        ground.condition > 100 || !valid_item(ground.item_id))
         return false;
-    if (!add(ground.item_id, ground.count)) return false;
+    if (!add(ground.item_id, ground.count, 0, ground.condition)) return false;
     ground = {};
     return true;
 }
@@ -256,14 +256,14 @@ bool InventorySystem::drop(std::size_t index, std::uint16_t amount,
 
     if (!ground.empty()) {
         if (ground.item_id != source.item_id ||
+            ground.condition != source.condition ||
             ground.count > stack_limit ||
             moving > stack_limit - ground.count)
             return false;
     }
 
-    // All checks happen before either the inventory or ground pile is changed.
     if (ground.empty()) {
-        ground = {source.item_id, moving};
+        ground = {source.item_id, moving, source.condition};
     } else {
         ground.count = static_cast<std::uint16_t>(ground.count + moving);
     }
@@ -283,15 +283,12 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
     const std::uint16_t moving = amount == 0 ? source.count : amount;
     if (moving == 0 || moving > source.count) return false;
 
-    if (destination.empty() || destination.item_id == source.item_id) {
-        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
-        if (max_stack == 0 || moving > max_stack) return false;
-    }
-
     if (destination.empty()) {
-        destination = {source.item_id, moving};
-    } else if (destination.item_id == source.item_id) {
-        if (destination.count > max_stack ||
+        destination = {source.item_id, moving, source.condition};
+    } else if (destination.item_id == source.item_id &&
+               destination.condition == source.condition) {
+        if (max_stack == 0) max_stack = source_max_stack(source.item_id);
+        if (max_stack == 0 || destination.count > max_stack ||
             moving > max_stack - destination.count)
             return false;
         destination.count = static_cast<std::uint16_t>(destination.count + moving);
@@ -333,16 +330,21 @@ InventorySnapshot InventorySystem::snapshot() const noexcept {
     result.slots = slots_;
     result.capacity = static_cast<std::uint16_t>(capacity_);
     result.equipped_backpack = equipped_backpack_;
+    result.equipped_backpack_condition = equipped_backpack_condition_;
     return result;
 }
 
 bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
     if (saved.capacity < kInventorySlotCount ||
-        saved.capacity > kMaximumInventorySlotCount)
+        saved.capacity > kMaximumInventorySlotCount ||
+        saved.equipped_backpack_condition > 100)
         return false;
     if (saved.equipped_backpack != 0 &&
         (!is_backpack_item(saved.equipped_backpack) ||
          saved.capacity <= kInventorySlotCount))
+        return false;
+    if (saved.equipped_backpack == 0 &&
+        saved.equipped_backpack_condition != 100)
         return false;
 
     for (std::size_t i = 0; i < kMaximumInventorySlotCount; ++i) {
@@ -352,12 +354,15 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
             continue;
         }
         if ((entry.item_id == 0) != (entry.count == 0)) return false;
-        if (!entry.empty() && !valid_item(entry.item_id)) return false;
+        if (!entry.empty() &&
+            (!valid_item(entry.item_id) || entry.condition > 100))
+            return false;
     }
 
     slots_ = saved.slots;
     capacity_ = saved.capacity;
     equipped_backpack_ = saved.equipped_backpack;
+    equipped_backpack_condition_ = saved.equipped_backpack_condition;
     return true;
 }
 
