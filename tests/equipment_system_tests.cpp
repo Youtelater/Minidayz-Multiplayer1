@@ -36,7 +36,7 @@ int main() {
     assert(equipment.equip_from_inventory(inventory, 1, EquipmentSlot::head));
     assert(equipment.equipped(EquipmentSlot::head) == 264);
     assert(inventory.count(251) == 1);
-    assert(equipment.unequip_to_inventory(inventory, EquipmentSlot::head, 2));
+    assert(equipment.unequip_to_inventory(inventory, EquipmentSlot::head, 1));
     assert(equipment.equipped(EquipmentSlot::head) == 0);
     assert(inventory.count(264) == 1);
 
