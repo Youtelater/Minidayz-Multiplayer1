@@ -28,7 +28,7 @@ def walk_events(items, sheet_name):
         yield from walk_events(children, sheet_name)
 
 def main():
-    source_text = SOURCE.read_text(encoding="utf-8")
+    source_text = SOURCE.read_text(encoding="utf-8-sig")
     source_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", source_text)
     root = json.loads(source_text)
     project = root["project"]
