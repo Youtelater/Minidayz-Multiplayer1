@@ -11,14 +11,17 @@ import json, re, xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
-XML=ROOT/"Minidayz-Multiplayer-main/l_eng_items.xml"
+XML=ROOT/"l_eng_items.xml"
+BUNDLED_XML=ROOT/"Minidayz-Multiplayer-main/l_eng_items.xml"
 TABLE=ROOT/"mp_itemtable.js"
 PROJECT=ROOT/"data/stage1/construct_project_parsed.json"
 OUT=ROOT/"include/minidayz/generated/item_source_catalog.hpp"
 
 def main():
-    for p in (XML,TABLE,PROJECT):
+    for p in (XML,BUNDLED_XML,TABLE,PROJECT):
         if not p.is_file(): raise SystemExit(f"Missing original source: {p}")
+    if XML.read_bytes() != BUNDLED_XML.read_bytes():
+        raise SystemExit("Root and bundled original item catalogs differ")
     names={}
     for item in ET.parse(XML).getroot().findall("item"):
         i=int(item.findtext("id","-1").strip())
