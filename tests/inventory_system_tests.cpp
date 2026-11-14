@@ -107,6 +107,36 @@ int main() {
     assert(full.occupied_slots() == 15);
     assert(full.count(18) == 0);
 
+    // Original item variable 6 is condition; it must survive stacking,
+    // moving, ground transfers, backpack swaps and save snapshots.
+    InventorySystem condition_inventory;
+    assert(condition_inventory.add(18, 2, 0, 40));
+    assert(condition_inventory.slot(0)->condition == 40);
+    assert(condition_inventory.add(18, 1, 0, 100));
+    assert(condition_inventory.slot(1)->condition == 100);
+    assert(condition_inventory.slot(0)->count == 2);
+    assert(!condition_inventory.add_to_slot(0, 18, 1, 0, 100));
+    assert(condition_inventory.move(0, 2));
+    assert(condition_inventory.slot(2)->condition == 40);
+    GroundItem conditioned_ground{};
+    assert(condition_inventory.drop(2, 1, conditioned_ground));
+    assert(conditioned_ground.condition == 40);
+    assert(!condition_inventory.drop(1, 1, conditioned_ground));
+    assert(condition_inventory.pickup(conditioned_ground));
+    assert(conditioned_ground.empty());
+    assert(condition_inventory.slot(2)->condition == 40);
+
+    InventorySystem conditioned_pack;
+    assert(conditioned_pack.add(450, 1, 0, 55));
+    assert(conditioned_pack.equip_backpack_from_slot(0, 20));
+    assert(conditioned_pack.equipped_backpack_condition() == 55);
+    auto pack_snapshot = conditioned_pack.snapshot();
+    InventorySystem pack_restored;
+    assert(pack_restored.restore(pack_snapshot));
+    assert(pack_restored.equipped_backpack_condition() == 55);
+    assert(pack_restored.unequip_backpack_to_slot(0));
+    assert(pack_restored.slot(0)->condition == 55);
+
     // Exact wearable backpack IDs from the original MDZItemTable.
     assert(is_backpack_item(450));
     assert(is_backpack_item(754));
