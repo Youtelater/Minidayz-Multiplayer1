@@ -13,9 +13,18 @@ OUTPUT = ROOT / "include/minidayz/generated/item_equipment_catalog.hpp"
 CONDITION_OUTPUT = ROOT / "include/minidayz/generated/item_condition_catalog.hpp"
 REPAIR_OUTPUT = ROOT / "include/minidayz/generated/item_outerwear_repair_catalog.hpp"
 REPAIR_EVENTS = {
-    5373788036138533: ("outerwear_tape", "Duct Tape", 969950014104242),
-    846519070449764: ("outerwear_glue", "Epoxy Glue", 170518958309748),
-    987128523726831: ("Patch_outerwear", "Sewing Kit", 423981573339098),
+    8157650840631157: ("pants_tape", "Duct Tape", "pants"),
+    5373788036138533: ("outerwear_tape", "Duct Tape", "outerwear"),
+    4035828705301917: ("backpack_tape", "Duct Tape", "backpack"),
+    2762162013500347: ("vest_tape", "Duct Tape", "vest"),
+    895732248449279: ("Patch_helmet", "Sewing Kit", "helmet"),
+    4967057711423501: ("Patch_helmet_lite", "Sewing Kit", "helmet_lite"),
+    6925924097521909: ("Patch_pants", "Sewing Kit", "pants"),
+    987128523726831: ("Patch_outerwear", "Sewing Kit", "outerwear"),
+    308622001609384: ("pants_glue", "Epoxy Glue", "pants"),
+    846519070449764: ("outerwear_glue", "Epoxy Glue", "outerwear"),
+    291275445997721: ("backpack_glue", "Epoxy Glue", "backpack"),
+    866618564675560: ("vest_glue", "Epoxy Glue", "vest"),
 }
 # Original player events read these item instance variables.
 WARMTH_VARIABLE = 8
@@ -40,24 +49,25 @@ def find_event(entries, uid):
                 return found
     return None
 
-def walk_events(event):
-    if not isinstance(event, list) or len(event) < 8 or event[0] != 0:
-        return
-    yield event
-    for child in event[7] if isinstance(event[7], list) else []:
-        yield from walk_events(child)
+def walk_arrays(value):
+    if isinstance(value, list):
+        yield value
+        for child in value:
+            yield from walk_arrays(child)
 
-def source_outerwear_repairs(project, items_by_name):
+def source_repairs(project, items_by_name):
     sheets = project.get("project", [None] * 7)[6]
     game = next((sheet for sheet in sheets if isinstance(sheet, list) and
                  sheet and sheet[0] == "Game_events"), None)
     if game is None:
-        raise SystemExit("Original Game_events sheet missing for outerwear repairs")
+        raise SystemExit("Original Game_events sheet missing for item repairs")
+    target_ids = {"helmet": 0, "helmet_lite": 1, "outerwear": 2,
+                  "vest": 3, "pants": 4, "backpack": 5}
     rows = []
-    for uid, (label, item_name, gain_event_uid) in REPAIR_EVENTS.items():
+    for uid, (label, item_name, target) in REPAIR_EVENTS.items():
         event = find_event(game[1], uid)
         if event is None:
-            raise SystemExit(f"Missing original outerwear repair event {uid}")
+            raise SystemExit(f"Missing original item repair event {uid}")
         conditions = event[5] if len(event) > 5 and isinstance(event[5], list) else []
         if not any(
             isinstance(condition, list) and len(condition) > 9 and
@@ -65,18 +75,15 @@ def source_outerwear_repairs(project, items_by_name):
             condition[9] == [[10, 0], [8, 0], [7, [2, label]]]
             for condition in conditions
         ):
-            raise SystemExit(f"Outerwear repair event {uid} no longer matches {label}")
+            raise SystemExit(f"Original repair event {uid} no longer matches {label}")
         item_id = items_by_name.get(item_name)
         if item_id is None:
             raise SystemExit(f"Original item name missing for repair material: {item_name}")
-        gain_event = find_event(game[1], gain_event_uid)
-        if gain_event is None:
-            raise SystemExit(f"Missing original repair amount event {gain_event_uid}")
         gains = []
-        for action in gain_event[6] if isinstance(gain_event[6], list) else []:
-            if not isinstance(action, list) or len(action) < 6 or action[0:2] != [1030, 88]:
+        for candidate in walk_arrays(event):
+            if len(candidate) < 6 or candidate[0:2] != [1030, 88] or not isinstance(candidate[5], list):
                 continue
-            params = action[5]
+            params = candidate[5]
             variable = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 10), None)
             value = next((p[1] for p in params if isinstance(p, list) and len(p) > 1 and p[0] == 7), None)
             if variable != 6 or not isinstance(value, list) or len(value) != 2 or value[0] != 4:
@@ -88,10 +95,10 @@ def source_outerwear_repairs(project, items_by_name):
                 gains.append(right[1])
         if len(gains) != 1 or not isinstance(gains[0], int) or gains[0] <= 0 or gains[0] > 100:
             raise SystemExit(f"Unexpected original repair gain for {label}: {gains}")
-        rows.append((item_id, gains[0], label))
-    rows.sort()
-    if len({item_id for item_id, _, _ in rows}) != len(rows):
-        raise SystemExit("Duplicate item ID in original outerwear repair materials")
+        rows.append((item_id, target_ids[target], gains[0], label))
+    rows.sort(key=lambda row: (row[0], row[1]))
+    if len({(item_id, target) for item_id, target, _, _ in rows}) != len(rows):
+        raise SystemExit("Duplicate source repair material/target pair")
     return rows
 
 def main():
@@ -173,7 +180,7 @@ def main():
     lines += ["};", "} // namespace minidayz::items", ""]
 
     condition_rows = sorted(item_conditions.items())
-    repair_rows = source_outerwear_repairs(project, items_by_name)
+    repair_rows = source_repairs(project, items_by_name)
     if len(condition_rows) < 150:
         raise SystemExit(f"Unexpectedly low original item condition coverage: {len(condition_rows)}")
     condition_lines = [
@@ -193,18 +200,18 @@ def main():
     repair_lines = [
         "#pragma once", "#include <cstddef>", "#include <cstdint>",
         "namespace minidayz::items {",
-        "struct SourceOuterwearRepair { std::uint16_t item_id; std::uint8_t condition_gain; };",
-        f"inline constexpr std::size_t kSourceOuterwearRepairCount = {len(repair_rows)};",
-        "inline constexpr SourceOuterwearRepair kSourceOuterwearRepairs[] = {",
+        "struct SourceItemRepair { std::uint16_t item_id; std::uint8_t target; std::uint8_t condition_gain; };",
+        f"inline constexpr std::size_t kSourceItemRepairCount = {len(repair_rows)};",
+        "inline constexpr SourceItemRepair kSourceItemRepairs[] = {",
     ]
-    for item_id, gain, _label in repair_rows:
-        repair_lines.append(f"    {{{item_id}, {gain}}},")
+    for item_id, target, gain, _label in repair_rows:
+        repair_lines.append(f"    {{{item_id}, {target}, {gain}}},")
     repair_lines += ["};", "} // namespace minidayz::items", ""]
     REPAIR_OUTPUT.write_text("\n".join(repair_lines), encoding="utf-8")
     print(
         f"Generated {len(rows)} original equipment property rows and "
         f"{len(condition_rows)} item condition defaults and "
-        f"{len(repair_rows)} source outerwear repair materials"
+        f"{len(repair_rows)} source equipment/backpack repair actions"
     )
 
 if __name__ == "__main__":
