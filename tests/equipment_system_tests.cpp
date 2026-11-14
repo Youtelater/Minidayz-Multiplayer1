@@ -46,6 +46,45 @@ int main() {
     assert(!restored.restore(invalid));
     assert(restored.equipped(EquipmentSlot::head) == 0);
 
+    // Original map instance variables supply exact flat armor protection.
+    SourceItemProtection protection{};
+    assert(source_item_protection(251, protection));
+    assert(protection.helmet == 4.0f);
+    assert(source_item_protection(355, protection));
+    assert(protection.outerwear == 2.0f);
+    assert(source_item_protection(402, protection));
+    assert(protection.vest == 3.0f);
+    assert(source_item_protection(303, protection));
+    assert(protection.pants == 2.0f);
+    assert(source_item_protection(408, protection));
+    assert(protection.vest == 20.0f);
+    assert(!source_item_protection(450, protection));
+
+    EquipmentSystem armor;
+    InventorySystem armor_inventory;
+    assert(armor_inventory.add(251, 1));
+    assert(armor_inventory.add(355, 1));
+    assert(armor_inventory.add(402, 1));
+    assert(armor_inventory.add(303, 1));
+    assert(armor.equip_from_inventory(armor_inventory, 0, EquipmentSlot::head));
+    assert(armor.equip_from_inventory(armor_inventory, 1, EquipmentSlot::outerwear));
+    assert(armor.equip_from_inventory(armor_inventory, 2, EquipmentSlot::vest));
+    assert(armor.equip_from_inventory(armor_inventory, 3, EquipmentSlot::pants));
+    const auto armor_values = armor.protection();
+    assert(armor_values.helmet == 4.0f);
+    assert(armor_values.outerwear == 2.0f);
+    assert(armor_values.vest == 3.0f);
+    assert(armor_values.pants == 2.0f);
+
+    PlayerState protected_state{};
+    protected_state.health = 100.0f;
+    protected_state.alive = true;
+    PlayerSystem protected_player(protected_state);
+    protected_player.apply_damage(20.0f, armor_values);
+    assert(protected_player.state().health == 91.0f);
+    protected_player.apply_damage(5.0f, armor_values);
+    assert(protected_player.state().health == 91.0f);
+
     // Failed replacement must leave both inventory and equipment unchanged.
     EquipmentSystem atomic;
     InventorySystem full;
