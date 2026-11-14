@@ -32,10 +32,6 @@ struct PlayerState {
 // Numeric movement/survival tuning is injected from source-equivalent rules.
 // Movement remains preview-tuned; survival drain rates use the extracted
 // original difficulty values and five-second source cadence.
-// Source rates are expressed per second after converting the original
-// five-second hunger/thirst cadence into the native frame-time update.
-PlayerRules source_survival_rules(SurvivalDifficulty difficulty) noexcept;
-
 struct PlayerArmorProtection {
     float helmet{};
     float outerwear{};
@@ -64,6 +60,10 @@ struct PlayerRules {
     float min_temperature{};
     float max_temperature{};
 };
+
+// Source rates are expressed per second after converting the original
+// five-second hunger/thirst cadence into the native frame-time update.
+PlayerRules source_survival_rules(SurvivalDifficulty difficulty) noexcept;
 
 struct PlayerInput {
     float move_x{};
