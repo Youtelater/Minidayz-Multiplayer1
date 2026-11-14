@@ -62,6 +62,10 @@ def main():
                 values = instance[3]
                 if item_id is None or not isinstance(values, list):
                     continue
+                if not (133 <= item_id <= 136 or 250 <= item_id <= 277 or
+                        300 <= item_id <= 307 or 350 <= item_id <= 368 or
+                        400 <= item_id <= 415):
+                    continue
                 instance_item_id = first_value(values, 16)
                 if instance_item_id != item_id:
                     continue
