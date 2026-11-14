@@ -43,9 +43,9 @@ def main() -> int:
     if not parsed_path.is_file():
         fail("reassembled Construct project is missing")
     rebuilt = b"".join(p.read_bytes() for p in parts)
-    original_path = ROOT / "Minidayz-Multiplayer-main/data.js"
+    original_path = ROOT / "data.deobfuscated.js"
     if not original_path.is_file():
-        fail("authoritative original Minidayz-Multiplayer-main/data.js is missing")
+        fail("authoritative original data.deobfuscated.js is missing")
     original_bytes = original_path.read_bytes()
     if rebuilt != original_bytes:
         fail("source snapshot chunks do not exactly match the authoritative original data.js")
