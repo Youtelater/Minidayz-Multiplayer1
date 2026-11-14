@@ -14,11 +14,12 @@ bool EquipmentSystem::source_slot_for_item(std::uint16_t id,
         return true;
     }
     if ((id >= 350 && id <= 368) || id == 702 || id == 703 ||
-        (id >= 409 && id <= 415) || id == 711 || id == 713) {
+        id == 409 || (id >= 413 && id <= 415) || id == 711 || id == 713) {
         slot = EquipmentSlot::outerwear;
         return true;
     }
-    if ((id >= 400 && id <= 405) || id == 408) {
+    if ((id >= 400 && id <= 405) || id == 408 ||
+        (id >= 410 && id <= 412)) {
         slot = EquipmentSlot::vest;
         return true;
     }
