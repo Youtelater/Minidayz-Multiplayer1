@@ -40,6 +40,10 @@ struct LegacyEquipmentSnapshotV3 {
     std::array<std::uint16_t, minidayz::items::kEquipmentSlotCount> item_ids{};
 };
 
+static_assert(sizeof(LegacyInventorySlotV3) == 4, "v3 inventory slot ABI changed");
+static_assert(sizeof(LegacyInventorySnapshotV3) == 132, "v3 inventory snapshot ABI changed");
+static_assert(sizeof(LegacyEquipmentSnapshotV3) == 14, "v3 equipment snapshot ABI changed");
+
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
     std::uint32_t version{kSaveVersion};
