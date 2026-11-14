@@ -47,7 +47,12 @@ def main() -> int:
     if rebuilt != parsed_bytes:
         fail("reassembled project does not exactly match the ordered source snapshot chunks")
 
-    root = read_json(parsed_path)
+    parsed_text = parsed_path.read_text(encoding="utf-8")
+    parsed_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", parsed_text)
+    try:
+        root = json.loads(parsed_text)
+    except Exception as exc:
+        fail(f"cannot parse {parsed_path.relative_to(ROOT)}: {exc}")
     project = root.get("project") if isinstance(root, dict) else None
     if not isinstance(project, list) or len(project) < 17:
         fail("parsed source is not a complete supported Construct project")
