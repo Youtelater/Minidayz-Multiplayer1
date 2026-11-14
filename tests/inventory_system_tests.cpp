@@ -237,7 +237,7 @@ int main() {
     assert(bag_restored.move_from_backpack(0, 0));
     assert(bag_restored.backpack_count(18) == 0);
     assert(bag_restored.count(18) == 2);
-    assert(bag_restored.unequip_backpack_to_slot(0));
+    assert(bag_restored.unequip_backpack_to_slot(1));
 
     InventorySystem bag_swap;
     assert(bag_swap.add(459, 1));
