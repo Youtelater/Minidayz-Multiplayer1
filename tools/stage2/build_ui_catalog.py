@@ -7,13 +7,18 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "Minidayz-Multiplayer-main" / "l_eng_ui.xml"
+SOURCE = ROOT / "l_eng_ui.xml"
+BUNDLED_SOURCE = ROOT / "Minidayz-Multiplayer-main" / "l_eng_ui.xml"
 OUTPUT = ROOT / "include" / "minidayz" / "generated" / "ui_catalog.hpp"
 
 
 def main() -> None:
-    if not SOURCE.is_file():
-        raise SystemExit(f"Original UI localization is missing: {SOURCE}")
+    if not SOURCE.is_file() or not BUNDLED_SOURCE.is_file():
+        raise SystemExit("Original root or bundled English UI localization is missing")
+    normalize = lambda value: value.replace("\\r\\n", "\\n").replace("\\r", "\\n")
+    if normalize(SOURCE.read_text(encoding="utf-8")) != normalize(
+            BUNDLED_SOURCE.read_text(encoding="utf-8")):
+        raise SystemExit("Root and bundled original UI localization files differ")
     root = ET.parse(SOURCE).getroot()
     rows: list[tuple[int, str]] = []
     for entry in root.iter("text"):
