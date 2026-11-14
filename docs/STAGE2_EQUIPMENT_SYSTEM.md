@@ -11,7 +11,7 @@ The native player equipment layer uses original 1.6.0 item IDs and `MDZItemTable
 - Hands / held weapon: original firearm and melee IDs 103, 107-108, 151-216, 230-246, 785.
 - Backpack remains the dedicated inventory equipment slot because it changes inventory capacity.
 
-The original player damage event subtracts four flat protection values. The generator reads the corresponding item instance variables from the original Map/TD layouts: variable 12 for helmets, 13 for outerwear, 14 for vests, and 15 for pants. These values are emitted per item ID and summed by EquipmentSystem::protection(). PlayerSystem has an armor-aware damage overload that applies the original flat reduction. Separate footwear and glove equipment slots are not invented; items without an original equipment slot are rejected.
+The original player damage event subtracts four flat protection values. The generator reads the corresponding item instance variables from the original Map/TD layouts: variable 12 for helmets, 13 for outerwear, 14 for vests, and 15 for pants. These values are emitted per item ID and summed by EquipmentSystem::protection(). PlayerSystem has an armor-aware damage overload that applies the original flat reduction. Clothing warmth is also extracted from item variable 8; EquipmentSystem::temperature_offset() ports the original Player_temperature term `(outerwear - helmet) / pants`, excluding the separate Day_cold value. Separate footwear and glove equipment slots are not invented; items without an original equipment slot are rejected.
 
 ## Runtime behavior
 
@@ -25,4 +25,4 @@ The original player damage event subtracts four flat protection values. The gene
 
 ## Still required before Stage 2 completion
 
-Clothing insulation and condition/durability, backpack capacity, the remaining item actions, and their save/load behavior still need to be ported from the original Construct variables and events. The armor-aware damage API is ready, but it still needs to be connected to the Stage 3 NPC hit path when that combat path is implemented. Values must not be guessed.
+Clothing condition/durability, backpack capacity, the remaining item actions, and their save/load behavior still need to be ported from the original Construct variables and events. The armor-aware damage API is ready, but it still needs to be connected to the Stage 3 NPC hit path when that combat path is implemented. The temperature offset still needs to be combined with the source Day_cold/weather value. Values must not be guessed.
