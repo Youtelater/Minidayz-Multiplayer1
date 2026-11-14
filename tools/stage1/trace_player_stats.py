@@ -10,6 +10,7 @@ It does not scan raw/, romfs/, MP JSON, or the restricted source folder.
 import argparse
 import csv
 import json
+import re
 from pathlib import Path
 
 TARGET_UID = 7463747062628312
@@ -67,7 +68,9 @@ def main():
     parser.add_argument("--out", default="data/stage1/player_stats_trace")
     args = parser.parse_args()
 
-    root = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    source_text = Path(args.input).read_text(encoding="utf-8")
+    source_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", source_text)
+    root = json.loads(source_text)
     project = root.get("project")
     if not isinstance(project, list) or len(project) <= 6 or not isinstance(project[6], list):
         raise SystemExit("Input is not a parsed Construct project export")
