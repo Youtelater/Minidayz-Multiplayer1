@@ -16,16 +16,14 @@ def main() -> None:
         raise SystemExit(f"Original UI localization is missing: {SOURCE}")
     root = ET.parse(SOURCE).getroot()
     rows: list[tuple[int, str]] = []
-    seen: set[int] = set()
     for entry in root.iter("text"):
         raw_id = entry.findtext("id")
         value = entry.findtext("name")
         if raw_id is None or value is None:
             raise SystemExit("UI text entry is missing its id or name")
         text_id = int(raw_id.strip())
-        if text_id < 0 or text_id > 65535 or text_id in seen:
-            raise SystemExit(f"Invalid or duplicate original UI text id: {text_id}")
-        seen.add(text_id)
+        if text_id < 0 or text_id > 65535:
+            raise SystemExit(f"Invalid original UI text id: {text_id}")
         rows.append((text_id, value.strip()))
     if not rows:
         raise SystemExit("Original UI localization contains no text entries")
@@ -43,9 +41,12 @@ def main() -> None:
         lines.append(f"    {{{text_id}, {json.dumps(value, ensure_ascii=False)}},")
     lines += [
         "};",
-        "inline constexpr const char* source_ui_text(std::uint16_t id) noexcept {",
-        "    for (const auto& entry : kSourceUiTexts)",
-        "        if (entry.id == id) return entry.value;",
+        "inline constexpr const char* source_ui_text(std::uint16_t id, std::size_t occurrence = 0) noexcept {",
+        "    for (const auto& entry : kSourceUiTexts) {",
+        "        if (entry.id != id) continue;",
+        "        if (occurrence == 0) return entry.value;",
+        "        --occurrence;",
+        "    }",
         '    return "";',
         "}",
         "} // namespace minidayz::ui",
