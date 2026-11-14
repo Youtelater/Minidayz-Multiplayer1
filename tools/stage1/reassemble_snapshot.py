@@ -44,7 +44,7 @@ if snapshot_bytes != original_bytes:
 target.write_bytes(original_bytes)
 print(
     f"Rebuilt {len(parts)} snapshot chunks directly from authoritative "
-    f"data.deobfuscated.js ({len(original_bytes):,} bytes, "
+    f"Minidayz-Multiplayer-main/data.js ({len(original_bytes):,} bytes, "
     f"sha256={sha256(original_bytes).hexdigest()})"
 )
 print(f"Wrote exact source to {target.relative_to(root)}")
