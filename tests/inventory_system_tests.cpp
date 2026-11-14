@@ -216,5 +216,16 @@ int main() {
     expanded.clear();
     assert(expanded.set_capacity(15));
     assert(expanded.capacity() == 15);
+
+    // Exact-slot placement is used when returning equipment to the backpack.
+    InventorySystem exact_slot;
+    assert(exact_slot.add_to_slot(4, 251, 1));
+    assert(exact_slot.slot(4)->item_id == 251);
+    assert(!exact_slot.add_to_slot(4, 303, 1));
+    assert(!exact_slot.add_to_slot(15, 251, 1));
+    assert(!exact_slot.add_to_slot(4, 251, 1)); // non-stackable headgear
+    assert(exact_slot.add_to_slot(5, 18, 1));
+    assert(exact_slot.add_to_slot(5, 18, 1));
+    assert(exact_slot.slot(5)->count == 2);
     return 0;
 }
