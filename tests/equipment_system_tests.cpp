@@ -91,6 +91,20 @@ int main() {
     protected_player.apply_damage(5.0f, armor_values);
     assert(protected_player.state().health == 91.0f);
 
+    // Item condition survives equipping, snapshots and unequipping.
+    InventorySystem condition_inventory;
+    EquipmentSystem condition_equipment;
+    assert(condition_inventory.add(251, 1, 0, 65));
+    assert(condition_equipment.equip_from_inventory(
+        condition_inventory, 0, EquipmentSlot::head));
+    assert(condition_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::head)] == 65);
+    EquipmentSystem condition_restored;
+    assert(condition_restored.restore(condition_equipment.snapshot()));
+    assert(condition_restored.unequip_to_inventory(
+        condition_inventory, EquipmentSlot::head, 0));
+    assert(condition_inventory.slot(0)->condition == 65);
+
     // Failed replacement must leave both inventory and equipment unchanged.
     EquipmentSystem atomic;
     InventorySystem full;
