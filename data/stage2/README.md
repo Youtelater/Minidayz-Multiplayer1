@@ -1,10 +1,25 @@
 # Stage 2: Items and inventory
 
-Stage 2 begins with a source-backed item catalog and native inventory rules.
+Stage 2 is a source-backed port of the original Mini DAYZ 1.6.0 item, inventory, and player-equipment rules.
 
-- Minidayz-Multiplayer-main/l_eng_items.xml is the authoritative English item-name source.
-- tools/stage2/extract_item_catalog.py generates include/minidayz/generated/item_catalog.hpp.
-- Item IDs are preserved exactly, including gaps. ID 0 is the empty slot and cannot be added.
-- InventorySystem provides fixed 15-slot storage, atomic additions, caller-supplied stack limits, removal, stack transfer, and complete-stack swapping.
-- Stack limits and item effects are deliberately not guessed. They must be ported from original gameplay data/events before being configured.
-- Loot spawning, pickup interaction, equipment effects, and item use are the next Stage 2 integration tasks.
+## Implemented
+
+- The original English item localization and MDZItemTable generate a catalog preserving all 405 original item IDs and gaps.
+- The original sprite catalog resolves 329 item IDs to exact Construct object identities; 76 IDs remain explicitly unmapped rather than receiving substitute art.
+- InventorySystem provides 15 base slots, up to 32 native slots, atomic additions, source stack limits, removal, moving, swapping, splitting, ground pickup/drop, and backpack equipment state.
+- The original Check_stack_size baseline groups are ported. The perk_cybb branch returns 31,415,926 in the source; the native uint16_t stack representation safely caps that at UINT16_MAX.
+- Item condition (original instance variable 6) is preserved through inventory, ground transfers, equipment, and save snapshots.
+- Forty direct literal stat-effect rows are extracted from original item_activate and item_activate2 events.
+- Sixty-three original equipment property rows provide clothing warmth and flat armor protection; 168 item IDs have source-map condition defaults.
+- Raw Construct inventory behavior records are exported with their source event UIDs and conditions/actions for further porting.
+
+## Remaining before Stage 2 completion
+
+- Extract and implement exact per-backpack capacity values and original backpack equip/replace/unequip behavior.
+- Port source item-condition wear, repair, and other durability rules.
+- Port conditional perk bonuses and remaining item-specific secondary effects without guessing expression semantics.
+- Complete loot spawning, world pickup/drop interaction, and item actions in the actual game runtime.
+- Finish end-to-end inventory/equipment UI integration and save/load testing in the 3DS build.
+- Connect armor and clothing warmth to the full combat and weather paths when those runtime paths are ready.
+
+Original Construct data and event expressions remain authoritative. Unresolved values must stay explicitly unresolved rather than being inferred from item names.

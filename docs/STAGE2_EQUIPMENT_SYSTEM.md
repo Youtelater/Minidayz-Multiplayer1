@@ -5,8 +5,8 @@ The native player equipment layer uses original 1.6.0 item IDs and `MDZItemTable
 ## Source-backed equipment slots
 
 - Helmet: IDs 133-136, 250-277, 748, 786, 787.
-- Outerwear: IDs 350-368, 702-703, 409-415, 711, 713.
-- Vest: IDs 400-405 and 408.
+- Outerwear: IDs 350-368, 702-703, 409, 413-415, 711, 713.
+- Vest: IDs 400-405, 408, and CBRN suit IDs 410-412.
 - Pants: IDs 300-307.
 - Hands / held weapon: original firearm and melee IDs 103, 107-108, 151-216, 230-246, 785.
 - Backpack remains the dedicated inventory equipment slot because it changes inventory capacity.
