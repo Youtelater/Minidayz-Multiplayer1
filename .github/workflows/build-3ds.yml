@@ -22,7 +22,7 @@ jobs:
         with:
           path: |
             romfs/gfx
-          key: graphics-v3-${{ hashFiles('assets/gfx/**/*.png', 'images/**/*.png', 'data/stage1/construct_project_parsed.json', 'tools/build_textures.py', 'tools/stage1/build_sprite_catalog.py') }}
+          key: graphics-v4-${{ hashFiles('assets/gfx/**/*.png', 'images/**/*.png', 'Minidayz-Multiplayer-main/data.js', 'Minidayz-Multiplayer-main/mp_itemtable.js', 'Minidayz-Multiplayer-main/l_eng_items.xml', 'data/stage1/construct_project_parsed.json', 'tools/build_textures.py', 'tools/stage1/build_sprite_catalog.py') }}
 
       # Texture conversion is handled incrementally by the Makefile from assets/gfx.
       - name: Update 3DS Libraries via dkp-pacman
