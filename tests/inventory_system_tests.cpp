@@ -44,6 +44,20 @@ int main() {
     assert(source_max_stack(18, true) == UINT16_MAX);
     assert(source_max_stack(1, true) == UINT16_MAX);
 
+    // The original perk raises Check_stack_size to 31,415,926. Ground
+    // transfers must accept the same effective cap rather than silently
+    // falling back to the non-perk baseline stack limit.
+    InventorySystem perk_ground;
+    assert(perk_ground.add(18, 4, source_max_stack(18, true)));
+    GroundItem perk_drop{};
+    assert(!perk_ground.drop(0, 0, perk_drop));
+    assert(perk_ground.drop(0, 0, perk_drop, source_max_stack(18, true)));
+    assert(perk_drop.count == 4);
+    InventorySystem perk_pickup;
+    assert(!perk_pickup.pickup(perk_drop));
+    assert(perk_pickup.pickup(perk_drop, source_max_stack(18, true)));
+    assert(perk_pickup.count(18) == 4);
+
     InventorySystem inventory;
     assert(inventory.occupied_slots() == 0);
     assert(inventory.capacity() == kInventorySlotCount);
