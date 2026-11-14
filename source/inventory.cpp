@@ -351,13 +351,13 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
 
     for (std::size_t i = 0; i < kMaximumInventorySlotCount; ++i) {
         const auto& entry = saved.slots[i];
+        if (entry.condition > 100) return false;
         if (i >= saved.capacity) {
             if (!entry.empty()) return false;
             continue;
         }
         if ((entry.item_id == 0) != (entry.count == 0)) return false;
-        if (!entry.empty() &&
-            (!valid_item(entry.item_id) || entry.condition > 100))
+        if (!entry.empty() && !valid_item(entry.item_id))
             return false;
     }
 
