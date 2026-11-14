@@ -26,3 +26,18 @@ The original player damage event subtracts four flat protection values. The gene
 ## Still required before Stage 2 completion
 
 Item condition storage and persistence are implemented using original instance variable 6; the source condition loss/repair rules still need to be ported. The four separate-container backpack capacities above are now source-backed and modeled; standard backpack inventory expansion remains unresolved. The touchscreen container page, transfers, and snapshot persistence are implemented, with end-to-end 3DS validation still required. The armor-aware damage API is ready, but it still needs to be connected to the Stage 3 NPC hit path when that combat path is implemented. The temperature offset still needs to be combined with the source Day_cold/weather value. Values must not be guessed.
+
+## Original UI source audit (required Stage 2 scope)
+
+The repository includes original UI sources and artwork in addition to `data.deobfuscated.js`:
+
+- Root `l_eng_ui.xml` and bundled `Minidayz-Multiplayer-main/l_eng_ui.xml` are checked for byte-normalized equality by `tools/stage2/build_ui_catalog.py`; the generated UI text catalog is built from the original IDs and strings.
+- Root `l_eng_items.xml`, bundled item localization, and `mp_itemtable.js` supply the 405 original item IDs/names and Construct object mapping. The generated item source and sprite catalogs preserve unresolved mappings rather than substituting unrelated icons.
+- `assets/gfx/` and `images/` contain the original PNG UI/item artwork; `romfs/gfx/` contains the converted 3DS texture assets. These are source assets, not permission to recreate the interface with generic rectangles.
+- The original project/data is also present as `data.deobfuscated.js`, `data/stage1/construct_project_parsed.json`, and the bundled original game directory.
+
+### UI implementation gap found during audit
+
+The current native scene is still a world-preview UI, not a port of the complete original interface. `source/main.cpp` currently draws a hand-built save/continue panel, a simplified lower-screen inventory/equipment view, and a simple title screen. It calls the source UI text catalog for only a small number of save-menu labels; most visible labels are hard-coded. It does not yet reproduce the original UI layouts, panels, item-detail/action menus, perk/quest/map/settings screens, or all source-defined touch flows. The original UI PNG/T3X assets are packaged, but the presence of packaged assets does not mean those screens are implemented.
+
+Stage 2 UI acceptance must therefore include: source-derived screen/object/layout inventory; original UI sprite and text-ID mapping; inventory/equipment/backpack panels and item action/detail behavior; touch hitboxes and navigation; and screenshot/device checks on both 3DS screens. Do not mark the UI complete based only on catalog generation or a successful build. Main menu, map, quests, perks, settings, combat HUD and other broader game screens must be assigned to their appropriate stage and must not be represented as already ported.
