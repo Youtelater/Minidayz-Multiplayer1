@@ -2,6 +2,7 @@
 #include "minidayz/generated/item_catalog.hpp"
 #include "minidayz/generated/item_source_catalog.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
+#include "minidayz/generated/item_condition_catalog.hpp"
 
 #include <limits>
 
@@ -24,6 +25,20 @@ bool valid_item(std::uint16_t item_id) noexcept {
 }
 
 } // namespace
+
+std::uint8_t source_default_condition(std::uint16_t item_id) noexcept {
+    std::size_t first = 0;
+    std::size_t last = kSourceItemConditionCount;
+    while (first < last) {
+        const std::size_t middle = first + (last - first) / 2;
+        if (kSourceItemConditions[middle].item_id < item_id) first = middle + 1;
+        else last = middle;
+    }
+    if (first >= kSourceItemConditionCount ||
+        kSourceItemConditions[first].item_id != item_id)
+        return 100;
+    return kSourceItemConditions[first].condition;
+}
 
 std::uint16_t source_max_stack(std::uint16_t item_id, bool perk_cybb) noexcept {
     return perk_cybb ? std::numeric_limits<std::uint16_t>::max()
@@ -165,7 +180,10 @@ bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
 bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
                           std::uint16_t max_stack,
                           std::uint8_t condition) noexcept {
-    if (!valid_item(item_id) || amount == 0 || condition > 100) return false;
+    if (!valid_item(item_id) || amount == 0) return false;
+    if (condition == kUseSourceItemCondition)
+        condition = source_default_condition(item_id);
+    if (condition > 100) return false;
     if (max_stack == 0) max_stack = source_max_stack(item_id);
     if (max_stack == 0) return false;
 
@@ -207,9 +225,11 @@ bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
                                   std::uint16_t amount,
                                   std::uint16_t max_stack,
                                   std::uint8_t condition) noexcept {
-    if (index >= capacity_ || !valid_item(item_id) || amount == 0 ||
-        condition > 100)
+    if (index >= capacity_ || !valid_item(item_id) || amount == 0)
         return false;
+    if (condition == kUseSourceItemCondition)
+        condition = source_default_condition(item_id);
+    if (condition > 100) return false;
     if (max_stack == 0) max_stack = source_max_stack(item_id);
     if (max_stack == 0 || amount > max_stack) return false;
     auto& entry = slots_[index];
@@ -236,9 +256,12 @@ bool InventorySystem::remove(std::size_t index,
 
 bool InventorySystem::pickup(GroundItem& ground) noexcept {
     if (ground.empty() || (ground.item_id == 0) != (ground.count == 0) ||
-        ground.condition > 100 || !valid_item(ground.item_id))
+        !valid_item(ground.item_id))
         return false;
-    if (!add(ground.item_id, ground.count, 0, ground.condition)) return false;
+    const std::uint8_t condition = ground.condition == kUseSourceItemCondition
+        ? source_default_condition(ground.item_id) : ground.condition;
+    if (condition > 100 || !add(ground.item_id, ground.count, 0, condition))
+        return false;
     ground = {};
     return true;
 }
@@ -255,11 +278,16 @@ bool InventorySystem::drop(std::size_t index, std::uint16_t amount,
         return false;
 
     if (!ground.empty()) {
-        if (ground.item_id != source.item_id ||
-            ground.condition != source.condition ||
+        const std::uint8_t ground_condition =
+            ground.condition == kUseSourceItemCondition
+                ? source_default_condition(ground.item_id) : ground.condition;
+        if (!valid_item(ground.item_id) || ground.item_id != source.item_id ||
+            ground_condition != source.condition || ground_condition > 100 ||
             ground.count > stack_limit ||
             moving > stack_limit - ground.count)
             return false;
+        if (ground.condition == kUseSourceItemCondition)
+            ground.condition = ground_condition;
     }
 
     if (ground.empty()) {
