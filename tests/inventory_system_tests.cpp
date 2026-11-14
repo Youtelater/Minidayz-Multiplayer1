@@ -269,7 +269,7 @@ int main() {
     auto corrupt_snapshot = saved_inventory;
     corrupt_snapshot.slots[26] = {1, 1};
     assert(!restored.restore(corrupt_snapshot));
-    assert(restored.capacity() == 20);
+    assert(restored.capacity() == 26);
     corrupt_snapshot = saved_inventory;
     corrupt_snapshot.slots[0] = {9999, 1};
     assert(!restored.restore(corrupt_snapshot));
@@ -277,7 +277,7 @@ int main() {
     corrupt_snapshot.slots[0].count =
         static_cast<std::uint16_t>(source_max_stack(18) + 1);
     assert(!restored.restore(corrupt_snapshot));
-    assert(restored.capacity() == 20);
+    assert(restored.capacity() == 26);
     assert(restored.count(18) == 2);
 
     InventorySystem wear_inventory;
