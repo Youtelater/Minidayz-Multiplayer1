@@ -438,9 +438,12 @@ public:
                 const auto* dragged = inventory_.slot(
                     static_cast<std::size_t>(drag_source_slot_));
                 if (dragged && minidayz::items::is_backpack_item(dragged->item_id)) {
-                    if (inventory_.equip_backpack_from_slot(
-                            static_cast<std::size_t>(drag_source_slot_)))
+                    const bool equipped =
+                        inventory_.equip_backpack_from_slot(
+                            static_cast<std::size_t>(drag_source_slot_));
+                    if (equipped) {
                         selected_inventory_slot_ = -1;
+                    }
                 }
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
                 if (equipment_.equip_from_inventory(
