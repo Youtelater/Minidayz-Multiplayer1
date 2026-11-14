@@ -8,6 +8,7 @@ namespace minidayz::items {
 
 inline constexpr std::size_t kInventorySlotCount = 15;
 inline constexpr std::size_t kMaximumInventorySlotCount = 32;
+inline constexpr std::size_t kMaximumBackpackSlotCount = 6;
 
 inline constexpr std::uint8_t kUseSourceItemCondition = 255;
 std::uint8_t source_default_condition(std::uint16_t item_id) noexcept;
@@ -32,6 +33,8 @@ struct InventorySnapshot {
     std::uint16_t capacity{static_cast<std::uint16_t>(kInventorySlotCount)};
     std::uint16_t equipped_backpack{};
     std::uint8_t equipped_backpack_condition{100};
+    std::array<InventorySlot, kMaximumBackpackSlotCount> backpack_slots{};
+    std::uint8_t backpack_capacity{};
 };
 
 // Baseline stack limits ported from the original Check_stack_size event.
@@ -43,6 +46,9 @@ std::uint16_t source_max_stack(std::uint16_t item_id, bool perk_cybb) noexcept;
 bool is_backpack_item(std::uint16_t item_id) noexcept;
 // Inventory slot count granted by each wearable backpack; zero for other items.
 std::size_t source_backpack_capacity(std::uint16_t item_id) noexcept;
+// Separate backpack-container slot count decoded from the original
+// Check_space_backpack / item-use event paths. Zero means no source mapping.
+std::size_t source_backpack_storage_capacity(std::uint16_t item_id) noexcept;
 // Exact original Construct object IDs resolved from MDZItemTable and the
 // original project object table. 65535 means the source has no mapping.
 std::uint16_t source_construct_object(std::uint16_t item_id) noexcept;
@@ -68,6 +74,20 @@ public:
         return equipped_backpack_condition_;
     }
     std::size_t capacity() const noexcept { return capacity_; }
+    const InventorySlot* backpack_slot(std::size_t index) const noexcept;
+    std::size_t backpack_capacity() const noexcept { return backpack_capacity_; }
+    std::size_t backpack_occupied_slots() const noexcept;
+    std::uint32_t backpack_count(std::uint16_t item_id) const noexcept;
+    bool add_to_backpack(std::uint16_t item_id, std::uint16_t amount,
+                         std::uint16_t max_stack = 0,
+                         std::uint8_t condition = kUseSourceItemCondition) noexcept;
+    bool remove_from_backpack(std::size_t slot, std::uint16_t amount) noexcept;
+    bool move_to_backpack(std::size_t inventory_slot, std::size_t backpack_slot,
+                          std::uint16_t amount = 0,
+                          std::uint16_t max_stack = 0) noexcept;
+    bool move_from_backpack(std::size_t backpack_slot, std::size_t inventory_slot,
+                            std::uint16_t amount = 0,
+                            std::uint16_t max_stack = 0) noexcept;
 
     // max_stack == 0 selects the original game's baseline rule for item_id.
     bool add(std::uint16_t item_id, std::uint16_t amount,
@@ -102,6 +122,8 @@ public:
         capacity_ = kInventorySlotCount;
         equipped_backpack_ = 0;
         equipped_backpack_condition_ = 100;
+        backpack_slots_ = {};
+        backpack_capacity_ = 0;
     }
 
 private:
@@ -109,6 +131,8 @@ private:
     std::size_t capacity_{kInventorySlotCount};
     std::uint16_t equipped_backpack_{};
     std::uint8_t equipped_backpack_condition_{100};
+    std::array<InventorySlot, kMaximumBackpackSlotCount> backpack_slots_{};
+    std::size_t backpack_capacity_{};
 };
 
 } // namespace minidayz::items
