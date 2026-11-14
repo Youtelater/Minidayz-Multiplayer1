@@ -15,7 +15,7 @@ Stage 2 is a source-backed port of the original Mini DAYZ 1.6.0 item, inventory,
 
 ## Remaining before Stage 2 completion
 
-- Translate the extracted original backpack-space, backpack-item, Drop_slot, and Drop_backpack event logic into the runtime. The native capacity lookup deliberately remains unresolved (zero); do not enable guessed per-pack capacity values.
+- Translate the extracted original backpack-space, backpack-item, Drop_slot, and Drop_backpack event logic into the runtime. The four separate bag-container sizes are source-backed (458=2, 459=4, 460=4, 461=6), and the touchscreen bag page, transfers, equip/swap/unequip/drop, and snapshot persistence are implemented. Standard inventory-expansion capacities for other wearable backpacks remain unresolved (zero); do not enable guessed per-pack capacity values.
 - Port source item-condition wear, repair, and other durability rules.
 - Port conditional perk bonuses and remaining item-specific secondary effects without guessing expression semantics.
 - Complete loot spawning, world pickup/drop interaction, and item actions in the actual game runtime.
