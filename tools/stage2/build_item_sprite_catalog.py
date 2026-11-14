@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-ITEM_TABLE = ROOT / "Minidayz-Multiplayer-main/mp_itemtable.js"
+ITEM_TABLE = ROOT / "mp_itemtable.js"
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_sprite_catalog.hpp"
 
