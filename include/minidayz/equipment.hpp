@@ -3,6 +3,7 @@
 #include "minidayz/inventory.hpp"
 #include "minidayz/player.hpp"
 #include "minidayz/generated/item_equipment_catalog.hpp"
+#include "minidayz/generated/item_outerwear_repair_catalog.hpp"
 
 #include <array>
 #include <cstddef>
@@ -56,6 +57,9 @@ public:
     bool damage_condition(EquipmentSlot slot, std::uint8_t loss) noexcept;
     // Apply an absolute condition value decoded from a source repair action.
     bool restore_condition(EquipmentSlot slot, std::uint8_t condition) noexcept;
+    // Consume one original repair material and apply its source-defined gain.
+    bool repair_outerwear_from_inventory(InventorySystem& inventory,
+                                         std::size_t inventory_slot) noexcept;
     bool unequip_to_inventory(InventorySystem& inventory,
                               EquipmentSlot equipment_slot,
                               std::size_t inventory_slot) noexcept;
