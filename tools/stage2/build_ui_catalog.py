@@ -17,7 +17,7 @@ def main() -> None:
     root = ET.parse(SOURCE).getroot()
     rows: list[tuple[int, str]] = []
     seen: set[int] = set()
-    for entry in root.findall("text"):
+    for entry in root.iter("text"):
         raw_id = entry.findtext("id")
         value = entry.findtext("name")
         if raw_id is None or value is None:
