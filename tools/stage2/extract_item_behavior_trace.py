@@ -76,7 +76,7 @@ def main() -> None:
         if not path.is_file():
             raise SystemExit(f"Missing original source input: {path}")
 
-    project = json.loads(PROJECT.read_text(encoding="utf-8"))
+    project = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", PROJECT.read_text(encoding="utf-8")))
     sheets = project.get("project", [None] * 7)[6]
     game_events = next((sheet for sheet in sheets
                         if isinstance(sheet, list) and sheet and sheet[0] == "Game_events"), None)
