@@ -1,6 +1,6 @@
 #include "minidayz/equipment.hpp"
 #include "minidayz/generated/item_equipment_catalog.hpp"
-#include "minidayz/generated/item_outerwear_repair_catalog.hpp"
+#include "minidayz/item_repair.hpp"
 
 #include <algorithm>
 
@@ -190,38 +190,47 @@ bool EquipmentSystem::restore_condition(
     return true;
 }
 
-bool EquipmentSystem::repair_outerwear_from_inventory(
-    InventorySystem& inventory, std::size_t inventory_slot) noexcept {
+bool EquipmentSystem::repair_from_inventory(
+    InventorySystem& inventory, std::size_t inventory_slot,
+    SourceRepairTarget target) noexcept {
     const auto* material = inventory.slot(inventory_slot);
-    const auto outerwear_index = static_cast<std::size_t>(EquipmentSlot::outerwear);
-    if (!material || material->empty() || state_.item_ids[outerwear_index] == 0)
+    if (!material || material->empty() || target == SourceRepairTarget::backpack)
         return false;
 
-    const auto current = state_.conditions[outerwear_index];
-    // The original repair menu only permits condition values strictly between
-    // zero and one hundred.
+    EquipmentSlot equipment_slot{};
+    switch (target) {
+        case SourceRepairTarget::helmet:
+        case SourceRepairTarget::helmet_lite:
+            equipment_slot = EquipmentSlot::head;
+            break;
+        case SourceRepairTarget::outerwear:
+            equipment_slot = EquipmentSlot::outerwear;
+            break;
+        case SourceRepairTarget::vest:
+            equipment_slot = EquipmentSlot::vest;
+            break;
+        case SourceRepairTarget::pants:
+            equipment_slot = EquipmentSlot::pants;
+            break;
+        case SourceRepairTarget::backpack:
+            return false;
+    }
+    const auto equipment_index = static_cast<std::size_t>(equipment_slot);
+    if (state_.item_ids[equipment_index] == 0) return false;
+    const auto current = state_.conditions[equipment_index];
+    // Original repair menu conditions require condition > 0 and < 100.
     if (current == 0 || current >= 100) return false;
 
-    std::size_t first = 0;
-    std::size_t last = kSourceOuterwearRepairCount;
-    while (first < last) {
-        const std::size_t middle = first + (last - first) / 2;
-        if (kSourceOuterwearRepairs[middle].item_id < material->item_id)
-            first = middle + 1;
-        else
-            last = middle;
-    }
-    if (first >= kSourceOuterwearRepairCount ||
-        kSourceOuterwearRepairs[first].item_id != material->item_id)
+    std::uint8_t gain = 0;
+    if (!source_item_repair_gain(material->item_id, target, gain))
         return false;
-
-    const auto gain = kSourceOuterwearRepairs[first].condition_gain;
     const auto repaired = static_cast<std::uint8_t>(
         std::min<unsigned>(100, static_cast<unsigned>(current) + gain));
+
     const auto inventory_before = inventory.snapshot();
     const auto equipment_before = state_;
     if (!inventory.remove(inventory_slot, 1)) return false;
-    if (!restore_condition(EquipmentSlot::outerwear, repaired)) {
+    if (!restore_condition(equipment_slot, repaired)) {
         (void)inventory.restore(inventory_before);
         state_ = equipment_before;
         return false;
