@@ -12,14 +12,14 @@ inline constexpr std::size_t kMaximumInventorySlotCount = 32;
 struct InventorySlot {
     std::uint16_t item_id{};
     std::uint16_t count{};
-    std::uint8_t condition{100};
+    std::uint8_t condition{100}; // Original Construct item instance variable 6.
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
 struct GroundItem {
     std::uint16_t item_id{};
     std::uint16_t count{};
-    std::uint8_t condition{100};
+    std::uint8_t condition{100}; // Preserved when dropped/picked up.
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
