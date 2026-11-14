@@ -111,17 +111,18 @@ int main() {
     protected_player.apply_damage(5.0f, armor_values);
     assert(protected_player.state().health == 91.0f);
 
-    // Worn equipment loses protective and warmth value in proportion to
-    // its persisted condition; a destroyed item contributes no benefit.
+    // Original item warmth and protection values remain flat when the
+    // separate native condition field changes; no proportional scaling exists
+    // in the original Construct event logic.
     assert(armor.damage_condition(EquipmentSlot::head, 50));
     const auto worn_armor = armor.protection();
-    assert(worn_armor.helmet == 2.0f);
+    assert(worn_armor.helmet == 4.0f);
     assert(worn_armor.outerwear == 2.0f);
     assert(worn_armor.vest == 3.0f);
     assert(worn_armor.pants == 2.0f);
-    assert(std::fabs(armor.temperature_offset() - (6.0f / 7.0f)) < 0.0001f);
+    assert(std::fabs(armor.temperature_offset() - (5.0f / 7.0f)) < 0.0001f);
     assert(armor.damage_condition(EquipmentSlot::pants, 50));
-    assert(std::fabs(armor.temperature_offset() - (6.0f / 3.5f)) < 0.0001f);
+    assert(std::fabs(armor.temperature_offset() - (5.0f / 7.0f)) < 0.0001f);
     assert(armor.damage_condition(EquipmentSlot::vest, 100));
     assert(armor.equipped(EquipmentSlot::vest) == 0);
     assert(armor.protection().vest == 0.0f);
