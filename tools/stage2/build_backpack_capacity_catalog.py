@@ -37,7 +37,7 @@ def main() -> None:
     if not PROJECT.is_file():
         raise SystemExit(f"Missing original Construct project: {PROJECT}")
     source = PROJECT.read_text(encoding="utf-8-sig")
-    source = re.sub(r"(?<![A-Za-z0-9_.]) -\\s+(?=\\d)", "-", source)
+    source = re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-", source)
     project = json.loads(source)
     sheets = project["project"][6]
     matches = [event for sheet in sheets for event in events(sheet[1])
