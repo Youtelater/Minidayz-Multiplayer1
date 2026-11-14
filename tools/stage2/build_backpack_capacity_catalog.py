@@ -81,7 +81,7 @@ def main() -> None:
         "} // namespace minidayz::items", ""
     ]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text("\\n".join(lines), encoding="utf-8")
+    OUTPUT.write_text("\n".join(lines), encoding="utf-8")
     print(f"Extracted {len(actual)} original backpack storage slots from Items_update")
 
 if __name__ == "__main__":
