@@ -129,6 +129,16 @@ bool load_saved_game(SavedGame& save) noexcept {
             std::fread(&save.inventory, sizeof(save.inventory), 1, file) == 1 &&
             std::fread(&save.equipment, sizeof(save.equipment), 1, file) == 1;
         save.ground_loot = {};
+        if (body_ok) {
+            // Version 4 wrote the complete SavedGame struct, including up to
+            // three bytes of tail padding required by its 4-byte alignment.
+            const std::size_t legacy_bytes = 3 * sizeof(std::uint32_t) +
+                sizeof(minidayz::PlayerState) +
+                sizeof(minidayz::items::InventorySnapshot) +
+                sizeof(minidayz::items::EquipmentSnapshot);
+            const std::size_t padding = (4 - (legacy_bytes % 4)) % 4;
+            body_ok = consume_legacy_padding(file, padding);
+        }
     } else if (header_ok && save.version == kSaveVersion) {
         body_ok =
             std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
