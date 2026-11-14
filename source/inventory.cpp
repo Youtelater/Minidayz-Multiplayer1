@@ -137,14 +137,14 @@ bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
     return true;
 }
 
-bool InventorySystem::equip_backpack_from_slot(
-    std::size_t index, std::size_t source_capacity) noexcept {
+bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
     if (index >= capacity_ || !is_backpack_item(slots_[index].item_id) ||
         slots_[index].count != 1 || slots_[index].condition > 100)
         return false;
 
     // Zero means the original source has not established a capacity value.
     // Equip the visual/equipment item without changing storage in that case.
+    const std::size_t source_capacity = source_backpack_capacity(slots_[index].item_id);
     const std::size_t target_capacity =
         source_capacity == 0 ? capacity_ : source_capacity;
     if (target_capacity < kInventorySlotCount ||
