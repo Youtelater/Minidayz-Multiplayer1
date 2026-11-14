@@ -5,6 +5,7 @@
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/inventory.hpp"
 #include "minidayz/equipment.hpp"
+#include "minidayz/item_use.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -161,6 +162,14 @@ public:
                 start_new_game();
             return;
         }
+        if (selected_inventory_slot_ >= 0 && (input.pressed & (KEY_A | KEY_X))) {
+            (void)minidayz::items::use_item_from_inventory(
+                inventory_, static_cast<std::size_t>(selected_inventory_slot_),
+                player_, preview_rules_, (input.pressed & KEY_X) != 0);
+            const auto* selected = inventory_.slot(
+                static_cast<std::size_t>(selected_inventory_slot_));
+            if (!selected || selected->empty()) selected_inventory_slot_ = -1;
+        }
         minidayz::PlayerInput movement{};
         movement.move_x = static_cast<float>(input.circle.dx) / 156.0f;
         movement.move_y = -static_cast<float>(input.circle.dy) / 156.0f;
@@ -205,10 +214,10 @@ public:
                                                    inventory_page_);
                 if (slot >= 0) {
                     const auto* item = inventory_.slot(static_cast<std::size_t>(slot));
-                    if (item && !item->empty()) {
+                    selected_inventory_slot_ = item && !item->empty() ? slot : -1;
+                    if (selected_inventory_slot_ >= 0) {
                         drag_source_slot_ = slot;
                         drag_target_slot_ = slot;
-                        selected_inventory_slot_ = slot;
                     }
                 }
             }
@@ -227,19 +236,19 @@ public:
         }
         if (touch_released) {
             if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
-                (void)equipment_.equip_from_inventory(
+                if (equipment_.equip_from_inventory(
                     inventory_, static_cast<std::size_t>(drag_source_slot_),
-                    static_cast<minidayz::items::EquipmentSlot>(drag_target_equipment_slot_));
+                    static_cast<minidayz::items::EquipmentSlot>(drag_target_equipment_slot_)))
+                    selected_inventory_slot_ = -1;
             } else if (drag_source_slot_ >= 0 && drag_target_slot_ >= 0 &&
                        drag_target_slot_ != drag_source_slot_) {
-                (void)inventory_.move(
-                    static_cast<std::size_t>(drag_source_slot_),
-                    static_cast<std::size_t>(drag_target_slot_));
+                if (inventory_.move(static_cast<std::size_t>(drag_source_slot_),
+                                    static_cast<std::size_t>(drag_target_slot_)))
+                    selected_inventory_slot_ = drag_target_slot_;
             }
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
             drag_target_equipment_slot_ = -1;
-            selected_inventory_slot_ = -1;
         }
         touch_down_ = input.touching;
         player_.update_movement(movement, dt, preview_rules_,
@@ -348,6 +357,7 @@ public:
             static_cast<unsigned>(page_count));
         renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                  C2D_Color32(54, 68, 55, 255));
+        renderer.draw_text("A USE  X ALT", 14.0f, 226.0f, 0.20f);
         renderer.draw_text(page_label, 104.0f, 226.0f, 0.30f);
     }
 
