@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,7 +41,9 @@ def main() -> None:
             raise SystemExit(f"Duplicate item sprite mapping: {item_id}")
         entries[item_id] = object_name
 
-    project = json.loads(PROJECT.read_text(encoding="utf-8"))
+    project_text = PROJECT.read_text(encoding="utf-8")
+    project_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", project_text)
+    project = json.loads(project_text)
     objects = project["project"][3]
     object_indices: dict[str, int] = {}
     for index, obj in enumerate(objects):
