@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
 XML=ROOT/"Minidayz-Multiplayer-main/l_eng_items.xml"
-TABLE=ROOT/"mp_itemtable.js"
+TABLE=ROOT/"Minidayz-Multiplayer-main/mp_itemtable.js"
 PROJECT=ROOT/"data/stage1/construct_project_parsed.json"
 OUT=ROOT/"include/minidayz/generated/item_source_catalog.hpp"
 
