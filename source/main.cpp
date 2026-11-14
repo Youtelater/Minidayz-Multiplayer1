@@ -291,6 +291,31 @@ public:
                 start_new_game();
             return;
         }
+        if ((input.pressed & KEY_Y) != 0) {
+            if (selected_inventory_slot_ >= 0 && inventory_.backpack_capacity() > 0) {
+                const auto* item = inventory_.slot(
+                    static_cast<std::size_t>(selected_inventory_slot_));
+                if (item && !item->empty()) {
+                    const std::size_t destination =
+                        first_available_backpack_slot(item->item_id);
+                    if (destination < inventory_.backpack_capacity() &&
+                        inventory_.move_to_backpack(
+                            static_cast<std::size_t>(selected_inventory_slot_), destination))
+                        selected_inventory_slot_ = -1;
+                }
+            } else if (selected_backpack_slot_ >= 0) {
+                const auto* item = inventory_.backpack_slot(
+                    static_cast<std::size_t>(selected_backpack_slot_));
+                if (item && !item->empty()) {
+                    const std::size_t destination =
+                        first_available_inventory_slot(item->item_id);
+                    if (destination < inventory_.capacity() &&
+                        inventory_.move_from_backpack(
+                            static_cast<std::size_t>(selected_backpack_slot_), destination))
+                        selected_backpack_slot_ = -1;
+                }
+            }
+        }
         if (selected_inventory_slot_ >= 0 && (input.pressed & (KEY_A | KEY_X))) {
             (void)minidayz::items::use_item_from_inventory(
                 inventory_, static_cast<std::size_t>(selected_inventory_slot_),
@@ -327,7 +352,9 @@ public:
         const bool touch_released = !input.touching && touch_down_;
         if (touch_pressed) {
             drag_source_slot_ = -1;
+            drag_source_backpack_slot_ = -1;
             drag_target_slot_ = -1;
+            drag_target_backpack_slot_ = -1;
             drag_target_equipment_slot_ = -1;
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
             if (equipment_target >= 0) {
@@ -350,15 +377,29 @@ public:
             }
             // Page through larger backpacks without changing the 5 x 3 grid.
             if (input.touch.py >= 223) {
-                const std::size_t page_count =
-                    (inventory_.capacity() + kInventoryPageSize - 1) /
-                    kInventoryPageSize;
+                const std::size_t page_count = total_inventory_page_count();
                 if (input.touch.px < 160 && inventory_page_ > 0)
                     --inventory_page_;
                 else if (input.touch.px >= 160 &&
                          inventory_page_ + 1 < page_count)
                     ++inventory_page_;
                 selected_inventory_slot_ = -1;
+                selected_backpack_slot_ = -1;
+            } else if (showing_backpack_page()) {
+                const int slot = inventory_slot_at(input.touch.px, input.touch.py, 0);
+                if (slot >= 0 &&
+                    static_cast<std::size_t>(slot) < inventory_.backpack_capacity()) {
+                    const auto* item = inventory_.backpack_slot(static_cast<std::size_t>(slot));
+                    selected_backpack_slot_ = item && !item->empty() ? slot : -1;
+                    selected_inventory_slot_ = -1;
+                    if (selected_backpack_slot_ >= 0) {
+                        drag_source_backpack_slot_ = slot;
+                        drag_target_backpack_slot_ = slot;
+                    }
+                } else {
+                    selected_backpack_slot_ = -1;
+                    selected_inventory_slot_ = -1;
+                }
             } else {
                 const int slot = inventory_slot_at(input.touch.px,
                                                    input.touch.py,
@@ -366,6 +407,7 @@ public:
                 if (slot >= 0) {
                     const auto* item = inventory_.slot(static_cast<std::size_t>(slot));
                     selected_inventory_slot_ = item && !item->empty() ? slot : -1;
+                    selected_backpack_slot_ = -1;
                     if (selected_inventory_slot_ >= 0) {
                         drag_source_slot_ = slot;
                         drag_target_slot_ = slot;
@@ -373,7 +415,8 @@ public:
                 }
             }
         }
-        if (input.touching && drag_source_slot_ >= 0) {
+        if (input.touching &&
+            (drag_source_slot_ >= 0 || drag_source_backpack_slot_ >= 0)) {
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
             if (equipment_target >= 0 && equipment_target < 6) {
                 drag_target_equipment_slot_ = equipment_target;
@@ -381,8 +424,13 @@ public:
             } else {
                 drag_target_equipment_slot_ = -1;
                 const int target = inventory_slot_at(input.touch.px, input.touch.py,
-                                                    inventory_page_);
-                if (target >= 0) drag_target_slot_ = target;
+                    showing_backpack_page() ? 0 : inventory_page_);
+                if (target >= 0) {
+                    if (showing_backpack_page())
+                        drag_target_backpack_slot_ = target;
+                    else
+                        drag_target_slot_ = target;
+                }
             }
         }
         if (touch_released) {
@@ -399,6 +447,19 @@ public:
                     inventory_, static_cast<std::size_t>(drag_source_slot_),
                     static_cast<minidayz::items::EquipmentSlot>(drag_target_equipment_slot_)))
                     selected_inventory_slot_ = -1;
+            } else if (drag_source_slot_ >= 0 &&
+                       drag_target_backpack_slot_ >= 0) {
+                if (inventory_.move_to_backpack(
+                        static_cast<std::size_t>(drag_source_slot_),
+                        static_cast<std::size_t>(drag_target_backpack_slot_)))
+                    selected_inventory_slot_ = -1;
+            } else if (drag_source_backpack_slot_ >= 0 &&
+                       drag_target_backpack_slot_ >= 0 &&
+                       drag_target_backpack_slot_ != drag_source_backpack_slot_) {
+                if (inventory_.move_backpack(
+                        static_cast<std::size_t>(drag_source_backpack_slot_),
+                        static_cast<std::size_t>(drag_target_backpack_slot_)))
+                    selected_backpack_slot_ = drag_target_backpack_slot_;
             } else if (drag_source_slot_ >= 0 && drag_target_slot_ >= 0 &&
                        drag_target_slot_ != drag_source_slot_) {
                 if (inventory_.move(static_cast<std::size_t>(drag_source_slot_),
@@ -406,22 +467,30 @@ public:
                     selected_inventory_slot_ = drag_target_slot_;
             }
             drag_source_slot_ = -1;
+            drag_source_backpack_slot_ = -1;
             drag_target_slot_ = -1;
+            drag_target_backpack_slot_ = -1;
             drag_target_equipment_slot_ = -1;
         }
         touch_down_ = input.touching;
         // A backpack can shrink the inventory back to its 15-slot base. Keep
         // the visible page and selection inside the new capacity immediately.
-        const std::size_t valid_page_count =
-            (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize;
+        const std::size_t valid_page_count = total_inventory_page_count();
         if (inventory_page_ >= valid_page_count)
             inventory_page_ = valid_page_count - 1;
         if (selected_inventory_slot_ >= static_cast<int>(inventory_.capacity()))
             selected_inventory_slot_ = -1;
+        if (selected_backpack_slot_ >= static_cast<int>(inventory_.backpack_capacity()))
+            selected_backpack_slot_ = -1;
         if (drag_source_slot_ >= static_cast<int>(inventory_.capacity())) {
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
             drag_target_equipment_slot_ = -1;
+        }
+        if (drag_source_backpack_slot_ >=
+            static_cast<int>(inventory_.backpack_capacity())) {
+            drag_source_backpack_slot_ = -1;
+            drag_target_backpack_slot_ = -1;
         }
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
@@ -507,19 +576,28 @@ public:
                 renderer.draw_text(equipment_labels[i], x + 3.0f, 53.0f, 0.18f);
             }
         }
-        // 5 x 3 backpack page, sized for the 320 x 240 touch screen.
-        const int page_start = static_cast<int>(inventory_page_ * kInventoryPageSize);
+        // The source-defined bag container has its own page; it is not part
+        // of the ordinary player inventory slot array.
+        const bool backpack_page = showing_backpack_page();
+        renderer.draw_text(backpack_page ? "BAG CONTENTS" : "PLAYER INVENTORY",
+                           10.0f, 83.0f, 0.20f);
+        const int page_start = backpack_page ? 0 :
+            static_cast<int>(inventory_page_ * kInventoryPageSize);
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 5; ++col) {
                 const int index = page_start + row * 5 + col;
                 const float x = 10.0f + col * 60.0f;
                 const float y = 92.0f + row * 43.0f;
-                const bool selected = index == selected_inventory_slot_;
+                const bool selected = backpack_page
+                    ? index == selected_backpack_slot_
+                    : index == selected_inventory_slot_;
                 renderer.draw_solid_rect(x, y, 56.0f, 39.0f,
                     selected ? C2D_Color32(225, 190, 105, 255) : C2D_Color32(5, 8, 7, 255));
                 renderer.draw_solid_rect(x + 2.0f, y + 2.0f, 52.0f, 35.0f,
                     selected ? C2D_Color32(76, 76, 54, 255) : C2D_Color32(43, 49, 44, 255));
-                const auto* item = inventory_.slot(static_cast<std::size_t>(index));
+                const auto* item = backpack_page
+                    ? inventory_.backpack_slot(static_cast<std::size_t>(index))
+                    : inventory_.slot(static_cast<std::size_t>(index));
                 if (item && !item->empty()) {
                     // Use the exact item ID -> Construct object mapping from
                     // the original game's MDZItemTable.
@@ -539,15 +617,15 @@ public:
                 }
             }
         }
-        const std::size_t page_count =
-            (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize;
+        const std::size_t page_count = total_inventory_page_count();
         char page_label[24]{};
-        std::snprintf(page_label, sizeof(page_label), "<  BACKPACK  %u/%u  >",
+        std::snprintf(page_label, sizeof(page_label), "< %s %u/%u >",
+            backpack_page ? "BAG" : "INVENTORY",
             static_cast<unsigned>(inventory_page_ + 1),
             static_cast<unsigned>(page_count));
         renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                  C2D_Color32(54, 68, 55, 255));
-        renderer.draw_text("A USE X ALT L DROP R PICK", 14.0f, 226.0f, 0.18f);
+        renderer.draw_text("A USE X ALT Y BAG L DROP R PICK", 14.0f, 226.0f, 0.18f);
         renderer.draw_text(page_label, 104.0f, 226.0f, 0.30f);
     }
 
@@ -691,6 +769,30 @@ private:
         return index >= 0 && index < 6 ? index : -1;
     }
 
+    std::size_t inventory_page_count() const noexcept {
+        return std::max<std::size_t>(1,
+            (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize);
+    }
+
+    std::size_t total_inventory_page_count() const noexcept {
+        return inventory_page_count() + (inventory_.backpack_capacity() > 0 ? 1 : 0);
+    }
+
+    bool showing_backpack_page() const noexcept {
+        return inventory_.backpack_capacity() > 0 &&
+               inventory_page_ == inventory_page_count();
+    }
+
+    std::size_t first_available_backpack_slot(std::uint16_t item_id) const noexcept {
+        const auto limit = minidayz::items::source_max_stack(item_id);
+        for (std::size_t i = 0; i < inventory_.backpack_capacity(); ++i) {
+            const auto* item = inventory_.backpack_slot(i);
+            if (!item || item->empty()) return i;
+            if (item->item_id == item_id && item->count < limit) return i;
+        }
+        return inventory_.backpack_capacity();
+    }
+
     std::size_t first_available_inventory_slot(std::uint16_t item_id) const noexcept {
         const auto limit = minidayz::items::source_max_stack(item_id);
         for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
@@ -718,6 +820,12 @@ private:
         ground_loot_.clear();
         inventory_page_ = 0;
         selected_inventory_slot_ = -1;
+        selected_backpack_slot_ = -1;
+        drag_source_slot_ = -1;
+        drag_source_backpack_slot_ = -1;
+        drag_target_slot_ = -1;
+        drag_target_backpack_slot_ = -1;
+        drag_target_equipment_slot_ = -1;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
         npc_ready_ = world_ready_ && npcs_.initialize(world_);
         save_elapsed_ = 0.0f;
@@ -785,8 +893,11 @@ private:
     minidayz::items::GroundLootSystem ground_loot_{};
     minidayz::PlayerRules preview_rules_{};
     int selected_inventory_slot_{-1};
+    int selected_backpack_slot_{-1};
     int drag_source_slot_{-1};
+    int drag_source_backpack_slot_{-1};
     int drag_target_slot_{-1};
+    int drag_target_backpack_slot_{-1};
     int drag_target_equipment_slot_{-1};
     std::size_t inventory_page_{};
     bool touch_down_{};
