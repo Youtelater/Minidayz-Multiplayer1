@@ -12,12 +12,14 @@ inline constexpr std::size_t kMaximumInventorySlotCount = 32;
 struct InventorySlot {
     std::uint16_t item_id{};
     std::uint16_t count{};
+    std::uint8_t condition{100};
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
 struct GroundItem {
     std::uint16_t item_id{};
     std::uint16_t count{};
+    std::uint8_t condition{100};
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
@@ -89,6 +91,7 @@ public:
         slots_ = {};
         capacity_ = kInventorySlotCount;
         equipped_backpack_ = 0;
+        equipped_backpack_condition_ = 100;
     }
 
 private:
