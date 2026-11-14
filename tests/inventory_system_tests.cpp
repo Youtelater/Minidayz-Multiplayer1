@@ -441,5 +441,12 @@ int main() {
     assert(!wrong_backpack_repair.repair_equipped_backpack_from_inventory_slot(1));
     assert(wrong_backpack_repair.count(35) == 1);
 
+    InventorySystem broken_backpack_repair;
+    assert(broken_backpack_repair.add(450, 1, 0, 0));
+    assert(broken_backpack_repair.add(39, 1));
+    assert(broken_backpack_repair.equip_backpack_from_slot(0));
+    assert(!broken_backpack_repair.repair_equipped_backpack_from_inventory_slot(1));
+    assert(broken_backpack_repair.count(39) == 1);
+
     return 0;
 }
