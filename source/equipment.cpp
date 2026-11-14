@@ -106,6 +106,21 @@ PlayerArmorProtection EquipmentSystem::protection() const noexcept {
     return result;
 }
 
+float EquipmentSystem::temperature_offset() const noexcept {
+    SourceItemProtection item{};
+    float helmet_warmth = 0.0f;
+    float outerwear_warmth = 0.0f;
+    float pants_warmth = 0.0f;
+    if (source_item_protection(equipped(EquipmentSlot::head), item))
+        helmet_warmth = item.warmth;
+    if (source_item_protection(equipped(EquipmentSlot::outerwear), item))
+        outerwear_warmth = item.warmth;
+    if (source_item_protection(equipped(EquipmentSlot::pants), item))
+        pants_warmth = item.warmth;
+    if (pants_warmth <= 0.0f) return 0.0f;
+    return (outerwear_warmth - helmet_warmth) / pants_warmth;
+}
+
 bool EquipmentSystem::equip_from_inventory(
     InventorySystem& inventory, std::size_t inventory_slot,
     EquipmentSlot equipment_slot) noexcept {
