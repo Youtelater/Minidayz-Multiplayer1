@@ -24,4 +24,4 @@ event trace until their command semantics are ported.
 
 ## CI extraction coverage
 
-The native regression workflow now runs the original event-trace exporter on every branch build. The current Mini DAYZ 1.6.0 snapshot exports 2,223 raw inventory behavior records across the five source event groups. This confirms source coverage, not full gameplay translation: food, medicine, equipment, and other actions still need their Construct command semantics ported and tested before Stage 2 can be declared complete.
+The native regression workflow now runs the original event-trace exporter on every branch build. The current Mini DAYZ 1.6.0 snapshot exports 2,223 raw inventory behavior records across seven source event groups, including both original item activation functions. This confirms source coverage, not full gameplay translation: food, medicine, equipment, and other actions still need their Construct command semantics ported and tested before Stage 2 can be declared complete.
