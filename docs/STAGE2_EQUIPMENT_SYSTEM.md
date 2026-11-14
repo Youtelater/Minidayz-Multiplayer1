@@ -18,8 +18,8 @@ The original player damage event subtracts four flat protection values. The gene
 - Dragging a single compatible item onto one of the five source equipment slots equips it.
 - Replacing equipment returns the previous item to inventory atomically.
 - Tapping an occupied clothing/held slot returns its item to a free/merge-compatible inventory slot.
-- The backpack appears in the equipment row and can be unequipped by tapping it. Drag-to-equip is still gated on extracting the exact original per-backpack capacity values.
-- Equipment is included in save version 3; older player-only and player-plus-inventory saves remain readable.
+- The backpack appears in the equipment row and can be unequipped by tapping it. Drag-to-equip is still gated on extracting the exact original per-backpack capacity values. Item condition (original instance variable 6) is preserved through inventory stacks, ground transfers, equipment swaps, backpack swaps and save/load.
+- Equipment and per-item condition are included in save version 4; player-only, inventory-only and version-3 equipment saves are migrated.
 - Player rendering draws original sprite objects by animation name, then layers pants, outerwear, vest, helmet, backpack, and held weapon.
 - The generated source sprite catalog provides the exact Construct object for each mapped item.
 
