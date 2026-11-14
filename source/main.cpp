@@ -358,15 +358,51 @@ public:
         }
         if (touch_released) {
             if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
-                if (inventory_.equip_backpack_from_slot(
-                        static_cast<std::size_t>(drag_source_slot_))) {
+                const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
+                // Dragging an original repair material onto the backpack slot
+                // invokes the source-defined repair event; otherwise it equips.
+                if (inventory_.repair_equipped_backpack_from_inventory_slot(source_slot) ||
+                    inventory_.equip_backpack_from_slot(source_slot))
                     selected_inventory_slot_ = -1;
-                }
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
-                if (equipment_.equip_from_inventory(
-                    inventory_, static_cast<std::size_t>(drag_source_slot_),
-                    static_cast<minidayz::items::EquipmentSlot>(drag_target_equipment_slot_)))
-                    selected_inventory_slot_ = -1;
+                const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
+                const auto target = static_cast<minidayz::items::EquipmentSlot>(
+                    drag_target_equipment_slot_);
+                bool changed = equipment_.equip_from_inventory(
+                    inventory_, source_slot, target);
+                if (!changed) {
+                    minidayz::items::SourceRepairTarget repair_target{};
+                    bool repairable = true;
+                    switch (target) {
+                    case minidayz::items::EquipmentSlot::head: {
+                        const auto* material = inventory_.slot(source_slot);
+                        std::uint8_t gain = 0;
+                        repair_target =
+                            material && minidayz::items::source_item_repair_gain(
+                                material->item_id,
+                                minidayz::items::SourceRepairTarget::helmet, gain)
+                            ? minidayz::items::SourceRepairTarget::helmet
+                            : minidayz::items::SourceRepairTarget::helmet_lite;
+                        break;
+                    }
+                    case minidayz::items::EquipmentSlot::outerwear:
+                        repair_target = minidayz::items::SourceRepairTarget::outerwear;
+                        break;
+                    case minidayz::items::EquipmentSlot::vest:
+                        repair_target = minidayz::items::SourceRepairTarget::vest;
+                        break;
+                    case minidayz::items::EquipmentSlot::pants:
+                        repair_target = minidayz::items::SourceRepairTarget::pants;
+                        break;
+                    default:
+                        repairable = false;
+                        break;
+                    }
+                    if (repairable)
+                        changed = equipment_.repair_from_inventory(
+                            inventory_, source_slot, repair_target);
+                }
+                if (changed) selected_inventory_slot_ = -1;
             } else if (drag_source_slot_ >= 0 && drag_target_slot_ >= 0 &&
                        drag_target_slot_ != drag_source_slot_) {
                 if (inventory_.move(static_cast<std::size_t>(drag_source_slot_),
