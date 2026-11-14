@@ -47,5 +47,35 @@ int main() {
         assert(crowded.add({1, 1, 100}, static_cast<float>(i), 0.0f));
     assert(!crowded.drop_from_inventory(source, 0, 1, 0.0f, 0.0f));
     assert(source.count(11) == 64);
+
+    // Original Backpack slot can be equipped without guessing extra capacity,
+    // then dropped into the same world-loot system with its condition intact.
+    InventorySystem pack_inventory;
+    assert(pack_inventory.add(450, 1, 0, 42));
+    assert(pack_inventory.equip_backpack_from_slot(0, 0));
+    assert(pack_inventory.equipped_backpack() == 450);
+    assert(pack_inventory.capacity() == kInventorySlotCount);
+    auto pack_snapshot = pack_inventory.snapshot();
+    InventorySystem pack_restored;
+    assert(pack_restored.restore(pack_snapshot));
+    assert(pack_restored.equipped_backpack() == 450);
+    assert(pack_restored.capacity() == kInventorySlotCount);
+    GroundLootSystem pack_ground;
+    assert(pack_ground.drop_equipped_backpack(pack_restored, 8.0f, 9.0f));
+    assert(pack_restored.equipped_backpack() == 0);
+    assert(pack_ground.count() == 1);
+    assert(pack_ground.entry(0)->item.item_id == 450);
+    assert(pack_ground.entry(0)->item.condition == 42);
+
+    // A full ground-loot array must leave the equipped backpack untouched.
+    InventorySystem full_pack;
+    assert(full_pack.add(450, 1));
+    assert(full_pack.equip_backpack_from_slot(0, 0));
+    GroundLootSystem full_ground;
+    for (std::size_t i = 0; i < kMaximumGroundLootItems; ++i)
+        assert(full_ground.add({1, 1, 100}, static_cast<float>(i), 0.0f));
+    assert(!full_ground.drop_equipped_backpack(full_pack, 0.0f, 0.0f));
+    assert(full_pack.equipped_backpack() == 450);
+
     return 0;
 }
