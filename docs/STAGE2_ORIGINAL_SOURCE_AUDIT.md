@@ -1,7 +1,6 @@
 # Stage 2 original-source audit
 
 - Authoritative original source: `Minidayz-Multiplayer-main/data.js` (original deobfuscated Construct export in this repository).
-- SHA-256: `b5e15cfad3106b56457bc13c4169e59b4ff0308035912330bf144b86238571d3`.
 - Original project title/version: Mini DAYZ 1.6.0.
 - The original source contains the `Check_stack_size` event and `perk_cybb` branch.
 - Original item IDs and Construct object names are mapped by `MDZItemTable`; localized names are in `l_eng_items.xml`.
@@ -13,7 +12,7 @@ Do not infer item effects or backpack slot counts from item names. The raw sourc
 
 ## Verified build outputs
 
-The native CI run generated 405 original item definitions, resolved 329 item-to-Construct sprite mappings, and extracted 3,680 original inventory behavior event records. Both the native regression workflow and the 3DS executable build completed successfully after the inventory fixes. The 76 item IDs without an `MDZItemTable` mapping remain explicitly unresolved; no substitute art or item effects are fabricated.
+The native CI run generated 405 original item definitions, resolved 329 item-to-Construct sprite mappings, and extracted 3,680 original inventory behavior event records. The native regression workflow passed on commit `61e84b901f5845b49aadf07f3001a9f180b2d4de`; 3DS build verification for the latest source-path corrections is pending. The 76 item IDs without an `MDZItemTable` mapping remain explicitly unresolved; no substitute art or item effects are fabricated.
 
 
 ## Player appearance and equipment layers verified in original source
