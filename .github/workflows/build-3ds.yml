@@ -54,6 +54,15 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/construct_expression.cpp source/construct_event_interpreter.cpp tests/construct_event_interpreter_tests.cpp -o /tmp/construct_event_interpreter_tests
           /tmp/construct_event_interpreter_tests
 
+      - name: Run Stage 2 inventory, equipment, and item-use regression tests
+        run: |
+          g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/inventory.cpp tests/inventory_system_tests.cpp -o /tmp/inventory_system_tests
+          /tmp/inventory_system_tests
+          g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/inventory.cpp source/equipment.cpp tests/equipment_system_tests.cpp -o /tmp/equipment_system_tests
+          /tmp/equipment_system_tests
+          g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/item_use.cpp tests/item_use_tests.cpp -o /tmp/item_use_tests
+          /tmp/item_use_tests
+
       - name: Upload .3dsx Executable
         uses: actions/upload-artifact@v4
         with:
