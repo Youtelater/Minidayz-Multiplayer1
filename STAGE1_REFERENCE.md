@@ -42,7 +42,7 @@ XML record totals include empty ID-zero records where present. Duplicate English
 - 489 audio resource entries.
 - 115 distinct condition command IDs and 206 distinct action command IDs.
 
-The complete parsed source snapshot is stored in ordered chunks under `data/stage1/source_snapshot/`. Reassemble and regenerate indexes using:
+The complete parsed source snapshot is stored in ordered chunks under `data/stage1/source_snapshot/`. Every reassembly now first verifies exact byte equality against root `data.deobfuscated.js`, the authoritative Construct export. A mismatch stops extraction and the build. Reassemble and regenerate indexes using:
 
 ```sh
 python tools/stage1/reassemble_snapshot.py
