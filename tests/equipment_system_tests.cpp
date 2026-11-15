@@ -275,6 +275,25 @@ int main() {
     assert(vest_repair.snapshot().conditions[
         static_cast<std::size_t>(EquipmentSlot::vest)] == 65);
 
+    // Backpack repairs share this public equipment repair entry point but
+    // mutate the backpack condition owned by InventorySystem.
+    EquipmentSystem backpack_repair_dispatch;
+    InventorySystem backpack_repair_inventory;
+    assert(backpack_repair_inventory.add(450, 1, 0, 40));
+    assert(backpack_repair_inventory.add(39, 1));
+    assert(backpack_repair_inventory.add(122, 1));
+    assert(backpack_repair_inventory.equip_backpack_from_slot(0));
+    assert(backpack_repair_dispatch.repair_from_inventory(
+        backpack_repair_inventory, 1, SourceRepairTarget::backpack));
+    assert(backpack_repair_inventory.equipped_backpack_condition() == 55);
+    assert(backpack_repair_inventory.count(39) == 0);
+    assert(backpack_repair_dispatch.repair_from_inventory(
+        backpack_repair_inventory, 2, SourceRepairTarget::backpack));
+    assert(backpack_repair_inventory.equipped_backpack_condition() == 80);
+    assert(backpack_repair_inventory.count(122) == 0);
+    assert(!backpack_repair_dispatch.repair_from_inventory(
+        backpack_repair_inventory, 2, SourceRepairTarget::backpack));
+
     // Failed replacement must leave both inventory and equipment unchanged.
     EquipmentSystem atomic;
     InventorySystem full;
