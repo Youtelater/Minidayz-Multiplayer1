@@ -28,3 +28,8 @@ are implemented.
 ## CI extraction coverage
 
 The native regression workflow now runs the original event-trace exporter on every branch build. The current Mini DAYZ 1.6.0 snapshot exports the raw inventory behavior records across seven source event groups, including both original item activation functions. The 40 direct item-use stat rows are generated separately and tested natively. Original item condition (instance variable 6) is now carried through inventory, ground, equipment and save/load transfers; stacks with different condition values do not merge. Default values are extracted for 168 item IDs from original map instances (two IDs start at zero); unmapped IDs currently default to 100. The equipment exporter also produces 63 original item property rows, including flat protection and clothing warmth values. The original backpack storage grid is now extracted and validated from the Items_update function (slot indices 1-11); the native inventory model applies the resulting 11-slot extension. Remaining work includes conditional perk bonuses, item-specific secondary effects, source condition wear/repair, and wiring armor/temperature values into the full combat and weather runtime.
+
+
+## Condition-wear source trace
+
+The exporter also retains the six original combat/obstacle event groups that contain item-condition writes. Their exact group and event UIDs, source action IDs, and unresolved fractional/perk expression semantics are documented in [STAGE2_CONDITION_WEAR_TRACE.md](STAGE2_CONDITION_WEAR_TRACE.md). CI now runs `validate_item_condition_trace.py` after extraction to guard that trace coverage. This is provenance validation only; it does not mark runtime condition wear as implemented.
