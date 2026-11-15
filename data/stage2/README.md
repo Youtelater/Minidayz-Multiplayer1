@@ -18,7 +18,7 @@ Stage 2 ports the original Mini DAYZ 1.6.0 item, inventory, backpack, equipment,
 - Sixty-three original equipment property rows provide clothing warmth and flat armor protection; 168 item IDs have source-map condition defaults.
 - Original repair menu actions are extracted and implemented: duct tape (+15) and epoxy glue (+25) for pants, outerwear, vest and backpack; sewing kit repairs for helmet (+50), light helmet (+25), pants (+50), and outerwear (+50). Repairs consume one matching material, require condition between 1 and 99, and clamp at 100.
 - Armor protection is summed from the original flat equipment values. The player damage API applies the original flat subtraction; item condition does not scale armor or warmth.
-- Raw Construct inventory behavior records are exported with their source event UIDs, conditions and actions for further porting.
+- Raw Construct inventory behavior records are exported with their source event UIDs, conditions and actions for further porting. The six original combat/obstacle groups containing item-condition writes are also retained and CI-validated; their fractional and perk-dependent action semantics remain unported (see `docs/STAGE2_CONDITION_WEAR_TRACE.md`).
 
 ## Remaining Stage 2 work
 
