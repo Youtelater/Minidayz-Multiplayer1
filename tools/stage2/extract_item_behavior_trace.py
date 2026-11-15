@@ -26,6 +26,14 @@ TARGETS = {
     3439113896437199: "inventory_items",
     8381242860269222: "item_activate",
     3890676334551161: "item_activate2",
+    # Combat and obstacle event groups are included so condition wear can be
+    # translated only from exact original Construct actions, never guessed.
+    811368909310732: "Damage dealing",
+    9520121190252054: "Player damaging",
+    5836740205504893: "Hitting_obstacles",
+    6904772320561696: "Firearm shooting",
+    3528035038609865: "Melee fight",
+    337954396197555: "Alternate attacks",
 }
 
 
