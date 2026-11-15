@@ -15,7 +15,12 @@ int main() {
     assert(effect.health == 50.0f);
     assert(source_item_use_effect(60, true, effect));
     assert(effect.hunger == 25.0f && effect.thirst == 10.0f);
+    // Unsupported IDs clear a reused output object rather than leaking the
+    // last successful item's values into a caller's next action.
+    effect = {99.0f, 98.0f, 97.0f, 96.0f};
     assert(!source_item_use_effect(456, false, effect));
+    assert(effect.hunger == 0.0f && effect.thirst == 0.0f &&
+           effect.health == 0.0f && effect.temperature == 0.0f);
 
     // Original item_activate expressions add +10 hunger for perk_hamster
     // and +10 thirst for perk_camel when their source conditions evaluate true.
