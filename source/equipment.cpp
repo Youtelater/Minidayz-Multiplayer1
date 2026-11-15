@@ -193,9 +193,14 @@ bool EquipmentSystem::restore_condition(
 bool EquipmentSystem::repair_from_inventory(
     InventorySystem& inventory, std::size_t inventory_slot,
     SourceRepairTarget target) noexcept {
+    // Backpack condition is owned by InventorySystem, not an EquipmentSlot.
+    // Route the original backpack repair actions to that authoritative state.
+    if (target == SourceRepairTarget::backpack)
+        return inventory.repair_equipped_backpack_from_inventory_slot(
+            inventory_slot);
+
     const auto* material = inventory.slot(inventory_slot);
-    if (!material || material->empty() || target == SourceRepairTarget::backpack)
-        return false;
+    if (!material || material->empty()) return false;
 
     EquipmentSlot equipment_slot{};
     switch (target) {
