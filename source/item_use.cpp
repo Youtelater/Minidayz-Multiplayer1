@@ -13,6 +13,9 @@ bool source_item_use_effect(std::uint16_t item_id, bool secondary,
 bool source_item_use_effect(std::uint16_t item_id, bool secondary,
                             const ItemUsePerks& perks,
                             ItemUseEffect& effect) noexcept {
+    // A failed lookup must never leak the previous item's effect through an
+    // output parameter. Callers can safely reuse one effect object per frame.
+    effect = {};
     std::size_t first = 0;
     std::size_t last = kItemUseEffectDefinitionCount;
     while (first < last) {
