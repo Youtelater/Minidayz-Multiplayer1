@@ -36,6 +36,14 @@ These are the only recipes currently translated without assuming undocumented
 requirements or outputs. Additional original crafting actions still need
 event-level extraction and porting.
 
+## Source-verified tent storage (native integration)
+
+- The original root `l_eng_items.xml` identifies item **456** as **Civilian Tent**. The original root `l_eng_ui.xml` states that civilian tents can be deployed and that items stored there persist permanently. `tools/stage2/validate_tent_storage_source.py` verifies both source facts.
+- `TentStorageSystem` deploys one actual tent item, preserves its condition, transfers item stacks atomically while preserving their condition, and rejects corrupt save snapshots.
+- The bottom 3DS touchscreen cycles **Backpack → Crafting → Tent Storage → Backpack**. In storage mode, tap the left pane to store an inventory stack and the right pane to retrieve it; tap the header of either pane to page. The top screen continues to render the world and deployed tents.
+- Save version **6** persists deployed tent locations and contents and migrates version 5 saves by reading the original complete C++ struct (including alignment padding).
+- **Scope limit:** 8 deployed tents and 32 stored stacks per tent are *native memory-safety limits*, not extracted original gameplay capacities. The exact original tent capacity, placement restrictions, and interaction range still require a verified Construct event translation.
+
 ## Remaining Stage 2 work
 
 - Port the original item-condition wear/loss events and connect them to the correct gameplay actions. Do not infer wear from damage or item names.
@@ -44,6 +52,7 @@ event-level extraction and porting.
 - Finish original loot spawning and remaining item-specific secondary actions from the exported Construct traces.
 - Complete perk progression and connect its evaluated source flags to item use.
 - Extract the per-item capacity of each remaining wearable backpack from original Construct equip conditions; the 11-slot UI grid does not prove that all packs have eleven usable storage slots.
+- Extract original tent capacity, placement restrictions, and interaction radius; current native storage bounds and interaction distance are technical defaults, not claims of source fidelity.
 - Finish the full source inventory/equipment UI and end-to-end save/load testing on the 3DS runtime.
 
 The native regression and 3DS build workflows passed on commit `4e91ae672230afcda9e72e9ab1615574256ebbd8`. Those results are not a physical 3DS hardware test, and they must be rerun after subsequent source changes. Unresolved values remain explicitly unresolved rather than being inferred from item names.
