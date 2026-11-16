@@ -25,11 +25,25 @@ jobs:
           key: graphics-v4-${{ hashFiles('assets/gfx/**/*.png', 'images/**/*.png', 'data.deobfuscated.js', 'mp_itemtable.js', 'l_eng_items.xml', 'l_eng_new.xml', 'l_eng_ui.xml', 'l_eng_log.xml', 'data/stage1/construct_project_parsed.json', 'tools/build_textures.py', 'tools/stage1/build_sprite_catalog.py') }}
 
       # Texture conversion is handled incrementally by the Makefile from assets/gfx.
-      - name: Update 3DS Libraries via dkp-pacman
+      - name: Prepare 3DS toolchain and Python texture dependencies
+        shell: bash
         run: |
+          set -e
+          # The devkitPro image already contains the compiler and tools.
+          # Do not make the build depend on a transient apt.devkitpro.org
+          # 522 response: the old apt-get update && apt-get install command
+          # silently skipped Pillow, then texture generation failed later.
           dirmngr < /dev/null || true
-          apt-get update && apt-get install -y --no-install-recommends ca-certificates python3-pil
-          dkp-pacman -S --noconfirm 3ds-dev 3ds-portlibs || true
+          if ! python3 -c "from PIL import Image" >/dev/null 2>&1; then
+            python3 -m pip install --no-cache-dir --break-system-packages Pillow ||
+              { apt-get update -o Acquire::Retries=3 || true;
+                apt-get install -y --no-install-recommends python3-pil; }
+          fi
+          python3 -c "from PIL import Image; print('Pillow', Image.__version__)"
+          if ! command -v arm-none-eabi-g++ >/dev/null 2>&1 &&
+             ! test -x /opt/devkitpro/devkitARM/bin/arm-none-eabi-g++; then
+            dkp-pacman -S --noconfirm 3ds-dev 3ds-portlibs
+          fi
 
       - name: Test Construct expression evaluator
         run: |
