@@ -98,6 +98,15 @@ jobs:
           name: original-stage2-remaining-source
           path: data/stage2/remaining_source_trace.json
 
+      - name: Trace original medical item use events
+        run: python3 tools/stage2/audit_medical_use_source.py
+
+      - name: Upload original medical item action trace
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-medical-item-actions
+          path: data/stage2/medical_item_source_trace.json
+
       - name: Compile Original Loot Choice Catalog Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
