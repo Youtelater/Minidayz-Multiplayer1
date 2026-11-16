@@ -125,6 +125,10 @@ public:
     void adjust_thirst(float amount, float max_thirst) noexcept;
     void adjust_temperature(float amount, float min_temperature,
                             float max_temperature) noexcept;
+    // Original Player Stats event 4824763499434787 assigns a literal
+    // Day_cold minus clothing warmth. Preserve negative cold exposure
+    // without the preview meter's artificial -10..10 limits.
+    void set_source_temperature(float source_value) noexcept;
     void set_bleeding(float severity, float max_severity) noexcept;
     void set_infection(float severity, float max_severity) noexcept;
 
