@@ -109,6 +109,30 @@ def main():
                     {"uid": event["uid"], "conditions": event["conditions"],
                      "action": action, "ancestors": ancestors},
                     separators=(",", ":"))[:5200])
+    # Weather variables are often initialized in the global event sheet,
+    # outside Player Stats. Trace exact writes across ALL original sheets.
+    all_weather = []
+    for sheet in project["project"][6]:
+        if not isinstance(sheet, list) or len(sheet) < 2:
+            continue
+        for event, parent in walk(sheet[1]):
+            for action in event[6] if isinstance(event[6], list) else ():
+                if not isinstance(action, list) or len(action) < 6:
+                    continue
+                params = action[5]
+                if not isinstance(params, list):
+                    continue
+                for weather_name in weather_terms:
+                    if [11, weather_name] not in params:
+                        continue
+                    all_weather.append({"sheet": sheet[0], "uid": event[4],
+                                        "parent": parent,
+                                        "conditions": event[5], "action": action})
+    print(f"Original global weather variable writes: {len(all_weather)}")
+    for event in all_weather[:30]:
+        print("  GLOBAL WEATHER SOURCE:", json.dumps(
+            event, separators=(",", ":"))[:3100])
+    result["weather_global_writes"] = all_weather
     # Resolve the original branch/condition ancestry of a representative
     # weighted LOOT Respawn call before translating any gameplay trigger.
     loot = result["loot_respawn"]
