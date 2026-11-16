@@ -8,7 +8,7 @@ Stage 2 ports the original Mini DAYZ 1.6.0 item, inventory, backpack, equipment,
 - The original sprite catalog resolves 329 item IDs to exact Construct object identities; 76 IDs remain explicitly unmapped rather than receiving substitute art.
 - InventorySystem provides 15 base slots, atomic additions/removals, source stack limits, moving, swapping, splitting, ground pickup/drop, per-stack item condition, and snapshots.
 - The original `Check_stack_size` baseline groups are ported. The `perk_cybb` branch returns 31,415,926 in the source; the native `uint16_t` representation uses `UINT16_MAX` as its safe upper bound when that override is explicitly supplied.
-- Backpack storage is derived from the original `Items_update` Construct function: the `Backpack` category renders source slot indices 1-11. Together with the 15 base slots this gives 26 total slots.
+- Backpack UI grid limits are derived from original `Items_update` (11 possible storage positions). The root `l_eng_ui.xml` also explicitly defines **3** added storage slots for the Improvised Sling Bag (18 total) and **5** for the Improvised Backpack (20 total); the generator now extracts these original capacities and applies them. The other wearable packs still use the 11-slot grid ceiling pending their exact original per-pack equip rules.
 - Original wearable backpack IDs are represented by the dedicated backpack equipment state. The item list excludes the Civilian Tent (456) and Supplies Stash (461), which are not wearable backpacks.
 - Equipping consumes a single backpack from inventory. Replacing a backpack returns the old one atomically; if the incoming pack is in a slot that disappears during a capacity change, the old pack is returned to a free slot in the surviving grid or the replacement fails without changing inventory.
 - Unequipping is allowed only when all 11 backpack storage slots are empty. Capacity cannot be manually increased or reduced independently of the equipped source backpack.
@@ -27,6 +27,7 @@ Stage 2 ports the original Mini DAYZ 1.6.0 item, inventory, backpack, equipment,
 - Connect the existing clothing warmth expression to the original weather/temperature update, including the separate `Day_cold` contribution. Do not substitute an invented weather formula.
 - Finish original loot spawning and remaining item-specific secondary actions from the exported Construct traces.
 - Complete perk progression and connect its evaluated source flags to item use.
+- Extract the per-item capacity of each remaining wearable backpack from original Construct equip conditions; the 11-slot UI grid does not prove that all packs have eleven usable storage slots.
 - Finish the full source inventory/equipment UI and end-to-end save/load testing on the 3DS runtime.
 
 The native regression and 3DS build workflows passed on commit `4e91ae672230afcda9e72e9ab1615574256ebbd8`. Those results are not a physical 3DS hardware test, and they must be rerun after subsequent source changes. Unresolved values remain explicitly unresolved rather than being inferred from item names.
