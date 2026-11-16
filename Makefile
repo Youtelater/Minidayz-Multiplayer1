@@ -128,6 +128,7 @@ stage1-assets:
 	@python3 tools/stage2/build_item_source_catalog.py
 	@python3 tools/stage2/build_item_description_catalog.py
 	@python3 tools/stage2/build_backpack_capacity_catalog.py
+	@python3 tools/stage2/build_weather_cold_catalog.py
 	@python3 tools/stage2/build_item_crafting_catalog.py
 	@python3 tools/stage2/build_source_loot_catalog.py
 	@python3 tools/stage2/extract_item_behavior_trace.py
