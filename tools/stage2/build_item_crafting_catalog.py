@@ -67,6 +67,8 @@ def main() -> None:
         "Improvised Sling Bag": (3394606754986424, "Craft_1"),
         "Improvised Backpack": (9521528803584300, "Craft_4"),
         "Campfire Kit": (6293809025927058, "Craft_3"),
+        "Crafted Arrow": (5857097494378506, "Craft_21"),
+        "Crafted Arrow Alternate": (6171369527712243, "Craft_22"),
     }
 
     def child_events(events):
@@ -139,7 +141,7 @@ def main() -> None:
                         isinstance(args[2], list) and args[2][0] == 7 and
                         isinstance(args[2][1], list) and args[2][1][0] == 0):
                         inventory_output_ids.append(args[2][1][1])
-        if result_name == "Campfire Kit":
+        if result_name in ("Campfire Kit", "Crafted Arrow", "Crafted Arrow Alternate"):
             if output_ids or inventory_output_ids != [result_id]:
                 raise SystemExit(
                     f"Original {function} inventory outputs {inventory_output_ids}, "
@@ -152,6 +154,21 @@ def main() -> None:
                 f"Original {function} ground outputs {output_ids}, "
                 f"not expected item {result_id}")
 
+    # Original Craft_21 and Craft_22 both return one item 51 through
+    # Check_space_inventory. Root tutorial says Wooden Sticks + any knife;
+    # all three exact root item names containing "Knife" are catalysts.
+    for name in ("Crafted Arrow", "Crafted Arrow Alternate"):
+        assert_original_output(name, resolve("Crafted Arrow"))
+    knives = ("Hunting Knife", "Army Knife", "Butcher Knife")
+    source_knife_names = [name for name in item_names if "Knife" in name]
+    if sorted(source_knife_names) != sorted(knives):
+        raise SystemExit(f"Original knife choices changed: {source_knife_names}")
+    arrow_guide = [line for line in tutorial if re.fullmatch(
+        r"Wooden sticks\\s*\\+\\s*any knife\\s*=\\s*arrows",
+        line, re.IGNORECASE)]
+    if len(arrow_guide) != 1:
+        raise SystemExit("Original root arrow recipe guide changed")
+
     rows = []
     for result_name, ingredients, pattern in RECIPES:
         source_text = [phrase for phrase in tutorial
@@ -163,7 +180,13 @@ def main() -> None:
         parts = [(resolve(label), count) for label, count in ingredients]
         if result_id in [id for id, _ in parts]:
             raise SystemExit(f"Self-consuming recipe: {result_name}")
-        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result)))
+        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result), False))
+    for knife in knives:
+        # Exact source check gives one arrow to inventory, no Spawn_drop.
+        # The original knife is a crafting tool, not a consumed ingredient.
+        rows.append((resolve("Crafted Arrow"), f"Crafted Arrow / {knife}",
+                     [(resolve("Wooden Sticks"), 1), (resolve(knife), 1)],
+                     arrow_guide[0], True, True))
 
     lines = [
         "#pragma once",
@@ -179,15 +202,16 @@ def main() -> None:
         "    const char* original_guide;",
         "    std::array<SourceCraftIngredient, 2> ingredients;",
         "    bool result_in_inventory;",
+        "    bool preserve_second_ingredient;",
         "};",
         f"inline constexpr std::size_t kSourceCraftRecipeCount = {len(rows)};",
         "inline constexpr SourceCraftRecipe kSourceCraftRecipes[] = {",
     ]
-    for result_id, name, parts, guide, inventory_result in rows:
+    for result_id, name, parts, guide, inventory_result, preserve_second in rows:
         ingredients = ", ".join(f"{{{id}, {count}}}" for id, count in parts)
         lines.append(f"    {{{result_id}, 1, {json.dumps(name)}, "
                      f"{json.dumps(guide)}, {{{{{ingredients}}}}}, "
-                     f"{str(inventory_result).lower()}}},")
+                     f"{str(inventory_result).lower()}, {str(preserve_second).lower()}}},")
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")

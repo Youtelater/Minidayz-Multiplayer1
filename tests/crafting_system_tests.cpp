@@ -8,7 +8,7 @@
 using namespace minidayz::items;
 
 int main() {
-    assert(kSourceCraftRecipeCount == 6);
+    assert(kSourceCraftRecipeCount == 9);
     assert(source_craft_recipe(0)->result_id == 163);
     assert(source_craft_recipe(1)->result_id == 454);
     assert(source_craft_recipe(2)->result_id == 455);
@@ -23,7 +23,8 @@ int main() {
     assert(source_craft_recipe(4)->ingredients[1].item_id == 38);
     assert(source_craft_recipe(5)->ingredients[1].item_id == 49);
     assert(!source_craft_recipe(0)->result_in_inventory);
-    assert(source_craft_recipe(6) == nullptr);
+    assert(source_craft_recipe(6)->result_id == 51);
+    assert(source_craft_recipe(9) == nullptr);
 
     InventorySystem player;
     GroundLootSystem ground;
@@ -115,6 +116,39 @@ int main() {
     assert(tight.occupied_slots() == tight.capacity());
     assert(craft_from_inventory(tight, tight_ground, 1, 2, 3));
     assert(tight.count(23) == 1 && tight_ground.count() == 0);
+
+    // Arrow crafting uses any of the three original knives as a reusable
+    // catalyst. The result is Check_space_inventory(-1,51), not a ground drop.
+    for (std::size_t recipe_index = 6; recipe_index < 9; ++recipe_index) {
+        InventorySystem arrow_inventory;
+        GroundLootSystem arrow_ground;
+        const auto* recipe = source_craft_recipe(recipe_index);
+        assert(recipe && recipe->result_in_inventory &&
+               recipe->preserve_second_ingredient);
+        const auto knife_id = recipe->ingredients[1].item_id;
+        assert(knife_id == 42 || knife_id == 43 || knife_id == 44);
+        assert(arrow_inventory.add(38, 2));
+        assert(!can_craft_from_inventory(
+            arrow_inventory, arrow_ground, 100, 100, recipe_index));
+        assert(arrow_inventory.add(knife_id, 1, 0, 47));
+        assert(can_craft_from_inventory(
+            arrow_inventory, arrow_ground, 100, 100, recipe_index));
+        assert(craft_from_inventory(
+            arrow_inventory, arrow_ground, 100, 100, recipe_index));
+        assert(arrow_inventory.count(38) == 1);
+        assert(arrow_inventory.count(51) == 1);
+        assert(arrow_inventory.count(knife_id) == 1);
+        assert(arrow_ground.count() == 0);
+        bool preserved = false;
+        for (std::size_t slot = 0; slot < arrow_inventory.capacity(); ++slot) {
+            const auto* item = arrow_inventory.slot(slot);
+            if (item && item->item_id == knife_id) {
+                assert(item->condition == 47);
+                preserved = true;
+            }
+        }
+        assert(preserved);
+    }
 
     // Full original ground-entity container and nonfinite positions reject a
     // craft without changing the source inventory or dropping the output.

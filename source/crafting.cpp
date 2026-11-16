@@ -33,7 +33,9 @@ bool craft_from_inventory(InventorySystem& inventory,
                      kUseSourceItemCondition}, player_x, player_y))
         return false;
 
-    for (const auto& ingredient : recipe->ingredients) {
+    for (std::size_t part = 0; part < recipe->ingredients.size(); ++part) {
+        if (part == 1 && recipe->preserve_second_ingredient) continue;
+        const auto& ingredient = recipe->ingredients[part];
         std::uint16_t remaining = ingredient.count;
         for (std::size_t i = 0; i < inventory.capacity() && remaining != 0; ++i) {
             const auto* slot = inventory.slot(i);
