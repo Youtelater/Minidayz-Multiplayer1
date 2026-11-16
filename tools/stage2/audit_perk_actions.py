@@ -23,6 +23,34 @@ def walk(rows,parent=()):
 def main():
     text=SOURCE.read_text(encoding="utf-8-sig")
     project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",text))
+    variables={}
+    for sheet in project["project"][6]:
+        if not isinstance(sheet,list) or len(sheet)<2:continue
+        for e in sheet[1] if isinstance(sheet[1],list) else []:
+            if isinstance(e,list) and len(e)>3 and e[0]==1:
+                variables.setdefault(str(e[1]),[]).append({
+                    "sheet":sheet[0],"initial":e[3]})
+    for name in ("perk_cost","expierence_points","perk_camel","perk_hamster",
+                 "perks_learnt_count"):
+        print("PERK VARIABLE",name,variables.get(name,[]))
+
+    xp_actions=[]
+    for sheet in project["project"][6]:
+        if not isinstance(sheet,list) or len(sheet)<2:continue
+        for e,parents in walk(sheet[1]):
+            actions=e[6] if isinstance(e[6],list) else []
+            for a in actions:
+                if not isinstance(a,list) or len(a)<6 or a[0]!=-1:
+                    continue
+                parameters=a[5]
+                if isinstance(parameters,list) and parameters and parameters[0] in (
+                   [11,"expierence_points"],[11,"perk_cost"]):
+                    xp_actions.append({"sheet":sheet[0],"event_uid":e[4],
+                        "method":a[1],"params":parameters,
+                        "ancestors":[p[4] for p in parents[-5:]]})
+    for action in xp_actions[:100]:
+        print("SOURCE XP ACTION",json.dumps(action,separators=(",",":"))[:1300])
+    print("Total original XP/Perk-cost writes:",len(xp_actions))
     groups=[e for sheet in project["project"][6] if isinstance(sheet,list) and len(sheet)>1
             for e,_ in walk(sheet[1]) if e[4]==UID]
     if len(groups)!=1:raise SystemExit(f"Original perks group missing: {len(groups)}")
