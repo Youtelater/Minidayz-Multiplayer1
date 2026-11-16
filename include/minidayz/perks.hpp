@@ -51,6 +51,9 @@ public:
     // Experience is awarded only by a translated original XP event;
     // never award arbitrary XP from elapsed time.
     bool award_experience(std::uint32_t source_award) noexcept;
+    // Call only after a matching original Construct event guard fires.
+    // Unknown or context-dependent XP actions are rejected, not guessed.
+    bool award_original_xp_event(std::uint64_t source_event_uid) noexcept;
     bool can_buy(SourcePerk perk) const noexcept;
     bool buy(SourcePerk perk) noexcept;
     std::uint8_t level(SourcePerk perk) const noexcept;
