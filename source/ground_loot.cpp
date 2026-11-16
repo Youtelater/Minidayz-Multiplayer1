@@ -8,7 +8,8 @@ namespace {
 bool valid_ground_item(const GroundItem& item) noexcept {
     return item.item_id != 0 && item.count != 0 &&
         source_item_exists(item.item_id) &&
-        (item.condition == kUseSourceItemCondition || item.condition <= 100) &&
+        (item.condition == static_cast<float>(kUseSourceItemCondition) ||
+         (std::isfinite(item.condition) && item.condition >= 0.0f && item.condition <= 100.0f)) &&
         item.count <= source_max_stack(item.item_id);
 }
 
