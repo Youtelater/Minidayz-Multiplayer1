@@ -73,6 +73,10 @@ public:
         preview_rules_.max_temperature = 10.0f;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
         if (world_ready_) npc_ready_ = npcs_.initialize(world_);
+        // Continuing a save preserves its exact persisted temperature;
+        // a fresh run initializes the original daytime exposure once.
+        source_temperature_initialized_ = restored != nullptr;
+        last_source_warmth_ = equipment_.temperature_offset();
     }
 
     void on_exit() noexcept override {
@@ -429,6 +433,15 @@ public:
                 crafting_feedback_ = CraftFeedback::none;
                 crafting_feedback_elapsed_ = 0.0f;
             }
+        }
+        const float current_source_warmth = equipment_.temperature_offset();
+        if (!source_temperature_initialized_ ||
+            current_source_warmth != last_source_warmth_) {
+            const float day_cold = minidayz::items::source_weather_cold(
+                minidayz::SurvivalDifficulty::regular).day;
+            player_.set_source_temperature(day_cold - current_source_warmth);
+            last_source_warmth_ = current_source_warmth;
+            source_temperature_initialized_ = true;
         }
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
@@ -1026,6 +1039,8 @@ private:
         tents_.clear();
         item_use_runtime_.clear();
         perks_.clear();
+        source_temperature_initialized_ = false;
+        last_source_warmth_ = 0.0f;
         inventory_page_ = 0;
         storage_page_ = 0;
         crafting_page_ = 0;
@@ -1106,6 +1121,8 @@ private:
     minidayz::items::ItemUseRuntime item_use_runtime_{};
     minidayz::items::SourcePerkSystem perks_{};
     minidayz::PlayerRules preview_rules_{};
+    bool source_temperature_initialized_{};
+    float last_source_warmth_{};
     int selected_inventory_slot_{-1};
     int drag_source_slot_{-1};
     int drag_target_slot_{-1};
