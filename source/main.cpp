@@ -8,6 +8,7 @@
 #include "minidayz/item_use.hpp"
 #include "minidayz/ground_loot.hpp"
 #include "minidayz/crafting.hpp"
+#include "minidayz/tent_storage.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -23,7 +24,7 @@ namespace {
 // fresh entropy for this native session. This is a per-run seed, not a claim
 // that the original browser Math.random() sequence is reproducible.
 constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-constexpr std::uint32_t kSaveVersion = 5u;
+constexpr std::uint32_t kSaveVersion = 6u;
 constexpr const char* kSavePath = "sdmc:/3ds/Minidayz/world.sav";
 constexpr const char* kSaveTempPath = "sdmc:/3ds/Minidayz/world.tmp";
 
@@ -49,6 +50,19 @@ static_assert(sizeof(LegacyEquipmentSnapshotV3) == 14, "v3 equipment snapshot AB
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
     std::uint32_t version{kSaveVersion};
+    std::uint32_t seed{};
+    minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
+    minidayz::items::GroundLootSnapshot ground_loot{};
+    minidayz::items::TentStorageSnapshot tents{};
+};
+
+// The old v5 layout is read as a complete struct, preserving C++ alignment
+// padding between EquipmentSnapshot and GroundLootSnapshot.
+struct SavedGameV5 {
+    std::uint32_t magic{};
+    std::uint32_t version{};
     std::uint32_t seed{};
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
@@ -140,12 +154,22 @@ bool load_saved_game(SavedGame& save) noexcept {
             const std::size_t padding = (4 - (legacy_bytes % 4)) % 4;
             body_ok = consume_legacy_padding(file, padding);
         }
+    } else if (header_ok && save.version == 5u) {
+        SavedGameV5 old{};
+        body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
+                  std::fread(&old, sizeof(old), 1, file) == 1;
+        if (body_ok) {
+            save.seed = old.seed;
+            save.player = old.player;
+            save.inventory = old.inventory;
+            save.equipment = old.equipment;
+            save.ground_loot = old.ground_loot;
+            save.tents = {};
+        }
     } else if (header_ok && save.version == kSaveVersion) {
-        body_ok =
-            std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
-            std::fread(&save.inventory, sizeof(save.inventory), 1, file) == 1 &&
-            std::fread(&save.equipment, sizeof(save.equipment), 1, file) == 1 &&
-            std::fread(&save.ground_loot, sizeof(save.ground_loot), 1, file) == 1;
+        // Read the actual on-disk struct, including compiler alignment.
+        body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
+                  std::fread(&save, sizeof(save), 1, file) == 1;
     }
     const bool no_extra_data = std::fgetc(file) == EOF;
     std::fclose(file);
@@ -165,17 +189,20 @@ bool load_saved_game(SavedGame& save) noexcept {
     minidayz::items::InventorySystem inventory_validation;
     minidayz::items::EquipmentSystem equipment_validation;
     minidayz::items::GroundLootSystem ground_loot_validation;
+    minidayz::items::TentStorageSystem tent_validation;
     return player_validation.restore(save.player) &&
         inventory_validation.restore(save.inventory) &&
         equipment_validation.restore(save.equipment) &&
-        ground_loot_validation.restore(save.ground_loot);
+        ground_loot_validation.restore(save.ground_loot) &&
+        tent_validation.restore(save.tents);
 }
 
 bool write_saved_game(std::uint32_t seed,
                       const minidayz::PlayerState& player,
                       const minidayz::items::InventorySystem& inventory,
                       const minidayz::items::EquipmentSystem& equipment,
-                      const minidayz::items::GroundLootSystem& ground_loot) noexcept {
+                      const minidayz::items::GroundLootSystem& ground_loot,
+                      const minidayz::items::TentStorageSystem& tents) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     SavedGame save{};
@@ -184,6 +211,7 @@ bool write_saved_game(std::uint32_t seed,
     save.inventory = inventory.snapshot();
     save.equipment = equipment.snapshot();
     save.ground_loot = ground_loot.snapshot();
+    save.tents = tents.snapshot();
     std::FILE* file = std::fopen(kSaveTempPath, "wb");
     if (!file) return false;
     const bool written = std::fwrite(&save, sizeof(save), 1, file) == 1 &&
@@ -226,6 +254,8 @@ public:
             equipment_.clear();
         if (restored && !ground_loot_.restore(restored->ground_loot))
             ground_loot_.clear();
+        if (restored && !tents_.restore(restored->tents))
+            tents_.clear();
         // Preview-only movement tuning. Source-equivalent values still need
         // to be supplied by the gameplay rules port.
         // Temporary preview movement tuning only. Original source movement
@@ -245,7 +275,7 @@ public:
 
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_);
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
@@ -268,9 +298,19 @@ public:
             return;
         }
         if (selected_inventory_slot_ >= 0 && (input.pressed & (KEY_A | KEY_X))) {
-            (void)minidayz::items::use_item_from_inventory(
-                inventory_, static_cast<std::size_t>(selected_inventory_slot_),
-                player_, preview_rules_, (input.pressed & KEY_X) != 0);
+            const auto selected_index = static_cast<std::size_t>(selected_inventory_slot_);
+            const auto* item = inventory_.slot(selected_index);
+            const bool deploy_tent = item && !item->empty() &&
+                item->item_id == minidayz::items::kOriginalCivilianTentItemId &&
+                (input.pressed & KEY_X) != 0;
+            if (deploy_tent) {
+                (void)tents_.deploy_from_inventory(
+                    inventory_, selected_index, player_.state().x, player_.state().y);
+            } else {
+                (void)minidayz::items::use_item_from_inventory(
+                    inventory_, selected_index, player_, preview_rules_,
+                    (input.pressed & KEY_X) != 0);
+            }
             const auto* selected = inventory_.slot(
                 static_cast<std::size_t>(selected_inventory_slot_));
             if (!selected || selected->empty()) selected_inventory_slot_ = -1;
@@ -297,11 +337,19 @@ public:
         const bool touch_pressed = input.touching && !touch_down_;
         const bool touch_released = !input.touching && touch_down_;
 
-        // Crafting is always on the 3DS bottom touch display. The center of
-        // the bottom footer switches between the backpack and craft lists.
+        // Cycle inventory -> crafting -> tent storage -> inventory on the
+        // lower 3DS touchscreen. The world always remains on the top screen.
         if (touch_pressed && input.touch.py >= 223 &&
             input.touch.px >= 110 && input.touch.px < 210) {
-            crafting_open_ = !crafting_open_;
+            if (storage_open_) {
+                storage_open_ = false;
+                crafting_open_ = false;
+            } else if (crafting_open_) {
+                crafting_open_ = false;
+                storage_open_ = true;
+            } else {
+                crafting_open_ = true;
+            }
             selected_inventory_slot_ = -1;
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
@@ -315,7 +363,39 @@ public:
                 inventory_, ground_loot_, player_.state().x, player_.state().y, recipe);
         }
 
-        if (!crafting_open_ && touch_pressed) {
+        if (storage_open_ && touch_pressed) {
+            const auto tent_index = tents_.nearest(
+                player_.state().x, player_.state().y, 36.0f);
+            if (input.touch.py >= 84 && input.touch.py < 99) {
+                if (input.touch.px < 160) {
+                    const std::size_t pages =
+                        (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize;
+                    inventory_page_ = (inventory_page_ + 1) % pages;
+                } else {
+                    const std::size_t pages =
+                        (minidayz::items::kNativeTentStorageSlots +
+                         kInventoryPageSize - 1) / kInventoryPageSize;
+                    storage_page_ = (storage_page_ + 1) % pages;
+                }
+            } else if (tent_index < tents_.tent_count() &&
+                       input.touch.py >= 99 && input.touch.py < 219) {
+                const int col = input.touch.px < 160
+                    ? (input.touch.px - 8) / 30 : (input.touch.px - 166) / 30;
+                const int row = (input.touch.py - 99) / 40;
+                if (col >= 0 && col < 5 && row >= 0 && row < 3) {
+                    const std::size_t cell = static_cast<std::size_t>(row * 5 + col);
+                    if (input.touch.px >= 8 && input.touch.px < 158)
+                        (void)tents_.store_from_inventory(
+                            inventory_, inventory_page_ * kInventoryPageSize + cell,
+                            tent_index);
+                    else if (input.touch.px >= 166 && input.touch.px < 316)
+                        (void)tents_.take_to_inventory(
+                            inventory_, tent_index,
+                            storage_page_ * kInventoryPageSize + cell);
+                }
+            }
+        }
+        if (!crafting_open_ && !storage_open_ && touch_pressed) {
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
             drag_target_equipment_slot_ = -1;
@@ -364,7 +444,7 @@ public:
                 }
             }
         }
-        if (!crafting_open_ && input.touching && drag_source_slot_ >= 0) {
+        if (!crafting_open_ && !storage_open_ && input.touching && drag_source_slot_ >= 0) {
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
             if (equipment_target >= 0 && equipment_target < 6) {
                 drag_target_equipment_slot_ = equipment_target;
@@ -376,7 +456,7 @@ public:
                 if (target >= 0) drag_target_slot_ = target;
             }
         }
-        if (!crafting_open_ && touch_released) {
+        if (!crafting_open_ && !storage_open_ && touch_released) {
             if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
                 // Dragging an original repair material onto the backpack slot
@@ -455,7 +535,7 @@ public:
         save_elapsed_ += dt;
         if (save_elapsed_ >= 2.0f) {
             save_elapsed_ = 0.0f;
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_);
         }
     }
 
@@ -543,6 +623,56 @@ public:
                 renderer.draw_text(equipment_labels[i], x + 3.0f, 53.0f, 0.18f);
             }
         }
+        if (storage_open_) {
+            // The tent item and permanent storage behavior are verified from
+            // root original XML. Native list bounds are resource safeguards,
+            // not invented gameplay capacities.
+            renderer.draw_solid_rect(6.0f, 85.0f, 308.0f, 137.0f,
+                                     C2D_Color32(22, 31, 25, 255));
+            const auto tent_index = tents_.nearest(
+                player_.state().x, player_.state().y, 36.0f);
+            const auto* tent = tents_.tent(tent_index);
+            if (!tent) {
+                renderer.draw_text("NO DEPLOYED TENT NEARBY", 22.0f, 130.0f, 0.36f);
+                renderer.draw_text("SELECT CIVILIAN TENT IN BAG, PRESS X", 14.0f, 153.0f, 0.25f);
+            } else {
+                char labels[64]{};
+                std::snprintf(labels, sizeof(labels), "BAG %u    TAP TO PAGE    TENT %u",
+                    static_cast<unsigned>(inventory_page_ + 1),
+                    static_cast<unsigned>(storage_page_ + 1));
+                renderer.draw_text(labels, 12.0f, 87.0f, 0.28f);
+                for (int row = 0; row < 3; ++row) {
+                    for (int col = 0; col < 5; ++col) {
+                        const std::size_t offset = static_cast<std::size_t>(row * 5 + col);
+                        const auto* carried = inventory_.slot(
+                            inventory_page_ * kInventoryPageSize + offset);
+                        const auto tent_slot = storage_page_ * kInventoryPageSize + offset;
+                        const auto* stored = tent_slot < tent->items.size()
+                            ? &tent->items[tent_slot] : nullptr;
+                        for (int side = 0; side < 2; ++side) {
+                            const auto* item = side == 0 ? carried : stored;
+                            const float x = static_cast<float>(
+                                (side == 0 ? 8 : 166) + col * 30);
+                            const float y = static_cast<float>(99 + row * 40);
+                            renderer.draw_solid_rect(x, y, 28.0f, 37.0f,
+                                                     C2D_Color32(48, 57, 48, 255));
+                            if (!item || item->empty()) continue;
+                            (void)renderer.draw_item_icon(item->item_id,
+                                x + 14.0f, y + 15.0f, 24.0f, 24.0f);
+                            char amount[12]{};
+                            std::snprintf(amount, sizeof(amount), "%u",
+                                          static_cast<unsigned>(item->count));
+                            renderer.draw_text(amount, x + 2.0f, y + 29.0f, 0.19f);
+                        }
+                    }
+                }
+            }
+            renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
+                                     C2D_Color32(54, 68, 55, 255));
+            renderer.draw_text("TAP TO STORE / TAKE", 14.0f, 226.0f, 0.19f);
+            renderer.draw_text("BACK TO BAG", 117.0f, 226.0f, 0.29f);
+            return;
+        }
         if (crafting_open_) {
             // Original guide-backed recipes only; no fabricated crafting
             // table. The upper 3DS screen remains the game world.
@@ -563,7 +693,7 @@ public:
             renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                      C2D_Color32(54, 68, 55, 255));
             renderer.draw_text("CRAFTED ITEM DROPS NEAR YOU", 14.0f, 226.0f, 0.19f);
-            renderer.draw_text("BACK TO BAG", 123.0f, 226.0f, 0.29f);
+            renderer.draw_text("TENTS", 132.0f, 226.0f, 0.29f);
             return;
         }
         // 5 x 3 backpack page, sized for the 320 x 240 touch screen.
@@ -658,6 +788,16 @@ public:
             }
 
 
+        }
+
+        for (std::size_t i = 0; i < tents_.tent_count(); ++i) {
+            const auto* tent = tents_.tent(i);
+            if (!tent || tent->x < camera_x - 24.0f ||
+                tent->x > camera_x + view_w + 24.0f ||
+                tent->y < camera_y - 24.0f ||
+                tent->y > camera_y + view_h + 24.0f) continue;
+            (void)renderer.draw_item_icon(minidayz::items::kOriginalCivilianTentItemId,
+                                          tent->x, tent->y, 28.0f, 28.0f);
         }
 
         for (std::size_t i = 0; i < ground_loot_.count(); ++i) {
@@ -789,7 +929,10 @@ private:
         inventory_.clear();
         equipment_.clear();
         ground_loot_.clear();
+        tents_.clear();
         inventory_page_ = 0;
+        storage_page_ = 0;
+        storage_open_ = false;
         crafting_open_ = false;
         selected_inventory_slot_ = -1;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
@@ -799,7 +942,7 @@ private:
         // Never enter a blank gameplay scene when source world generation
         // fails. Keep the menu available so the player can retry instead.
         menu_active_ = !world_ready_;
-        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_);
+        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_);
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
@@ -857,14 +1000,17 @@ private:
     minidayz::items::InventorySystem inventory_{};
     minidayz::items::EquipmentSystem equipment_{};
     minidayz::items::GroundLootSystem ground_loot_{};
+    minidayz::items::TentStorageSystem tents_{};
     minidayz::PlayerRules preview_rules_{};
     int selected_inventory_slot_{-1};
     int drag_source_slot_{-1};
     int drag_target_slot_{-1};
     int drag_target_equipment_slot_{-1};
     std::size_t inventory_page_{};
+    std::size_t storage_page_{};
     bool touch_down_{};
     bool crafting_open_{};
+    bool storage_open_{};
 };
 
 } // namespace
