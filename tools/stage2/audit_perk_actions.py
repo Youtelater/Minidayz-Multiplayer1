@@ -65,6 +65,30 @@ def main():
             print("SOURCE PURCHASE CHILD",index,"uid",child[4],
                   "conditions",json.dumps(child[5],separators=(",",":"))[:1100],
                   "actions",json.dumps(child[6],separators=(",",":"))[:1200])
+    # Translate the original sixteen clicked perk icon indices from literal
+    # Construct global writes. Never use icon order guesses as gameplay data.
+    perk_source_names = (
+        "perk_header", "perk_spotter", "perk_runner", "perk_camel",
+        "perk_hamster", "perk_snowborn", "perk_farmer", "perk_regen",
+        "perk_hunter", "perk_meleeatk", "perk_meleedef", "perk_trunkster",
+        "perk_sweethome", "perk_metabolism", "perk_eye", "perk_agronom",
+    )
+    purchase_rows = []
+    for index, branch in enumerate(handler[7][:16]):
+        bought = set()
+        for node, _ in walk([branch]):
+            for action in node[6] if isinstance(node[6], list) else ():
+                if not isinstance(action, list) or len(action)<6 or action[:2]!=[-1,41]:
+                    continue
+                args=action[5]
+                if (isinstance(args,list) and len(args)>1 and
+                    isinstance(args[0],list) and len(args[0])==2 and
+                    args[0][0]==11 and args[0][1] in perk_source_names):
+                    bought.add(args[0][1])
+        print("ORIGINAL PERK SLOT", index, "written perks", sorted(bought))
+        purchase_rows.append(sorted(bought))
+    if len(purchase_rows)!=16:
+        raise SystemExit("Original sixteen purchase click handlers missing")
     output=[]
     for event,parents in walk([groups[0]]):
         data=json.dumps([event[5],event[6]],separators=(",",":"))
