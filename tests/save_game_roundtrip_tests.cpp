@@ -1,0 +1,129 @@
+#include "minidayz/save_game.hpp"
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstdint>
+#include <limits>
+using namespace minidayz;
+using namespace minidayz::items;
+using namespace minidayz::persistence;
+
+struct PreviousSaveV5 {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{5};
+    std::uint32_t seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+};
+
+int main() {
+    constexpr const char* kFile = "stage2_roundtrip_test.sav";
+    constexpr const char* kTemp = "stage2_roundtrip_test.tmp";
+    std::remove(kFile);
+    std::remove(kTemp);
+
+    PlayerState player{};
+    player.x = 231.5f;
+    player.y = 89.0f;
+    player.health = 93;
+    player.hunger = 24;
+    player.thirst = 78;
+    player.temperature = -2.5f;
+    player.bleeding = 1.5f;
+    player.infection = 2.0f;
+    player.facing = PlayerFacing::left;
+    player.alive = true;
+    InventorySystem inventory;
+    EquipmentSystem equipment;
+    GroundLootSystem ground;
+    TentStorageSystem tents;
+    assert(inventory.add(454, 1, 0, 81));
+    assert(inventory.equip_backpack_from_slot(0));
+    assert(inventory.capacity() == 18);
+    assert(inventory.add(350, 1, 0, 66));
+    assert(equipment.equip_from_inventory(inventory, 0, EquipmentSlot::outerwear));
+    assert(inventory.add(456, 1, 0, 83));
+    assert(tents.deploy_from_inventory(inventory, 0, 300, 400));
+    assert(inventory.add(18, 2, 0, 75));
+    assert(tents.store_from_inventory(inventory, 0, 0));
+    assert(ground.add({11, 2, 67}, 150.0f, 600.0f));
+
+    assert(!write_saved_game_to_paths(0, player, inventory, equipment,
+                                      ground, tents, kFile, kTemp));
+    assert(!write_saved_game_to_paths(42, player, inventory, equipment,
+                                      ground, tents, kFile, kFile));
+    assert(write_saved_game_to_paths(42, player, inventory, equipment,
+                                    ground, tents, kFile, kTemp));
+    SavedGame restored{};
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == kSaveVersion);
+    assert(restored.seed == 42);
+    assert(restored.player.x == 231.5f && restored.player.bleeding == 1.5f);
+    InventorySystem loaded_inventory;
+    EquipmentSystem loaded_equipment;
+    GroundLootSystem loaded_ground;
+    TentStorageSystem loaded_tents;
+    assert(loaded_inventory.restore(restored.inventory));
+    assert(loaded_equipment.restore(restored.equipment));
+    assert(loaded_ground.restore(restored.ground_loot));
+    assert(loaded_tents.restore(restored.tents));
+    assert(loaded_inventory.equipped_backpack() == 454);
+    assert(loaded_inventory.equipped_backpack_condition() == 81);
+    assert(loaded_equipment.equipped(EquipmentSlot::outerwear) == 350);
+    assert(loaded_equipment.snapshot().conditions[1] == 66);
+    assert(loaded_ground.entry(0)->item.condition == 67);
+    assert(loaded_tents.tent(0)->items[0].item_id == 18);
+    assert(loaded_tents.tent(0)->items[0].count == 2);
+    assert(loaded_tents.tent(0)->items[0].condition == 75);
+    assert(loaded_tents.tent(0)->condition == 83);
+
+    // A failed write must never replace an existing usable save.
+    assert(!write_saved_game_to_paths(0, player, inventory, equipment,
+                                      ground, tents, kFile, kTemp));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.seed == 42);
+
+    PreviousSaveV5 old{};
+    old.seed = 137;
+    old.player = player;
+    old.inventory = inventory.snapshot();
+    old.equipment = equipment.snapshot();
+    old.ground_loot = ground.snapshot();
+    {
+        auto* f = std::fopen(kFile, "wb");
+        assert(f && std::fwrite(&old, sizeof(old), 1, f) == 1);
+        assert(std::fclose(f) == 0);
+    }
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 5);
+    assert(restored.seed == 137 && restored.ground_loot.count == 1);
+    assert(restored.tents.count == 0);
+
+    // Truncation, a spurious trailing byte, NaN, and bad inventory all reject.
+    assert(write_saved_game_to_paths(42, player, inventory, equipment,
+                                    ground, tents, kFile, kTemp));
+    {
+        auto* f = std::fopen(kFile, "ab");
+        assert(f && std::fputc('Z', f) != EOF);
+        assert(std::fclose(f) == 0);
+        assert(!load_saved_game_from_path(restored, kFile));
+    }
+    assert(write_saved_game_to_paths(42, player, inventory, equipment,
+                                    ground, tents, kFile, kTemp));
+    {
+        auto* f = std::fopen(kFile, "r+b");
+        assert(f && std::fseek(f, 0, SEEK_END) == 0);
+        const auto len = std::ftell(f);
+        assert(len > 16);
+        assert(std::fclose(f) == 0);
+        f = std::fopen(kFile, "wb");
+        assert(f && std::fwrite("bad", 1, 3, f) == 3);
+        assert(std::fclose(f) == 0);
+        assert(!load_saved_game_from_path(restored, kFile));
+    }
+    std::remove(kFile);
+    std::remove(kTemp);
+    return 0;
+}
