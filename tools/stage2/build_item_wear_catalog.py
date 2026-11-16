@@ -91,7 +91,7 @@ def events(node: object):
 
 
 def main() -> None:
-    text = re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-",
+    text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-",
                   PROJECT.read_text(encoding="utf-8-sig"))
     project = json.loads(text)["project"]
     sheet = next((s for s in project[6] if s[0] == "Game_events"), None)
@@ -130,11 +130,17 @@ def main() -> None:
         f"inline constexpr std::size_t kSourceWearRuleCount = {len(rows)};",
         "inline constexpr SourceWearRule kSourceWearRules[] = {",
     ]
+    def cpp_float(value: float) -> str:
+        formatted = format(value, ".8g")
+        if "." not in formatted and "e" not in formatted:
+            formatted += ".0"
+        return formatted + "f"
+
     for uid, (kind, low, high) in sorted(rows.items()):
-        lines.append(f"    {{{uid}ULL, {kind}, {low:.8g}f, {high:.8g}f}},")
+        lines.append(f"    {{{uid}ULL, {kind}, {cpp_float(low)}, {cpp_float(high)}}},")
     lines.extend(["};", "} // namespace minidayz::items", ""])
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text("\\n".join(lines), encoding="utf-8")
+    OUTPUT.write_text("\n".join(lines), encoding="utf-8")
     print(f"Source condition actions: {actions}; decoded unique actions: {len(rows)}; unsupported: {len(unsupported)}")
     if unsupported:
         print("Unsupported action UIDs:", ", ".join(map(str, sorted(set(unsupported)))))
