@@ -368,14 +368,33 @@ int main() {
     InventorySystem migrated_pack;
     assert(migrated_pack.restore(legacy_pack_save));
     assert(migrated_pack.capacity() == 20);
-    legacy_pack_save.slots[20] = {1, 1}; // hidden outside the legacy saved capacity
-    assert(!migrated_pack.restore(legacy_pack_save));
+    legacy_pack_save.slots[20] = {1, 1}; // old oversized storage position
+    assert(migrated_pack.restore(legacy_pack_save));
+    assert(migrated_pack.capacity() == 20);
+    assert(migrated_pack.count(1) == 1);
+    assert(migrated_pack.slot(20)->empty());
+    // A full surviving grid must reject the old oversized save rather
+    // than deleting or overwriting any original item.
+    auto overflowing = legacy_pack_save;
+    for (std::size_t i = 0; i < 20; ++i)
+        overflowing.slots[i] = {1, 1, 100};
+    const auto before_failed_migration = migrated_pack.snapshot();
+    assert(!migrated_pack.restore(overflowing));
+    assert(migrated_pack.snapshot().capacity == before_failed_migration.capacity);
+    assert(migrated_pack.count(1) == 1);
 
     InventorySnapshot stale_empty_expansion{};
     stale_empty_expansion.capacity = 20;
     InventorySystem migrated_empty;
     assert(migrated_empty.restore(stale_empty_expansion));
     assert(migrated_empty.capacity() == kInventorySlotCount);
+    stale_empty_expansion.slots[16] = {20, 2, 67};
+    assert(migrated_empty.restore(stale_empty_expansion));
+    assert(migrated_empty.capacity() == kInventorySlotCount);
+    assert(migrated_empty.slot(0)->item_id == 20);
+    assert(migrated_empty.slot(0)->count == 2);
+    assert(migrated_empty.slot(0)->condition == 67);
+    assert(migrated_empty.slot(16)->empty());
 
     InventorySystem wear_inventory;
     assert(wear_inventory.add(251, 1, 0, 65));
