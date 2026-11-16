@@ -31,6 +31,12 @@ struct EquipmentSnapshot {
 bool source_item_protection(std::uint16_t item_id,
                             SourceItemProtection& protection) noexcept;
 
+// Raw source event UIDs from the six original Stage 2 condition-wear
+// groups. The containing event conditions must be satisfied by the caller.
+// A random fraction in [0, 1) is required only by Player_get_hit.
+bool source_condition_wear_loss(std::uint64_t event_uid, bool perk_wxnj,
+                                float random_fraction, float& loss) noexcept;
+
 class EquipmentSystem {
 public:
     EquipmentSystem() noexcept = default;
@@ -59,6 +65,10 @@ public:
                               std::size_t inventory_slot,
                               EquipmentSlot equipment_slot) noexcept;
     bool damage_condition(EquipmentSlot slot, float loss) noexcept;
+    // Dispatch one already-triggered source condition-write event to the
+    // held weapon; does not invent attack input or collision timing.
+    bool apply_source_wear(std::uint64_t event_uid, bool perk_wxnj,
+                           float random_fraction = 0.0f) noexcept;
     // Apply an absolute condition value decoded from a source repair action.
     bool restore_condition(EquipmentSlot slot, float condition) noexcept;
     // Consume one original repair material and apply the source-defined gain.
