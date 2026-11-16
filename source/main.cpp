@@ -430,7 +430,8 @@ public:
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
         player_.update_survival(dt, preview_rules_);
-        item_use_runtime_.update(dt, player_);
+        item_use_runtime_.update(dt, player_,
+            &WorldPreviewScene::award_source_experience, &perks_);
         if (npc_ready_) npcs_.update(dt, player_.state().x, player_.state().y,
                                      &WorldPreviewScene::blocked, this);
         save_elapsed_ += dt;
@@ -523,9 +524,12 @@ public:
             char treatment[48]{};
             const auto* rule = minidayz::items::ItemUseRuntime::medical_rule(
                 item_use_runtime_.snapshot().pending_medical_item_id);
+            const bool reading = item_use_runtime_.snapshot().pending_medical_item_id ==
+                minidayz::items::ItemUseRuntime::kOriginalNewspaperItemId;
             std::snprintf(treatment, sizeof(treatment), "%s %.1fs",
-                rule && rule->action == minidayz::items::SourceMedicalAction::stop_bleeding
-                    ? "BANDAGING" : "TREATMENT",
+                reading ? "READING +50XP" :
+                    rule && rule->action == minidayz::items::SourceMedicalAction::stop_bleeding
+                        ? "BANDAGING" : "TREATMENT",
                 static_cast<double>(item_use_runtime_.remaining()));
             renderer.draw_text(treatment, 170.0f, 33.0f, 0.18f);
         }
@@ -961,6 +965,12 @@ public:
     }
 
 private:
+    static bool award_source_experience(void* context,
+                                        std::uint32_t amount) noexcept {
+        auto* perks = static_cast<minidayz::items::SourcePerkSystem*>(context);
+        return perks && perks->award_experience(amount);
+    }
+
     static constexpr std::size_t kInventoryPageSize = 15;
     static constexpr std::size_t kCraftPageSize = 3;
 
