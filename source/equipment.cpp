@@ -141,11 +141,13 @@ float EquipmentSystem::temperature_offset() const noexcept {
 }
 
 void EquipmentSystem::apply_temperature(
-    PlayerSystem& player, float delta_seconds,
+    PlayerSystem& player, float day_cold,
     float min_temperature, float max_temperature) const noexcept {
-    if (!std::isfinite(delta_seconds) || delta_seconds <= 0.0f) return;
-    player.adjust_temperature(temperature_offset() * delta_seconds,
-                              min_temperature, max_temperature);
+    if (!std::isfinite(day_cold)) return;
+    // Construct Update_Stats assigns Day_cold +
+    // (outerwear warmth - helmet warmth) / pants warmth to Player_temperature.
+    player.set_temperature(day_cold + temperature_offset(),
+                           min_temperature, max_temperature);
 }
 
 bool EquipmentSystem::equip_from_inventory(
