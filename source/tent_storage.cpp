@@ -30,6 +30,33 @@ bool TentStorageSystem::deploy_from_inventory(InventorySystem& inventory,
     return true;
 }
 
+bool TentStorageSystem::deploy_from_inventory_checked(
+    InventorySystem& inventory, std::size_t inventory_slot,
+    float x, float y, TentPlacementBlocked blocked,
+    void* context, float clearance_radius) noexcept {
+    if (!std::isfinite(x) || !std::isfinite(y) ||
+        !std::isfinite(clearance_radius) ||
+        clearance_radius < 0.0f || clearance_radius > 10000.0f)
+        return false;
+    // Validate before consuming the tent item. The four probe points are
+    // native collision safety checks, not inferred Construct placement rules.
+    const float r = clearance_radius;
+    if (blocked && (blocked(context, x, y) ||
+                    blocked(context, x - r, y - r) ||
+                    blocked(context, x + r, y - r) ||
+                    blocked(context, x - r, y + r) ||
+                    blocked(context, x + r, y + r)))
+        return false;
+    const float separation = 2.0f * r;
+    for (std::size_t i = 0; i < count_; ++i) {
+        const float dx = tents_[i].x - x;
+        const float dy = tents_[i].y - y;
+        if (dx * dx + dy * dy < separation * separation)
+            return false;
+    }
+    return deploy_from_inventory(inventory, inventory_slot, x, y);
+}
+
 std::size_t TentStorageSystem::nearest(float x, float y, float radius) const noexcept {
     if (!std::isfinite(x) || !std::isfinite(y) ||
         !std::isfinite(radius) || radius < 0.0f) return count_;
