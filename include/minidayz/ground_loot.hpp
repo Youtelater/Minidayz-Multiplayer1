@@ -24,6 +24,11 @@ struct GroundLootSnapshot {
 class GroundLootSystem {
 public:
     bool add(const GroundItem& item, float x, float y) noexcept;
+    // A caller must first evaluate the exact original Construct event guards.
+    // This method handles only the verified weighted Spawn_drop choice.
+    bool spawn_verified_source_choice(std::size_t source_record,
+                                      std::uint32_t random_draw,
+                                      float x, float y) noexcept;
     bool drop_from_inventory(InventorySystem& inventory, std::size_t slot,
                              std::uint16_t amount, float x, float y) noexcept;
     bool pickup_nearest(InventorySystem& inventory, float x, float y,
