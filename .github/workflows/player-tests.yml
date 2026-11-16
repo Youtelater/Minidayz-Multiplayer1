@@ -78,6 +78,7 @@ jobs:
           python3 tools/stage2/build_item_equipment_catalog.py
           python3 tools/stage2/build_backpack_capacity_catalog.py
           python3 tools/stage2/build_item_crafting_catalog.py
+          python3 tools/stage2/build_source_loot_catalog.py
 
       - name: Audit all original crafting functions
         run: python3 tools/stage2/audit_crafting_source.py
@@ -96,6 +97,15 @@ jobs:
         with:
           name: original-stage2-remaining-source
           path: data/stage2/remaining_source_trace.json
+
+      - name: Compile Original Loot Choice Catalog Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp tests/loot_source_tests.cpp \
+            -o loot_source_tests
+
+      - name: Run Original Loot Choice Catalog Tests
+        run: ./loot_source_tests
 
       - name: Compile Item and Inventory Regression Tests
         run: |
