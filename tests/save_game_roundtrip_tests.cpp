@@ -240,12 +240,15 @@ int main() {
     assert(write_saved_game_to_paths(90, player, inventory, equipment, ground,
                                     tents, kFile, kTemp, &pending, &source_perks));
     assert(load_saved_game_from_path(restored, kFile));
-    assert(restored.version == 8 && restored.seed == 90);
+    assert(restored.version == kSaveVersion && restored.seed == 90);
     SourcePerkSystem perk_restore{};
     assert(perk_restore.restore(restored.perks));
     assert(perk_restore.level(SourcePerk::camel) == 2);
     assert(perk_restore.snapshot().perk_cost == 360);
     assert(perk_restore.item_use_flags().camel_active);
+    assert(perk_restore.award_experience(1000));
+    assert(perk_restore.buy(SourcePerk::regen));
+    assert(perk_restore.level(SourcePerk::regen) == 1);
     auto tampered = perk_restore.snapshot();
     tampered.perk_cost = 100;
     assert(!perk_restore.restore(tampered));
