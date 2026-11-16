@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate only crafting recipes explicitly documented in the original root UI.
 
-These three recipes come from root l_eng_ui.xml tutorial text and root
+These recipes come from root l_eng_ui.xml tutorial text and root
 l_eng_items.xml names. No guessed quantities, alternative materials, or
 recipes copied from Minidayz-Multiplayer-main are introduced.
 """
@@ -27,6 +27,14 @@ RECIPES = (
      r"Rope\s*\+\s*Burlap sack\s*=\s*improvised bag\s*\(3 slots\)"),
     ("Improvised Backpack", (("Improvised Sling Bag", 1), ("Wooden Sticks", 3)),
      r"Improvised bag\s*\+\s*3 wooden sticks\s*=\s*improvised backpack\s*\(5 slots\)"),
+    # The original tutorial lists three distinct tinder alternatives. The
+    # item catalog calls the source "papers" item "Newspapers".
+    ("Campfire Kit", (("Woodpiles", 1), ("Rags", 1)),
+     r"Wood piles\s*\+\s*rags/wooden sticks/papers\s*=\s*fireplace kit"),
+    ("Campfire Kit", (("Woodpiles", 1), ("Wooden Sticks", 1)),
+     r"Wood piles\s*\+\s*rags/wooden sticks/papers\s*=\s*fireplace kit"),
+    ("Campfire Kit", (("Woodpiles", 1), ("Newspapers", 1)),
+     r"Wood piles\s*\+\s*rags/wooden sticks/papers\s*=\s*fireplace kit"),
 )
 
 
@@ -48,10 +56,9 @@ def main() -> None:
             raise SystemExit(f"Ambiguous/missing original item name {label!r}: {ids}")
         return ids[0]
 
-    # Verify actual result creation against the original Construct event
-    # groups. Craft_5 (bow), Craft_1 (bag), and Craft_4 (backpack) each call
-    # Spawn_drop(result_id, player_x, player_y, ...). The results are spawned
-    # on the ground, NOT silently inserted directly into inventory.
+    # Verify exact result creation against the original Construct functions.
+    # Craft_1/4/5 call Spawn_drop; Craft_3 calls Check_space_inventory(-1,23)
+    # and therefore puts the campfire kit into inventory, not onto the ground.
     text = PROJECT.read_text(encoding="utf-8-sig")
     text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", text)
     project = json.loads(text)
@@ -59,6 +66,7 @@ def main() -> None:
         "Improvised Bow": (4860170170632921, "Craft_5"),
         "Improvised Sling Bag": (3394606754986424, "Craft_1"),
         "Improvised Backpack": (9521528803584300, "Craft_4"),
+        "Campfire Kit": (6293809025927058, "Craft_3"),
     }
 
     def child_events(events):
@@ -93,7 +101,7 @@ def main() -> None:
                         parameter[1][0] == 2 and parameter[1][1] in function_names):
                         by_function.setdefault(parameter[1][1], []).append(event)
 
-    def assert_original_ground_output(result_name, result_id):
+    def assert_original_output(result_name, result_id):
         uid, function = source_event_uids[result_name]
         event = source_events.get(uid)
         if event is None:
@@ -109,6 +117,7 @@ def main() -> None:
                    for condition in event[5]):
             raise SystemExit(f"Changed Craft function signature: {function}")
         output_ids = []
+        inventory_output_ids = []
         for nested in child_events([event]):
             for action in nested[6] if isinstance(nested[6], list) else []:
                 if not isinstance(action, list) or len(action) < 6:
@@ -121,6 +130,23 @@ def main() -> None:
                         args[0] == 13 and args[1][0] == 7 and
                         args[1][1][0] == 0):
                         output_ids.append(args[1][1][1])
+                if (action[0:2] == [189, 69] and
+                    len(action[5]) >= 2 and
+                    action[5][0] == [1, [2, "Check_space_inventory"]]):
+                    args = action[5][1]
+                    if (isinstance(args, list) and len(args) >= 3 and
+                        args[0] == 13 and args[1] == [7, [0, -1]] and
+                        isinstance(args[2], list) and args[2][0] == 7 and
+                        isinstance(args[2][1], list) and args[2][1][0] == 0):
+                        inventory_output_ids.append(args[2][1][1])
+        if result_name == "Campfire Kit":
+            if output_ids or inventory_output_ids != [result_id]:
+                raise SystemExit(
+                    f"Original {function} inventory outputs {inventory_output_ids}, "
+                    f"ground outputs {output_ids}; expected {result_id}")
+            return True
+        if inventory_output_ids:
+            raise SystemExit(f"Original {function} unexpectedly writes inventory")
         if output_ids != [result_id]:
             raise SystemExit(
                 f"Original {function} ground outputs {output_ids}, "
@@ -133,11 +159,11 @@ def main() -> None:
         if len(source_text) != 1:
             raise SystemExit(f"Original root recipe missing/ambiguous: {result_name}")
         result_id = resolve(result_name)
-        assert_original_ground_output(result_name, result_id)
+        inventory_result = assert_original_output(result_name, result_id)
         parts = [(resolve(label), count) for label, count in ingredients]
         if result_id in [id for id, _ in parts]:
             raise SystemExit(f"Self-consuming recipe: {result_name}")
-        rows.append((result_id, result_name, parts, source_text[0]))
+        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result)))
 
     lines = [
         "#pragma once",
@@ -152,18 +178,20 @@ def main() -> None:
         "    const char* result_name;",
         "    const char* original_guide;",
         "    std::array<SourceCraftIngredient, 2> ingredients;",
+        "    bool result_in_inventory;",
         "};",
         f"inline constexpr std::size_t kSourceCraftRecipeCount = {len(rows)};",
         "inline constexpr SourceCraftRecipe kSourceCraftRecipes[] = {",
     ]
-    for result_id, name, parts, guide in rows:
+    for result_id, name, parts, guide, inventory_result in rows:
         ingredients = ", ".join(f"{{{id}, {count}}}" for id, count in parts)
         lines.append(f"    {{{result_id}, 1, {json.dumps(name)}, "
-                     f"{json.dumps(guide)}, {{{{{ingredients}}}}}}},")
+                     f"{json.dumps(guide)}, {{{{{ingredients}}}}}, "
+                     f"{str(inventory_result).lower()}}},")
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Generated {len(rows)} recipes with validated original Spawn_drop outputs")
+    print(f"Generated {len(rows)} recipes with validated original ground/inventory outputs")
 
 
 if __name__ == "__main__":
