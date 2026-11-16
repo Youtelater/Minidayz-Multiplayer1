@@ -101,6 +101,51 @@ def main() -> None:
         if len(ids) != 1 or len(slots) != 1 or not 0 < slots[0] <= len(actual):
             raise SystemExit(f"Source backpack capacity missing or ambiguous: {label}")
         pack_rows.append((ids[0], slots[0]))
+    # The root original l_eng_new.xml has a separate description ID space
+    # for several backpacks (e.g. Taloon=301 versus inventory item=450).
+    # Match its adjacent original <!-- item name --> comment, NOT the
+    # description ID, to avoid assigning a helmet's description to a pack.
+    # The improvised pair has conflicting guide/description values: preserve
+    # the already-validated original tutorial capacities (+3/+5).
+    descriptions = ROOT / "l_eng_new.xml"
+    if not descriptions.is_file():
+        raise SystemExit("Missing original root item descriptions")
+    desc_text = descriptions.read_text(encoding="utf-8-sig")
+    source_descriptions = {}
+    for match in re.finditer(
+        r"<!--\s*([^<>]+?)\s*-->\s*<text>\s*<id>\s*(\d+)\s*</id>\s*"
+        r"<name>(.*?)</name>\s*</text>", desc_text, flags=re.DOTALL):
+        label = match.group(1).strip()
+        body = match.group(3)
+        slot_match = re.search(r"(?<!Exclusive )Slots:\s*\+(\d+)", body)
+        if not slot_match:
+            continue
+        exclusive_match = re.search(r"Exclusive Slots:\s*\+(\d+)", body)
+        entry = (int(slot_match.group(1)),
+                 int(exclusive_match.group(1)) if exclusive_match else 0)
+        source_descriptions.setdefault(label, set()).add(entry)
+    backpack_ids = (450, 451, 452, 453, 454, 455, 457, 458, 459, 460,
+                    462, 752, 753, 754)
+    original_by_id = {int(item.findtext("id")):
+                      (item.findtext("name") or "").strip()
+                      for item in ET.parse(ITEMS).getroot().findall("item")}
+    rows = []
+    for item_id in backpack_ids:
+        name = original_by_id.get(item_id)
+        matches = source_descriptions.get(name, set())
+        if not name or len(matches) != 1:
+            raise SystemExit(f"Ambiguous/missing original pack description: "
+                             f"{item_id} {name!r}: {matches}")
+        extra, exclusive = next(iter(matches))
+        if item_id == pack_rows[0][0]:
+            extra = pack_rows[0][1]
+        elif item_id == pack_rows[1][0]:
+            extra = pack_rows[1][1]
+        if extra < 1 or extra > len(actual) or exclusive > len(actual):
+            raise SystemExit(f"Invalid source backpack slots: {item_id} "
+                             f"{extra} exclusive={exclusive}")
+        rows.append((item_id, extra, exclusive))
+    rows.sort()
     lines = [
         "#pragma once", "#include <cstddef>", "#include <cstdint>",
         "namespace minidayz::items {",
@@ -109,11 +154,20 @@ def main() -> None:
         f"inline constexpr std::size_t kSourceImprovisedSlingBagSlots = {pack_rows[0][1]};",
         f"inline constexpr std::uint16_t kSourceImprovisedBackpackItemId = {pack_rows[1][0]};",
         f"inline constexpr std::size_t kSourceImprovisedBackpackSlots = {pack_rows[1][1]};",
+        "struct SourceBackpackCapacityRow { std::uint16_t item_id; std::uint8_t extra_slots; std::uint8_t exclusive_slots; };",
+        f"inline constexpr std::size_t kSourceBackpackCapacityRowCount = {len(rows)};",
+        "inline constexpr SourceBackpackCapacityRow kSourceBackpackCapacityRows[] = {",
+    ]
+    for item_id, extra, exclusive in rows:
+        lines.append(f"    {{{item_id}, {extra}, {exclusive}}},")
+    lines += [
+        "};",
         "} // namespace minidayz::items", ""
     ]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Extracted {len(actual)} original backpack UI slots and {pack_rows} source capacities")
+    print(f"Extracted {len(actual)} original backpack UI slots, "
+          f"{len(rows)} item-specific capacities: {rows}")
 
 if __name__ == "__main__":
     main()
