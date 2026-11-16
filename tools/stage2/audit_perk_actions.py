@@ -54,6 +54,17 @@ def main():
     groups=[e for sheet in project["project"][6] if isinstance(sheet,list) and len(sheet)>1
             for e,_ in walk(sheet[1]) if e[4]==UID]
     if len(groups)!=1:raise SystemExit(f"Original perks group missing: {len(groups)}")
+    purchase_handlers=[e for e,parents in walk([groups[0]]) if e[4]==3255362991909782]
+    if len(purchase_handlers)!=1:
+        raise SystemExit("Original perk click handler changed")
+    handler=purchase_handlers[0]
+    print("SOURCE PURCHASE HANDLER",handler[4],
+          "actions",json.dumps(handler[6],separators=(",",":")))
+    for index,child in enumerate(handler[7]):
+        if isinstance(child,list) and len(child)>6 and child[0]==0:
+            print("SOURCE PURCHASE CHILD",index,"uid",child[4],
+                  "conditions",json.dumps(child[5],separators=(",",":"))[:1100],
+                  "actions",json.dumps(child[6],separators=(",",":"))[:1200])
     output=[]
     for event,parents in walk([groups[0]]):
         data=json.dumps([event[5],event[6]],separators=(",",":"))
