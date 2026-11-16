@@ -178,6 +178,10 @@ int main() {
     assert(condition_equipment.damage_condition(EquipmentSlot::head, 0.25f));
     assert(std::fabs(condition_equipment.snapshot().conditions[
         static_cast<std::size_t>(EquipmentSlot::head)] - 64.75f) < 0.0001f);
+    EquipmentSystem fractional_equipment_restore;
+    assert(fractional_equipment_restore.restore(condition_equipment.snapshot()));
+    assert(std::fabs(fractional_equipment_restore.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::head)] - 64.75f) < 0.0001f);
     assert(condition_equipment.damage_condition(EquipmentSlot::head, 25));
     assert(std::fabs(condition_equipment.snapshot().conditions[
         static_cast<std::size_t>(EquipmentSlot::head)] - 39.75f) < 0.0001f);
