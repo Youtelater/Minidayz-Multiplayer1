@@ -171,5 +171,37 @@ int main() {
     assert(use_item_from_inventory(rope_inventory, 4, player, rules, true));
     assert(rope_inventory.count(26) == 0 && rope_inventory.count(41) == 1);
     assert(!use_item_from_inventory(rope_inventory, 4, player, rules, true));
+
+    // Source event 422420671955084: Newspapers consume one item, wait 5
+    // seconds, then award 50 XP. The effect survives a saved pending action.
+    InventorySystem papers;
+    ItemUseRuntime reading;
+    assert(papers.add(49, 2));
+    assert(!use_item_from_inventory(papers, 0, player, rules));
+    assert(papers.count(49) == 2);
+    assert(use_item_from_inventory(papers, 0, player, rules, false, {}, &reading));
+    assert(reading.busy() && papers.count(49) == 1);
+    assert(reading.remaining() == 5.0f);
+    assert(!use_item_from_inventory(papers, 0, player, rules, false, {}, &reading));
+    auto pending_read = reading.snapshot();
+    ItemUseRuntime resumed_read{};
+    assert(resumed_read.restore(pending_read));
+    std::uint32_t earned = 0;
+    const auto grant = [](void* context, std::uint32_t amount) noexcept -> bool {
+        if (!context) return false;
+        *static_cast<std::uint32_t*>(context) += amount;
+        return true;
+    };
+    resumed_read.update(3.0f, player, grant, &earned);
+    assert(earned == 0 && resumed_read.busy());
+    resumed_read.update(2.0f, player, grant, &earned);
+    assert(earned == 50 && !resumed_read.busy());
+    assert(!resumed_read.restore({49, 6.0f}));
+    assert(!resumed_read.restore({49, 0.0f}));
+    assert(reading.restore(pending_read));
+    reading.update(5.0f, player);
+    assert(reading.busy()); // no XP destination: never drop a source award
+    reading.update(1.0f, player, grant, &earned);
+    assert(earned == 100 && !reading.busy());
     return 0;
 }

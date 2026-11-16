@@ -249,6 +249,9 @@ jobs:
       - name: Run Perk Progression Regression Tests
         run: ./perks_tests
 
+      - name: Verify original timed Newspaper experience effect
+        run: python3 tools/stage2/validate_newspaper_xp.py
+
       - name: Compile Original Item Use Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \

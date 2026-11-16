@@ -48,6 +48,19 @@ bool use_item_from_inventory(InventorySystem& inventory,
     if (!item || item->empty() || !player.state().alive) return false;
 
     if (delayed && delayed->busy()) return false;
+    // The original reading action explicitly consumes Newspapers (ID 49),
+    // waits 5 seconds, and then awards 50 experience points. Without a
+    // scheduler, do not consume it and silently discard the source XP.
+    if (!secondary && item->item_id == ItemUseRuntime::kOriginalNewspaperItemId) {
+        if (!delayed) return false;
+        const auto before = inventory.snapshot();
+        if (!inventory.remove(inventory_slot, 1)) return false;
+        if (!delayed->begin_newspaper()) {
+            (void)inventory.restore(before);
+            return false;
+        }
+        return true;
+    }
     // Original item_activate2 explicitly reduces the selected Rags stack
     // by three then calls Check_space_inventory(-1, Rope). The 3DS native
     // inventory transaction is atomic; source capacity/condition rules apply.
