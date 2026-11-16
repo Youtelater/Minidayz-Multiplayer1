@@ -372,7 +372,7 @@ int main() {
     assert(migrated_pack.restore(legacy_pack_save));
     assert(migrated_pack.capacity() == 20);
     assert(migrated_pack.count(1) == 1);
-    assert(migrated_pack.slot(20)->empty());
+    assert(migrated_pack.snapshot().slots[20].empty());
     // A full surviving grid must reject the old oversized save rather
     // than deleting or overwriting any original item.
     auto overflowing = legacy_pack_save;
@@ -394,7 +394,7 @@ int main() {
     assert(migrated_empty.slot(0)->item_id == 20);
     assert(migrated_empty.slot(0)->count == 2);
     assert(migrated_empty.slot(0)->condition == 67);
-    assert(migrated_empty.slot(16)->empty());
+    assert(migrated_empty.snapshot().slots[16].empty());
 
     InventorySystem wear_inventory;
     assert(wear_inventory.add(251, 1, 0, 65));
