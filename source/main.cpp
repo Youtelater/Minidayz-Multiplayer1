@@ -471,6 +471,16 @@ public:
                       static_cast<double>(stats.bleeding),
                       static_cast<double>(stats.infection));
         renderer.draw_text(survival_labels, 163.0f, 25.0f, 0.14f);
+        if (item_use_runtime_.busy()) {
+            char treatment[48]{};
+            const auto* rule = minidayz::items::ItemUseRuntime::medical_rule(
+                item_use_runtime_.snapshot().pending_medical_item_id);
+            std::snprintf(treatment, sizeof(treatment), "%s %.1fs",
+                rule && rule->action == minidayz::items::SourceMedicalAction::stop_bleeding
+                    ? "BANDAGING" : "TREATMENT",
+                static_cast<double>(item_use_runtime_.remaining()));
+            renderer.draw_text(treatment, 170.0f, 33.0f, 0.18f);
+        }
         // Original equipment categories: helmet, outerwear, vest, pants,
         // held weapon, plus the separate backpack slot.
         static constexpr const char* equipment_labels[] = {"HELMET","COAT","VEST","PANTS","HANDS","PACK"};
