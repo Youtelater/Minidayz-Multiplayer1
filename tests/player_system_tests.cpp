@@ -125,6 +125,11 @@ int main() {
     assert(std::isfinite(edge_player.state().x));
     assert(std::isfinite(edge_player.state().y));
 
+    // Source difficulty initializes Day_cold independently of survival drain.
+    assert(source_survival_rules(SurvivalDifficulty::novice).day_cold == 6.0f);
+    assert(source_survival_rules(SurvivalDifficulty::regular).day_cold == 7.0f);
+    assert(source_survival_rules(SurvivalDifficulty::veteran).day_cold == 8.0f);
+
     // Injected survival rates are applied over a bounded frame. These are
     // API tests, not claims about the original game's tuned gameplay values.
     PlayerState survival_state{};
@@ -209,11 +214,14 @@ int main() {
     survival.adjust_hunger(200.0f, 100.0f);
     survival.adjust_thirst(-200.0f, 100.0f);
     survival.adjust_temperature(100.0f, -5.0f, 5.0f);
+    assert(survival.state().temperature == 5.0f);
+    survival.set_temperature(-3.0f, -5.0f, 5.0f);
+    assert(survival.state().temperature == -3.0f);
     survival.set_bleeding(3.0f, 2.0f);
     survival.set_infection(-1.0f, 4.0f);
     assert(survival.state().hunger == 100.0f);
     assert(survival.state().thirst == 0.0f);
-    assert(survival.state().temperature == 5.0f);
+    assert(survival.state().temperature == -3.0f);
     assert(survival.state().bleeding == 2.0f);
     assert(survival.state().infection == 0.0f);
 

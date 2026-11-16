@@ -29,9 +29,18 @@ PlayerRules source_survival_rules(SurvivalDifficulty difficulty) noexcept {
     rules.max_thirst = 100.0f;
     float source_rate_per_five_seconds = 0.75f;
     switch (difficulty) {
-    case SurvivalDifficulty::novice: source_rate_per_five_seconds = 0.5f; break;
-    case SurvivalDifficulty::regular: source_rate_per_five_seconds = 0.75f; break;
-    case SurvivalDifficulty::veteran: source_rate_per_five_seconds = 1.0f; break;
+    case SurvivalDifficulty::novice:
+        source_rate_per_five_seconds = 0.5f;
+        rules.day_cold = 6.0f;
+        break;
+    case SurvivalDifficulty::regular:
+        source_rate_per_five_seconds = 0.75f;
+        rules.day_cold = 7.0f;
+        break;
+    case SurvivalDifficulty::veteran:
+        source_rate_per_five_seconds = 1.0f;
+        rules.day_cold = 8.0f;
+        break;
     }
     // Original Game_events sets Novice/Regular/Veteran_starving and _thirsty
     // to 0.5/0.75/1.0; Foodlimit and Waterlimit multiply by five seconds.
@@ -335,6 +344,15 @@ void PlayerSystem::adjust_temperature(float amount, float min_temperature,
     const float low = std::min(min_temperature, max_temperature);
     const float high = std::max(min_temperature, max_temperature);
     state_.temperature = clamp(state_.temperature + amount, low, high);
+}
+
+void PlayerSystem::set_temperature(float value, float min_temperature,
+                                   float max_temperature) noexcept {
+    if (!std::isfinite(value) || !std::isfinite(min_temperature) ||
+        !std::isfinite(max_temperature)) return;
+    const float low = std::min(min_temperature, max_temperature);
+    const float high = std::max(min_temperature, max_temperature);
+    state_.temperature = clamp(value, low, high);
 }
 
 void PlayerSystem::set_bleeding(float severity, float max_severity) noexcept {

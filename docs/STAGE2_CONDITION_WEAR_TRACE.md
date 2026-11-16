@@ -32,9 +32,13 @@ generated raw trace. The native regression workflow runs this validator
 immediately after `extract_item_behavior_trace.py`.
 
 This validator is a source-provenance guard only. It does **not** claim that the
-condition-write actions have been implemented in gameplay. Before translating
-them, the port still needs to resolve the exact Construct object/action
-semantics, preserve fractional condition values through inventory/equipment/
-ground transfers and save migration, and evaluate the original perk condition.
-Rounding these source values into the current integer condition field would
-change the original behavior, so the runtime wear port remains open.
+condition-write actions have been implemented in gameplay. The native inventory, equipment, backpack, and ground-item condition fields now
+use floating-point values, so fractional source wear is retained through stack
+moves, equipment swaps, ground transfers, snapshots, and save version 6. Save
+versions 1-5 are migrated; v5's byte-sized condition fields are converted
+without changing their existing values. Regression tests cover fractional wear
+and ground transfer. The event-to-runtime wiring remains open: each source
+branch still needs its exact item-ID predicate, action timing, and perk_wxnj
+evaluation connected to the matching firearm, melee, player-hit, and obstacle
+actions. This change is the storage prerequisite, not a claim that those combat
+events are now active in gameplay.

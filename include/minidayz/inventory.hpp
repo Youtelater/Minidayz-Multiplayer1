@@ -16,14 +16,14 @@ bool source_item_exists(std::uint16_t item_id) noexcept;
 struct InventorySlot {
     std::uint16_t item_id{};
     std::uint16_t count{};
-    std::uint8_t condition{100}; // Original Construct item instance variable 6.
+    float condition{100.0f}; // Original Construct item instance variable 6; fractional wear is preserved.
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
 struct GroundItem {
     std::uint16_t item_id{};
     std::uint16_t count{};
-    std::uint8_t condition{kUseSourceItemCondition}; // Resolve from original item variable 6 on pickup.
+    float condition{static_cast<float>(kUseSourceItemCondition)}; // Resolve from original item variable 6 on pickup.
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
@@ -31,7 +31,7 @@ struct InventorySnapshot {
     std::array<InventorySlot, kMaximumInventorySlotCount> slots{};
     std::uint16_t capacity{static_cast<std::uint16_t>(kInventorySlotCount)};
     std::uint16_t equipped_backpack{};
-    std::uint8_t equipped_backpack_condition{100};
+    float equipped_backpack_condition{100.0f};
 };
 
 // Baseline stack limits ported from the original Check_stack_size event.
@@ -60,7 +60,7 @@ public:
     bool equip_backpack_from_slot(std::size_t inventory_slot) noexcept;
     bool unequip_backpack_to_slot(std::size_t inventory_slot) noexcept;
     std::uint16_t equipped_backpack() const noexcept { return equipped_backpack_; }
-    std::uint8_t equipped_backpack_condition() const noexcept {
+    float equipped_backpack_condition() const noexcept {
         return equipped_backpack_condition_;
     }
     std::size_t capacity() const noexcept { return capacity_; }
@@ -68,17 +68,17 @@ public:
     // max_stack == 0 selects the original game's baseline rule for item_id.
     bool add(std::uint16_t item_id, std::uint16_t amount,
              std::uint16_t max_stack = 0,
-             std::uint8_t condition = kUseSourceItemCondition) noexcept;
+             float condition = static_cast<float>(kUseSourceItemCondition)) noexcept;
     // Place or merge into one exact slot without silently choosing another.
     bool add_to_slot(std::size_t slot, std::uint16_t item_id,
                      std::uint16_t amount, std::uint16_t max_stack = 0,
-                     std::uint8_t condition = kUseSourceItemCondition) noexcept;
+                     float condition = static_cast<float>(kUseSourceItemCondition)) noexcept;
     bool remove(std::size_t slot, std::uint16_t amount) noexcept;
     // Apply source condition loss; an item is destroyed when condition reaches zero.
-    bool damage_condition(std::size_t slot, std::uint8_t loss) noexcept;
+    bool damage_condition(std::size_t slot, float loss) noexcept;
     // Apply an absolute condition value decoded from a source repair action.
     // This deliberately does not invent repair amounts or repair eligibility.
-    bool restore_condition(std::size_t slot, std::uint8_t condition) noexcept;
+    bool restore_condition(std::size_t slot, float condition) noexcept;
     // Repair the equipped backpack using an original source repair material.
     bool repair_equipped_backpack_from_inventory_slot(
         std::size_t material_slot) noexcept;
@@ -93,6 +93,9 @@ public:
     bool move(std::size_t from, std::size_t to,
               std::uint16_t amount = 0,
               std::uint16_t max_stack = 0) noexcept;
+    // Split a stack in two without changing its original item condition.
+    // A split is atomic and only targets an empty, active inventory slot.
+    bool split_stack(std::size_t from, std::size_t to) noexcept;
 
     const InventorySlot* slot(std::size_t index) const noexcept;
     std::uint32_t count(std::uint16_t item_id) const noexcept;
@@ -110,7 +113,7 @@ private:
     std::array<InventorySlot, kMaximumInventorySlotCount> slots_{};
     std::size_t capacity_{kInventorySlotCount};
     std::uint16_t equipped_backpack_{};
-    std::uint8_t equipped_backpack_condition_{100};
+    float equipped_backpack_condition_{100.0f};
 };
 
 } // namespace minidayz::items

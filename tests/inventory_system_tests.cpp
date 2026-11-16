@@ -4,6 +4,7 @@
 #include "minidayz/generated/item_sprite_catalog.hpp"
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 
 int main() {
@@ -339,6 +340,17 @@ int main() {
     assert(wear_inventory.add(251, 1, 0, 65));
     assert(wear_inventory.damage_condition(0, 20));
     assert(wear_inventory.slot(0)->condition == 45);
+    assert(wear_inventory.damage_condition(0, 0.25f));
+    assert(std::fabs(wear_inventory.slot(0)->condition - 44.75f) < 0.0001f);
+    const auto fractional_snapshot = wear_inventory.snapshot();
+    InventorySystem fractional_restored;
+    assert(fractional_restored.restore(fractional_snapshot));
+    assert(std::fabs(fractional_restored.slot(0)->condition - 44.75f) < 0.0001f);
+    GroundItem fractional_ground{};
+    assert(wear_inventory.drop(0, 1, fractional_ground));
+    assert(std::fabs(fractional_ground.condition - 44.75f) < 0.0001f);
+    assert(wear_inventory.pickup(fractional_ground));
+    assert(std::fabs(wear_inventory.slot(0)->condition - 44.75f) < 0.0001f);
     assert(wear_inventory.damage_condition(0, 45));
     assert(wear_inventory.slot(0)->empty());
     assert(!wear_inventory.damage_condition(0, 1));
@@ -447,6 +459,30 @@ int main() {
     assert(broken_backpack_repair.equip_backpack_from_slot(0));
     assert(!broken_backpack_repair.repair_equipped_backpack_from_inventory_slot(1));
     assert(broken_backpack_repair.count(39) == 1);
+
+    // Stage 2 touchscreen Y action: splitting must be atomic, bounded to
+    // active backpack capacity and preserve original fractional condition.
+    InventorySystem split_inventory;
+    assert(split_inventory.add_to_slot(0, 11, 9, 0, 64.75f));
+    const auto before_invalid_split = split_inventory.snapshot();
+    assert(!split_inventory.split_stack(0, 0));
+    assert(!split_inventory.split_stack(0, 20));
+    assert(!split_inventory.split_stack(1, 2));
+    assert(split_inventory.snapshot().slots[0].count == before_invalid_split.slots[0].count);
+    assert(split_inventory.split_stack(0, 1));
+    assert(split_inventory.slot(0)->count == 5);
+    assert(split_inventory.slot(1)->count == 4);
+    assert(std::fabs(split_inventory.slot(0)->condition - 64.75f) < 0.0001f);
+    assert(std::fabs(split_inventory.slot(1)->condition - 64.75f) < 0.0001f);
+    assert(!split_inventory.split_stack(0, 1));
+    assert(split_inventory.split_stack(1, 2));
+    assert(split_inventory.slot(1)->count == 2);
+    assert(split_inventory.slot(2)->count == 2);
+    assert(split_inventory.split_stack(2, 3));
+    assert(!split_inventory.split_stack(3, 4)); // Single items do not split.
+    InventorySystem split_restored;
+    assert(split_restored.restore(split_inventory.snapshot()));
+    assert(std::fabs(split_restored.slot(3)->condition - 64.75f) < 0.0001f);
 
     return 0;
 }

@@ -1,4 +1,5 @@
 #include "minidayz/equipment.hpp"
+#include "minidayz/generated/item_wear_catalog.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -115,6 +116,18 @@ int main() {
     assert(armor_values.vest == 3.0f);
     assert(armor_values.pants == 2.0f);
     assert(std::fabs(armor.temperature_offset() - (5.0f / 7.0f)) < 0.0001f);
+    PlayerState warm_state{};
+    warm_state.temperature = 0.0f;
+    PlayerSystem warm_player(warm_state);
+    armor.apply_temperature(warm_player, 2.0f, -10.0f, 10.0f);
+    assert(std::fabs(warm_player.state().temperature - (2.0f + 5.0f / 7.0f)) < 0.0001f);
+    armor.apply_temperature(warm_player, 2.0f, -10.0f, 10.0f);
+    assert(std::fabs(warm_player.state().temperature - (2.0f + 5.0f / 7.0f)) < 0.0001f);
+    warm_player.adjust_temperature(20.0f, -10.0f, 10.0f);
+    armor.apply_temperature(warm_player, 2.0f, -10.0f, 10.0f);
+    assert(std::fabs(warm_player.state().temperature - (2.0f + 5.0f / 7.0f)) < 0.0001f);
+    // The source event reassigns the absolute target every update; the
+    // independent heat adjustment must not accumulate across frames.
 
     PlayerState equipment_damage_state{};
     equipment_damage_state.health = 100.0f;
@@ -165,12 +178,28 @@ int main() {
         condition_inventory, EquipmentSlot::head, 0));
     assert(condition_inventory.slot(0)->condition == 65);
 
+    assert(condition_equipment.damage_condition(EquipmentSlot::head, 0.25f));
+    assert(std::fabs(condition_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::head)] - 64.75f) < 0.0001f);
+    EquipmentSystem fractional_equipment_restore;
+    assert(fractional_equipment_restore.restore(condition_equipment.snapshot()));
+    assert(std::fabs(fractional_equipment_restore.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::head)] - 64.75f) < 0.0001f);
     assert(condition_equipment.damage_condition(EquipmentSlot::head, 25));
-    assert(condition_equipment.snapshot().conditions[
-        static_cast<std::size_t>(EquipmentSlot::head)] == 40);
-    assert(condition_equipment.damage_condition(EquipmentSlot::head, 40));
+    assert(std::fabs(condition_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::head)] - 39.75f) < 0.0001f);
+    assert(condition_equipment.damage_condition(EquipmentSlot::head, 39.75f));
     assert(condition_equipment.equipped(EquipmentSlot::head) == 0);
     assert(!condition_equipment.damage_condition(EquipmentSlot::head, 1));
+
+    // Clothing temperature is an absolute source target: Day_cold plus the
+    // exact equipment expression, independent of frame delta.
+    PlayerState temperature_state{};
+    temperature_state.health = 100.0f;
+    PlayerSystem temperature_player(temperature_state);
+    EquipmentSystem temperature_equipment;
+    temperature_equipment.apply_temperature(temperature_player, 7.0f, -10.0f, 10.0f);
+    assert(temperature_player.state().temperature == 7.0f);
 
     // Repair uses an absolute source-derived value and never resurrects a broken item.
     EquipmentSystem repair_equipment;
@@ -300,5 +329,91 @@ int main() {
     assert(atomic.restore(EquipmentSnapshot{{251, 0, 0, 0, 0, 0, 0}}));
     for (std::uint16_t id = 1; id <= 15; ++id) assert(full.add(id, 1));
     assert(full.add(264, 1) == false);
+    // Original Construct condition-write events, not estimated weapon wear.
+    float wear = -1.0f;
+    assert(source_condition_wear_loss(2098275646157213ULL, false, 0.0f, wear));
+    assert(std::fabs(wear - 0.25f) < 0.0001f);
+    assert(source_condition_wear_loss(2098275646157213ULL, true, 0.0f, wear));
+    assert(wear == 0.0f);
+    assert(source_condition_wear_loss(251602875520018ULL, false, 0.0f, wear));
+    assert(wear == 1.0f);
+    assert(source_condition_wear_loss(8036449108462062ULL, false, 0.0f, wear));
+    assert(std::fabs(wear - 0.2f) < 0.0001f);
+    assert(source_condition_wear_loss(682686209618980ULL, false, 0.5f, wear));
+    assert(wear == 3.0f);
+    assert(source_condition_wear_loss(682686209618980ULL, true, 0.5f, wear));
+    assert(wear == 0.0f);
+    assert(!source_condition_wear_loss(682686209618980ULL, false, 1.0f, wear));
+    assert(wear == 0.0f);
+    assert(!source_condition_wear_loss(0, false, 0.0f, wear));
+    assert(wear == 0.0f);
+
+    EquipmentSystem source_wear_equipment;
+    InventorySystem source_wear_inventory;
+    assert(source_wear_inventory.add_to_slot(0, 244, 1, 0, 75.0f));
+    assert(source_wear_equipment.equip_from_inventory(
+        source_wear_inventory, 0, EquipmentSlot::hands));
+    assert(source_wear_equipment.apply_source_wear(875054325568454ULL, false));
+    assert(std::fabs(source_wear_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] - 74.75f) < 0.0001f);
+    assert(!source_wear_equipment.apply_source_wear(875054325568454ULL, true));
+    assert(!source_wear_equipment.apply_source_wear(0, false));
+    assert(source_wear_equipment.apply_source_wear(682686209618980ULL, false, 0.5f));
+    assert(std::fabs(source_wear_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] - 71.75f) < 0.0001f);
+    assert(source_wear_equipment.apply_source_wear(251602875520018ULL, false));
+    assert(std::fabs(source_wear_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] - 70.75f) < 0.0001f);
+    assert(source_wear_equipment.apply_source_wear(8036449108462062ULL, false));
+    assert(std::fabs(source_wear_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] - 70.55f) < 0.0001f);
+    assert(source_wear_equipment.apply_source_wear(251602875520018ULL, false));
+    assert(source_wear_equipment.apply_source_wear(2098275646157213ULL, false));
+    assert(source_wear_equipment.damage_condition(EquipmentSlot::hands, 100.0f));
+    assert(!source_wear_equipment.apply_source_wear(2098275646157213ULL, false));
+
+    // Regenerated original Construct source actions: action IDs are stable,
+    // unlike enclosing event UIDs which may be duplicated by the source.
+    assert(kSourceWearRuleCount >= 100);
+    float source_action_loss = 77.0f;
+    assert(source_condition_wear_action(
+        744011060201717ULL, false, 0.0f, 0.0f, source_action_loss));
+    assert(std::fabs(source_action_loss - 0.25f) < 0.0001f);
+    assert(source_condition_wear_action(
+        744011060201717ULL, true, 0.0f, 0.0f, source_action_loss));
+    assert(source_action_loss == 0.0f);
+    assert(source_condition_wear_action(
+        7229337118015925ULL, false, 0.0f, 0.0f, source_action_loss));
+    assert(std::fabs(source_action_loss - 0.4f) < 0.0001f);
+    assert(source_condition_wear_action(
+        228602990115248ULL, false, 0.0f, 0.0f, source_action_loss));
+    assert(source_action_loss == 1.0f);
+    assert(source_condition_wear_action(
+        449456536338930ULL, false, 0.75f, 0.0f, source_action_loss));
+    assert(source_action_loss == 3.0f);  // floor(random(2,4))
+    assert(!source_condition_wear_action(
+        449456536338930ULL, false, 1.0f, 0.0f, source_action_loss));
+    assert(source_action_loss == 0.0f);
+    assert(!source_condition_wear_action(
+        123456789ULL, false, 0.0f, 0.0f, source_action_loss));
+    assert(source_action_loss == 0.0f);
+
+    // All original generated rules must be strictly sorted and unique.
+    for (std::size_t i = 1; i < kSourceWearRuleCount; ++i) {
+        assert(kSourceWearRules[i - 1].action_uid <
+               kSourceWearRules[i].action_uid);
+    }
+    EquipmentSystem generated_wear_equipment;
+    InventorySystem generated_wear_inventory;
+    assert(generated_wear_inventory.add_to_slot(0, 244, 1, 0, 80.0f));
+    assert(generated_wear_equipment.equip_from_inventory(
+        generated_wear_inventory, 0, EquipmentSlot::hands));
+    assert(generated_wear_equipment.apply_source_wear_action(
+        744011060201717ULL, false));
+    assert(std::fabs(generated_wear_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] - 79.75f) < 0.0001f);
+    assert(!generated_wear_equipment.apply_source_wear_action(
+        744011060201717ULL, true));
+
     return 0;
 }

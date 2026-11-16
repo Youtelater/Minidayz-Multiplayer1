@@ -22,7 +22,7 @@ namespace {
 // fresh entropy for this native session. This is a per-run seed, not a claim
 // that the original browser Math.random() sequence is reproducible.
 constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-constexpr std::uint32_t kSaveVersion = 5u;
+constexpr std::uint32_t kSaveVersion = 6u;
 constexpr const char* kSavePath = "sdmc:/3ds/Minidayz/world.sav";
 constexpr const char* kSaveTempPath = "sdmc:/3ds/Minidayz/world.tmp";
 
@@ -44,6 +44,78 @@ struct LegacyEquipmentSnapshotV3 {
 static_assert(sizeof(LegacyInventorySlotV3) == 4, "v3 inventory slot ABI changed");
 static_assert(sizeof(LegacyInventorySnapshotV3) == 132, "v3 inventory snapshot ABI changed");
 static_assert(sizeof(LegacyEquipmentSnapshotV3) == 14, "v3 equipment snapshot ABI changed");
+
+
+struct LegacyInventorySlotV5 {
+    std::uint16_t item_id{};
+    std::uint16_t count{};
+    std::uint8_t condition{100};
+};
+struct LegacyInventorySnapshotV5 {
+    std::array<LegacyInventorySlotV5, minidayz::items::kMaximumInventorySlotCount> slots{};
+    std::uint16_t capacity{static_cast<std::uint16_t>(minidayz::items::kInventorySlotCount)};
+    std::uint16_t equipped_backpack{};
+    std::uint8_t equipped_backpack_condition{100};
+};
+struct LegacyEquipmentSnapshotV5 {
+    std::array<std::uint16_t, minidayz::items::kEquipmentSlotCount> item_ids{};
+    std::array<std::uint8_t, minidayz::items::kEquipmentSlotCount> conditions{
+        100, 100, 100, 100, 100, 100, 100
+    };
+};
+struct LegacyGroundItemV5 {
+    std::uint16_t item_id{};
+    std::uint16_t count{};
+    std::uint8_t condition{minidayz::items::kUseSourceItemCondition};
+};
+struct LegacyGroundLootEntryV5 {
+    LegacyGroundItemV5 item{};
+    float x{};
+    float y{};
+};
+struct LegacyGroundLootSnapshotV5 {
+    std::array<LegacyGroundLootEntryV5, minidayz::items::kMaximumGroundLootItems> entries{};
+    std::uint16_t count{};
+};
+static_assert(sizeof(LegacyInventorySlotV5) == 6, "v5 inventory slot ABI changed");
+static_assert(sizeof(LegacyInventorySnapshotV5) == 198, "v5 inventory snapshot ABI changed");
+static_assert(sizeof(LegacyEquipmentSnapshotV5) == 22, "v5 equipment snapshot ABI changed");
+static_assert(sizeof(LegacyGroundItemV5) == 6, "v5 ground item ABI changed");
+static_assert(sizeof(LegacyGroundLootEntryV5) == 16, "v5 ground loot entry ABI changed");
+static_assert(sizeof(LegacyGroundLootSnapshotV5) == 1028, "v5 ground loot snapshot ABI changed");
+
+minidayz::items::InventorySnapshot migrate_inventory_v5(
+    const LegacyInventorySnapshotV5& legacy) noexcept {
+    minidayz::items::InventorySnapshot result{};
+    result.capacity = legacy.capacity;
+    result.equipped_backpack = legacy.equipped_backpack;
+    result.equipped_backpack_condition = static_cast<float>(legacy.equipped_backpack_condition);
+    for (std::size_t i = 0; i < legacy.slots.size(); ++i)
+        result.slots[i] = {legacy.slots[i].item_id, legacy.slots[i].count,
+                           static_cast<float>(legacy.slots[i].condition)};
+    return result;
+}
+minidayz::items::EquipmentSnapshot migrate_equipment_v5(
+    const LegacyEquipmentSnapshotV5& legacy) noexcept {
+    minidayz::items::EquipmentSnapshot result{};
+    result.item_ids = legacy.item_ids;
+    for (std::size_t i = 0; i < legacy.conditions.size(); ++i)
+        result.conditions[i] = static_cast<float>(legacy.conditions[i]);
+    return result;
+}
+minidayz::items::GroundLootSnapshot migrate_ground_loot_v5(
+    const LegacyGroundLootSnapshotV5& legacy) noexcept {
+    minidayz::items::GroundLootSnapshot result{};
+    result.count = legacy.count;
+    for (std::size_t i = 0; i < legacy.entries.size(); ++i) {
+        const auto& source = legacy.entries[i];
+        result.entries[i] = {
+            {source.item.item_id, source.item.count, static_cast<float>(source.item.condition)},
+            source.x, source.y
+        };
+    }
+    return result;
+}
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
@@ -122,22 +194,40 @@ bool load_saved_game(SavedGame& save) noexcept {
             body_ok = consume_legacy_padding(file, padding);
         }
     } else if (header_ok && save.version == 4u) {
-        // Version 4 persisted player, inventory and equipment; ground loot was
-        // not part of that format, so it starts empty when migrated.
+        LegacyInventorySnapshotV5 legacy_inventory{};
+        LegacyEquipmentSnapshotV5 legacy_equipment{};
         body_ok =
             std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
-            std::fread(&save.inventory, sizeof(save.inventory), 1, file) == 1 &&
-            std::fread(&save.equipment, sizeof(save.equipment), 1, file) == 1;
+            std::fread(&legacy_inventory, sizeof(legacy_inventory), 1, file) == 1 &&
+            std::fread(&legacy_equipment, sizeof(legacy_equipment), 1, file) == 1;
+        if (body_ok) {
+            save.inventory = migrate_inventory_v5(legacy_inventory);
+            save.equipment = migrate_equipment_v5(legacy_equipment);
+        }
         save.ground_loot = {};
         if (body_ok) {
-            // Version 4 wrote the complete SavedGame struct, including up to
-            // three bytes of tail padding required by its 4-byte alignment.
             const std::size_t legacy_bytes = 3 * sizeof(std::uint32_t) +
-                sizeof(minidayz::PlayerState) +
-                sizeof(minidayz::items::InventorySnapshot) +
-                sizeof(minidayz::items::EquipmentSnapshot);
-            const std::size_t padding = (4 - (legacy_bytes % 4)) % 4;
-            body_ok = consume_legacy_padding(file, padding);
+                sizeof(minidayz::PlayerState) + sizeof(LegacyInventorySnapshotV5) +
+                sizeof(LegacyEquipmentSnapshotV5);
+            body_ok = consume_legacy_padding(file, (4 - (legacy_bytes % 4)) % 4);
+        }
+    } else if (header_ok && save.version == 5u) {
+        LegacyInventorySnapshotV5 legacy_inventory{};
+        LegacyEquipmentSnapshotV5 legacy_equipment{};
+        LegacyGroundLootSnapshotV5 legacy_ground_loot{};
+        body_ok =
+            std::fread(&save.player, sizeof(save.player), 1, file) == 1 &&
+            std::fread(&legacy_inventory, sizeof(legacy_inventory), 1, file) == 1 &&
+            std::fread(&legacy_equipment, sizeof(legacy_equipment), 1, file) == 1 &&
+            std::fread(&legacy_ground_loot, sizeof(legacy_ground_loot), 1, file) == 1;
+        if (body_ok) {
+            save.inventory = migrate_inventory_v5(legacy_inventory);
+            save.equipment = migrate_equipment_v5(legacy_equipment);
+            save.ground_loot = migrate_ground_loot_v5(legacy_ground_loot);
+            const std::size_t legacy_bytes = 3 * sizeof(std::uint32_t) +
+                sizeof(minidayz::PlayerState) + sizeof(LegacyInventorySnapshotV5) +
+                sizeof(LegacyEquipmentSnapshotV5) + sizeof(LegacyGroundLootSnapshotV5);
+            body_ok = consume_legacy_padding(file, (4 - (legacy_bytes % 4)) % 4);
         }
     } else if (header_ok && save.version == kSaveVersion) {
         body_ok =
@@ -276,6 +366,20 @@ public:
         }
         // L drops the selected stack at the player's feet; R picks up the
         // nearest ground stack. Ground transfers are atomic and persisted.
+        if ((input.pressed & KEY_Y) && selected_inventory_slot_ >= 0) {
+            const std::size_t source = static_cast<std::size_t>(selected_inventory_slot_);
+            // The 3DS Y shortcut exposes the original split-stack operation;
+            // do not discard or merge items when there is no free slot.
+            for (std::size_t target = 0; target < inventory_.capacity(); ++target) {
+                const auto* destination = inventory_.slot(target);
+                if (destination && destination->empty() &&
+                    inventory_.split_stack(source, target)) {
+                    selected_inventory_slot_ = static_cast<int>(target);
+                    inventory_page_ = target / kInventoryPageSize;
+                    break;
+                }
+            }
+        }
         if ((input.pressed & KEY_L) && selected_inventory_slot_ >= 0) {
             if (ground_loot_.drop_from_inventory(
                     inventory_, static_cast<std::size_t>(selected_inventory_slot_),
@@ -430,6 +534,11 @@ public:
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
         player_.update_survival(dt, preview_rules_);
+        // Update_Stats assigns an absolute Player_temperature target from
+        // Day_cold plus the exact clothing expression; it is not a frame-rate
+        // accumulation. Dynamic rain/night/map modifiers remain separate.
+        equipment_.apply_temperature(player_, preview_rules_.day_cold,
+            preview_rules_.min_temperature, preview_rules_.max_temperature);
         if (npc_ready_) npcs_.update(dt, player_.state().x, player_.state().y,
                                      &WorldPreviewScene::blocked, this);
         save_elapsed_ += dt;
@@ -551,7 +660,7 @@ public:
             static_cast<unsigned>(page_count));
         renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                  C2D_Color32(54, 68, 55, 255));
-        renderer.draw_text("A USE X ALT L DROP R PICK", 14.0f, 226.0f, 0.18f);
+        renderer.draw_text("A USE X ALT Y SPLIT L DROP R PICK", 14.0f, 226.0f, 0.16f);
         renderer.draw_text(page_label, 104.0f, 226.0f, 0.30f);
     }
 
