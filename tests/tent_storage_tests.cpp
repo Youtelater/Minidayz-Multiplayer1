@@ -8,7 +8,7 @@ int main() {
     InventorySystem inv;
     TentStorageSystem tents;
     assert(inv.add(456, 2, 0, 73));
-    assert(!tents.deploy_from_inventory(inv, 1, 10, 20));
+    assert(!tents.deploy_from_inventory(inv, 100, 10, 20));
     assert(!tents.deploy_from_inventory(inv, 0,
            std::numeric_limits<float>::quiet_NaN(), 20));
     assert(inv.count(456) == 2);
