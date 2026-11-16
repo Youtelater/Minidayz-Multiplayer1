@@ -3,11 +3,14 @@
 from __future__ import annotations
 import json
 import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/backpack_capacity_catalog.hpp"
+ITEMS = ROOT / "l_eng_items.xml"
+UI = ROOT / "l_eng_ui.xml"
 EXPECTED_SLOTS = list(range(1, 12))
 
 def children(event):
@@ -34,8 +37,9 @@ def function_name(event):
     return None
 
 def main() -> None:
-    if not PROJECT.is_file():
-        raise SystemExit(f"Missing original Construct project: {PROJECT}")
+    for source_file in (PROJECT, ITEMS, UI):
+        if not source_file.is_file():
+            raise SystemExit(f"Missing root-level original source: {source_file}")
     source = PROJECT.read_text(encoding="utf-8-sig")
     source = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", source)
     project = json.loads(source)
@@ -74,15 +78,42 @@ def main() -> None:
     actual = sorted(backpack_indices)
     if actual != EXPECTED_SLOTS:
         raise SystemExit(f"Original backpack grid changed: expected {EXPECTED_SLOTS}, found {actual}")
+    # The UI exposes up to 11 storage slots, but original tutorial text
+    # explicitly specifies smaller capacities for two improvised packs.
+    names = {}
+    for item in ET.parse(ITEMS).getroot().findall("item"):
+        name = (item.findtext("name") or "").strip()
+        if name:
+            names.setdefault(name, []).append(int(item.findtext("id")))
+    texts = [(e.findtext("name") or "").strip()
+             for e in ET.parse(UI).getroot().findall("text")]
+    known = [
+        ("Improvised Sling Bag",
+         r"Rope\s*\+\s*Burlap sack\s*=\s*improvised bag\s*\((\d+) slots\)"),
+        ("Improvised Backpack",
+         r"Improvised bag\s*\+\s*3 wooden sticks\s*=\s*improvised backpack\s*\((\d+) slots\)"),
+    ]
+    pack_rows = []
+    for label, pattern in known:
+        ids = names.get(label, [])
+        slots = [int(match.group(1)) for phrase in texts
+                 if (match := re.fullmatch(pattern, phrase, flags=re.IGNORECASE))]
+        if len(ids) != 1 or len(slots) != 1 or not 0 < slots[0] <= len(actual):
+            raise SystemExit(f"Source backpack capacity missing or ambiguous: {label}")
+        pack_rows.append((ids[0], slots[0]))
     lines = [
-        "#pragma once", "#include <cstddef>",
+        "#pragma once", "#include <cstddef>", "#include <cstdint>",
         "namespace minidayz::items {",
         f"inline constexpr std::size_t kSourceBackpackStorageSlotCount = {len(actual)};",
+        f"inline constexpr std::uint16_t kSourceImprovisedSlingBagItemId = {pack_rows[0][0]};",
+        f"inline constexpr std::size_t kSourceImprovisedSlingBagSlots = {pack_rows[0][1]};",
+        f"inline constexpr std::uint16_t kSourceImprovisedBackpackItemId = {pack_rows[1][0]};",
+        f"inline constexpr std::size_t kSourceImprovisedBackpackSlots = {pack_rows[1][1]};",
         "} // namespace minidayz::items", ""
     ]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Extracted {len(actual)} original backpack storage slots from Items_update")
+    print(f"Extracted {len(actual)} original backpack UI slots and {pack_rows} source capacities")
 
 if __name__ == "__main__":
     main()
