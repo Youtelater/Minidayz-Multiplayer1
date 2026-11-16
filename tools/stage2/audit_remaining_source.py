@@ -84,6 +84,31 @@ def main():
             for event in matches[:3]:
                 print(f"  {word} UID={event['uid']}: "
                       f"{json.dumps(event, separators=(',', ':'))[:1400]}")
+    # Record every original global weather assignment with its full
+    # conditional ancestry; no weather values are guessed or hard-coded.
+    weather_terms = ("Day_cold", "Night_cold", "Rain_cold")
+    for label in ("player_stats",):
+        lookup = {event["uid"]: event for event in result[label]["events"]}
+        for event in result[label]["events"]:
+            for action in event["actions"]:
+                if not isinstance(action, list) or len(action) < 6:
+                    continue
+                params = action[5]
+                if not isinstance(params, list):
+                    continue
+                if not any(isinstance(p, list) and len(p) == 2 and
+                           p[0] == 11 and p[1] in weather_terms for p in params):
+                    continue
+                ancestors = []
+                parent = event["parent"]
+                while parent in lookup and len(ancestors) < 12:
+                    ancestors.append({"uid": parent,
+                                      "conditions": lookup[parent]["conditions"]})
+                    parent = lookup[parent]["parent"]
+                print("  WEATHER SOURCE WRITE:", json.dumps(
+                    {"uid": event["uid"], "conditions": event["conditions"],
+                     "action": action, "ancestors": ancestors},
+                    separators=(",", ":"))[:5200])
     # Resolve the original branch/condition ancestry of a representative
     # weighted LOOT Respawn call before translating any gameplay trigger.
     loot = result["loot_respawn"]
