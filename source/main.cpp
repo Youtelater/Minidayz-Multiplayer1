@@ -168,8 +168,12 @@ public:
             input.touch.py >= 99 && input.touch.py < 219) {
             const std::size_t recipe = crafting_page_ * kCraftPageSize +
                 static_cast<std::size_t>((input.touch.py - 99) / 40);
-            (void)minidayz::items::craft_from_inventory(
-                inventory_, ground_loot_, player_.state().x, player_.state().y, recipe);
+            if (minidayz::items::source_craft_recipe(recipe)) {
+                const bool crafted = minidayz::items::craft_from_inventory(
+                    inventory_, ground_loot_, player_.state().x, player_.state().y, recipe);
+                crafting_feedback_ = crafted ? CraftFeedback::success : CraftFeedback::missing_or_full;
+                crafting_feedback_elapsed_ = 0.0f;
+            }
         }
 
         if (storage_open_ && touch_pressed) {
@@ -402,6 +406,13 @@ public:
             drag_target_slot_ = -1;
             drag_target_equipment_slot_ = -1;
         }
+        if (crafting_feedback_ != CraftFeedback::none) {
+            crafting_feedback_elapsed_ += std::max(0.0f, dt);
+            if (crafting_feedback_elapsed_ >= 2.5f) {
+                crafting_feedback_ = CraftFeedback::none;
+                crafting_feedback_elapsed_ = 0.0f;
+            }
+        }
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
         player_.update_survival(dt, preview_rules_);
@@ -590,10 +601,20 @@ public:
             return;
         }
         if (crafting_open_) {
-            // Original guide-backed recipes only; no fabricated crafting
-            // table. The upper 3DS screen remains the game world.
+            // Source-verified crafting recipes and exact item IDs. Every
+            // ingredient line shows owned/required counts; the original
+            // output destination (ground or inventory) is visible before use.
             renderer.draw_solid_rect(8.0f, 89.0f, 304.0f, 133.0f,
                                      C2D_Color32(22, 31, 25, 255));
+            const std::size_t page_count =
+                (minidayz::items::kSourceCraftRecipeCount + kCraftPageSize - 1) /
+                kCraftPageSize;
+            char page_header[60]{};
+            std::snprintf(page_header, sizeof(page_header),
+                          "CRAFTING %u/%u     TAP A RECIPE",
+                          static_cast<unsigned>(crafting_page_ + 1),
+                          static_cast<unsigned>(page_count));
+            renderer.draw_text(page_header, 13.0f, 90.0f, 0.19f);
             for (std::size_t row = 0; row < kCraftPageSize; ++row) {
                 const std::size_t i = crafting_page_ * kCraftPageSize + row;
                 const auto* recipe = minidayz::items::source_craft_recipe(i);
@@ -604,8 +625,44 @@ public:
                 renderer.draw_solid_rect(12.0f, y, 296.0f, 36.0f,
                     ready ? C2D_Color32(65, 95, 64, 255)
                           : C2D_Color32(49, 56, 49, 255));
-                renderer.draw_text(recipe->result_name, 18.0f, y + 3.0f, 0.32f);
-                renderer.draw_text(recipe->original_guide, 18.0f, y + 20.0f, 0.19f);
+                (void)renderer.draw_item_icon(recipe->result_id,
+                    27.0f, y + 16.0f, 24.0f, 24.0f);
+                // The result name is original localization where available.
+                const char* result_name = minidayz::items::source_item_name(
+                    recipe->result_id);
+                renderer.draw_text(result_name ? result_name : recipe->result_name,
+                                   43.0f, y + 2.0f, 0.29f);
+                renderer.draw_text(ready ? "READY" : "NEED",
+                                   263.0f, y + 2.0f, 0.19f);
+                char ingredients[145]{};
+                std::size_t at = 0;
+                for (std::size_t part = 0; part < recipe->ingredients.size(); ++part) {
+                    const auto ingredient = recipe->ingredients[part];
+                    if (ingredient.count == 0) continue;
+                    const auto owned = inventory_.count(ingredient.item_id);
+                    const char* name = minidayz::items::source_item_name(ingredient.item_id);
+                    const int written = std::snprintf(ingredients + at,
+                        sizeof(ingredients) - at, "%s%s %u/%u%s",
+                        at ? " + " : "", name ? name : "ITEM",
+                        static_cast<unsigned>(owned),
+                        static_cast<unsigned>(ingredient.count),
+                        part == 1 && recipe->preserve_second_ingredient ? " (tool)" : "");
+                    if (written <= 0) break;
+                    at += std::min(static_cast<std::size_t>(written),
+                                   sizeof(ingredients) - at - 1);
+                }
+                renderer.draw_text(ingredients, 43.0f, y + 19.0f, 0.19f);
+                renderer.draw_text(recipe->result_in_inventory ? "BAG" : "GROUND",
+                                   265.0f, y + 26.0f, 0.16f);
+            }
+            if (crafting_feedback_ != CraftFeedback::none) {
+                const bool success = crafting_feedback_ == CraftFeedback::success;
+                renderer.draw_solid_rect(10.0f, 209.0f, 300.0f, 13.0f,
+                    success ? C2D_Color32(46, 105, 52, 255)
+                            : C2D_Color32(115, 66, 46, 255));
+                renderer.draw_text(success ? "CRAFTED - CHECK BAG OR GROUND"
+                                         : "NEED MATERIALS OR OUTPUT SPACE",
+                                   24.0f, 211.0f, 0.22f);
             }
             renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                      C2D_Color32(54, 68, 55, 255));
@@ -908,6 +965,8 @@ private:
         inventory_page_ = 0;
         storage_page_ = 0;
         crafting_page_ = 0;
+        crafting_feedback_ = CraftFeedback::none;
+        crafting_feedback_elapsed_ = 0.0f;
         storage_open_ = false;
         crafting_open_ = false;
         details_open_ = false;
@@ -988,6 +1047,9 @@ private:
     std::size_t inventory_page_{};
     std::size_t storage_page_{};
     std::size_t crafting_page_{};
+    enum class CraftFeedback : std::uint8_t { none, success, missing_or_full };
+    CraftFeedback crafting_feedback_{CraftFeedback::none};
+    float crafting_feedback_elapsed_{};
     bool touch_down_{};
     bool tap_was_selected_{};
     bool crafting_open_{};
