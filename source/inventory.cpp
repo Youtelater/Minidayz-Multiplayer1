@@ -251,7 +251,7 @@ bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
         return false;
     if (condition == kUseSourceItemCondition)
         condition = source_default_condition(item_id);
-    if (condition > 100) return false;
+    if (!std::isfinite(condition) || condition < 0.0f || condition > 100.0f) return false;
     if (max_stack == 0) max_stack = source_max_stack(item_id);
     if (max_stack == 0 || amount > max_stack) return false;
     auto& entry = slots_[index];
@@ -280,7 +280,7 @@ bool InventorySystem::damage_condition(
 bool InventorySystem::restore_condition(
     std::size_t slot_index, float condition) noexcept {
     if (slot_index >= capacity_ || slots_[slot_index].empty() ||
-        !std::isfinite(condition) || condition > 100.0f ||
+        !std::isfinite(condition) || condition < 0.0f || condition > 100.0f ||
         condition <= slots_[slot_index].condition)
         return false;
     slots_[slot_index].condition = condition;
@@ -308,8 +308,7 @@ bool InventorySystem::repair_equipped_backpack_from_inventory_slot(
     if (!source_item_repair_gain(material->item_id,
                                  SourceRepairTarget::backpack, gain))
         return false;
-    const auto repaired = static_cast<std::uint8_t>(
-        std::min(100.0f, equipped_backpack_condition_ + static_cast<float>(gain)));
+    const float repaired = std::min(100.0f, equipped_backpack_condition_ + static_cast<float>(gain));
     if (!remove(material_slot, 1)) return false;
     equipped_backpack_condition_ = repaired;
     return true;
