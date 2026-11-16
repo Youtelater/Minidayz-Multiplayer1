@@ -1,4 +1,5 @@
 #include "minidayz/equipment.hpp"
+#include "minidayz/generated/item_wear_catalog.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -370,6 +371,49 @@ int main() {
     assert(source_wear_equipment.apply_source_wear(2098275646157213ULL, false));
     assert(source_wear_equipment.damage_condition(EquipmentSlot::hands, 100.0f));
     assert(!source_wear_equipment.apply_source_wear(2098275646157213ULL, false));
+
+    // Regenerated original Construct source actions: action IDs are stable,
+    // unlike enclosing event UIDs which may be duplicated by the source.
+    assert(kSourceWearRuleCount >= 100);
+    float source_action_loss = 77.0f;
+    assert(source_condition_wear_action(
+        744011060201717ULL, false, 0.0f, 0.0f, source_action_loss));
+    assert(std::fabs(source_action_loss - 0.25f) < 0.0001f);
+    assert(source_condition_wear_action(
+        744011060201717ULL, true, 0.0f, 0.0f, source_action_loss));
+    assert(source_action_loss == 0.0f);
+    assert(source_condition_wear_action(
+        7229337118015925ULL, false, 0.0f, 0.0f, source_action_loss));
+    assert(std::fabs(source_action_loss - 0.4f) < 0.0001f);
+    assert(source_condition_wear_action(
+        228602990115248ULL, false, 0.0f, 0.0f, source_action_loss));
+    assert(source_action_loss == 1.0f);
+    assert(source_condition_wear_action(
+        449456536338930ULL, false, 0.75f, 0.0f, source_action_loss));
+    assert(source_action_loss == 3.0f);  // floor(random(2,4))
+    assert(!source_condition_wear_action(
+        449456536338930ULL, false, 1.0f, 0.0f, source_action_loss));
+    assert(source_action_loss == 0.0f);
+    assert(!source_condition_wear_action(
+        123456789ULL, false, 0.0f, 0.0f, source_action_loss));
+    assert(source_action_loss == 0.0f);
+
+    // All original generated rules must be strictly sorted and unique.
+    for (std::size_t i = 1; i < kSourceWearRuleCount; ++i) {
+        assert(kSourceWearRules[i - 1].action_uid <
+               kSourceWearRules[i].action_uid);
+    }
+    EquipmentSystem generated_wear_equipment;
+    InventorySystem generated_wear_inventory;
+    assert(generated_wear_inventory.add_to_slot(0, 244, 1, 0, 80.0f));
+    assert(generated_wear_equipment.equip_from_inventory(
+        generated_wear_inventory, 0, EquipmentSlot::hands));
+    assert(generated_wear_equipment.apply_source_wear_action(
+        744011060201717ULL, false));
+    assert(std::fabs(generated_wear_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] - 79.75f) < 0.0001f);
+    assert(!generated_wear_equipment.apply_source_wear_action(
+        744011060201717ULL, true));
 
     return 0;
 }
