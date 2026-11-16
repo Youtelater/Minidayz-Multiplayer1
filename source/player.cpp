@@ -337,6 +337,13 @@ void PlayerSystem::adjust_temperature(float amount, float min_temperature,
     state_.temperature = clamp(state_.temperature + amount, low, high);
 }
 
+void PlayerSystem::set_source_temperature(float source_value) noexcept {
+    if (!state_.alive || !std::isfinite(source_value)) return;
+    // Unlike preview meters, the Construct Day_cold - warmth assignment
+    // accepts negative results. The persisted PlayerState uses float.
+    state_.temperature = source_value;
+}
+
 void PlayerSystem::set_bleeding(float severity, float max_severity) noexcept {
     if (!std::isfinite(severity) || !std::isfinite(max_severity)) return;
     state_.bleeding = clamp(severity, 0.0f, std::max(0.0f, max_severity));
