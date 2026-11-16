@@ -91,7 +91,7 @@ bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
         normalized.conditions[weapon] = 100;
     }
     for (std::size_t i = 0; i < normalized.item_ids.size(); ++i) {
-        if (normalized.conditions[i] > 100) return false;
+        if (!std::isfinite(normalized.conditions[i]) || normalized.conditions[i] < 0.0f || normalized.conditions[i] > 100.0f) return false;
         if (normalized.item_ids[i] == 0) continue;
         const auto slot = static_cast<EquipmentSlot>(i);
         if (!item_fits_slot(normalized.item_ids[i], slot)) return false;
@@ -160,9 +160,9 @@ bool EquipmentSystem::equip_from_inventory(
 
     const auto old_inventory = inventory.snapshot();
     const std::uint16_t incoming_id = incoming->item_id;
-    const std::uint8_t incoming_condition = incoming->condition;
+    const float incoming_condition = incoming->condition;
     const std::uint16_t outgoing_id = state_.item_ids[slot_index];
-    const std::uint8_t outgoing_condition = state_.conditions[slot_index];
+    const float outgoing_condition = state_.conditions[slot_index];
     if (!inventory.remove(inventory_slot, 1)) return false;
     if (outgoing_id != 0 &&
         !inventory.add(outgoing_id, 1, 0, outgoing_condition)) {
@@ -175,16 +175,16 @@ bool EquipmentSystem::equip_from_inventory(
 }
 
 bool EquipmentSystem::damage_condition(
-    EquipmentSlot slot, std::uint8_t loss) noexcept {
+    EquipmentSlot slot, float loss) noexcept {
     const auto index = static_cast<std::size_t>(slot);
     if (index >= state_.item_ids.size() || state_.item_ids[index] == 0 ||
         loss == 0) return false;
+    if (!std::isfinite(loss) || loss <= 0.0f) return false;
     if (loss >= state_.conditions[index]) {
         state_.item_ids[index] = 0;
         state_.conditions[index] = 100;
     } else {
-        state_.conditions[index] = static_cast<std::uint8_t>(
-            state_.conditions[index] - loss);
+        state_.conditions[index] -= loss;
     }
     return true;
 }
@@ -232,7 +232,7 @@ bool EquipmentSystem::repair_from_inventory(
     }
     const auto equipment_index = static_cast<std::size_t>(equipment_slot);
     if (state_.item_ids[equipment_index] == 0) return false;
-    const auto current = state_.conditions[equipment_index];
+    const float current = state_.conditions[equipment_index];
     // Original repair menu conditions require condition > 0 and < 100.
     if (current == 0 || current >= 100) return false;
 
@@ -261,7 +261,7 @@ bool EquipmentSystem::unequip_to_inventory(
         state_.item_ids[slot_index] == 0)
         return false;
     const std::uint16_t outgoing_id = state_.item_ids[slot_index];
-    const std::uint8_t outgoing_condition = state_.conditions[slot_index];
+    const float outgoing_condition = state_.conditions[slot_index];
     if (!inventory.add_to_slot(inventory_slot, outgoing_id, 1, 0,
                                outgoing_condition)) return false;
     state_.item_ids[slot_index] = 0;
