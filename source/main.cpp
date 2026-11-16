@@ -505,6 +505,18 @@ public:
             (preview_rules_.max_temperature - preview_rules_.min_temperature);
         meter(244.0f, temperature_ratio * 100.0f, 100.0f,
               C2D_Color32(75, 180, 165, 255));
+        // Show the exact source-localized item name above the touch slots.
+        // The source is the original root l_eng_items.xml, never a guessed ID
+        // or a name from the excluded newer Minidayz folder.
+        if (selected_inventory_slot_ >= 0) {
+            const auto* selected = inventory_.slot(
+                static_cast<std::size_t>(selected_inventory_slot_));
+            if (selected && !selected->empty()) {
+                if (const char* name = minidayz::items::source_item_name(
+                        selected->item_id))
+                    renderer.draw_text(name, 10.0f, 82.0f, 0.20f);
+            }
+        }
         // Original equipment categories: helmet, outerwear, vest, pants,
         // held weapon, plus the separate backpack slot.
         static constexpr const char* equipment_labels[] = {"HELMET","COAT","VEST","PANTS","HANDS","PACK"};

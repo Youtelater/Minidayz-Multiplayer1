@@ -34,6 +34,20 @@ bool source_item_exists(std::uint16_t item_id) noexcept {
     return valid_item(item_id);
 }
 
+const char* source_item_name(std::uint16_t item_id) noexcept {
+    if (!valid_item(item_id)) return nullptr;
+    std::size_t first = 0;
+    std::size_t last = kItemDefinitionCount;
+    while (first < last) {
+        const std::size_t middle = first + (last - first) / 2;
+        if (kItemDefinitions[middle].id < item_id) first = middle + 1;
+        else last = middle;
+    }
+    return first < kItemDefinitionCount &&
+           kItemDefinitions[first].id == item_id
+        ? kItemDefinitions[first].name : nullptr;
+}
+
 std::uint8_t source_default_condition(std::uint16_t item_id) noexcept {
     std::size_t first = 0;
     std::size_t last = kSourceItemConditionCount;

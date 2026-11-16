@@ -4,6 +4,7 @@
 #include "minidayz/generated/item_sprite_catalog.hpp"
 
 #include <cassert>
+#include <cstring>
 #include <cstdint>
 
 int main() {
@@ -65,6 +66,14 @@ int main() {
     assert(perk_pickup.pickup(perk_pile, source_max_stack(18, true)));
     assert(perk_pickup.count(18) == 4);
     assert(perk_pickup.slot(0)->count == 4);
+
+    // Item labels always come from the original root English localization.
+    assert(source_item_name(1) != nullptr);
+    assert(std::strcmp(source_item_name(1), "Canned Beans") == 0);
+    assert(std::strcmp(source_item_name(454), "Improvised Sling Bag") == 0);
+    assert(std::strcmp(source_item_name(455), "Improvised Backpack") == 0);
+    assert(source_item_name(0) == nullptr);
+    assert(source_item_name(65535) == nullptr);
 
     InventorySystem inventory;
     assert(inventory.occupied_slots() == 0);
