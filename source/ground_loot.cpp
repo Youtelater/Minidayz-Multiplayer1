@@ -1,4 +1,5 @@
 #include "minidayz/ground_loot.hpp"
+#include "minidayz/loot_source.hpp"
 
 #include <cmath>
 
@@ -19,6 +20,17 @@ bool GroundLootSystem::add(const GroundItem& item, float x, float y) noexcept {
         !std::isfinite(x) || !std::isfinite(y)) return false;
     entries_[count_++] = {item, x, y};
     return true;
+}
+
+bool GroundLootSystem::spawn_verified_source_choice(
+    std::size_t source_record, std::uint32_t random_draw,
+    float x, float y) noexcept {
+    std::uint16_t selected = 0;
+    if (!source_loot_choose_from_draw(source_record, random_draw, selected))
+        return false;
+    // No source event is dispatched here: the caller must verify the
+    // category, marker, and conditional ancestry before invoking this.
+    return add({selected, 1, kUseSourceItemCondition}, x, y);
 }
 
 bool GroundLootSystem::drop_from_inventory(
