@@ -203,5 +203,21 @@ int main() {
     assert(reading.busy()); // no XP destination: never drop a source award
     reading.update(1.0f, player, grant, &earned);
     assert(earned == 100 && !reading.busy());
+
+    InventorySystem book;
+    ItemUseRuntime guide_runtime;
+    assert(book.add(116, 1, 0, 62));
+    assert(!use_item_from_inventory(book, 0, player, rules));
+    assert(use_item_from_inventory(book, 0, player, rules,
+                                   false, {}, &guide_runtime));
+    assert(book.count(116) == 0 && guide_runtime.remaining() == 10.0f);
+    auto guide_snapshot = guide_runtime.snapshot();
+    ItemUseRuntime guide_restore;
+    assert(guide_restore.restore(guide_snapshot));
+    guide_restore.update(9.0f, player, grant, &earned);
+    assert(earned == 100 && guide_restore.remaining() == 1.0f);
+    guide_restore.update(1.0f, player, grant, &earned);
+    assert(earned == 300 && !guide_restore.busy());
+    assert(!guide_restore.restore({116, 11.0f}));
     return 0;
 }

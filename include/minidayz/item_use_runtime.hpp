@@ -22,6 +22,9 @@ public:
     // Newspapers (49) are consumed, wait(5), then award 50 XP.
     static constexpr std::uint16_t kOriginalNewspaperItemId = 49;
     static constexpr std::uint32_t kOriginalNewspaperExperience = 50;
+    static constexpr std::uint16_t kOriginalScoutHandbookItemId = 116;
+    static constexpr std::uint32_t kOriginalScoutHandbookExperience = 200;
+    static constexpr float kOriginalScoutHandbookSeconds = 10.0f;
     static constexpr float kOriginalNewspaperSeconds = 5.0f;
     using ExperienceGrant = bool (*)(void* user, std::uint32_t amount) noexcept;
 
@@ -46,10 +49,34 @@ public:
         return true;
     }
 
-    bool begin_newspaper() noexcept {
-        if (busy()) return false;
-        pending_ = {kOriginalNewspaperItemId, kOriginalNewspaperSeconds};
+    static bool source_reading_rule(std::uint16_t item_id, float& seconds,
+                                    std::uint32_t& experience) noexcept {
+        seconds = 0.0f;
+        experience = 0;
+        switch (item_id) {
+        case kOriginalNewspaperItemId:
+            seconds = kOriginalNewspaperSeconds;
+            experience = kOriginalNewspaperExperience;
+            return true;
+        case kOriginalScoutHandbookItemId:
+            seconds = kOriginalScoutHandbookSeconds;
+            experience = kOriginalScoutHandbookExperience;
+            return true;
+        default: return false;
+        }
+    }
+
+    bool begin_reading(std::uint16_t item_id) noexcept {
+        float seconds = 0.0f;
+        std::uint32_t experience = 0;
+        if (busy() || !source_reading_rule(item_id, seconds, experience))
+            return false;
+        pending_ = {item_id, seconds};
         return true;
+    }
+
+    bool begin_newspaper() noexcept {
+        return begin_reading(kOriginalNewspaperItemId);
     }
 
     void update(float seconds, PlayerSystem& player,
@@ -61,11 +88,13 @@ public:
             pending_.seconds_remaining -= seconds;
             return;
         }
-        if (pending_.pending_medical_item_id == kOriginalNewspaperItemId) {
-            // Do not consume the pending award when no XP recipient exists.
-            // Save/load preserves the original delayed action until it succeeds.
+        float reading_seconds = 0.0f;
+        std::uint32_t reading_experience = 0;
+        if (source_reading_rule(pending_.pending_medical_item_id,
+                                reading_seconds, reading_experience)) {
+            // Do not lose a source XP award if its recipient is unavailable.
             if (!award_experience ||
-                !award_experience(experience_context, kOriginalNewspaperExperience)) {
+                !award_experience(experience_context, reading_experience)) {
                 pending_.seconds_remaining = 0.001f;
                 return;
             }
@@ -86,9 +115,12 @@ public:
         if (saved.pending_medical_item_id == 0) {
             if (saved.seconds_remaining != 0.0f) return false;
         } else {
+            float reading_seconds = 0.0f;
+            std::uint32_t reading_experience = 0;
             const float max_seconds =
-                saved.pending_medical_item_id == kOriginalNewspaperItemId
-                    ? kOriginalNewspaperSeconds
+                source_reading_rule(saved.pending_medical_item_id,
+                                    reading_seconds, reading_experience)
+                    ? reading_seconds
                     : medical_rule(saved.pending_medical_item_id)
                         ? static_cast<float>(
                             medical_rule(saved.pending_medical_item_id)->cooldown_seconds)

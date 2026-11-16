@@ -48,14 +48,16 @@ bool use_item_from_inventory(InventorySystem& inventory,
     if (!item || item->empty() || !player.state().alive) return false;
 
     if (delayed && delayed->busy()) return false;
-    // The original reading action explicitly consumes Newspapers (ID 49),
-    // waits 5 seconds, and then awards 50 experience points. Without a
-    // scheduler, do not consume it and silently discard the source XP.
-    if (!secondary && item->item_id == ItemUseRuntime::kOriginalNewspaperItemId) {
+    // Original Newspapers and Scout Handbook item-activate events consume
+    // one item, wait 5/10 seconds respectively and award 50/200 XP.
+    // Without a scheduler, don't consume an item and discard its source XP.
+    if (!secondary && (item->item_id == ItemUseRuntime::kOriginalNewspaperItemId ||
+                       item->item_id == ItemUseRuntime::kOriginalScoutHandbookItemId)) {
         if (!delayed) return false;
+        const auto item_id = item->item_id;
         const auto before = inventory.snapshot();
         if (!inventory.remove(inventory_slot, 1)) return false;
-        if (!delayed->begin_newspaper()) {
+        if (!delayed->begin_reading(item_id)) {
             (void)inventory.restore(before);
             return false;
         }
