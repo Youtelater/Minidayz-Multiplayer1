@@ -342,6 +342,10 @@ int main() {
     assert(wear_inventory.slot(0)->condition == 45);
     assert(wear_inventory.damage_condition(0, 0.25f));
     assert(std::fabs(wear_inventory.slot(0)->condition - 44.75f) < 0.0001f);
+    const auto fractional_snapshot = wear_inventory.snapshot();
+    InventorySystem fractional_restored;
+    assert(fractional_restored.restore(fractional_snapshot));
+    assert(std::fabs(fractional_restored.slot(0)->condition - 44.75f) < 0.0001f);
     GroundItem fractional_ground{};
     assert(wear_inventory.drop(0, 1, fractional_ground));
     assert(std::fabs(fractional_ground.condition - 44.75f) < 0.0001f);
