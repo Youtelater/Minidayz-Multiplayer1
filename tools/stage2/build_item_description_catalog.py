@@ -27,6 +27,41 @@ def main() -> None:
                 for row in ET.parse(ITEM_XML).getroot().findall("item")}
     if len(descriptions) != 528 or len(item_ids) != 405:
         raise SystemExit(f"Unexpected original source counts: {len(descriptions)} descriptions, {len(item_ids)} items")
+    # Description text IDs are NOT item IDs. For example the original
+    # comment "Improvised Bow" describes text ID 243 but item ID 163, and
+    # "Civilian Tent" describes text ID 307 but item ID 456. Bind entries
+    # only through matching source XML item-name annotations, never by
+    # assuming the two unrelated numeric ID namespaces coincide.
+    names_by_id = {int(row.findtext("id", "-1").strip()):
+                   (row.findtext("name") or "").strip()
+                   for row in ET.parse(ITEM_XML).getroot().findall("item")}
+    ids_by_name: dict[str, list[int]] = {}
+    for iid, label in names_by_id.items():
+        if label:
+            ids_by_name.setdefault(label, []).append(iid)
+    parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
+    annotated_xml = ET.parse(DESCRIPTION_XML, parser=parser).getroot()
+    annotated: dict[int, list[tuple[int, str]]] = {}
+    comment = ""
+    for child in annotated_xml:
+        if child.tag is ET.Comment:
+            comment = (child.text or "").strip()
+        elif child.tag == "text":
+            text_id = int(child.findtext("id", "-1").strip())
+            if comment in ids_by_name and text_id in descriptions:
+                for iid in ids_by_name[comment]:
+                    annotated.setdefault(iid, []).append((text_id, descriptions[text_id]))
+            comment = ""
+    verified = sorted((iid, rows[0][0], rows[0][1])
+                      for iid, rows in annotated.items()
+                      if len(rows) == 1)
+    ambiguous = sorted(iid for iid, rows in annotated.items() if len(rows) != 1)
+    if not verified or ambiguous:
+        if ambiguous:
+            print(f"Skipped ambiguous original annotation item IDs: {ambiguous}")
+        if not verified:
+            raise SystemExit("No unambiguous XML comment-to-name mappings found")
+
     missing = sorted(item_ids - descriptions.keys())
     extra = sorted(descriptions.keys() - item_ids)
     lines = [
@@ -38,11 +73,18 @@ def main() -> None:
     ]
     for item_id, description in sorted(descriptions.items()):
         lines.append("    {" + str(item_id) + ", " + json.dumps(description, ensure_ascii=False) + "},")
+    lines += ["};",
+              "struct VerifiedItemDescription { std::uint16_t item_id; std::uint16_t source_text_id; const char* description; };",
+              f"inline constexpr std::size_t kVerifiedItemDescriptionCount = {len(verified)};",
+              "inline constexpr VerifiedItemDescription kVerifiedItemDescriptions[] = {"]
+    for item_id, text_id, description in verified:
+        lines.append("    {" + str(item_id) + ", " + str(text_id) + ", " +
+                     json.dumps(description, ensure_ascii=False) + "},")
     lines += ["};", f"inline constexpr std::size_t kItemsWithoutSourceDescription = {len(missing)};",
               "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Generated {len(descriptions)} exact original item descriptions")
+    print(f"Generated {len(descriptions)} raw description rows, {len(verified)} verified item-name annotation mappings")
     print(f"Item IDs with no original description ({len(missing)}): {missing}")
     print(f"Description IDs not present in item-name catalog ({len(extra)}): {extra}")
 
