@@ -57,6 +57,30 @@ struct SavedGameV7 {
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
 };
 
+// V8 stored only Camel and Hamster, before the remaining source perk levels.
+// Keep the exact native C++ v8 field order and layout for backward loading.
+struct LegacyPerkSnapshotV8 {
+    std::uint32_t experience_points{};
+    std::uint32_t perk_cost{100};
+    std::uint16_t perks_learnt_count{};
+    std::uint8_t camel_level{};
+    std::uint8_t hamster_level{};
+};
+struct SavedGameV8 {
+    std::uint32_t magic{};
+    std::uint32_t version{};
+    std::uint32_t seed{};
+    minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
+    minidayz::items::GroundLootSnapshot ground_loot{};
+    minidayz::items::TentStorageSnapshot tents{};
+    minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
+    LegacyPerkSnapshotV8 perks{};
+};
+static_assert(sizeof(LegacyPerkSnapshotV8) == 12,
+              "v8 perk layout changed");
+
 // Version 6 introduced native persistent tents, before timed medical actions.
 struct SavedGameV6 {
     std::uint32_t magic{};
@@ -194,6 +218,24 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.tents = old.tents;
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks = {};
+        }
+    } else if (header_ok && candidate.version == 8u) {
+        SavedGameV8 old{};
+        body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
+                  std::fread(&old, sizeof(old), 1, file) == 1;
+        if (body_ok) {
+            candidate.seed = old.seed;
+            candidate.player = old.player;
+            candidate.inventory = old.inventory;
+            candidate.equipment = old.equipment;
+            candidate.ground_loot = old.ground_loot;
+            candidate.tents = old.tents;
+            candidate.pending_item_use = old.pending_item_use;
+            candidate.perks.experience_points = old.perks.experience_points;
+            candidate.perks.perk_cost = old.perks.perk_cost;
+            candidate.perks.perks_learnt_count = old.perks.perks_learnt_count;
+            candidate.perks.camel_level = old.perks.camel_level;
+            candidate.perks.hamster_level = old.perks.hamster_level;
         }
     } else if (header_ok && candidate.version == kSaveVersion) {
         // Read the actual on-disk struct, including compiler alignment.
