@@ -10,6 +10,7 @@
 #include "minidayz/crafting.hpp"
 #include "minidayz/tent_storage.hpp"
 #include "minidayz/save_game.hpp"
+#include "minidayz/item_description.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -203,6 +204,10 @@ public:
         // Source-backed item operations are accessible without physical
         // buttons. This narrow action strip stays on the lower touchscreen.
         if (!crafting_open_ && !storage_open_ && touch_pressed &&
+            input.touch.py >= 25 && input.touch.py < 38) {
+            details_open_ = !details_open_;
+        }
+        if (!crafting_open_ && !storage_open_ && touch_pressed &&
             input.touch.py >= 81 && input.touch.py < 92) {
             const int action = input.touch.px / 80;
             if (action == 3) {
@@ -230,7 +235,7 @@ public:
                 }
             }
         }
-        if (!crafting_open_ && !storage_open_ && touch_pressed) {
+        if (!crafting_open_ && !storage_open_ && !details_open_ && touch_pressed) {
             tap_was_selected_ = false;
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
@@ -282,7 +287,7 @@ public:
                 }
             }
         }
-        if (!crafting_open_ && !storage_open_ && input.touching && drag_source_slot_ >= 0) {
+        if (!crafting_open_ && !storage_open_ && !details_open_ && input.touching && drag_source_slot_ >= 0) {
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
             if (equipment_target >= 0 && equipment_target < 6) {
                 drag_target_equipment_slot_ = equipment_target;
@@ -294,7 +299,7 @@ public:
                 if (target >= 0) drag_target_slot_ = target;
             }
         }
-        if (!crafting_open_ && !storage_open_ && touch_released) {
+        if (!crafting_open_ && !storage_open_ && !details_open_ && touch_released) {
             if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
                 // Dragging an original repair material onto the backpack slot
@@ -572,6 +577,61 @@ public:
             renderer.draw_text("NEXT >", 262.0f, 226.0f, 0.25f);
             return;
         }
+        if (details_open_) {
+            renderer.draw_solid_rect(8.0f, 94.0f, 304.0f, 126.0f,
+                                     C2D_Color32(24, 37, 28, 255));
+            const auto* selected = selected_inventory_slot_ >= 0
+                ? inventory_.slot(static_cast<std::size_t>(selected_inventory_slot_))
+                : nullptr;
+            if (selected && !selected->empty()) {
+                const char* description =
+                    minidayz::items::source_item_description(selected->item_id);
+                char heading[80]{};
+                std::snprintf(heading, sizeof(heading), "ITEM %u  x%u  CONDITION %u%%",
+                    static_cast<unsigned>(selected->item_id),
+                    static_cast<unsigned>(selected->count),
+                    static_cast<unsigned>(selected->condition));
+                renderer.draw_text(heading, 16.0f, 101.0f, 0.27f);
+                if (description && *description) {
+                    // Simple bounded word-wrapping for the original XML text.
+                    // Do not substitute guessed descriptions for missing rows.
+                    const char* pos = description;
+                    for (int line = 0; line < 6 && *pos; ++line) {
+                        char buffer[58]{};
+                        std::size_t length = 0;
+                        const char* next = pos;
+                        const char* split = nullptr;
+                        while (*next && *next != '\n' && length < 50) {
+                            if (*next == ' ') split = next;
+                            ++next; ++length;
+                        }
+                        if (*next && *next != '\n' && length == 50 && split) {
+                            length = static_cast<std::size_t>(split - pos);
+                            next = split;
+                        }
+                        std::memcpy(buffer, pos, length);
+                        buffer[length] = '\0';
+                        renderer.draw_text(buffer, 16.0f,
+                            125.0f + static_cast<float>(line) * 14.0f, 0.24f);
+                        pos = next;
+                        while (*pos == ' ' || *pos == '\n') ++pos;
+                    }
+                } else {
+                    renderer.draw_text("NO ORIGINAL DESCRIPTION IN ROOT XML",
+                                       16.0f, 134.0f, 0.23f);
+                }
+            } else {
+                renderer.draw_text("SELECT AN ITEM, THEN OPEN DETAILS",
+                                   16.0f, 130.0f, 0.26f);
+            }
+            renderer.draw_text("TAP ITEM NAME ABOVE TO CLOSE",
+                               14.0f, 205.0f, 0.20f);
+            renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
+                                     C2D_Color32(54, 68, 55, 255));
+            renderer.draw_text("ORIGINAL ITEM DESCRIPTION", 35.0f, 226.0f, 0.24f);
+            renderer.draw_text("CRAFT", 132.0f, 226.0f, 0.29f);
+            return;
+        }
         // 5 x 3 backpack page, sized for the 320 x 240 touch screen.
         const int page_start = static_cast<int>(inventory_page_ * kInventoryPageSize);
         for (int row = 0; row < 3; ++row) {
@@ -812,6 +872,7 @@ private:
         crafting_page_ = 0;
         storage_open_ = false;
         crafting_open_ = false;
+        details_open_ = false;
         tap_was_selected_ = false;
         selected_inventory_slot_ = -1;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
@@ -892,6 +953,7 @@ private:
     bool tap_was_selected_{};
     bool crafting_open_{};
     bool storage_open_{};
+    bool details_open_{};
 };
 
 } // namespace
