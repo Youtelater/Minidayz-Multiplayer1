@@ -70,7 +70,7 @@ def main():
     perk_source_names = (
         "perk_header", "perk_spotter", "perk_runner", "perk_camel",
         "perk_hamster", "perk_snowborn", "perk_farmer", "perk_regen",
-        "perk_hunter", "perk_meleeatk", "perk_meleedef", "perk_trunkster",
+        "perk_meleedef", "perk_meleeatk", "perk_trunkster", "perk_hunter",
         "perk_sweethome", "perk_metabolism", "perk_eye", "perk_agronom",
     )
     purchase_rows = []
@@ -86,6 +86,9 @@ def main():
                     args[0][0]==11 and args[0][1] in perk_source_names):
                     bought.add(args[0][1])
         print("ORIGINAL PERK SLOT", index, "written perks", sorted(bought))
+        if sorted(bought) != [perk_source_names[index]]:
+            raise SystemExit(
+                f"Source perk menu index {index} changed: {sorted(bought)}")
         purchase_rows.append(sorted(bought))
     if len(purchase_rows)!=16:
         raise SystemExit("Original sixteen purchase click handlers missing")
