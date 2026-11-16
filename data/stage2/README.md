@@ -14,7 +14,7 @@ Stage 2 ports the original Mini DAYZ 1.6.0 item, inventory, backpack, equipment,
 - Unequipping is allowed only when all 11 backpack storage slots are empty. Capacity cannot be manually increased or reduced independently of the equipped source backpack.
 - Backpack condition is preserved through equipment swaps and inventory snapshots. Restore now **losslessly migrates** old +11-slot saves to the correct source-defined capacity: overflow stacks are merged into matching surviving stacks or moved into free surviving slots, preserving item condition. If nothing fits, restore fails atomically instead of deleting items.
 - Ground pickup/drop and inventory moves preserve item condition; stacks with different conditions do not merge.
-- Forty direct literal stat-effect rows are extracted from original `item_activate` and `item_activate2` events and applied by the item-use runtime. The original `perk_hamster` (+10 hunger) and `perk_camel` (+10 thirst) conditional branches are represented by explicit `ItemUsePerks` flags; the missing perk-progression/runtime state must supply those flags before those bonuses can activate in gameplay.
+- Forty direct literal stat-effect rows are extracted from original `item_activate` and `item_activate2` events and applied by the item-use runtime. Original `perk_hamster` (+10 hunger) and `perk_camel` (+10 thirst) conditional bonuses are now connected to a persistent two-level perk system, with bonuses activating only at source level 2.
 - Sixty-three original equipment property rows provide clothing warmth and flat armor protection; 168 item IDs have source-map condition defaults.
 - Original repair menu actions are extracted and implemented: duct tape (+15) and epoxy glue (+25) for pants, outerwear, vest and backpack; sewing kit repairs for helmet (+50), light helmet (+25), pants (+50), and outerwear (+50). Repairs consume one matching material, require condition between 1 and 99, and clamp at 100.
 - Armor protection is summed from the original flat equipment values. The player damage API applies the original flat subtraction; item condition does not scale armor or warmth.
@@ -48,21 +48,20 @@ Wooden Sticks**, and **Woodpiles + Newspapers** as three tinder alternatives
 for a Campfire Kit. The source `Craft_3` calls
 `Check_space_inventory(-1, 23)` rather than `Spawn_drop`, so all three
 transactions now put the resulting item into inventory, with atomic rollback.
-Other original crafting functions still require event-level translation,
-including the variable-yield arrow crafting and placeable structures.
+The original `Craft_21` and `Craft_22` each create Crafted Arrow item 51 in inventory; the three root original knives (Hunting, Army and Butcher) remain reusable crafting tools. Three distinct arrow transactions use the same original `Wooden sticks + any knife = arrows` guide. Other crafting functions, especially building mode and placeable structures, still need exact translation.
 
 ## Source-verified tent storage (native integration)
 
 - The original root `l_eng_items.xml` identifies item **456** as **Civilian Tent**. The original root `l_eng_ui.xml` states that civilian tents can be deployed and that items stored there persist permanently. `tools/stage2/validate_tent_storage_source.py` verifies both source facts.
 - `TentStorageSystem` deploys one actual tent item, preserves its condition, transfers item stacks atomically while preserving their condition, and rejects corrupt save snapshots.
-- The bottom 3DS touchscreen cycles **Backpack → Crafting → Tent Storage → Backpack**. In storage mode, tap the left pane to store an inventory stack and the right pane to retrieve it; tap the header of either pane to page. The top screen continues to render the world and deployed tents.
-- Save version **6** persists deployed tent locations and contents and migrates version 5 saves by reading the original complete C++ struct (including alignment padding).
+- The bottom 3DS touchscreen cycles **Backpack → Crafting → Tent Storage → Perks → Backpack**. In storage mode, tap the left pane to store an inventory stack and the right pane to retrieve it; tap the header of either pane to page. The top screen continues to render the world and deployed tents.
+- Current save version **8** persists player, inventory, equipment, dropped items, deployed tent positions and contents, in-flight original medical/reading actions, and native Camel/Hamster experience and levels. Old v1-v7 save files are validated and migrated without losing existing items or tent contents.
 - **Scope limit:** 8 deployed tents and 32 stored stacks per tent are *native memory-safety limits*, not extracted original gameplay capacities. The exact original tent capacity, placement restrictions, and interaction range still require a verified Construct event translation.
 
 ## Original crafting source audit
 
 - The root Construct export contains **19** distinct `Craft_*` functions. `tools/stage2/audit_crafting_source.py` now exports their exact source UIDs, nested condition/action expressions, and called functions to a CI artifact named `original-crafting-source`.
-- **Six** source-validated crafting transactions are implemented: `Craft_1` (Improvised Sling Bag), `Craft_4` (Improvised Backpack), `Craft_5` (Improvised Bow), and three tinder alternatives for `Craft_3` (Campfire Kit). `Craft_3` calls `Check_space_inventory(-1, 23)`, unlike the three ground-spawn recipes. Other original crafting functions have different item/stack and world-placement semantics and are not yet translated.
+- **Nine** source-validated crafting transactions are implemented: `Craft_1` (Improvised Sling Bag), `Craft_4` (Improvised Backpack), `Craft_5` (Improvised Bow), and three tinder alternatives for `Craft_3` (Campfire Kit). `Craft_3` calls `Check_space_inventory(-1, 23)`, unlike the three ground-spawn recipes. Another three transactions come from `Craft_21`/`Craft_22`, turning a wooden stick into one crafted arrow using one reusable original knife. Other original crafting functions have different item/stack and world-placement semantics and are not yet translated.
 - The bottom touchscreen crafting panel now pages three recipes at a time; adding verified source recipes does not require shrinking the screen layout.
 
 ## Original backpack description mismatch
@@ -78,13 +77,20 @@ silently added as general-purpose slots. Fuel Pack describes a fuel reservoir,
 not item storage; it equips with no extra inventory slots. This conflict and those equipment restrictions remain
 explicit until the corresponding original Construct equip events are ported.
 
+## Original perk progression and timed experience
+
+- Original `Game_events` defaults `perk_cost=100`, `expierence_points=0`, `perks_learnt_count=0`. Original purchase event UID `454712397231976` raises the next cost by `100 + 20 * perks_learnt_count`. XP is **cumulative**, not spent on purchase: the source `Perks and stats menu` writes no deduction to `expierence_points` when perks are acquired.
+- `SourcePerkSystem` implements source purchase levels 0 → 1 → 2 for Camel and Hamster, validates purchase thresholds and restored states, and supplies item-use bonuses only at level 2. The bottom touchscreen offers a separate Perks panel and persists this state across save/continue.
+- Original `item_activate` event UID `422420671955084` consumes Newspapers (49), waits 5 seconds and awards 50 XP. Original UID `853523169384096` consumes Scout Handbook (116), waits 10 seconds and awards 200 XP. Both now have source-verified asynchronous in-game item actions, and their pending awards survive saves without loss.
+- Other perks, additional source event XP awards, and complete world combat/quest XP triggers remain open. No guessed passive XP or random kill XP is awarded.
+
 ## Remaining Stage 2 work
 
 - Port the original item-condition wear/loss events and connect them to the correct gameplay actions. Do not infer wear from damage or item names.
 - Connect the existing armor-aware player damage API to the original NPC/combat hit path. NPC spawn, movement and chase are implemented, but the complete source combat/attack path is not.
 - Connect the existing clothing warmth expression to the original weather/temperature update, including the separate `Day_cold` contribution. Do not substitute an invented weather formula.
 - Finish original loot spawning and remaining item-specific secondary actions from the exported Construct traces.
-- Complete perk progression and connect its evaluated source flags to item use.
+- Add the remaining original perk effects and connect their exact XP award triggers; Camel/Hamster leveling and item bonuses are now in runtime.
 - Validate per-item backpack and satchel descriptions against the original Construct equip conditions. Source-documented capacity values are now applied; simultaneous satchel/backpack equipment and exclusive item filters remain incomplete.
 - Extract original tent capacity, placement restrictions, and interaction radius; current native storage bounds and interaction distance are technical defaults, not claims of source fidelity.
 - Finish the full source inventory/equipment UI and end-to-end save/load testing on the 3DS runtime.
