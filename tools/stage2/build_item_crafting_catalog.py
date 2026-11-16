@@ -164,7 +164,7 @@ def main() -> None:
     if sorted(source_knife_names) != sorted(knives):
         raise SystemExit(f"Original knife choices changed: {source_knife_names}")
     arrow_guide = [line for line in tutorial if re.fullmatch(
-        r"Wooden sticks\\s*\\+\\s*any knife\\s*=\\s*arrows",
+        r"Wooden sticks\s*\+\s*any knife\s*=\s*arrows",
         line, re.IGNORECASE)]
     if len(arrow_guide) != 1:
         raise SystemExit("Original root arrow recipe guide changed")
