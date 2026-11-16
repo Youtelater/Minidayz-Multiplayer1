@@ -22,9 +22,14 @@ bool correct_source_cost(const SourcePerkSnapshot& state) noexcept {
 }
 
 bool SourcePerkSystem::restore(const SourcePerkSnapshot& candidate) noexcept {
+    unsigned total = static_cast<unsigned>(candidate.camel_level) +
+                     candidate.hamster_level;
+    for (const auto other_level : candidate.other_levels) {
+        if (other_level > 2) return false;
+        total += other_level;
+    }
     if (candidate.camel_level > 2 || candidate.hamster_level > 2 ||
-        candidate.perks_learnt_count !=
-            static_cast<unsigned>(candidate.camel_level) + candidate.hamster_level ||
+        candidate.perks_learnt_count != total ||
         !correct_source_cost(candidate))
         return false;
     state_ = candidate;
@@ -44,13 +49,16 @@ std::uint8_t SourcePerkSystem::level(SourcePerk perk) const noexcept {
     switch (perk) {
     case SourcePerk::camel: return state_.camel_level;
     case SourcePerk::hamster: return state_.hamster_level;
+    default:
+        const auto index = static_cast<std::size_t>(perk);
+        return index >= 2 && index < kOriginalPerkCount
+            ? state_.other_levels[index - 2] : 0;
     }
-    return 0;
 }
 
 bool SourcePerkSystem::can_buy(SourcePerk perk) const noexcept {
     return level(perk) < 2 && state_.experience_points >= state_.perk_cost &&
-        state_.perks_learnt_count < 4;
+        state_.perks_learnt_count < 2 * kOriginalPerkCount;
 }
 
 bool SourcePerkSystem::buy(SourcePerk perk) noexcept {
@@ -59,7 +67,12 @@ bool SourcePerkSystem::buy(SourcePerk perk) noexcept {
     switch (perk) {
     case SourcePerk::camel: ++next.camel_level; break;
     case SourcePerk::hamster: ++next.hamster_level; break;
-    default: return false;
+    default: {
+        const auto index = static_cast<std::size_t>(perk);
+        if (index < 2 || index >= kOriginalPerkCount) return false;
+        ++next.other_levels[index - 2];
+        break;
+    }
     }
     // The original Perks and stats menu tests cumulative experience against
     // perk_cost. It raises perk_cost on purchase but does not subtract XP.
