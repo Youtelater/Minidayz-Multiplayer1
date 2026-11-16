@@ -405,6 +405,7 @@ public:
             }
         }
         if (!crafting_open_ && !storage_open_ && touch_pressed) {
+            tap_was_selected_ = false;
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
             drag_target_equipment_slot_ = -1;
@@ -445,6 +446,8 @@ public:
                                                    inventory_page_);
                 if (slot >= 0) {
                     const auto* item = inventory_.slot(static_cast<std::size_t>(slot));
+                    tap_was_selected_ = item && !item->empty() &&
+                        selected_inventory_slot_ == slot;
                     selected_inventory_slot_ = item && !item->empty() ? slot : -1;
                     if (selected_inventory_slot_ >= 0) {
                         drag_source_slot_ = slot;
@@ -517,7 +520,25 @@ public:
                 if (inventory_.move(static_cast<std::size_t>(drag_source_slot_),
                                     static_cast<std::size_t>(drag_target_slot_)))
                     selected_inventory_slot_ = drag_target_slot_;
+            } else if (drag_source_slot_ >= 0 &&
+                       drag_target_slot_ == drag_source_slot_ &&
+                       tap_was_selected_) {
+                // Touch activates the already-selected original primary Use
+                // effect, or deploys the original civilian tent.
+                const auto source = static_cast<std::size_t>(drag_source_slot_);
+                const auto* item = inventory_.slot(source);
+                if (item && !item->empty()) {
+                    if (item->item_id == minidayz::items::kOriginalCivilianTentItemId)
+                        (void)tents_.deploy_from_inventory(
+                            inventory_, source, player_.state().x, player_.state().y);
+                    else
+                        (void)minidayz::items::use_item_from_inventory(
+                            inventory_, source, player_, preview_rules_);
+                    item = inventory_.slot(source);
+                    if (!item || item->empty()) selected_inventory_slot_ = -1;
+                }
             }
+            tap_was_selected_ = false;
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
             drag_target_equipment_slot_ = -1;
@@ -747,7 +768,7 @@ public:
             static_cast<unsigned>(page_count));
         renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                  C2D_Color32(54, 68, 55, 255));
-        renderer.draw_text("A USE X ALT L DROP R PICK", 14.0f, 226.0f, 0.18f);
+        renderer.draw_text("TAP TWICE USE / X ALT", 14.0f, 226.0f, 0.18f);
         renderer.draw_text("CRAFT", 132.0f, 226.0f, 0.30f);
         renderer.draw_text(page_label, 213.0f, 226.0f, 0.23f);
     }
@@ -947,6 +968,7 @@ private:
         crafting_page_ = 0;
         storage_open_ = false;
         crafting_open_ = false;
+        tap_was_selected_ = false;
         selected_inventory_slot_ = -1;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
         npc_ready_ = world_ready_ && npcs_.initialize(world_);
@@ -1023,6 +1045,7 @@ private:
     std::size_t storage_page_{};
     std::size_t crafting_page_{};
     bool touch_down_{};
+    bool tap_was_selected_{};
     bool crafting_open_{};
     bool storage_open_{};
 };
