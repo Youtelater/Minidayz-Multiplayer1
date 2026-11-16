@@ -119,6 +119,15 @@ jobs:
           name: original-backpack-stash-actions
           path: data/stage2/backpack_and_stash_actions.json
 
+      - name: Trace exact original item-condition wear guards
+        run: python3 tools/stage2/audit_source_wear.py
+
+      - name: Upload original item wear action tree
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-stage2-item-wear
+          path: data/stage2/original_item_wear_actions.json
+
       - name: Compile Original Loot Choice Catalog Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
