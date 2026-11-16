@@ -79,6 +79,15 @@ jobs:
           python3 tools/stage2/build_backpack_capacity_catalog.py
           python3 tools/stage2/build_item_crafting_catalog.py
 
+      - name: Audit all original crafting functions
+        run: python3 tools/stage2/audit_crafting_source.py
+
+      - name: Upload original crafting action trace
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-crafting-source
+          path: data/stage2/craft_source_audit.json
+
       - name: Compile Item and Inventory Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
