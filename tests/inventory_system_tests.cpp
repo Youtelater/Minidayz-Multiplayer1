@@ -195,6 +195,7 @@ int main() {
     assert(is_backpack_item(754));
     assert(!is_backpack_item(456)); // Civilian Tent
     assert(!is_backpack_item(461)); // Supplies Stash
+    assert(!is_backpack_item(462)); // Fuel Pack is a fuel reservoir, not storage
     assert(!is_backpack_item(1));
     // The original Items_update function exposes Backpack storage slots 1-11.
     assert(source_backpack_capacity(450) == 20);
@@ -232,7 +233,7 @@ int main() {
     assert(backpack.equip_backpack_from_slot(1));
     assert(backpack.slot(1)->empty());
     assert(backpack.equipped_backpack() == 450);
-    assert(backpack.capacity() == 26);
+    assert(backpack.capacity() == 20);
     assert(!backpack.unequip_backpack_to_slot(0)); // target occupied
 
     // A backpack is one equipment instance, never a multi-count stack.
@@ -247,7 +248,7 @@ int main() {
     assert(backpack.add(451, 1));
     assert(backpack.equip_backpack_from_slot(1));
     assert(backpack.equipped_backpack() == 451);
-    assert(backpack.capacity() == 26);
+    assert(backpack.capacity() == 22);
     assert(backpack.slot(1)->item_id == 450);
     assert(backpack.slot(1)->count == 1);
 
@@ -301,7 +302,7 @@ int main() {
     assert(replacement.add(451, 1, 0, 65));
     assert(replacement.slot(16)->item_id == 451);
     assert(replacement.equip_backpack_from_slot(16));
-    assert(replacement.capacity() == 26);
+    assert(replacement.capacity() == 22);
     assert(replacement.equipped_backpack() == 451);
     assert(replacement.equipped_backpack_condition() == 65);
     assert(replacement.slot(16)->item_id == 450);
@@ -313,18 +314,18 @@ int main() {
     // the incoming backpack's vacated slot. This is an important no-free-slot
     // atomic replacement edge case.
     InventorySystem full_replacement;
-    assert(full_replacement.add(450, 1, 0, 55));
+    assert(full_replacement.add(452, 1, 0, 55));
     assert(full_replacement.equip_backpack_from_slot(0));
     for (std::uint16_t id = 1; id <= 25; ++id)
         assert(full_replacement.add(id, 1));
     assert(full_replacement.occupied_slots() == 25);
-    assert(full_replacement.add(451, 1, 0, 65));
-    assert(full_replacement.slot(25)->item_id == 451);
+    assert(full_replacement.add(452, 1, 0, 65));
+    assert(full_replacement.slot(25)->item_id == 452);
     assert(full_replacement.occupied_slots() == 26);
     assert(full_replacement.equip_backpack_from_slot(25));
-    assert(full_replacement.equipped_backpack() == 451);
+    assert(full_replacement.equipped_backpack() == 452);
     assert(full_replacement.equipped_backpack_condition() == 65);
-    assert(full_replacement.slot(25)->item_id == 450);
+    assert(full_replacement.slot(25)->item_id == 452);
     assert(full_replacement.slot(25)->condition == 55);
     assert(full_replacement.occupied_slots() == 26);
 
@@ -336,13 +337,13 @@ int main() {
     const auto saved_inventory = persisted.snapshot();
     InventorySystem restored;
     assert(restored.restore(saved_inventory));
-    assert(restored.capacity() == 26);
+    assert(restored.capacity() == 20);
     assert(restored.equipped_backpack() == 450);
     assert(restored.count(18) == 2);
     auto corrupt_snapshot = saved_inventory;
     corrupt_snapshot.slots[26] = {1, 1};
     assert(!restored.restore(corrupt_snapshot));
-    assert(restored.capacity() == 26);
+    assert(restored.capacity() == 20);
     corrupt_snapshot = saved_inventory;
     corrupt_snapshot.slots[0] = {9999, 1};
     assert(!restored.restore(corrupt_snapshot));
@@ -350,15 +351,15 @@ int main() {
     corrupt_snapshot.slots[0].count =
         static_cast<std::uint16_t>(source_max_stack(18) + 1);
     assert(!restored.restore(corrupt_snapshot));
-    assert(restored.capacity() == 26);
+    assert(restored.capacity() == 20);
     assert(restored.count(18) == 2);
 
     // Legacy guessed capacities migrate to the exact source-defined backpack grid.
     auto legacy_pack_save = saved_inventory;
-    legacy_pack_save.capacity = 20;
+    legacy_pack_save.capacity = 26;
     InventorySystem migrated_pack;
     assert(migrated_pack.restore(legacy_pack_save));
-    assert(migrated_pack.capacity() == 26);
+    assert(migrated_pack.capacity() == 20);
     legacy_pack_save.slots[20] = {1, 1}; // hidden outside the legacy saved capacity
     assert(!migrated_pack.restore(legacy_pack_save));
 
@@ -403,7 +404,7 @@ int main() {
     assert(no_room.slot(0)->item_id == 1);
 
     // Capacity cannot be fabricated by a caller: only equipping an
-    // original wearable backpack grants the source-defined 11 extra slots.
+    // original wearable backpack grants its source-defined extra slots.
     InventorySystem expanded;
     assert(!expanded.set_capacity(20));
     assert(expanded.capacity() == kInventorySlotCount);
@@ -417,8 +418,8 @@ int main() {
     assert(expanded.add(450, 1));
     assert(expanded.equip_backpack_from_slot(0));
     assert(!expanded.set_capacity(kInventorySlotCount));
-    assert(!expanded.set_capacity(20));
-    assert(expanded.capacity() == 26);
+    assert(expanded.set_capacity(20));
+    assert(expanded.capacity() == 20);
 
     // Exact-slot placement is used when returning equipment to the backpack.
     InventorySystem exact_slot;
