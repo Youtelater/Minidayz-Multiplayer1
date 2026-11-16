@@ -91,7 +91,7 @@ jobs:
       - name: Compile Source Crafting Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
-            source/inventory.cpp source/crafting.cpp tests/crafting_system_tests.cpp \
+            source/inventory.cpp source/ground_loot.cpp source/crafting.cpp tests/crafting_system_tests.cpp \
             -o crafting_system_tests
 
       - name: Run Source Crafting Regression Tests
