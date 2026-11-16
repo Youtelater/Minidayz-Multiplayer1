@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 ITEMS = ROOT / "l_eng_items.xml"
 UI = ROOT / "l_eng_ui.xml"
+PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_crafting_catalog.hpp"
 
 # The root tutorial states each recipe explicitly. The last recipe explicitly
@@ -30,7 +31,7 @@ RECIPES = (
 
 
 def main() -> None:
-    for path in (ITEMS, UI):
+    for path in (ITEMS, UI, PROJECT):
         if not path.is_file():
             raise SystemExit(f"Missing root-level Mini DAYZ file: {path}")
     item_names: dict[str, list[int]] = {}
@@ -47,6 +48,65 @@ def main() -> None:
             raise SystemExit(f"Ambiguous/missing original item name {label!r}: {ids}")
         return ids[0]
 
+    # Verify actual result creation against the original Construct event
+    # groups. Craft_5 (bow), Craft_1 (bag), and Craft_4 (backpack) each call
+    # Spawn_drop(result_id, player_x, player_y, ...). The results are spawned
+    # on the ground, NOT silently inserted directly into inventory.
+    text = PROJECT.read_text(encoding="utf-8-sig")
+    text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", text)
+    project = json.loads(text)
+    source_event_uids = {
+        "Improvised Bow": (4860170170632921, "Craft_5"),
+        "Improvised Sling Bag": (3394606754986424, "Craft_1"),
+        "Improvised Backpack": (9521528803584300, "Craft_4"),
+    }
+
+    def child_events(events):
+        for event in events if isinstance(events, list) else ():
+            if not isinstance(event, list) or len(event) < 8 or event[0] != 0:
+                continue
+            yield event
+            yield from child_events(event[7])
+
+    source_events = {}
+    for sheet in project["project"][6]:
+        if not isinstance(sheet, list) or len(sheet) < 2:
+            continue
+        for event in child_events(sheet[1]):
+            uid = event[4]
+            if uid in (pair[0] for pair in source_event_uids.values()):
+                if uid in source_events:
+                    raise SystemExit(f"Duplicate Construct crafting event UID {uid}")
+                source_events[uid] = event
+
+    def assert_original_ground_output(result_name, result_id):
+        uid, function = source_event_uids[result_name]
+        event = source_events.get(uid)
+        if event is None:
+            raise SystemExit(f"Missing original Construct craft function {function}")
+        if not any(condition[0:2] == [292, 71] and
+                   [10, 0] in condition[9] and
+                   [7, [2, function]] in condition[9]
+                   for condition in event[5]):
+            raise SystemExit(f"Changed Craft function signature: {function}")
+        output_ids = []
+        for nested in child_events([event]):
+            for action in nested[6] if isinstance(nested[6], list) else []:
+                if not isinstance(action, list) or len(action) < 6:
+                    continue
+                if (action[0:2] == [189, 69] and
+                    len(action[5]) >= 2 and
+                    action[5][0] == [1, [2, "Spawn_drop"]]):
+                    args = action[5][1]
+                    if (isinstance(args, list) and len(args) >= 2 and
+                        args[0] == 13 and args[1][0] == 7 and
+                        args[1][1][0] == 0):
+                        output_ids.append(args[1][1][1])
+        if output_ids != [result_id]:
+            raise SystemExit(
+                f"Original {function} ground outputs {output_ids}, "
+                f"not expected item {result_id}")
+
     rows = []
     for result_name, ingredients, pattern in RECIPES:
         source_text = [phrase for phrase in tutorial
@@ -54,6 +114,7 @@ def main() -> None:
         if len(source_text) != 1:
             raise SystemExit(f"Original root recipe missing/ambiguous: {result_name}")
         result_id = resolve(result_name)
+        assert_original_ground_output(result_name, result_id)
         parts = [(resolve(label), count) for label, count in ingredients]
         if result_id in [id for id, _ in parts]:
             raise SystemExit(f"Self-consuming recipe: {result_name}")
@@ -83,7 +144,7 @@ def main() -> None:
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Generated {len(rows)} recipes from original root Mini DAYZ tutorial")
+    print(f"Generated {len(rows)} recipes with validated original Spawn_drop outputs")
 
 
 if __name__ == "__main__":
