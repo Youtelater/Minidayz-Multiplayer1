@@ -124,8 +124,10 @@ def main() -> None:
         entry = (int(slot_match.group(1)),
                  int(exclusive_match.group(1)) if exclusive_match else 0)
         source_descriptions.setdefault(label, set()).add(entry)
+    # Fuel Pack (462) has fuel capacity but no item-storage slots in the
+    # original description. Do not invent eleven backpack inventory slots.
     backpack_ids = (450, 451, 452, 453, 454, 455, 457, 458, 459, 460,
-                    462, 752, 753, 754)
+                    752, 753, 754)
     original_by_id = {int(item.findtext("id")):
                       (item.findtext("name") or "").strip()
                       for item in ET.parse(ITEMS).getroot().findall("item")}

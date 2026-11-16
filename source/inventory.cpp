@@ -100,7 +100,7 @@ bool is_backpack_item(std::uint16_t item_id) noexcept {
     // Civilian Tent (456) and Supplies Stash (461) are not wearable packs.
     switch (item_id) {
         case 450: case 451: case 452: case 453: case 454: case 455:
-        case 457: case 458: case 459: case 460: case 462:
+        case 457: case 458: case 459: case 460:
         case 752: case 753: case 754:
             return true;
         default:
@@ -109,19 +109,25 @@ bool is_backpack_item(std::uint16_t item_id) noexcept {
 }
 
 std::size_t source_backpack_capacity(std::uint16_t item_id) noexcept {
-    if (!is_backpack_item(item_id)) return 0;
-    // The original root l_eng_ui.xml specifies 3 extra inventory slots for
-    // the improvised bag and 5 for the improvised backpack. Items_update has
-    // eleven grid positions, not eleven slots granted by every item.
-    if (item_id == kSourceImprovisedSlingBagItemId)
-        return kInventorySlotCount + kSourceImprovisedSlingBagSlots;
-    if (item_id == kSourceImprovisedBackpackItemId)
-        return kInventorySlotCount + kSourceImprovisedBackpackSlots;
-    // Other source wearables currently use the verified maximum grid extent;
-    // their individual equip rules remain to be extracted.
-    return kInventorySlotCount + kSourceBackpackStorageSlotCount;
+    // Root l_eng_new.xml lists exact backpack storage sizes in a separate
+    // description ID space. The generated catalog matches source item names
+    // and preserves the original tutorial's +3/+5 improvised bag values.
+    // Satchel-only exclusive slots are tracked but not counted as unrestricted
+    // backpack slots until their original item-filter rules are implemented.
+    std::size_t first = 0;
+    std::size_t last = kSourceBackpackCapacityRowCount;
+    while (first < last) {
+        const auto mid = first + (last - first) / 2;
+        if (kSourceBackpackCapacityRows[mid].item_id < item_id)
+            first = mid + 1;
+        else
+            last = mid;
+    }
+    if (first == kSourceBackpackCapacityRowCount ||
+        kSourceBackpackCapacityRows[first].item_id != item_id)
+        return 0;
+    return kInventorySlotCount + kSourceBackpackCapacityRows[first].extra_slots;
 }
-
 
 std::uint16_t source_max_stack(std::uint16_t item_id) noexcept {
     // The item-ID groups and baseline limits are taken from the original

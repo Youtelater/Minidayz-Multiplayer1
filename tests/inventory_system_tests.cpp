@@ -197,20 +197,20 @@ int main() {
     assert(!is_backpack_item(461)); // Supplies Stash
     assert(!is_backpack_item(1));
     // The original Items_update function exposes Backpack storage slots 1-11.
-    assert(source_backpack_capacity(450) == 26);
-    assert(source_backpack_capacity(451) == 26);
+    assert(source_backpack_capacity(450) == 20);
+    assert(source_backpack_capacity(451) == 22);
     assert(source_backpack_capacity(452) == 26);
-    assert(source_backpack_capacity(453) == 26);
+    assert(source_backpack_capacity(453) == 18);
     assert(source_backpack_capacity(454) == 18); // 3 original improvised bag slots
     assert(source_backpack_capacity(455) == 20); // 5 original improved bag slots
-    assert(source_backpack_capacity(457) == 26);
-    assert(source_backpack_capacity(458) == 26);
-    assert(source_backpack_capacity(459) == 26);
-    assert(source_backpack_capacity(460) == 26);
-    assert(source_backpack_capacity(462) == 26);
-    assert(source_backpack_capacity(752) == 26);
-    assert(source_backpack_capacity(753) == 26);
-    assert(source_backpack_capacity(754) == 26);
+    assert(source_backpack_capacity(457) == 24);
+    assert(source_backpack_capacity(458) == 17);
+    assert(source_backpack_capacity(459) == 16);
+    assert(source_backpack_capacity(460) == 16);
+    assert(source_backpack_capacity(462) == 0);
+    assert(source_backpack_capacity(752) == 17);
+    assert(source_backpack_capacity(753) == 16);
+    assert(source_backpack_capacity(754) == 16);
     assert(source_backpack_capacity(456) == 0);
     assert(source_backpack_capacity(461) == 0);
     assert(source_backpack_capacity(1) == 0);
