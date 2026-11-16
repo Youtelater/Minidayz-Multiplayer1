@@ -10,6 +10,7 @@
 #include "minidayz/crafting.hpp"
 #include "minidayz/tent_storage.hpp"
 #include "minidayz/save_game.hpp"
+#include "minidayz/perks.hpp"
 #include "minidayz/item_description.hpp"
 #include "minidayz/weather_source.hpp"
 #include "minidayz/generated/item_catalog.hpp"
@@ -56,6 +57,7 @@ public:
             tents_.clear();
         if (restored && !item_use_runtime_.restore(restored->pending_item_use))
             item_use_runtime_.clear();
+        if (restored && !perks_.restore(restored->perks)) perks_.clear();
         // Preview-only movement tuning. Source-equivalent values still need
         // to be supplied by the gameplay rules port.
         // Temporary preview movement tuning only. Original source movement
@@ -75,7 +77,7 @@ public:
 
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_);
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
@@ -109,7 +111,7 @@ public:
             } else {
                 (void)minidayz::items::use_item_from_inventory(
                     inventory_, selected_index, player_, preview_rules_,
-                    (input.pressed & KEY_X) != 0, {}, &item_use_runtime_);
+                    (input.pressed & KEY_X) != 0, perks_.item_use_flags(), &item_use_runtime_);
             }
             const auto* selected = inventory_.slot(
                 static_cast<std::size_t>(selected_inventory_slot_));
@@ -137,18 +139,21 @@ public:
         const bool touch_pressed = input.touching && !touch_down_;
         const bool touch_released = !input.touching && touch_down_;
 
-        // Cycle inventory -> crafting -> tent storage -> inventory on the
-        // lower 3DS touchscreen. The world always remains on the top screen.
+        // Cycle inventory -> crafting -> tent storage -> perks -> inventory.
+        // Every Stage 2 panel stays on the lower 3DS touchscreen.
         if (touch_pressed && input.touch.py >= 223 &&
             input.touch.px >= 110 && input.touch.px < 210) {
-            if (storage_open_) {
+            if (perks_open_) {
+                perks_open_ = false;
+            } else if (storage_open_) {
                 storage_open_ = false;
-                crafting_open_ = false;
+                perks_open_ = true;
             } else if (crafting_open_) {
                 crafting_open_ = false;
                 storage_open_ = true;
             } else {
                 crafting_open_ = true;
+                details_open_ = false;
             }
             selected_inventory_slot_ = -1;
             drag_source_slot_ = -1;
@@ -174,6 +179,15 @@ public:
                 crafting_feedback_ = crafted ? CraftFeedback::success : CraftFeedback::missing_or_full;
                 crafting_feedback_elapsed_ = 0.0f;
             }
+        }
+
+        if (perks_open_ && touch_pressed &&
+            input.touch.px >= 16 && input.touch.px < 304 &&
+            input.touch.py >= 110 && input.touch.py < 194) {
+            const auto selection = input.touch.py < 152
+                ? minidayz::items::SourcePerk::camel
+                : minidayz::items::SourcePerk::hamster;
+            (void)perks_.buy(selection);
         }
 
         if (storage_open_ && touch_pressed) {
@@ -210,11 +224,11 @@ public:
         }
         // Source-backed item operations are accessible without physical
         // buttons. This narrow action strip stays on the lower touchscreen.
-        if (!crafting_open_ && !storage_open_ && touch_pressed &&
+        if (!crafting_open_ && !storage_open_ && !perks_open_ && touch_pressed &&
             input.touch.py >= 25 && input.touch.py < 38) {
             details_open_ = !details_open_;
         }
-        if (!crafting_open_ && !storage_open_ && touch_pressed &&
+        if (!crafting_open_ && !storage_open_ && !perks_open_ && touch_pressed &&
             input.touch.py >= 81 && input.touch.py < 92) {
             const int action = input.touch.px / 64;
             if (action == 3) {
@@ -232,7 +246,7 @@ public:
                         else
                             (void)minidayz::items::use_item_from_inventory(
                                 inventory_, selected, player_, preview_rules_,
-                                action == 1, {}, &item_use_runtime_);
+                                action == 1, perks_.item_use_flags(), &item_use_runtime_);
                     } else if (action == 2) {
                         (void)ground_loot_.drop_from_inventory(
                             inventory_, selected, 0, player_.state().x, player_.state().y);
@@ -252,7 +266,7 @@ public:
                 }
             }
         }
-        if (!crafting_open_ && !storage_open_ && !details_open_ && touch_pressed) {
+        if (!crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ && touch_pressed) {
             tap_was_selected_ = false;
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
@@ -304,7 +318,7 @@ public:
                 }
             }
         }
-        if (!crafting_open_ && !storage_open_ && !details_open_ && input.touching && drag_source_slot_ >= 0) {
+        if (!crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ && input.touching && drag_source_slot_ >= 0) {
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
             if (equipment_target >= 0 && equipment_target < 6) {
                 drag_target_equipment_slot_ = equipment_target;
@@ -316,7 +330,7 @@ public:
                 if (target >= 0) drag_target_slot_ = target;
             }
         }
-        if (!crafting_open_ && !storage_open_ && !details_open_ && touch_released) {
+        if (!crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ && touch_released) {
             if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
                 // Dragging an original repair material onto the backpack slot
@@ -382,7 +396,7 @@ public:
                     else
                         (void)minidayz::items::use_item_from_inventory(
                             inventory_, source, player_, preview_rules_,
-                            false, {}, &item_use_runtime_);
+                            false, perks_.item_use_flags(), &item_use_runtime_);
                     item = inventory_.slot(source);
                     if (!item || item->empty()) selected_inventory_slot_ = -1;
                 }
@@ -422,7 +436,7 @@ public:
         save_elapsed_ += dt;
         if (save_elapsed_ >= 2.0f) {
             save_elapsed_ = 0.0f;
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_);
         }
     }
 
@@ -550,6 +564,40 @@ public:
                 renderer.draw_text(actions[i], x + 13.0f, 83.0f, 0.21f);
             }
         }
+        if (perks_open_) {
+            // Original XP cost and two-level purchase rules are from
+            // the repository-root Perks and stats menu Construct events.
+            char status[96]{};
+            std::snprintf(status, sizeof(status), "XP %lu  NEXT COST %lu",
+                static_cast<unsigned long>(perks_.snapshot().experience_points),
+                static_cast<unsigned long>(perks_.snapshot().perk_cost));
+            renderer.draw_solid_rect(8.0f, 89.0f, 304.0f, 133.0f,
+                                     C2D_Color32(22, 31, 25, 255));
+            renderer.draw_text(status, 20.0f, 96.0f, 0.31f);
+            for (int i = 0; i < 2; ++i) {
+                const auto perk = i == 0
+                    ? minidayz::items::SourcePerk::camel
+                    : minidayz::items::SourcePerk::hamster;
+                const float y = 110.0f + static_cast<float>(i) * 42.0f;
+                renderer.draw_solid_rect(16.0f, y, 288.0f, 37.0f,
+                    perks_.can_buy(perk) ? C2D_Color32(65, 95, 64, 255)
+                                         : C2D_Color32(49, 56, 49, 255));
+                char label[80]{};
+                std::snprintf(label, sizeof(label), "%s LVL %u / 2",
+                    i == 0 ? "CAMEL" : "HAMSTER",
+                    static_cast<unsigned>(perks_.level(perk)));
+                renderer.draw_text(label, 22.0f, y + 8.0f, 0.36f);
+                renderer.draw_text(perks_.level(perk) >= 2 ? "MAX" :
+                    perks_.can_buy(perk) ? "BUY" : "LOCKED",
+                    242.0f, y + 10.0f, 0.25f);
+            }
+            renderer.draw_text("ORIGINAL 2-LEVEL SURVIVAL ITEM PERKS",
+                               17.0f, 203.0f, 0.21f);
+            renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
+                                     C2D_Color32(54, 68, 55, 255));
+            renderer.draw_text("BACK TO BAG", 122.0f, 226.0f, 0.28f);
+            return;
+        }
         if (storage_open_) {
             // The tent item and permanent storage behavior are verified from
             // root original XML. Native list bounds are resource safeguards,
@@ -597,7 +645,7 @@ public:
             renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                      C2D_Color32(54, 68, 55, 255));
             renderer.draw_text("TAP TO STORE / TAKE", 14.0f, 226.0f, 0.19f);
-            renderer.draw_text("BACK TO BAG", 117.0f, 226.0f, 0.29f);
+            renderer.draw_text("PERKS", 132.0f, 226.0f, 0.29f);
             return;
         }
         if (crafting_open_) {
@@ -962,6 +1010,7 @@ private:
         ground_loot_.clear();
         tents_.clear();
         item_use_runtime_.clear();
+        perks_.clear();
         inventory_page_ = 0;
         storage_page_ = 0;
         crafting_page_ = 0;
@@ -969,6 +1018,7 @@ private:
         crafting_feedback_elapsed_ = 0.0f;
         storage_open_ = false;
         crafting_open_ = false;
+        perks_open_ = false;
         details_open_ = false;
         tap_was_selected_ = false;
         selected_inventory_slot_ = -1;
@@ -979,7 +1029,7 @@ private:
         // Never enter a blank gameplay scene when source world generation
         // fails. Keep the menu available so the player can retry instead.
         menu_active_ = !world_ready_;
-        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_);
+        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_);
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
@@ -1039,6 +1089,7 @@ private:
     minidayz::items::GroundLootSystem ground_loot_{};
     minidayz::items::TentStorageSystem tents_{};
     minidayz::items::ItemUseRuntime item_use_runtime_{};
+    minidayz::items::SourcePerkSystem perks_{};
     minidayz::PlayerRules preview_rules_{};
     int selected_inventory_slot_{-1};
     int drag_source_slot_{-1};
@@ -1054,6 +1105,7 @@ private:
     bool tap_was_selected_{};
     bool crafting_open_{};
     bool storage_open_{};
+    bool perks_open_{};
     bool details_open_{};
 };
 
