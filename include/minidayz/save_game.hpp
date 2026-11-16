@@ -12,7 +12,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 8u;
+inline constexpr std::uint32_t kSaveVersion = 9u;
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
