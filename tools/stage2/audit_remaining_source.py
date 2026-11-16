@@ -79,6 +79,19 @@ def main():
             for event in matches[:3]:
                 print(f"  {word} UID={event['uid']}: "
                       f"{json.dumps(event, separators=(',', ':'))[:1400]}")
+    # Resolve the original branch/condition ancestry of a representative
+    # weighted LOOT Respawn call before translating any gameplay trigger.
+    loot = result["loot_respawn"]
+    lookup = {event["uid"]: event for event in loot["events"]}
+    for target in (673982235644371, 773215391218752):
+        current = lookup.get(target)
+        print(f"loot source conditional ancestry for event UID {target}:")
+        hops = 0
+        while current is not None and hops < 30:
+            print(f"  ancestor UID={current['uid']} parent={current['parent']} "
+                  f"conditions={json.dumps(current['conditions'], separators=(',', ':'))[:1900]}")
+            current = lookup.get(current["parent"])
+            hops += 1
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(result, separators=(",", ":"), ensure_ascii=False),
                    encoding="utf-8")
