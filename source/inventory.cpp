@@ -95,12 +95,17 @@ bool is_backpack_item(std::uint16_t item_id) noexcept {
 }
 
 std::size_t source_backpack_capacity(std::uint16_t item_id) noexcept {
-    // The original Items_update function renders Backpack storage slots 1-11.
-    // Every wearable item routed through the original Backpack slot uses this
-    // same source-defined grid; total capacity includes the 15 base slots.
-    return is_backpack_item(item_id)
-        ? kInventorySlotCount + kSourceBackpackStorageSlotCount
-        : 0;
+    if (!is_backpack_item(item_id)) return 0;
+    // The original root l_eng_ui.xml specifies 3 extra inventory slots for
+    // the improvised bag and 5 for the improvised backpack. Items_update has
+    // eleven grid positions, not eleven slots granted by every item.
+    if (item_id == kSourceImprovisedSlingBagItemId)
+        return kInventorySlotCount + kSourceImprovisedSlingBagSlots;
+    if (item_id == kSourceImprovisedBackpackItemId)
+        return kInventorySlotCount + kSourceImprovisedBackpackSlots;
+    // Other source wearables currently use the verified maximum grid extent;
+    // their individual equip rules remain to be extracted.
+    return kInventorySlotCount + kSourceBackpackStorageSlotCount;
 }
 
 
