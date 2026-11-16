@@ -1,6 +1,7 @@
 #include "minidayz/item_use.hpp"
 #include "minidayz/generated/item_use_effect_catalog.hpp"
 #include "minidayz/generated/item_medical_catalog.hpp"
+#include "minidayz/generated/item_secondary_crafting_catalog.hpp"
 
 #include <algorithm>
 
@@ -47,6 +48,20 @@ bool use_item_from_inventory(InventorySystem& inventory,
     if (!item || item->empty() || !player.state().alive) return false;
 
     if (delayed && delayed->busy()) return false;
+    // Original item_activate2 explicitly reduces the selected Rags stack
+    // by three then calls Check_space_inventory(-1, Rope). The 3DS native
+    // inventory transaction is atomic; source capacity/condition rules apply.
+    if (secondary && item->item_id == kSourceRagsToRopeInputId) {
+        if (item->count < kSourceRagsToRopeRequiredCount) return false;
+        const auto before = inventory.snapshot();
+        if (!inventory.remove(inventory_slot, kSourceRagsToRopeRequiredCount))
+            return false;
+        if (!inventory.add(kSourceRagsToRopeOutputId, 1)) {
+            (void)inventory.restore(before);
+            return false;
+        }
+        return true;
+    }
 
     ItemUseEffect effect{};
     if (!source_item_use_effect(item->item_id, secondary, perks, effect)) {

@@ -1,4 +1,5 @@
 #include "minidayz/item_use.hpp"
+#include "minidayz/generated/item_secondary_crafting_catalog.hpp"
 
 #include <cassert>
 
@@ -155,5 +156,20 @@ int main() {
     assert(resumed.remaining() == 3.0f);
     resumed.update(3.0f, player);
     assert(player.state().infection == 0.0f);
+
+    // Exact original Rags x3 -> Rope via item_activate2 and
+    // Check_space_inventory. This uses one selected stack, not a guessed
+    // inventory-wide total or an invented ground spawn.
+    assert(kSourceRagsToRopeInputId == 26);
+    assert(kSourceRagsToRopeRequiredCount == 3);
+    assert(kSourceRagsToRopeOutputId == 41);
+    InventorySystem rope_inventory;
+    assert(rope_inventory.add_to_slot(4, 26, 2, 0, 82));
+    assert(!use_item_from_inventory(rope_inventory, 4, player, rules, true));
+    assert(rope_inventory.count(26) == 2);
+    assert(rope_inventory.add_to_slot(4, 26, 1, 0, 82));
+    assert(use_item_from_inventory(rope_inventory, 4, player, rules, true));
+    assert(rope_inventory.count(26) == 0 && rope_inventory.count(41) == 1);
+    assert(!use_item_from_inventory(rope_inventory, 4, player, rules, true));
     return 0;
 }
