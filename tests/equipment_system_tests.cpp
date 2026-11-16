@@ -121,10 +121,12 @@ int main() {
     armor.apply_temperature(warm_player, 2.0f, -10.0f, 10.0f);
     assert(std::fabs(warm_player.state().temperature - (2.0f + 5.0f / 7.0f)) < 0.0001f);
     armor.apply_temperature(warm_player, 2.0f, -10.0f, 10.0f);
-    assert(std::fabs(warm_player.state().temperature - (10.0f / 7.0f)) < 0.0001f);
+    assert(std::fabs(warm_player.state().temperature - (2.0f + 5.0f / 7.0f)) < 0.0001f);
     warm_player.adjust_temperature(20.0f, -10.0f, 10.0f);
     armor.apply_temperature(warm_player, 2.0f, -10.0f, 10.0f);
-    assert(warm_player.state().temperature == 10.0f);
+    assert(std::fabs(warm_player.state().temperature - (2.0f + 5.0f / 7.0f)) < 0.0001f);
+    // The source event reassigns the absolute target every update; the
+    // independent heat adjustment must not accumulate across frames.
 
     PlayerState equipment_damage_state{};
     equipment_damage_state.health = 100.0f;
