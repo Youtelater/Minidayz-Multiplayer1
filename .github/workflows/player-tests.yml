@@ -210,6 +210,14 @@ jobs:
       - name: Run Source Crafting Regression Tests
         run: ./crafting_system_tests
 
+      - name: Compile Original Fractional Condition Wear Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/fractional_wear_tests.cpp -o fractional_wear_tests
+
+      - name: Run Original Fractional Condition Wear Tests
+        run: ./fractional_wear_tests
+
       - name: Compile Player Equipment Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
