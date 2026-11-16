@@ -460,5 +460,29 @@ int main() {
     assert(!broken_backpack_repair.repair_equipped_backpack_from_inventory_slot(1));
     assert(broken_backpack_repair.count(39) == 1);
 
+    // Stage 2 touchscreen Y action: splitting must be atomic, bounded to
+    // active backpack capacity and preserve original fractional condition.
+    InventorySystem split_inventory;
+    assert(split_inventory.add_to_slot(0, 11, 9, 0, 64.75f));
+    const auto before_invalid_split = split_inventory.snapshot();
+    assert(!split_inventory.split_stack(0, 0));
+    assert(!split_inventory.split_stack(0, 20));
+    assert(!split_inventory.split_stack(1, 2));
+    assert(split_inventory.snapshot().slots[0].count == before_invalid_split.slots[0].count);
+    assert(split_inventory.split_stack(0, 1));
+    assert(split_inventory.slot(0)->count == 5);
+    assert(split_inventory.slot(1)->count == 4);
+    assert(std::fabs(split_inventory.slot(0)->condition - 64.75f) < 0.0001f);
+    assert(std::fabs(split_inventory.slot(1)->condition - 64.75f) < 0.0001f);
+    assert(!split_inventory.split_stack(0, 1));
+    assert(split_inventory.split_stack(1, 2));
+    assert(split_inventory.slot(1)->count == 2);
+    assert(split_inventory.slot(2)->count == 2);
+    assert(split_inventory.split_stack(2, 3));
+    assert(!split_inventory.split_stack(3, 4)); // Single items do not split.
+    InventorySystem split_restored;
+    assert(split_restored.restore(split_inventory.snapshot()));
+    assert(std::fabs(split_restored.slot(3)->condition - 64.75f) < 0.0001f);
+
     return 0;
 }
