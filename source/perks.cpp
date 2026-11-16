@@ -45,6 +45,37 @@ bool SourcePerkSystem::award_experience(std::uint32_t source_award) noexcept {
     return true;
 }
 
+bool SourcePerkSystem::award_original_xp_event(
+    std::uint64_t source_event_uid) noexcept {
+    // Original Game_events global expierence_points ADD actions (method 122).
+    // Call only on a fully source-verified event dispatch. In particular,
+    // don't also call these for Newspaper/Scout Handbook actions already
+    // awarded by ItemUseRuntime or award XP every frame.
+    std::uint32_t award = 0;
+    switch (source_event_uid) {
+    case 662365640635533ULL: award = 25; break;
+    case 609771835564225ULL: award = 15; break;
+    case 184273689853649ULL: award = 200; break;
+    case 853523169384096ULL: award = 200; break;
+    case 422420671955084ULL: award = 50; break;
+    case 278938995521251ULL: award = 50; break;
+    case 786944914217829ULL: award = 100; break;
+    case 589702583314875ULL: award = 150; break;
+    case 979830737090869ULL: award = 100; break;
+    case 120764849871488ULL: award = 150; break;
+    case 118494092025457ULL: award = 200; break;
+    case 920613859152657ULL: award = 250; break;
+    case 265440217696674ULL: award = 300; break;
+    case 1074032691412307ULL: award = 2; break;
+    case 3302144065259174ULL: award = 2; break;
+    case 409652067374260ULL: award = 10; break;
+    case 517726037510695ULL: award = 5; break;
+    case 972069878318185ULL: award = 5; break;
+    default: return false;
+    }
+    return award_experience(award);
+}
+
 std::uint8_t SourcePerkSystem::level(SourcePerk perk) const noexcept {
     switch (perk) {
     case SourcePerk::camel: return state_.camel_level;
