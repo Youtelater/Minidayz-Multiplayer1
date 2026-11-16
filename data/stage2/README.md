@@ -84,6 +84,48 @@ explicit until the corresponding original Construct equip events are ported.
 - Original `item_activate` event UID `422420671955084` consumes Newspapers (49), waits 5 seconds and awards 50 XP. Original UID `853523169384096` consumes Scout Handbook (116), waits 10 seconds and awards 200 XP. Both now have source-verified asynchronous in-game item actions, and their pending awards survive saves without loss.
 - Other perks, additional source event XP awards, and complete world combat/quest XP triggers remain open. No guessed passive XP or random kill XP is awarded.
 
+## Parts 2–8 native integration (source-backed, 16 November 2026)
+
+- **Part 2, loot:** `GroundLootSystem::spawn_verified_source_choice`
+  turns a source-selected `choose(...)` record and 32-bit draw into an
+  atomic, validated ground item. Its original marker category, seed guards,
+  and respawn event still need a translated caller; this is **not**
+  unconditional or autonomous world loot respawning.
+- **Part 3, durability:** `SourceFractionalWear` represents original
+  0.2/0.25/0.4/0.5 decrements in exact hundredths, without rounding the
+  condition to a byte on each event. Native tests cover fractional accumulation,
+  broken items, snapshot validation, and reject invalid restores. The original
+  guarded firearm/melee/obstacle event dispatch and persistent instance
+  integration are still required; **do not** apply wear on every frame.
+- **Part 4, perks:** Original cumulative XP thresholds, Camel/Hamster
+  level 1–2 unlocking, timed Newspapers and Scout Handbook awards, and
+  persistent touch-menu progression are implemented. Other perks remain.
+- **Part 5, survival:** At new-game initialization and whenever equipped
+  clothing warmth changes, the 3DS scene now applies the verified daytime
+  expression `Player_temperature = Day_cold - clothing_warmth` without
+  clipping negative values to preview HUD limits. Loaded saves retain their
+  temperature. Weather scheduling and rain/night/cold-damage source events
+  remain separate work.
+- **Part 6, contact/armor:** `apply_verified_npc_contact_damage`
+  supplies a guarded NPC hit transaction using the equipped original flat
+  armor values, with no fabricated attack range, damage amount or cooldown.
+  Tests cover proximity, dead actors, invalid source values, and protection.
+  An exact original hit-event dispatcher must call this transaction in gameplay.
+- **Part 7, backpacks:** Fourteen source backpack item types, source-derived
+  capacities, the Fuel Pack exception, original condition preservation and
+  lossless legacy-save migration are already live. Restricted/exclusive
+  Army and Medical Satchel slots still need their original category guards.
+- **Part 8, tents/storage:** The native 3DS deploy actions now reject
+  obstructed corners and overlap with previously deployed tents before
+  consuming the item. Storage transactions remain atomic and persisted;
+  distances are **native safety checks**, not a claim about exact original
+  Construct placement behavior. Supplies Stash source actions are still
+  under audit.
+
+Native tests and 3DS builds must pass for the relevant commit before
+claiming a verified binary. These improvements do **not** yet make
+Stage 2 100% source-equivalent.
+
 ## Remaining Stage 2 work
 
 - Port the original item-condition wear/loss events and connect them to the correct gameplay actions. Do not infer wear from damage or item names.
