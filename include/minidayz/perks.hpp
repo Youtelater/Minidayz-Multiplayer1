@@ -20,15 +20,15 @@ inline constexpr std::size_t kOtherPerkCount = kOriginalPerkCount - 2;
 inline constexpr SourcePerk kOriginalPerkMenuOrder[kOriginalPerkCount] = {
     SourcePerk::header, SourcePerk::spotter, SourcePerk::runner,
     SourcePerk::camel, SourcePerk::hamster, SourcePerk::snowborn,
-    SourcePerk::farmer, SourcePerk::regen, SourcePerk::hunter,
-    SourcePerk::meleeatk, SourcePerk::meleedef, SourcePerk::trunkster,
+    SourcePerk::farmer, SourcePerk::regen, SourcePerk::meleedef,
+    SourcePerk::meleeatk, SourcePerk::trunkster, SourcePerk::hunter,
     SourcePerk::sweethome, SourcePerk::metabolism, SourcePerk::eye,
     SourcePerk::agronom
 };
 inline constexpr const char* kOriginalPerkMenuLabels[kOriginalPerkCount] = {
     "HEADER", "SPOTTER", "RUNNER", "CAMEL", "HAMSTER", "SNOWBORN",
-    "FARMER", "REGEN", "HUNTER", "MELEE ATK", "MELEE DEF",
-    "TRUNKSTER", "SWEET HOME", "METABOLISM", "EYE", "AGRONOM"
+    "FARMER", "REGEN", "MELEE DEF", "MELEE ATK", "TRUNKSTER",
+    "HUNTER", "SWEET HOME", "METABOLISM", "EYE", "AGRONOM"
 };
 
 struct SourcePerkSnapshot {
