@@ -44,8 +44,8 @@ def main():
         if event is None:
             raise SystemExit(f"Original {difficulty} weather event missing: {uid}")
         condition = [-1, 46, None, 0, False, False, False]
-        if len(event[5]) != 1 or event[5][0][:7] != condition or
-                event[5][0][9] != [[11, "Difficulty"], [8, 0], [7, [2, difficulty]]]:
+        if (len(event[5]) != 1 or event[5][0][:7] != condition or
+                event[5][0][9] != [[11, "Difficulty"], [8, 0], [7, [2, difficulty]]]):
             raise SystemExit(f"Original weather difficulty condition changed: {difficulty}")
         values = {}
         for action in event[6]:
