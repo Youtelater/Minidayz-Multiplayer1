@@ -75,6 +75,7 @@ jobs:
           python3 tools/stage2/build_item_description_catalog.py
           python3 tools/stage2/extract_item_behavior_trace.py
           python3 tools/stage2/validate_item_condition_trace.py
+          python3 tools/stage2/audit_wear_rule_source.py
           python3 tools/stage2/build_item_effect_catalog.py
           python3 tools/stage2/build_item_medical_catalog.py
           python3 tools/stage2/build_item_secondary_crafting_catalog.py
@@ -144,6 +145,12 @@ jobs:
 
       - name: Run Original Item Descriptions Tests
         run: ./item_description_tests
+
+      - name: Upload original item wear source expressions
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-condition-wear-actions
+          path: data/stage2/condition_wear_source_audit.json
 
       - name: Compile Item and Inventory Regression Tests
         run: |
