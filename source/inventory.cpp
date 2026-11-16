@@ -399,6 +399,15 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
     return true;
 }
 
+bool InventorySystem::split_stack(std::size_t from, std::size_t to) noexcept {
+    if (from >= capacity_ || to >= capacity_ || from == to ||
+        slots_[from].count < 2 || !slots_[to].empty())
+        return false;
+    // Source inventory stack movement preserves the exact fractional
+    // condition in both halves. The remainder stays in the original slot.
+    return move(from, to, static_cast<std::uint16_t>(slots_[from].count / 2));
+}
+
 const InventorySlot* InventorySystem::slot(std::size_t index) const noexcept {
     return index < capacity_ ? &slots_[index] : nullptr;
 }
