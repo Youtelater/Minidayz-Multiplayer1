@@ -2,6 +2,7 @@
 #include "minidayz/item_repair.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include "minidayz/generated/item_catalog.hpp"
 #include "minidayz/generated/item_source_catalog.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
@@ -204,7 +205,7 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
     if (!valid_item(item_id) || amount == 0) return false;
     if (condition == kUseSourceItemCondition)
         condition = source_default_condition(item_id);
-    if (condition > 100) return false;
+    if (!std::isfinite(condition) || condition < 0.0f || condition > 100.0f) return false;
     if (max_stack == 0) max_stack = source_max_stack(item_id);
     if (max_stack == 0) return false;
 
@@ -245,7 +246,7 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
 bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
                                   std::uint16_t amount,
                                   std::uint16_t max_stack,
-                                  std::uint8_t condition) noexcept {
+                                  float condition) noexcept {
     if (index >= capacity_ || !valid_item(item_id) || amount == 0)
         return false;
     if (condition == kUseSourceItemCondition)
@@ -322,7 +323,7 @@ bool InventorySystem::pickup(GroundItem& ground, std::uint16_t max_stack) noexce
     if (max_stack == 0) return false;
     const float condition = ground.condition == kUseSourceItemCondition
         ? source_default_condition(ground.item_id) : ground.condition;
-    if (condition > 100 || !add(ground.item_id, ground.count, max_stack, condition))
+    if (!std::isfinite(condition) || condition < 0.0f || condition > 100.0f || !add(ground.item_id, ground.count, max_stack, condition))
         return false;
     ground = {};
     return true;
@@ -346,7 +347,7 @@ bool InventorySystem::drop(std::size_t index, std::uint16_t amount,
             ground.condition == kUseSourceItemCondition
                 ? source_default_condition(ground.item_id) : ground.condition;
         if (!valid_item(ground.item_id) || ground.item_id != source.item_id ||
-            ground_condition != source.condition || ground_condition > 100 ||
+            ground_condition != source.condition || !std::isfinite(ground_condition) || ground_condition < 0.0f || ground_condition > 100.0f ||
             ground.count > stack_limit ||
             moving > stack_limit - ground.count)
             return false;
@@ -431,7 +432,7 @@ InventorySnapshot InventorySystem::snapshot() const noexcept {
 bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
     if (saved.capacity < kInventorySlotCount ||
         saved.capacity > kMaximumInventorySlotCount ||
-        saved.equipped_backpack_condition > 100)
+        !std::isfinite(saved.equipped_backpack_condition) || saved.equipped_backpack_condition < 0.0f || saved.equipped_backpack_condition > 100.0f)
         return false;
     if (saved.equipped_backpack != 0 &&
         !is_backpack_item(saved.equipped_backpack))
@@ -442,7 +443,7 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
 
     for (std::size_t i = 0; i < kMaximumInventorySlotCount; ++i) {
         const auto& entry = saved.slots[i];
-        if (entry.condition > 100) return false;
+        if (!std::isfinite(entry.condition) || entry.condition < 0.0f || entry.condition > 100.0f) return false;
         if (i >= saved.capacity) {
             if (!entry.empty()) return false;
             continue;
