@@ -42,6 +42,27 @@ struct PreviousSaveV7 {
     ItemUseRuntimeSnapshot pending_item_use{};
 };
 
+struct LegacyPerkSnapshotV8ForTest {
+    std::uint32_t experience_points{};
+    std::uint32_t perk_cost{100};
+    std::uint16_t perks_learnt_count{};
+    std::uint8_t camel_level{};
+    std::uint8_t hamster_level{};
+};
+struct PreviousSaveV8 {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{8};
+    std::uint32_t seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+    LegacyPerkSnapshotV8ForTest perks{};
+};
+static_assert(sizeof(LegacyPerkSnapshotV8ForTest) == 12);
+
 struct LegacyInventorySlotForTest {
     std::uint16_t item_id{};
     std::uint16_t count{};
@@ -255,6 +276,34 @@ int main() {
     assert(perk_restore.snapshot().perk_cost == 520);
     assert(write_saved_game_to_paths(90, player, inventory, equipment, ground,
                                     tents, kFile, kTemp, &pending, &source_perks));
+
+    // A v8 save must migrate all old fields without inventing purchases
+    // in the other fourteen newly persisted original perk variables.
+    PreviousSaveV8 old8{};
+    old8.seed = 90;
+    old8.player = player;
+    old8.inventory = inventory.snapshot();
+    old8.equipment = equipment.snapshot();
+    old8.ground_loot = ground.snapshot();
+    old8.tents = tents.snapshot();
+    old8.pending_item_use = pending.snapshot();
+    old8.perks.experience_points = source_perks.snapshot().experience_points;
+    old8.perks.perk_cost = source_perks.snapshot().perk_cost;
+    old8.perks.perks_learnt_count = source_perks.snapshot().perks_learnt_count;
+    old8.perks.camel_level = source_perks.snapshot().camel_level;
+    old8.perks.hamster_level = source_perks.snapshot().hamster_level;
+    {
+        auto* file = std::fopen(kFile, "wb");
+        assert(file && std::fwrite(&old8, sizeof(old8), 1, file) == 1);
+        assert(std::fclose(file) == 0);
+    }
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 8);
+    assert(restored.perks.camel_level == 2);
+    assert(restored.perks.hamster_level == 0);
+    assert(restored.perks.perk_cost == 360);
+    for (const auto level : restored.perks.other_levels)
+        assert(level == 0);
 
     // The old v7 binary layout must migrate without losing in-flight
     // medical treatment while leaving newly introduced perk XP at defaults.
