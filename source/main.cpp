@@ -366,6 +366,20 @@ public:
         }
         // L drops the selected stack at the player's feet; R picks up the
         // nearest ground stack. Ground transfers are atomic and persisted.
+        if ((input.pressed & KEY_Y) && selected_inventory_slot_ >= 0) {
+            const std::size_t source = static_cast<std::size_t>(selected_inventory_slot_);
+            // The 3DS Y shortcut exposes the original split-stack operation;
+            // do not discard or merge items when there is no free slot.
+            for (std::size_t target = 0; target < inventory_.capacity(); ++target) {
+                const auto* destination = inventory_.slot(target);
+                if (destination && destination->empty() &&
+                    inventory_.split_stack(source, target)) {
+                    selected_inventory_slot_ = static_cast<int>(target);
+                    inventory_page_ = target / kInventoryPageSize;
+                    break;
+                }
+            }
+        }
         if ((input.pressed & KEY_L) && selected_inventory_slot_ >= 0) {
             if (ground_loot_.drop_from_inventory(
                     inventory_, static_cast<std::size_t>(selected_inventory_slot_),
@@ -646,7 +660,7 @@ public:
             static_cast<unsigned>(page_count));
         renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                  C2D_Color32(54, 68, 55, 255));
-        renderer.draw_text("A USE X ALT L DROP R PICK", 14.0f, 226.0f, 0.18f);
+        renderer.draw_text("A USE X ALT Y SPLIT L DROP R PICK", 14.0f, 226.0f, 0.16f);
         renderer.draw_text(page_label, 104.0f, 226.0f, 0.30f);
     }
 
