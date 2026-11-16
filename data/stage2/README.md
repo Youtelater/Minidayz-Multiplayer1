@@ -8,7 +8,7 @@ Stage 2 ports the original Mini DAYZ 1.6.0 item, inventory, backpack, equipment,
 - The original sprite catalog resolves 329 item IDs to exact Construct object identities; 76 IDs remain explicitly unmapped rather than receiving substitute art.
 - InventorySystem provides 15 base slots, atomic additions/removals, source stack limits, moving, swapping, splitting, ground pickup/drop, per-stack item condition, and snapshots. The bottom 3DS touchscreen now exposes a fifth **SPLIT** action that moves half the selected stack into a free slot while preserving condition and rejecting invalid splits atomically.
 - The original `Check_stack_size` baseline groups are ported. The `perk_cybb` branch returns 31,415,926 in the source; the native `uint16_t` representation uses `UINT16_MAX` as its safe upper bound when that override is explicitly supplied.
-- Backpack UI grid limits come from original `Items_update` (11 positions). Root `l_eng_new.xml` documents **individual backpack capacities** under a separate description-ID scheme; the generator matches each adjacent source comment to the original item name. Taloon +5, Hunting +7, Mountain +11, School +3, Tortilla +9, Satchel +2, Army/Medical Satchel +1 unrestricted slot. Root `l_eng_ui.xml` takes priority for the conflicting Improvised Sling Bag +3 and Improvised Backpack +5 tutorial counts. Exclusive satchel slots (+3) are tracked but cannot yet be equipped simultaneously with backpacks. Fuel Pack (462) carries fuel, not inventory slots, and is no longer treated as a storage backpack.
+- Backpack UI grid limits come from original `Items_update` (11 positions). Root `l_eng_new.xml` documents **individual backpack capacities** under a separate description-ID scheme; the generator matches each adjacent source comment to the original item name. Taloon +5, Hunting +7, Mountain +11, School +3, Tortilla +9, Satchel +2, Army/Medical Satchel +1 unrestricted slot. Root `l_eng_ui.xml` takes priority for the conflicting Improvised Sling Bag +3 and Improvised Backpack +5 tutorial counts. Exclusive satchel slots (+3) are tracked but cannot yet be equipped simultaneously with backpacks. Fuel Pack (462) is wearable in the backpack slot but provides **zero** inventory slots: its original description grants fuel capacity only.
 - Original wearable backpack IDs are represented by the dedicated backpack equipment state. The item list excludes the Civilian Tent (456) and Supplies Stash (461), which are not wearable backpacks.
 - Equipping consumes a single backpack from inventory. Replacing a backpack returns the old one atomically; if the incoming pack is in a slot that disappears during a capacity change, the old pack is returned to a free slot in the surviving grid or the replacement fails without changing inventory.
 - Unequipping is allowed only when all 11 backpack storage slots are empty. Capacity cannot be manually increased or reduced independently of the equipped source backpack.
@@ -64,7 +64,7 @@ tutorial-verified +3/+5 and uses the named original descriptions for the
 other packs. Army and Medical Satchel descriptions specify three additional
 **exclusive** slots that require item-category restrictions; those are not
 silently added as general-purpose slots. Fuel Pack describes a fuel reservoir,
-not item storage. This conflict and those equipment restrictions remain
+not item storage; it equips with no extra inventory slots. This conflict and those equipment restrictions remain
 explicit until the corresponding original Construct equip events are ported.
 
 ## Remaining Stage 2 work

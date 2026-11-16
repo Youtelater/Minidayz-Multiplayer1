@@ -124,10 +124,10 @@ def main() -> None:
         entry = (int(slot_match.group(1)),
                  int(exclusive_match.group(1)) if exclusive_match else 0)
         source_descriptions.setdefault(label, set()).add(entry)
-    # Fuel Pack (462) has fuel capacity but no item-storage slots in the
-    # original description. Do not invent eleven backpack inventory slots.
+    # Fuel Pack (462) is wearable in the original backpack equipment slot,
+    # but its description grants fuel capacity, not general inventory slots.
     backpack_ids = (450, 451, 452, 453, 454, 455, 457, 458, 459, 460,
-                    752, 753, 754)
+                    462, 752, 753, 754)
     original_by_id = {int(item.findtext("id")):
                       (item.findtext("name") or "").strip()
                       for item in ET.parse(ITEMS).getroot().findall("item")}
@@ -135,6 +135,17 @@ def main() -> None:
     for item_id in backpack_ids:
         name = original_by_id.get(item_id)
         matches = source_descriptions.get(name, set())
+        if item_id == 462:
+            # Verify the exact source comment rather than guessing a
+            # storage size for the original fuel reservoir.
+            fuel_match = re.search(
+                r"<!--\\s*Fuel Pack\\s*-->\\s*<text>\\s*<id>\\s*313\\s*</id>\\s*"
+                r"<name>(.*?)</name>\\s*</text>", desc_text, flags=re.DOTALL)
+            if not fuel_match or "fuel" not in fuel_match.group(1).lower() or
+                    "Slots:" in fuel_match.group(1):
+                raise SystemExit("Original Fuel Pack has no verified storage slots")
+            rows.append((item_id, 0, 0))
+            continue
         if not name or len(matches) != 1:
             raise SystemExit(f"Ambiguous/missing original pack description: "
                              f"{item_id} {name!r}: {matches}")

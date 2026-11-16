@@ -195,7 +195,7 @@ int main() {
     assert(is_backpack_item(754));
     assert(!is_backpack_item(456)); // Civilian Tent
     assert(!is_backpack_item(461)); // Supplies Stash
-    assert(!is_backpack_item(462)); // Fuel Pack is a fuel reservoir, not storage
+    assert(is_backpack_item(462)); // Wearable fuel reservoir, zero storage slots
     assert(!is_backpack_item(1));
     // The original Items_update function exposes Backpack storage slots 1-11.
     assert(source_backpack_capacity(450) == 20);
@@ -208,7 +208,7 @@ int main() {
     assert(source_backpack_capacity(458) == 17);
     assert(source_backpack_capacity(459) == 16);
     assert(source_backpack_capacity(460) == 16);
-    assert(source_backpack_capacity(462) == 0);
+    assert(source_backpack_capacity(462) == 15);
     assert(source_backpack_capacity(752) == 17);
     assert(source_backpack_capacity(753) == 16);
     assert(source_backpack_capacity(754) == 16);
@@ -222,6 +222,14 @@ int main() {
         assert(source_construct_object(id) != 65535);
         assert(source_sprite_object(id) != 65535);
     }
+
+    InventorySystem fuel_pack;
+    assert(fuel_pack.add(462, 1));
+    assert(fuel_pack.equip_backpack_from_slot(0));
+    assert(fuel_pack.capacity() == kInventorySlotCount);
+    assert(fuel_pack.equipped_backpack() == 462);
+    assert(fuel_pack.unequip_backpack_to_slot(0));
+    assert(fuel_pack.slot(0)->item_id == 462);
 
     InventorySystem backpack;
     assert(backpack.add(1, 1));

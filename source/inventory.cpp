@@ -100,7 +100,7 @@ bool is_backpack_item(std::uint16_t item_id) noexcept {
     // Civilian Tent (456) and Supplies Stash (461) are not wearable packs.
     switch (item_id) {
         case 450: case 451: case 452: case 453: case 454: case 455:
-        case 457: case 458: case 459: case 460:
+        case 457: case 458: case 459: case 460: case 462:
         case 752: case 753: case 754:
             return true;
         default:
@@ -173,7 +173,7 @@ bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
         source_backpack_capacity(slots_[index].item_id);
     if (!is_backpack_item(slots_[index].item_id) ||
         slots_[index].count != 1 || slots_[index].condition > 100 ||
-        source_capacity <= kInventorySlotCount ||
+        source_capacity < kInventorySlotCount ||
         source_capacity > kMaximumInventorySlotCount)
         return false;
 
@@ -490,7 +490,7 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
     std::size_t restored_capacity = saved.capacity;
     if (saved.equipped_backpack != 0) {
         restored_capacity = source_backpack_capacity(saved.equipped_backpack);
-        if (restored_capacity <= kInventorySlotCount ||
+        if (restored_capacity < kInventorySlotCount ||
             restored_capacity > kMaximumInventorySlotCount)
             return false;
         for (std::size_t i = restored_capacity; i < saved.capacity; ++i)
