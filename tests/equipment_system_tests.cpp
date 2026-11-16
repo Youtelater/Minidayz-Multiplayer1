@@ -189,6 +189,15 @@ int main() {
     assert(condition_equipment.equipped(EquipmentSlot::head) == 0);
     assert(!condition_equipment.damage_condition(EquipmentSlot::head, 1));
 
+    // Clothing temperature is an absolute source target: Day_cold plus the
+    // exact equipment expression, independent of frame delta.
+    PlayerState temperature_state{};
+    temperature_state.health = 100.0f;
+    PlayerSystem temperature_player(temperature_state);
+    EquipmentSystem temperature_equipment;
+    temperature_equipment.apply_temperature(temperature_player, 7.0f, -10.0f, 10.0f);
+    assert(temperature_player.state().temperature == 7.0f);
+
     // Repair uses an absolute source-derived value and never resurrects a broken item.
     EquipmentSystem repair_equipment;
     InventorySystem repair_source;
