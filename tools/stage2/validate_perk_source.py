@@ -25,10 +25,12 @@ def walk(events):
 by_uid = {}
 for e in walk(game[1]):by_uid.setdefault(e[4], []).append(e)
 cost = by_uid.get(454712397231976,[])
-assert any(a[0:2] == [-1,41] and a[5] == [
-    [11,"perk_cost"],
-    [7,[4,[4,[23,"perk_cost"],[0,100]],[6,[0,20],[23,"perks_learnt_count"]]]]
-    ] for e in cost for a in e[6]),"Original increasing perk cost changed"
+expected_cost_action = ('[[11,"perk_cost"],'
+    '[7,[4,[4,[23,"perk_cost"],[0,100]],'
+    '[6,[0,20],[23,"perks_learnt_count"]]]]]')
+assert any(a[0:2] == [-1,41] and
+           json.dumps(a[5], separators=(",",":")) == expected_cost_action
+           for e in cost for a in e[6]), "Original increasing perk cost changed"
 for name, uid, level in (("perk_camel",774754508115784,1),
                          ("perk_camel",784538107764217,2),
                          ("perk_hamster",109489764621466,1),
