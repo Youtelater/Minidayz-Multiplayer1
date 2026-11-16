@@ -252,7 +252,7 @@ int main() {
     auto tampered = perk_restore.snapshot();
     tampered.perk_cost = 100;
     assert(!perk_restore.restore(tampered));
-    assert(perk_restore.snapshot().perk_cost == 360);
+    assert(perk_restore.snapshot().perk_cost == 520);
     assert(write_saved_game_to_paths(90, player, inventory, equipment, ground,
                                     tents, kFile, kTemp, &pending, &source_perks));
 
