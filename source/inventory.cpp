@@ -153,9 +153,9 @@ bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
         return false;
 
     const std::uint16_t incoming = slots_[index].item_id;
-    const std::uint8_t incoming_condition = slots_[index].condition;
+    const float incoming_condition = slots_[index].condition;
     const std::uint16_t outgoing = equipped_backpack_;
-    const std::uint8_t outgoing_condition = equipped_backpack_condition_;
+    const float outgoing_condition = equipped_backpack_condition_;
 
     std::size_t return_slot = index;
     if (outgoing != 0 && index >= source_capacity) {
@@ -190,7 +190,7 @@ bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
         if (!slots_[i].empty()) return false;
 
     const std::uint16_t outgoing = equipped_backpack_;
-    const std::uint8_t condition = equipped_backpack_condition_;
+    const float condition = equipped_backpack_condition_;
     capacity_ = kInventorySlotCount;
     equipped_backpack_ = 0;
     equipped_backpack_condition_ = 100;
@@ -200,7 +200,7 @@ bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
 
 bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
                           std::uint16_t max_stack,
-                          std::uint8_t condition) noexcept {
+                          float condition) noexcept {
     if (!valid_item(item_id) || amount == 0) return false;
     if (condition == kUseSourceItemCondition)
         condition = source_default_condition(item_id);
@@ -266,19 +266,21 @@ bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
 }
 
 bool InventorySystem::damage_condition(
-    std::size_t slot_index, std::uint8_t loss) noexcept {
+    std::size_t slot_index, float loss) noexcept {
     if (slot_index >= capacity_ || slots_[slot_index].empty() || loss == 0)
         return false;
     auto& item = slots_[slot_index];
+    if (!std::isfinite(loss) || loss <= 0.0f) return false;
     if (loss >= item.condition) item = {};
-    else item.condition = static_cast<std::uint8_t>(item.condition - loss);
+    else item.condition -= loss;
     return true;
 }
 
 bool InventorySystem::restore_condition(
-    std::size_t slot_index, std::uint8_t condition) noexcept {
+    std::size_t slot_index, float condition) noexcept {
     if (slot_index >= capacity_ || slots_[slot_index].empty() ||
-        condition > 100 || condition <= slots_[slot_index].condition)
+        !std::isfinite(condition) || condition > 100.0f ||
+        condition <= slots_[slot_index].condition)
         return false;
     slots_[slot_index].condition = condition;
     return true;
@@ -306,7 +308,7 @@ bool InventorySystem::repair_equipped_backpack_from_inventory_slot(
                                  SourceRepairTarget::backpack, gain))
         return false;
     const auto repaired = static_cast<std::uint8_t>(
-        std::min<unsigned>(100, static_cast<unsigned>(equipped_backpack_condition_) + gain));
+        std::min(100.0f, equipped_backpack_condition_ + static_cast<float>(gain)));
     if (!remove(material_slot, 1)) return false;
     equipped_backpack_condition_ = repaired;
     return true;
@@ -318,7 +320,7 @@ bool InventorySystem::pickup(GroundItem& ground, std::uint16_t max_stack) noexce
         return false;
     if (max_stack == 0) max_stack = source_max_stack(ground.item_id);
     if (max_stack == 0) return false;
-    const std::uint8_t condition = ground.condition == kUseSourceItemCondition
+    const float condition = ground.condition == kUseSourceItemCondition
         ? source_default_condition(ground.item_id) : ground.condition;
     if (condition > 100 || !add(ground.item_id, ground.count, max_stack, condition))
         return false;
@@ -340,7 +342,7 @@ bool InventorySystem::drop(std::size_t index, std::uint16_t amount,
         return false;
 
     if (!ground.empty()) {
-        const std::uint8_t ground_condition =
+        const float ground_condition =
             ground.condition == kUseSourceItemCondition
                 ? source_default_condition(ground.item_id) : ground.condition;
         if (!valid_item(ground.item_id) || ground.item_id != source.item_id ||
