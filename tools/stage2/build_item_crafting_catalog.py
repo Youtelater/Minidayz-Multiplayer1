@@ -63,10 +63,11 @@ def main() -> None:
 
     def child_events(events):
         for event in events if isinstance(events, list) else ():
-            if not isinstance(event, list) or len(event) < 8 or event[0] != 0:
+            if not isinstance(event, list) or len(event) < 7 or event[0] != 0:
                 continue
             yield event
-            yield from child_events(event[7])
+            if len(event) > 7:
+                yield from child_events(event[7])
 
     source_events = {}
     for sheet in project["project"][6]:
