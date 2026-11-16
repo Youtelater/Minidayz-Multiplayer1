@@ -3,6 +3,7 @@
 #include "minidayz/item_repair.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace minidayz::items {
 
@@ -137,6 +138,14 @@ float EquipmentSystem::temperature_offset() const noexcept {
         pants_warmth = item.warmth;
     if (pants_warmth <= 0.0f) return 0.0f;
     return (outerwear_warmth - helmet_warmth) / pants_warmth;
+}
+
+void EquipmentSystem::apply_temperature(
+    PlayerSystem& player, float delta_seconds,
+    float min_temperature, float max_temperature) const noexcept {
+    if (!std::isfinite(delta_seconds) || delta_seconds <= 0.0f) return;
+    player.adjust_temperature(temperature_offset() * delta_seconds,
+                              min_temperature, max_temperature);
 }
 
 bool EquipmentSystem::equip_from_inventory(
