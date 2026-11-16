@@ -485,23 +485,52 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
             return false;
     }
 
-    // Migrate older saves that persisted guessed backpack sizes (or retained
-    // an empty expanded grid after unequipping) to the exact original layout.
+    // Old native saves used a provisional +11 slots for every backpack.
+    // Source-specific capacities can be smaller. Relocate displaced stacks
+    // into the surviving slots (merge only matching ID AND condition)
+    // instead of deleting items or rejecting otherwise recoverable saves.
+    // Everything happens in a local snapshot: a failed migration is atomic.
     std::size_t restored_capacity = saved.capacity;
     if (saved.equipped_backpack != 0) {
         restored_capacity = source_backpack_capacity(saved.equipped_backpack);
         if (restored_capacity < kInventorySlotCount ||
             restored_capacity > kMaximumInventorySlotCount)
             return false;
-        for (std::size_t i = restored_capacity; i < saved.capacity; ++i)
-            if (!saved.slots[i].empty()) return false;
     } else {
         restored_capacity = kInventorySlotCount;
-        for (std::size_t i = restored_capacity; i < saved.capacity; ++i)
-            if (!saved.slots[i].empty()) return false;
+    }
+    InventorySnapshot normalized = saved;
+    if (restored_capacity < saved.capacity) {
+        for (std::size_t i = restored_capacity; i < saved.capacity; ++i) {
+            auto& displaced = normalized.slots[i];
+            if (displaced.empty()) continue;
+            const std::uint16_t limit = source_max_stack(displaced.item_id);
+            for (std::size_t j = 0; j < restored_capacity && !displaced.empty(); ++j) {
+                auto& target = normalized.slots[j];
+                if (target.empty() || target.item_id != displaced.item_id ||
+                    target.condition != displaced.condition ||
+                    target.count >= limit)
+                    continue;
+                const std::uint16_t amount = std::min<std::uint16_t>(
+                    static_cast<std::uint16_t>(limit - target.count),
+                    displaced.count);
+                target.count = static_cast<std::uint16_t>(target.count + amount);
+                displaced.count = static_cast<std::uint16_t>(displaced.count - amount);
+                if (displaced.count == 0) displaced = {};
+            }
+            if (displaced.empty()) continue;
+            for (std::size_t j = 0; j < restored_capacity; ++j) {
+                auto& target = normalized.slots[j];
+                if (!target.empty()) continue;
+                target = displaced;
+                displaced = {};
+                break;
+            }
+            if (!displaced.empty()) return false; // no loss or silent overflow
+        }
     }
 
-    slots_ = saved.slots;
+    slots_ = normalized.slots;
     capacity_ = restored_capacity;
     equipped_backpack_ = saved.equipped_backpack;
     equipped_backpack_condition_ = saved.equipped_backpack_condition;
