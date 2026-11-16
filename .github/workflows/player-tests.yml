@@ -72,6 +72,7 @@ jobs:
           python3 tools/stage2/extract_item_catalog.py
           python3 tools/stage2/build_item_source_catalog.py
           python3 tools/stage2/build_item_sprite_catalog.py
+          python3 tools/stage2/build_item_description_catalog.py
           python3 tools/stage2/extract_item_behavior_trace.py
           python3 tools/stage2/validate_item_condition_trace.py
           python3 tools/stage2/build_item_effect_catalog.py
@@ -115,6 +116,14 @@ jobs:
 
       - name: Run Original Loot Choice Catalog Tests
         run: ./loot_source_tests
+
+      - name: Compile Original Item Descriptions Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/item_description_tests.cpp -o item_description_tests
+
+      - name: Run Original Item Descriptions Tests
+        run: ./item_description_tests
 
       - name: Compile Item and Inventory Regression Tests
         run: |
