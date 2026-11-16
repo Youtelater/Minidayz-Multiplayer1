@@ -4,6 +4,7 @@
 #include "minidayz/generated/item_sprite_catalog.hpp"
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 
 int main() {
@@ -339,6 +340,13 @@ int main() {
     assert(wear_inventory.add(251, 1, 0, 65));
     assert(wear_inventory.damage_condition(0, 20));
     assert(wear_inventory.slot(0)->condition == 45);
+    assert(wear_inventory.damage_condition(0, 0.25f));
+    assert(std::fabs(wear_inventory.slot(0)->condition - 44.75f) < 0.0001f);
+    GroundItem fractional_ground{};
+    assert(wear_inventory.drop(0, 1, fractional_ground));
+    assert(std::fabs(fractional_ground.condition - 44.75f) < 0.0001f);
+    assert(wear_inventory.pickup(fractional_ground));
+    assert(std::fabs(wear_inventory.slot(0)->condition - 44.75f) < 0.0001f);
     assert(wear_inventory.damage_condition(0, 45));
     assert(wear_inventory.slot(0)->empty());
     assert(!wear_inventory.damage_condition(0, 1));
