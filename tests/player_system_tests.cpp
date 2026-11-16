@@ -217,5 +217,17 @@ int main() {
     assert(survival.state().bleeding == 2.0f);
     assert(survival.state().infection == 0.0f);
 
+    // Construct daytime source event assigns the computed cold load,
+    // which can be below the preview UI's -10 lower meter bound.
+    PlayerState daytime_state{};
+    daytime_state.health = 100.0f;
+    PlayerSystem daytime(daytime_state);
+    daytime.set_source_temperature(-17.0f);
+    assert(daytime.state().temperature == -17.0f);
+    const float old_day = daytime.state().temperature;
+    daytime.set_source_temperature(std::numeric_limits<float>::quiet_NaN());
+    assert(daytime.state().temperature == old_day);
+    assert(daytime.restore(daytime.snapshot()));
+    assert(daytime.state().temperature == -17.0f);
     return 0;
 }
