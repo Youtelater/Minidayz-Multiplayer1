@@ -1,5 +1,7 @@
 #pragma once
 #include "minidayz/item_use.hpp"
+#include <array>
+#include <cstddef>
 #include <cstdint>
 
 namespace minidayz::items {
@@ -7,7 +9,27 @@ namespace minidayz::items {
 // Original Game_events globals: perk_hamster, perk_camel,
 // expierence_points, perk_cost and perks_learnt_count.
 // Both item bonuses are applied only at the source's level == 2.
-enum class SourcePerk : std::uint8_t { camel, hamster };
+// All sixteen original Perks and stats menu variables. Source menu indices
+// 3=camel, 4=hamster, 7=regen are verified against the Construct click guards.
+enum class SourcePerk : std::uint8_t {
+    camel, hamster, header, spotter, runner, snowborn, farmer, regen,
+    hunter, meleeatk, meleedef, trunkster, sweethome, metabolism, eye, agronom
+};
+inline constexpr std::size_t kOriginalPerkCount = 16;
+inline constexpr std::size_t kOtherPerkCount = kOriginalPerkCount - 2;
+inline constexpr SourcePerk kOriginalPerkMenuOrder[kOriginalPerkCount] = {
+    SourcePerk::header, SourcePerk::spotter, SourcePerk::runner,
+    SourcePerk::camel, SourcePerk::hamster, SourcePerk::snowborn,
+    SourcePerk::farmer, SourcePerk::regen, SourcePerk::hunter,
+    SourcePerk::meleeatk, SourcePerk::meleedef, SourcePerk::trunkster,
+    SourcePerk::sweethome, SourcePerk::metabolism, SourcePerk::eye,
+    SourcePerk::agronom
+};
+inline constexpr const char* kOriginalPerkMenuLabels[kOriginalPerkCount] = {
+    "HEADER", "SPOTTER", "RUNNER", "CAMEL", "HAMSTER", "SNOWBORN",
+    "FARMER", "REGEN", "HUNTER", "MELEE ATK", "MELEE DEF",
+    "TRUNKSTER", "SWEET HOME", "METABOLISM", "EYE", "AGRONOM"
+};
 
 struct SourcePerkSnapshot {
     std::uint32_t experience_points{};
@@ -15,6 +37,9 @@ struct SourcePerkSnapshot {
     std::uint16_t perks_learnt_count{};
     std::uint8_t camel_level{};
     std::uint8_t hamster_level{};
+    // The original fourteen other perk variables use the same 0/1/2 levels.
+    // Stored after the legacy v8 fields so v8 save migration stays exact.
+    std::array<std::uint8_t, kOtherPerkCount> other_levels{};
 };
 
 class SourcePerkSystem {
