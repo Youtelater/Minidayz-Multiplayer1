@@ -51,8 +51,21 @@ including the variable-yield arrow crafting and placeable structures.
 ## Original crafting source audit
 
 - The root Construct export contains **19** distinct `Craft_*` functions. `tools/stage2/audit_crafting_source.py` now exports their exact source UIDs, nested condition/action expressions, and called functions to a CI artifact named `original-crafting-source`.
-- The currently implemented **three** source-validated recipes are `Craft_1` (Improvised Sling Bag), `Craft_4` (Improvised Backpack), and `Craft_5` (Improvised Bow). The other functions have different result semantics (for example `Check_space_inventory` rather than `Spawn_drop`) and must not be misrepresented as ground-spawn recipes.
+- **Six** source-validated crafting transactions are implemented: `Craft_1` (Improvised Sling Bag), `Craft_4` (Improvised Backpack), `Craft_5` (Improvised Bow), and three tinder alternatives for `Craft_3` (Campfire Kit). `Craft_3` calls `Check_space_inventory(-1, 23)`, unlike the three ground-spawn recipes. Other original crafting functions have different item/stack and world-placement semantics and are not yet translated.
 - The bottom touchscreen crafting panel now pages three recipes at a time; adding verified source recipes does not require shrinking the screen layout.
+
+## Original backpack description mismatch
+
+The original root `l_eng_new.xml` has separate IDs for backpack descriptions
+(e.g., Taloon Backpack is description ID 301, inventory ID 450). It also
+disagrees with the root tutorial about the two improvised packs (+4/+6 in
+descriptions versus +3/+5 in the tutorial). The port keeps the existing
+tutorial-verified +3/+5 and uses the named original descriptions for the
+other packs. Army and Medical Satchel descriptions specify three additional
+**exclusive** slots that require item-category restrictions; those are not
+silently added as general-purpose slots. Fuel Pack describes a fuel reservoir,
+not item storage. This conflict and those equipment restrictions remain
+explicit until the corresponding original Construct equip events are ported.
 
 ## Remaining Stage 2 work
 
