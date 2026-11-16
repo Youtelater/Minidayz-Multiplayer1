@@ -146,7 +146,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
     } else if (header_ok && candidate.version == kSaveVersion) {
         // Read the actual on-disk struct, including compiler alignment.
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
-                  std::fread(&save, sizeof(save), 1, file) == 1;
+                  std::fread(&candidate, sizeof(candidate), 1, file) == 1;
     }
     const bool no_extra_data = std::fgetc(file) == EOF;
     std::fclose(file);
