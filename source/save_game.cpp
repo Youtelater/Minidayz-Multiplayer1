@@ -44,6 +44,19 @@ struct SavedGameV5 {
     minidayz::items::GroundLootSnapshot ground_loot{};
 };
 
+// Version 7 persisted timed medical item actions, before perk progression.
+struct SavedGameV7 {
+    std::uint32_t magic{};
+    std::uint32_t version{};
+    std::uint32_t seed{};
+    minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
+    minidayz::items::GroundLootSnapshot ground_loot{};
+    minidayz::items::TentStorageSnapshot tents{};
+    minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
+};
+
 // Version 6 introduced native persistent tents, before timed medical actions.
 struct SavedGameV6 {
     std::uint32_t magic{};
@@ -168,6 +181,20 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.tents = old.tents;
             candidate.pending_item_use = {};
         }
+    } else if (header_ok && candidate.version == 7u) {
+        SavedGameV7 old{};
+        body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
+                  std::fread(&old, sizeof(old), 1, file) == 1;
+        if (body_ok) {
+            candidate.seed = old.seed;
+            candidate.player = old.player;
+            candidate.inventory = old.inventory;
+            candidate.equipment = old.equipment;
+            candidate.ground_loot = old.ground_loot;
+            candidate.tents = old.tents;
+            candidate.pending_item_use = old.pending_item_use;
+            candidate.perks = {};
+        }
     } else if (header_ok && candidate.version == kSaveVersion) {
         // Read the actual on-disk struct, including compiler alignment.
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
@@ -193,12 +220,14 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
     minidayz::items::GroundLootSystem ground_loot_validation;
     minidayz::items::TentStorageSystem tent_validation;
     minidayz::items::ItemUseRuntime item_use_validation;
+    minidayz::items::SourcePerkSystem perk_validation;
     if (!player_validation.restore(candidate.player) ||
         !inventory_validation.restore(candidate.inventory) ||
         !equipment_validation.restore(candidate.equipment) ||
         !ground_loot_validation.restore(candidate.ground_loot) ||
         !tent_validation.restore(candidate.tents) ||
-        !item_use_validation.restore(candidate.pending_item_use))
+        !item_use_validation.restore(candidate.pending_item_use) ||
+        !perk_validation.restore(candidate.perks))
         return false;
     // Never replace a caller's valid save with a partially decoded file.
     save = candidate;
@@ -213,7 +242,8 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       const minidayz::items::TentStorageSystem& tents,
                       const char* target_path,
                       const char* temporary_path,
-                      const minidayz::items::ItemUseRuntime* item_use) noexcept {
+                      const minidayz::items::ItemUseRuntime* item_use,
+                      const minidayz::items::SourcePerkSystem* perks) noexcept {
     if (!target_path || !temporary_path || !target_path[0] || !temporary_path[0] ||
         std::strcmp(target_path, temporary_path) == 0 || seed == 0) return false;
     SavedGame save{};
@@ -224,6 +254,7 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     save.ground_loot = ground_loot.snapshot();
     save.tents = tents.snapshot();
     save.pending_item_use = item_use ? item_use->snapshot() : minidayz::items::ItemUseRuntimeSnapshot{};
+    save.perks = perks ? perks->snapshot() : minidayz::items::SourcePerkSnapshot{};
     // Reject an invalid or corrupt in-memory snapshot before touching the
     // temporary file. The existing valid save must remain intact.
     if (!std::isfinite(save.player.x) || !std::isfinite(save.player.y) ||
@@ -237,12 +268,14 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     minidayz::items::GroundLootSystem ground_validation;
     minidayz::items::TentStorageSystem tent_validation;
     minidayz::items::ItemUseRuntime item_use_validation;
+    minidayz::items::SourcePerkSystem perk_validation;
     if (!player_validation.restore(save.player) ||
         !inventory_validation.restore(save.inventory) ||
         !equipment_validation.restore(save.equipment) ||
         !ground_validation.restore(save.ground_loot) ||
         !tent_validation.restore(save.tents) ||
-        !item_use_validation.restore(save.pending_item_use))
+        !item_use_validation.restore(save.pending_item_use) ||
+        !perk_validation.restore(save.perks))
         return false;
     std::FILE* file = std::fopen(temporary_path, "wb");
     if (!file) return false;
@@ -274,11 +307,13 @@ bool write_saved_game(std::uint32_t seed,
                       const items::EquipmentSystem& equipment,
                       const items::GroundLootSystem& ground_loot,
                       const items::TentStorageSystem& tents,
-                      const items::ItemUseRuntime* item_use) noexcept {
+                      const items::ItemUseRuntime* item_use,
+                      const items::SourcePerkSystem* perks) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     return write_saved_game_to_paths(seed, player, inventory, equipment,
-                                    ground_loot, tents, kSavePath, kSaveTempPath, item_use);
+                                    ground_loot, tents, kSavePath, kSaveTempPath,
+                                    item_use, perks);
 }
 
 } // namespace minidayz::persistence
