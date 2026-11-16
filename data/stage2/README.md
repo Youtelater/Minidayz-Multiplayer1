@@ -44,6 +44,12 @@ event-level extraction and porting.
 - Save version **6** persists deployed tent locations and contents and migrates version 5 saves by reading the original complete C++ struct (including alignment padding).
 - **Scope limit:** 8 deployed tents and 32 stored stacks per tent are *native memory-safety limits*, not extracted original gameplay capacities. The exact original tent capacity, placement restrictions, and interaction range still require a verified Construct event translation.
 
+## Original crafting source audit
+
+- The root Construct export contains **19** distinct `Craft_*` functions. `tools/stage2/audit_crafting_source.py` now exports their exact source UIDs, nested condition/action expressions, and called functions to a CI artifact named `original-crafting-source`.
+- The currently implemented **three** source-validated recipes are `Craft_1` (Improvised Sling Bag), `Craft_4` (Improvised Backpack), and `Craft_5` (Improvised Bow). The other functions have different result semantics (for example `Check_space_inventory` rather than `Spawn_drop`) and must not be misrepresented as ground-spawn recipes.
+- The bottom touchscreen crafting panel now pages three recipes at a time; adding verified source recipes does not require shrinking the screen layout.
+
 ## Remaining Stage 2 work
 
 - Port the original item-condition wear/loss events and connect them to the correct gameplay actions. Do not infer wear from damage or item names.
