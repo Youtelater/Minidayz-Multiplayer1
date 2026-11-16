@@ -229,6 +229,17 @@ jobs:
       - name: Run Ground Loot Regression Tests
         run: ./ground_loot_tests
 
+      - name: Verify original perk progression and cost events
+        run: python3 tools/stage2/validate_perk_source.py
+
+      - name: Compile Perk Progression Regression Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/perks.cpp tests/perks_tests.cpp -o perks_tests
+
+      - name: Run Perk Progression Regression Tests
+        run: ./perks_tests
+
       - name: Compile Original Item Use Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
