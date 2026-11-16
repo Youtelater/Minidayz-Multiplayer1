@@ -88,6 +88,18 @@ jobs:
       - name: Run Item and Inventory Regression Tests
         run: ./inventory_system_tests
 
+      - name: Verify original tent storage source
+        run: python3 tools/stage2/validate_tent_storage_source.py
+
+      - name: Compile Tent Storage Regression Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp source/tent_storage.cpp tests/tent_storage_tests.cpp \
+            -o tent_storage_tests
+
+      - name: Run Tent Storage Regression Tests
+        run: ./tent_storage_tests
+
       - name: Compile Source Crafting Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
