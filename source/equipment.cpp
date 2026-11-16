@@ -176,6 +176,53 @@ bool EquipmentSystem::equip_from_inventory(
     return true;
 }
 
+bool source_condition_wear_loss(std::uint64_t event_uid, bool perk_wxnj,
+                                float random_fraction, float& loss) noexcept {
+    loss = 0.0f;
+    switch (event_uid) {
+    case 875054325568454ULL: // Firearm shooting / alternate attacks (ID 244)
+    case 2098275646157213ULL: // Melee fight
+        // Construct: perk_wxnj = 1 ? 0 : 0.25.
+        loss = perk_wxnj ? 0.0f : 0.25f;
+        return true;
+    case 251602875520018ULL: // NPC bullet damage
+        // Construct: perk_wxnj = 1 ? 0 : 1.
+        loss = perk_wxnj ? 0.0f : 1.0f;
+        return true;
+    case 8036449108462062ULL: // Bullet/obstacle contact with melee tools
+        // Construct: perk_wxnj = 1 ? 0 : 0.2.
+        loss = perk_wxnj ? 0.0f : 0.2f;
+        return true;
+    case 682686209618980ULL: // Player_get_hit
+        // Original conditional random(2,4) when perk_wxnj = 0. The
+        // caller supplies the already-sampled uniform fraction so the
+        // source RNG remains authoritative.
+        if (perk_wxnj) return true;
+        if (!std::isfinite(random_fraction) ||
+            random_fraction < 0.0f || random_fraction >= 1.0f)
+            return false;
+        loss = 2.0f + 2.0f * random_fraction;
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool EquipmentSystem::apply_source_wear(std::uint64_t event_uid,
+                                        bool perk_wxnj,
+                                        float random_fraction) noexcept {
+    float loss = 0.0f;
+    if (!source_condition_wear_loss(event_uid, perk_wxnj,
+                                    random_fraction, loss) || loss <= 0.0f)
+        return false;
+    // This branch of Firearm shooting has an explicit item ID 244 gate
+    // in the original event's instance-variable-16 comparison.
+    if (event_uid == 875054325568454ULL &&
+        equipped(EquipmentSlot::hands) != 244)
+        return false;
+    return damage_condition(EquipmentSlot::hands, loss);
+}
+
 bool EquipmentSystem::damage_condition(
     EquipmentSlot slot, float loss) noexcept {
     const auto index = static_cast<std::size_t>(slot);
