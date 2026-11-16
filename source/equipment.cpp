@@ -1,6 +1,7 @@
 #include "minidayz/equipment.hpp"
 #include "minidayz/generated/item_equipment_catalog.hpp"
 #include "minidayz/item_repair.hpp"
+#include "minidayz/generated/item_wear_catalog.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -174,6 +175,57 @@ bool EquipmentSystem::equip_from_inventory(
     state_.item_ids[slot_index] = incoming_id;
     state_.conditions[slot_index] = incoming_condition;
     return true;
+}
+
+bool source_condition_wear_action(std::uint64_t action_uid, bool perk_wxnj,
+                                  float random_fraction, float crafted,
+                                  float& loss) noexcept {
+    loss = 0.0f;
+    std::size_t first = 0;
+    std::size_t last = kSourceWearRuleCount;
+    while (first < last) {
+        const std::size_t middle = first + (last - first) / 2;
+        if (kSourceWearRules[middle].action_uid < action_uid) first = middle + 1;
+        else last = middle;
+    }
+    if (first == kSourceWearRuleCount ||
+        kSourceWearRules[first].action_uid != action_uid)
+        return false;
+
+    const SourceWearRule& row = kSourceWearRules[first];
+    switch (row.kind) {
+    case 0: // original constant value
+        loss = row.low;
+        break;
+    case 1: // choose(perk_wxnj = 1, 0, fixed loss)
+        loss = perk_wxnj ? 0.0f : row.low;
+        break;
+    case 2: // floor(random(lower, upper))
+    case 3: // perk_wxnj = 0 ? floor(random(lower, upper)) : 0
+        if (row.kind == 3 && perk_wxnj) break;
+        if (!std::isfinite(random_fraction) ||
+            random_fraction < 0.0f || random_fraction >= 1.0f)
+            return false;
+        loss = std::floor(row.low + (row.high - row.low) * random_fraction);
+        break;
+    case 4: // 3 * original Crafted variable, supplied by action context
+        if (!std::isfinite(crafted) || crafted < 0.0f) return false;
+        loss = row.low * crafted;
+        break;
+    default:
+        return false;
+    }
+    return std::isfinite(loss) && loss >= 0.0f;
+}
+
+bool EquipmentSystem::apply_source_wear_action(std::uint64_t action_uid,
+                                                bool perk_wxnj,
+                                                float random_fraction,
+                                                float crafted) noexcept {
+    float loss = 0.0f;
+    return source_condition_wear_action(action_uid, perk_wxnj,
+                                        random_fraction, crafted, loss) &&
+           loss > 0.0f && damage_condition(EquipmentSlot::hands, loss);
 }
 
 bool source_condition_wear_loss(std::uint64_t event_uid, bool perk_wxnj,
