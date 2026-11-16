@@ -57,6 +57,8 @@ struct PlayerRules {
     float infection_damage_per_severity_second{};
     float regeneration_per_second{};
     float temperature_change_per_second{};
+    // Source Day_cold is an absolute Player_temperature baseline, not a rate.
+    float day_cold{};
     float min_temperature{};
     float max_temperature{};
 };
@@ -125,6 +127,8 @@ public:
     void adjust_thirst(float amount, float max_thirst) noexcept;
     void adjust_temperature(float amount, float min_temperature,
                             float max_temperature) noexcept;
+    void set_temperature(float value, float min_temperature,
+                         float max_temperature) noexcept;
     void set_bleeding(float severity, float max_severity) noexcept;
     void set_infection(float severity, float max_severity) noexcept;
 
