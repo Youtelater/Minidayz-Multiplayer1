@@ -2,6 +2,8 @@
 #include "minidayz/generated/item_equipment_catalog.hpp"
 #include "minidayz/item_repair.hpp"
 
+#include <cmath>
+
 #include <algorithm>
 
 namespace minidayz::items {
@@ -123,8 +125,9 @@ void EquipmentSystem::apply_damage(PlayerSystem& player, float amount) const noe
 }
 
 float EquipmentSystem::temperature_offset() const noexcept {
-    // Exact clothing term used by the original Player_temperature event:
-    // (outerwear warmth - helmet warmth) / pants warmth.
+    // Original source event UID 4824763499434787 evaluates
+    // Player_temperature = Day_cold - ((var29 + var28) + var30).
+    // These are outerwear, helmet and pants warmth. No division is present.
     SourceItemProtection item{};
     float helmet_warmth = 0.0f;
     float outerwear_warmth = 0.0f;
@@ -135,8 +138,11 @@ float EquipmentSystem::temperature_offset() const noexcept {
         outerwear_warmth = item.warmth;
     if (source_item_protection(equipped(EquipmentSlot::pants), item))
         pants_warmth = item.warmth;
-    if (pants_warmth <= 0.0f) return 0.0f;
-    return (outerwear_warmth - helmet_warmth) / pants_warmth;
+    return outerwear_warmth + helmet_warmth + pants_warmth;
+}
+
+float EquipmentSystem::day_cooling(float day_cold) const noexcept {
+    return std::isfinite(day_cold) ? day_cold - temperature_offset() : 0.0f;
 }
 
 bool EquipmentSystem::equip_from_inventory(

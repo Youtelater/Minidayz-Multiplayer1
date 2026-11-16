@@ -44,8 +44,10 @@ public:
     PlayerArmorProtection protection() const noexcept;
     // Apply the original flat armor subtraction to incoming player damage.
     void apply_damage(PlayerSystem& player, float amount) const noexcept;
-    // Original Player_temperature clothing term, excluding Day_cold.
+    // Exact original clothing warmth sum, excluding Day_cold.
     float temperature_offset() const noexcept;
+    // Original daytime cooling term before weather, perk, and night modifiers.
+    float day_cooling(float day_cold) const noexcept;
     const EquipmentSnapshot& snapshot() const noexcept { return state_; }
     bool restore(const EquipmentSnapshot& saved) noexcept;
 
