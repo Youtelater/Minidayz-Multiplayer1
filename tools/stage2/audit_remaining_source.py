@@ -97,6 +97,25 @@ def main():
                   f"conditions={json.dumps(current['conditions'], separators=(',', ':'))[:1900]}")
             current = lookup.get(current["parent"])
             hops += 1
+    # Find the actual source callers of Trigger_spawn. The LOOT Respawn
+    # function is an event trigger, not proof that every marker spawns each
+    # frame. Record callers and ancestor source conditions before wiring it.
+    trigger_callers = []
+    for sheet in project["project"][6]:
+        if not isinstance(sheet, list) or len(sheet) < 2:
+            continue
+        for root_event in sheet[1] if isinstance(sheet[1], list) else ():
+            for event, parent in walk([root_event]):
+                for action in event[6] if isinstance(event[6], list) else ():
+                    if isinstance(action, list) and len(action) >= 6 and action[0:2] == [189, 69]:
+                        params = action[5]
+                        if isinstance(params, list) and params and params[0] == [1, [2, "Trigger_spawn"]]:
+                            trigger_callers.append({"sheet": sheet[0], "uid": event[4],
+                                "parent": parent, "conditions": event[5], "action": action})
+    print(f"Original Trigger_spawn call sites: {len(trigger_callers)}")
+    for event in trigger_callers[:24]:
+        print("  TRIGGER SPAWN SOURCE:", json.dumps(event, separators=(",", ":"))[:2600])
+    result["trigger_spawn_call_sites"] = trigger_callers
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(result, separators=(",", ":"), ensure_ascii=False),
                    encoding="utf-8")
