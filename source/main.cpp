@@ -11,6 +11,7 @@
 #include "minidayz/tent_storage.hpp"
 #include "minidayz/save_game.hpp"
 #include "minidayz/item_description.hpp"
+#include "minidayz/weather_source.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -481,6 +482,18 @@ public:
                       static_cast<double>(stats.bleeding),
                       static_cast<double>(stats.infection));
         renderer.draw_text(survival_labels, 163.0f, 25.0f, 0.14f);
+        // Original Regular difficulty sets Day_cold=7. This displays the
+        // exact source clothing-warmth expression without fabricating
+        // weather cadence or cold-damage rates.
+        const auto& weather = minidayz::items::source_weather_cold(
+            minidayz::SurvivalDifficulty::regular);
+        char cold_status[64]{};
+        std::snprintf(cold_status, sizeof(cold_status),
+            "DAY COLD %.0f - WARMTH %.0f = %.0f",
+            static_cast<double>(weather.day),
+            static_cast<double>(equipment_.temperature_offset()),
+            static_cast<double>(equipment_.day_cooling(weather.day)));
+        renderer.draw_text(cold_status, 10.0f, 33.0f, 0.15f);
         if (item_use_runtime_.busy()) {
             char treatment[48]{};
             const auto* rule = minidayz::items::ItemUseRuntime::medical_rule(
