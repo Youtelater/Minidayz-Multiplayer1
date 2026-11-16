@@ -22,7 +22,7 @@ int main() {
     assert(inv.add(18, 2, 0, 81));
     assert(!tents.store_from_inventory(inv, 100, 0));
     assert(!tents.store_from_inventory(inv, 1, 100));
-    assert(tents.store_from_inventory(inv, 1, 0));
+    assert(tents.store_from_inventory(inv, 0, 0));
     assert(inv.count(18) == 2);
     assert(tents.store_from_inventory(inv, 2, 0));
     assert(tents.tent(0)->items[0].item_id == 18);
