@@ -195,6 +195,24 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     save.equipment = equipment.snapshot();
     save.ground_loot = ground_loot.snapshot();
     save.tents = tents.snapshot();
+    // Reject an invalid or corrupt in-memory snapshot before touching the
+    // temporary file. The existing valid save must remain intact.
+    if (!std::isfinite(save.player.x) || !std::isfinite(save.player.y) ||
+        save.player.x < 0.0f || save.player.y < 0.0f ||
+        save.player.x > minidayz::WorldSystem::kSourceMapWidth ||
+        save.player.y > minidayz::WorldSystem::kSourceMapHeight)
+        return false;
+    minidayz::PlayerSystem player_validation(save.player);
+    minidayz::items::InventorySystem inventory_validation;
+    minidayz::items::EquipmentSystem equipment_validation;
+    minidayz::items::GroundLootSystem ground_validation;
+    minidayz::items::TentStorageSystem tent_validation;
+    if (!player_validation.restore(save.player) ||
+        !inventory_validation.restore(save.inventory) ||
+        !equipment_validation.restore(save.equipment) ||
+        !ground_validation.restore(save.ground_loot) ||
+        !tent_validation.restore(save.tents))
+        return false;
     std::FILE* file = std::fopen(temporary_path, "wb");
     if (!file) return false;
     const bool written = std::fwrite(&save, sizeof(save), 1, file) == 1 &&
