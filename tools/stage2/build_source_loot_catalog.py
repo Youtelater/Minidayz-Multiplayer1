@@ -96,8 +96,9 @@ def main():
             pools.append((action[3], event[4], selected))
     if not pools:
         raise SystemExit("No literal source loot pools were found")
-    if len({uid for uid, _, _ in pools}) != len(pools):
-        raise SystemExit("Duplicate original loot action UIDs")
+    # The original Construct export reuses some ACE action UIDs in cloned
+    # event branches. Preserve each occurrence, never coalesce by UID.
+    repeated = len(pools) - len({uid for uid, _, _ in pools})
     pools.sort()
     flat = []
     rows = []
@@ -124,7 +125,7 @@ def main():
         separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
     print(f"Original LOOT Respawn: {len(audit)} Spawn_drop calls, "
           f"{len(pools)} literal source pools, {len(dynamic)} dynamic expressions, "
-          f"{len(flat)} weighted choices")
+          f"{len(flat)} weighted choices, {repeated} reused source action UIDs")
     print("Original exemplar event 673982235644371:",
           [list(items) for _, uid, items in pools if uid == 673982235644371])
 

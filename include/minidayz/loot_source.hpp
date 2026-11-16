@@ -5,26 +5,19 @@
 
 namespace minidayz::items {
 
-// Original Construct's choose(...) arguments are kept in their exact order,
-// including duplicates. Caller provides the already evaluated choice index
-// after matching the original event conditions. No invented respawn cadence,
-// source-item weights, or RNG algorithm is supplied here.
-inline const SourceLootPool* source_loot_pool(std::uint64_t action_uid) noexcept {
-    std::size_t first = 0;
-    std::size_t last = kSourceLootPoolCount;
-    while (first < last) {
-        const std::size_t mid = first + (last - first) / 2;
-        if (kSourceLootPools[mid].action_uid < action_uid) first = mid + 1;
-        else last = mid;
-    }
-    return first < kSourceLootPoolCount &&
-           kSourceLootPools[first].action_uid == action_uid
-        ? &kSourceLootPools[first] : nullptr;
+// The original Construct export sometimes clones ACE action UIDs in different
+// branches. We therefore address an exact source action occurrence by table
+// index, retaining both original action and event UIDs for traceability.
+// Never collapse two source branches based solely on their shared UID.
+// An original matching-condition and RNG evaluator supplies choice_index.
+inline const SourceLootPool* source_loot_pool(std::size_t record_index) noexcept {
+    return record_index < kSourceLootPoolCount
+        ? &kSourceLootPools[record_index] : nullptr;
 }
 
-inline std::uint16_t source_loot_choice(std::uint64_t action_uid,
+inline std::uint16_t source_loot_choice(std::size_t record_index,
                                          std::size_t choice_index) noexcept {
-    const auto* pool = source_loot_pool(action_uid);
+    const auto* pool = source_loot_pool(record_index);
     if (!pool || choice_index >= pool->choices) return 0;
     return kSourceLootChoices[pool->first + choice_index];
 }
