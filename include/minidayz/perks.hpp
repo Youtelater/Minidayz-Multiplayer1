@@ -21,7 +21,8 @@ class SourcePerkSystem {
 public:
     const SourcePerkSnapshot& snapshot() const noexcept { return state_; }
     bool restore(const SourcePerkSnapshot& candidate) noexcept;
-    void clear() noexcept { state_ = {}; }
+    // A reset must retain the original first-purchase threshold of 100 XP.
+    void clear() noexcept { state_ = SourcePerkSnapshot{}; }
     // Experience is awarded only by a translated original XP event;
     // never award arbitrary XP from elapsed time.
     bool award_experience(std::uint32_t source_award) noexcept;
