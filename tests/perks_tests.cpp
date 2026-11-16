@@ -37,12 +37,34 @@ int main() {
     assert(p.snapshot().perks_learnt_count == 4);
     assert(!p.can_buy(SourcePerk::hamster));
 
+    // The Construct source exposes sixteen two-level perks. All can be
+    // purchased through the exact cumulative XP threshold progression.
+    assert(kOriginalPerkCount == 16);
+    assert(kOriginalPerkMenuOrder[3] == SourcePerk::camel);
+    assert(kOriginalPerkMenuOrder[4] == SourcePerk::hamster);
+    assert(kOriginalPerkMenuOrder[7] == SourcePerk::regen);
+    assert(p.award_experience(100000));
+    for (std::size_t i = 0; i < kOriginalPerkCount; ++i) {
+        const auto perk = kOriginalPerkMenuOrder[i];
+        while (p.level(perk) < 2) {
+            assert(p.can_buy(perk));
+            assert(p.buy(perk));
+        }
+        assert(!p.can_buy(perk));
+    }
+    assert(p.snapshot().perks_learnt_count == 32);
+    assert(p.snapshot().other_levels[static_cast<unsigned>(SourcePerk::regen) - 2] == 2);
+    assert(!p.can_buy(SourcePerk::regen));
+
     SourcePerkSystem restored;
     assert(restored.restore(p.snapshot()));
     assert(restored.level(SourcePerk::camel) == 2);
     const auto previous = restored.snapshot();
     auto corrupt = previous;
     corrupt.hamster_level = 3;
+    assert(!restored.restore(corrupt));
+    corrupt = previous;
+    corrupt.other_levels[static_cast<unsigned>(SourcePerk::regen) - 2] = 3;
     assert(!restored.restore(corrupt));
     corrupt = previous;
     corrupt.perk_cost = 0;
