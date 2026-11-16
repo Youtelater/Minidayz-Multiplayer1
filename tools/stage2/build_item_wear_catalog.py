@@ -21,7 +21,7 @@ FIXED, PERK_FIXED, RANDOM, PERK_RANDOM, CRAFTED = range(5)
 
 
 def literal(expr: object) -> float | None:
-    if (isinstance(expr, list) and len(expr) == 2 and expr[0] in (0, 1):
+    if isinstance(expr, list) and len(expr) == 2 and expr[0] in (0, 1):
         if type(expr[1]) in (int, float):
             value = float(expr[1])
             return value if math.isfinite(value) else None
