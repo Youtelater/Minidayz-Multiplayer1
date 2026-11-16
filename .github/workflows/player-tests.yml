@@ -88,6 +88,15 @@ jobs:
           name: original-crafting-source
           path: data/stage2/craft_source_audit.json
 
+      - name: Audit original survival, perks, loot and wear events
+        run: python3 tools/stage2/audit_remaining_source.py
+
+      - name: Upload remaining Stage 2 original source trace
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-stage2-remaining-source
+          path: data/stage2/remaining_source_trace.json
+
       - name: Compile Item and Inventory Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
