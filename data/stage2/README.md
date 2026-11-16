@@ -55,7 +55,7 @@ The original `Craft_21` and `Craft_22` each create Crafted Arrow item 51 in inve
 - The original root `l_eng_items.xml` identifies item **456** as **Civilian Tent**. The original root `l_eng_ui.xml` states that civilian tents can be deployed and that items stored there persist permanently. `tools/stage2/validate_tent_storage_source.py` verifies both source facts.
 - `TentStorageSystem` deploys one actual tent item, preserves its condition, transfers item stacks atomically while preserving their condition, and rejects corrupt save snapshots.
 - The bottom 3DS touchscreen cycles **Backpack → Crafting → Tent Storage → Perks → Backpack**. In storage mode, tap the left pane to store an inventory stack and the right pane to retrieve it; tap the header of either pane to page. The top screen continues to render the world and deployed tents.
-- Current save version **8** persists player, inventory, equipment, dropped items, deployed tent positions and contents, in-flight original medical/reading actions, and native Camel/Hamster experience and levels. Old v1-v7 save files are validated and migrated without losing existing items or tent contents.
+- Current save version **9** persists player, inventory, equipment, dropped items, deployed tent positions and contents, in-flight original medical/reading actions, and native Camel/Hamster experience and levels. Old v1-v8 save files are validated and migrated without losing existing items or tent contents.
 - **Scope limit:** 8 deployed tents and 32 stored stacks per tent are *native memory-safety limits*, not extracted original gameplay capacities. The exact original tent capacity, placement restrictions, and interaction range still require a verified Construct event translation.
 
 ## Original crafting source audit
@@ -125,6 +125,29 @@ explicit until the corresponding original Construct equip events are ported.
 Native tests and 3DS builds must pass for the relevant commit before
 claiming a verified binary. These improvements do **not** yet make
 Stage 2 100% source-equivalent.
+
+## Original 16-perk progression update (16 November 2026)
+
+- Native `SourcePerkSystem` now holds **all 16 original** two-level
+  Perks and stats menu variables, including the 14 previously missing
+  categories. Every purchase uses the exact cumulative-XP thresholds and
+  source cost increment `100 + 20 * perks_learnt_count`.
+- The original purchase icon index-to-variable associations are extracted
+  from the nested Construct action events and checked in CI. In particular,
+  slots 8–11 are **melee defense, melee attack, trunkster, hunter**.
+- The bottom 3DS touchscreen offers six pages of original perk progression;
+  no guessed perk bonuses are applied. Camel/Hamster level-two item bonuses
+  remain wired; the remaining fourteen perks' individual gameplay effects
+  still need guarded source event translation.
+- Save version **9** persists all 16 levels and keeps the existing inventory,
+  tent, medical timer, and original XP fields. Version-8 files are explicitly
+  migrated, preserving Camel/Hamster levels and initializing only the new
+  perk fields. Native tests cover the migration and corrupted states.
+- Eighteen additional source-identifiable *literal XP ADD actions* are exposed
+  as a guarded event-UID transaction. They do **not** fire autonomously:
+  the original NPC, wave, quest, and other source event prerequisites must be
+  implemented before calling them. The existing delayed book/newspaper awards
+  must not be double-dispatched.
 
 ## Remaining Stage 2 work
 
