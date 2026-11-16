@@ -214,13 +214,14 @@ int main() {
     survival.adjust_hunger(200.0f, 100.0f);
     survival.adjust_thirst(-200.0f, 100.0f);
     survival.adjust_temperature(100.0f, -5.0f, 5.0f);
+    assert(survival.state().temperature == 5.0f);
     survival.set_temperature(-3.0f, -5.0f, 5.0f);
     assert(survival.state().temperature == -3.0f);
     survival.set_bleeding(3.0f, 2.0f);
     survival.set_infection(-1.0f, 4.0f);
     assert(survival.state().hunger == 100.0f);
     assert(survival.state().thirst == 0.0f);
-    assert(survival.state().temperature == 5.0f);
+    assert(survival.state().temperature == -3.0f);
     assert(survival.state().bleeding == 2.0f);
     assert(survival.state().infection == 0.0f);
 
