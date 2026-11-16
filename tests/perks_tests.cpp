@@ -52,6 +52,11 @@ int main() {
     assert(!restored.restore(corrupt));
     assert(restored.snapshot().perk_cost == previous.perk_cost);
     restored.clear();
+    assert(restored.snapshot().perk_cost == 100);
+    assert(restored.snapshot().perks_learnt_count == 0);
+    assert(restored.level(SourcePerk::camel) == 0);
+    assert(restored.level(SourcePerk::hamster) == 0);
+    assert(!restored.can_buy(SourcePerk::camel));
     assert(!restored.award_experience(0));
     assert(restored.award_experience(std::numeric_limits<std::uint32_t>::max()));
     assert(!restored.award_experience(1));
