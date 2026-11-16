@@ -377,6 +377,25 @@ int main() {
     assert(wear_inventory.slot(0)->empty());
     assert(!wear_inventory.damage_condition(0, 1));
 
+    // Native lower-touchscreen half-stack split preserves the exact source
+    // item condition and does not mutate the inventory on a failed split.
+    InventorySystem split_inventory;
+    assert(split_inventory.add_to_slot(0, 20, 5, 0, 72));
+    assert(split_inventory.split_half(0, 7));
+    assert(split_inventory.slot(0)->count == 3);
+    assert(split_inventory.slot(7)->count == 2);
+    assert(split_inventory.slot(7)->condition == 72);
+    const auto split_before = split_inventory.snapshot();
+    assert(!split_inventory.split_half(0, 7));
+    assert(!split_inventory.split_half(7, 7));
+    assert(!split_inventory.split_half(0, 99));
+    assert(split_inventory.slot(0)->count == split_before.slots[0].count);
+    assert(split_inventory.slot(7)->count == split_before.slots[7].count);
+    assert(split_inventory.split_half(0, 8));
+    assert(split_inventory.slot(0)->count == 2);
+    assert(split_inventory.slot(8)->count == 1);
+    assert(!split_inventory.split_half(8, 9));
+
     // Ground pickup/drop mirrors the original inventory transfer flow.
     InventorySystem ground_inventory;
     GroundItem ground_pile{18, 4};

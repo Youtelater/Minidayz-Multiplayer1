@@ -211,7 +211,7 @@ public:
         }
         if (!crafting_open_ && !storage_open_ && touch_pressed &&
             input.touch.py >= 81 && input.touch.py < 92) {
-            const int action = input.touch.px / 80;
+            const int action = input.touch.px / 64;
             if (action == 3) {
                 (void)ground_loot_.pickup_nearest(
                     inventory_, player_.state().x, player_.state().y, 36.0f);
@@ -231,6 +231,16 @@ public:
                     } else if (action == 2) {
                         (void)ground_loot_.drop_from_inventory(
                             inventory_, selected, 0, player_.state().x, player_.state().y);
+                    } else if (action == 4) {
+                        // Half-stack split on the 3DS lower touchscreen.
+                        for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
+                            const auto* target = inventory_.slot(i);
+                            if (target && target->empty()) {
+                                if (inventory_.split_half(selected, i))
+                                    selected_inventory_slot_ = static_cast<int>(i);
+                                break;
+                            }
+                        }
                     }
                     item = inventory_.slot(selected);
                     if (!item || item->empty()) selected_inventory_slot_ = -1;
@@ -508,12 +518,12 @@ public:
             }
         }
         if (!storage_open_ && !crafting_open_) {
-            static constexpr const char* actions[] = {"USE", "ALT", "DROP", "PICK"};
-            for (int i = 0; i < 4; ++i) {
-                const float x = static_cast<float>(i * 80);
-                renderer.draw_solid_rect(x + 1.0f, 81.0f, 78.0f, 11.0f,
+            static constexpr const char* actions[] = {"USE", "ALT", "DROP", "PICK", "SPLIT"};
+            for (int i = 0; i < 5; ++i) {
+                const float x = static_cast<float>(i * 64);
+                renderer.draw_solid_rect(x + 1.0f, 81.0f, 62.0f, 11.0f,
                                          C2D_Color32(65, 78, 66, 255));
-                renderer.draw_text(actions[i], x + 24.0f, 83.0f, 0.21f);
+                renderer.draw_text(actions[i], x + 13.0f, 83.0f, 0.21f);
             }
         }
         if (storage_open_) {

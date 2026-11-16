@@ -422,6 +422,14 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
     return true;
 }
 
+bool InventorySystem::split_half(std::size_t from, std::size_t to) noexcept {
+    if (from >= capacity_ || to >= capacity_ || from == to ||
+        slots_[from].empty() || slots_[from].count < 2 ||
+        !slots_[to].empty())
+        return false;
+    return move(from, to, static_cast<std::uint16_t>(slots_[from].count / 2));
+}
+
 const InventorySlot* InventorySystem::slot(std::size_t index) const noexcept {
     return index < capacity_ ? &slots_[index] : nullptr;
 }
