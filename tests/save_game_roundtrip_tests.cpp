@@ -30,6 +30,18 @@ struct PreviousSaveV6 {
 };
 
 
+struct PreviousSaveV7 {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{7};
+    std::uint32_t seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+};
+
 struct LegacyInventorySlotForTest {
     std::uint16_t item_id{};
     std::uint16_t count{};
@@ -197,7 +209,7 @@ int main() {
     assert(restored.tents.tents[0].items[0].condition == 75);
     assert(restored.pending_item_use.pending_medical_item_id == 0);
 
-    // Version 7 also saves an in-flight 2-second bandage action.
+    // Current save format retains an in-flight 2-second bandage action.
     ItemUseRuntime pending{};
     assert(pending.begin(18));
     assert(pending.snapshot().seconds_remaining == 2.0f);
@@ -207,6 +219,7 @@ int main() {
     assert(restored.version == kSaveVersion && restored.seed == 89);
     assert(restored.pending_item_use.pending_medical_item_id == 18);
     assert(restored.pending_item_use.seconds_remaining == 2.0f);
+    assert(restored.perks.perk_cost == 100u);
     ItemUseRuntime restored_pending{};
     assert(restored_pending.restore(restored.pending_item_use));
     PlayerSystem after_restore(player);
@@ -215,6 +228,51 @@ int main() {
     assert(after_restore.state().bleeding == 2.0f);
     restored_pending.update(1.0f, after_restore);
     assert(after_restore.state().bleeding == 0.0f);
+
+    // Original XP and two-level perks survive a v8 save and restore intact.
+    SourcePerkSystem source_perks{};
+    assert(source_perks.award_experience(100u));
+    assert(source_perks.buy(SourcePerk::camel));
+    assert(source_perks.award_experience(220u));
+    assert(source_perks.buy(SourcePerk::camel));
+    assert(source_perks.item_use_flags().camel_active);
+    assert(!source_perks.item_use_flags().hamster_active);
+    assert(write_saved_game_to_paths(90, player, inventory, equipment, ground,
+                                    tents, kFile, kTemp, &pending, &source_perks));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 8 && restored.seed == 90);
+    SourcePerkSystem perk_restore{};
+    assert(perk_restore.restore(restored.perks));
+    assert(perk_restore.level(SourcePerk::camel) == 2);
+    assert(perk_restore.snapshot().perk_cost == 360);
+    assert(perk_restore.item_use_flags().camel_active);
+    auto tampered = perk_restore.snapshot();
+    tampered.perk_cost = 100;
+    assert(!perk_restore.restore(tampered));
+    assert(perk_restore.snapshot().perk_cost == 360);
+    assert(write_saved_game_to_paths(90, player, inventory, equipment, ground,
+                                    tents, kFile, kTemp, &pending, &source_perks));
+
+    // The old v7 binary layout must migrate without losing in-flight
+    // medical treatment while leaving newly introduced perk XP at defaults.
+    PreviousSaveV7 old7{};
+    old7.seed = 322;
+    old7.player = player;
+    old7.inventory = inventory.snapshot();
+    old7.equipment = equipment.snapshot();
+    old7.ground_loot = ground.snapshot();
+    old7.tents = tents.snapshot();
+    old7.pending_item_use = pending.snapshot();
+    {
+        auto* file = std::fopen(kFile, "wb");
+        assert(file && std::fwrite(&old7, sizeof(old7), 1, file) == 1);
+        assert(std::fclose(file) == 0);
+    }
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 7 && restored.seed == 322);
+    assert(restored.pending_item_use.pending_medical_item_id == 18);
+    assert(restored.perks.camel_level == 0 && restored.perks.hamster_level == 0);
+    assert(restored.perks.perk_cost == 100);
 
     // Truncation, a spurious trailing byte, NaN, and bad inventory all reject.
     assert(write_saved_game_to_paths(42, player, inventory, equipment,
