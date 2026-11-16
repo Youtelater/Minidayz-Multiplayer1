@@ -328,5 +328,48 @@ int main() {
     assert(atomic.restore(EquipmentSnapshot{{251, 0, 0, 0, 0, 0, 0}}));
     for (std::uint16_t id = 1; id <= 15; ++id) assert(full.add(id, 1));
     assert(full.add(264, 1) == false);
+    // Original Construct condition-write events, not estimated weapon wear.
+    float wear = -1.0f;
+    assert(source_condition_wear_loss(2098275646157213ULL, false, 0.0f, wear));
+    assert(std::fabs(wear - 0.25f) < 0.0001f);
+    assert(source_condition_wear_loss(2098275646157213ULL, true, 0.0f, wear));
+    assert(wear == 0.0f);
+    assert(source_condition_wear_loss(251602875520018ULL, false, 0.0f, wear));
+    assert(wear == 1.0f);
+    assert(source_condition_wear_loss(8036449108462062ULL, false, 0.0f, wear));
+    assert(std::fabs(wear - 0.2f) < 0.0001f);
+    assert(source_condition_wear_loss(682686209618980ULL, false, 0.5f, wear));
+    assert(wear == 3.0f);
+    assert(source_condition_wear_loss(682686209618980ULL, true, 0.5f, wear));
+    assert(wear == 0.0f);
+    assert(!source_condition_wear_loss(682686209618980ULL, false, 1.0f, wear));
+    assert(wear == 0.0f);
+    assert(!source_condition_wear_loss(0, false, 0.0f, wear));
+    assert(wear == 0.0f);
+
+    EquipmentSystem source_wear_equipment;
+    InventorySystem source_wear_inventory;
+    assert(source_wear_inventory.add_to_slot(0, 244, 1, 0, 75.0f));
+    assert(source_wear_equipment.equip_from_inventory(
+        source_wear_inventory, 0, EquipmentSlot::hands));
+    assert(source_wear_equipment.apply_source_wear(875054325568454ULL, false));
+    assert(std::fabs(source_wear_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] - 74.75f) < 0.0001f);
+    assert(!source_wear_equipment.apply_source_wear(875054325568454ULL, true));
+    assert(!source_wear_equipment.apply_source_wear(0, false));
+    assert(source_wear_equipment.apply_source_wear(682686209618980ULL, false, 0.5f));
+    assert(std::fabs(source_wear_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] - 71.75f) < 0.0001f);
+    assert(source_wear_equipment.apply_source_wear(251602875520018ULL, false));
+    assert(std::fabs(source_wear_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] - 70.75f) < 0.0001f);
+    assert(source_wear_equipment.apply_source_wear(8036449108462062ULL, false));
+    assert(std::fabs(source_wear_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] - 70.55f) < 0.0001f);
+    assert(source_wear_equipment.apply_source_wear(251602875520018ULL, false));
+    assert(source_wear_equipment.apply_source_wear(2098275646157213ULL, false));
+    assert(source_wear_equipment.damage_condition(EquipmentSlot::hands, 100.0f));
+    assert(!source_wear_equipment.apply_source_wear(2098275646157213ULL, false));
+
     return 0;
 }
