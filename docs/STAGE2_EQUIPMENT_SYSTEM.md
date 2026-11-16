@@ -22,10 +22,10 @@ The original player damage event subtracts four flat protection values. The gene
 - Backpack unequip returns the pack only to one of the 15 base inventory slots. It is refused while any of the 11 backpack storage slots are occupied. The UI does not mistake a free backpack-storage slot for a valid unequip destination.
 - Replacing a backpack from an extended slot preserves the old pack in the same surviving slot when possible; otherwise it uses a free slot in the resulting grid or fails atomically.
 - Older snapshots with guessed capacity values are normalized safely on restore. Item condition (original instance variable 6) is preserved through inventory stacks, ground transfers, equipment swaps, backpack swaps and save/load.
-- Equipment and per-item condition are included in save version 5. Player-only, inventory-only, version-3 equipment, and version-4 equipment/ inventory saves are migrated; version 5 also persists ground loot.
+- Equipment and per-item condition are included in save version 6. Player-only, inventory-only, version-3 equipment, version-4 equipment/inventory, and version-5 ground-loot saves are migrated.
 - Player rendering draws original sprite objects by animation name, then layers pants, clothing, vest, helmet, backpack, and held weapon.
 - The generated source sprite catalog provides the exact Construct object for each mapped item.
 
 ## Remaining before Stage 2 completion
 
-Item condition storage and persistence are implemented using original instance variable 6; the source condition loss/repair rules still need to be ported. The armor-aware damage API is ready, but it still needs to be connected to the complete original combat path. The temperature offset still needs to be combined with the source Day_cold/weather value. World loot spawning and the remaining item actions still need their original Construct semantics. Values must not be guessed.
+Item condition storage and persistence are implemented using original instance variable 6; the source condition loss/repair rules still need to be ported. The armor-aware damage API is ready, but it still needs to be connected to the complete original combat path. The source difficulty Day_cold baseline (Novice 6, Regular 7, Veteran 8) is now applied as an absolute Player_temperature target together with the exact clothing expression. Map-specific Day_cold overrides and the original night/rain temperature events still need to be connected. World loot spawning and the remaining item actions still need their original Construct semantics. Values must not be guessed.
