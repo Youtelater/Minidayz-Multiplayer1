@@ -20,6 +20,18 @@ Stage 2 ports the original Mini DAYZ 1.6.0 item, inventory, backpack, equipment,
 - Armor protection is summed from the original flat equipment values. The player damage API applies the original flat subtraction; item condition does not scale armor or warmth.
 - Raw Construct inventory behavior records are exported with their source event UIDs, conditions and actions for further porting. The six original combat/obstacle groups containing item-condition writes are also retained and CI-validated; their fractional and perk-dependent action semantics remain unported (see `docs/STAGE2_CONDITION_WEAR_TRACE.md`).
 
+## Source-backed crafting implementation
+
+The bottom 3DS touchscreen now has a craft list opened from the backpack
+footer. Three transactions are generated from the original root tutorial
+recipe text and original item IDs: Ashwood Stick + Rope -> Improvised Bow,
+Rope + Burlap Sack -> Improvised Sling Bag, and Improvised Sling Bag +
+three Wooden Sticks -> Improvised Backpack. The generator rejects missing
+or altered root tutorial text; failed crafting does not consume ingredients.
+These are the only recipes currently translated without assuming undocumented
+requirements or outputs. Additional original crafting actions still need
+event-level extraction and porting.
+
 ## Remaining Stage 2 work
 
 - Port the original item-condition wear/loss events and connect them to the correct gameplay actions. Do not infer wear from damage or item names.

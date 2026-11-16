@@ -7,6 +7,7 @@
 #include "minidayz/equipment.hpp"
 #include "minidayz/item_use.hpp"
 #include "minidayz/ground_loot.hpp"
+#include "minidayz/crafting.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -295,7 +296,25 @@ public:
         movement.run = (input.held & KEY_B) != 0;
         const bool touch_pressed = input.touching && !touch_down_;
         const bool touch_released = !input.touching && touch_down_;
-        if (touch_pressed) {
+
+        // Crafting is always on the 3DS bottom touch display. The center of
+        // the bottom footer switches between the backpack and craft lists.
+        if (touch_pressed && input.touch.py >= 223 &&
+            input.touch.px >= 110 && input.touch.px < 210) {
+            crafting_open_ = !crafting_open_;
+            selected_inventory_slot_ = -1;
+            drag_source_slot_ = -1;
+            drag_target_slot_ = -1;
+            drag_target_equipment_slot_ = -1;
+        }
+        if (crafting_open_ && touch_pressed &&
+            input.touch.py >= 99 && input.touch.py < 219) {
+            const std::size_t recipe = static_cast<std::size_t>(
+                (input.touch.py - 99) / 40);
+            (void)minidayz::items::craft_from_inventory(inventory_, recipe);
+        }
+
+        if (!crafting_open_ && touch_pressed) {
             drag_source_slot_ = -1;
             drag_target_slot_ = -1;
             drag_target_equipment_slot_ = -1;
@@ -324,9 +343,9 @@ public:
                 const std::size_t page_count =
                     (inventory_.capacity() + kInventoryPageSize - 1) /
                     kInventoryPageSize;
-                if (input.touch.px < 160 && inventory_page_ > 0)
+                if (input.touch.px < 110 && inventory_page_ > 0)
                     --inventory_page_;
-                else if (input.touch.px >= 160 &&
+                else if (input.touch.px >= 210 &&
                          inventory_page_ + 1 < page_count)
                     ++inventory_page_;
                 selected_inventory_slot_ = -1;
@@ -344,7 +363,7 @@ public:
                 }
             }
         }
-        if (input.touching && drag_source_slot_ >= 0) {
+        if (!crafting_open_ && input.touching && drag_source_slot_ >= 0) {
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
             if (equipment_target >= 0 && equipment_target < 6) {
                 drag_target_equipment_slot_ = equipment_target;
@@ -356,7 +375,7 @@ public:
                 if (target >= 0) drag_target_slot_ = target;
             }
         }
-        if (touch_released) {
+        if (!crafting_open_ && touch_released) {
             if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
                 // Dragging an original repair material onto the backpack slot
@@ -511,6 +530,29 @@ public:
                 renderer.draw_text(equipment_labels[i], x + 3.0f, 53.0f, 0.18f);
             }
         }
+        if (crafting_open_) {
+            // Original guide-backed recipes only; no fabricated crafting
+            // table. The upper 3DS screen remains the game world.
+            renderer.draw_solid_rect(8.0f, 89.0f, 304.0f, 133.0f,
+                                     C2D_Color32(22, 31, 25, 255));
+            for (std::size_t i = 0; i < minidayz::items::kSourceCraftRecipeCount; ++i) {
+                const auto* recipe = minidayz::items::source_craft_recipe(i);
+                if (!recipe) continue;
+                const float y = 99.0f + static_cast<float>(i) * 40.0f;
+                const bool ready = minidayz::items::can_craft_from_inventory(
+                    inventory_, i);
+                renderer.draw_solid_rect(12.0f, y, 296.0f, 36.0f,
+                    ready ? C2D_Color32(65, 95, 64, 255)
+                          : C2D_Color32(49, 56, 49, 255));
+                renderer.draw_text(recipe->result_name, 18.0f, y + 3.0f, 0.32f);
+                renderer.draw_text(recipe->original_guide, 18.0f, y + 20.0f, 0.19f);
+            }
+            renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
+                                     C2D_Color32(54, 68, 55, 255));
+            renderer.draw_text("TAP RECIPE TO CRAFT", 14.0f, 226.0f, 0.23f);
+            renderer.draw_text("BACK TO BAG", 123.0f, 226.0f, 0.29f);
+            return;
+        }
         // 5 x 3 backpack page, sized for the 320 x 240 touch screen.
         const int page_start = static_cast<int>(inventory_page_ * kInventoryPageSize);
         for (int row = 0; row < 3; ++row) {
@@ -552,7 +594,8 @@ public:
         renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                  C2D_Color32(54, 68, 55, 255));
         renderer.draw_text("A USE X ALT L DROP R PICK", 14.0f, 226.0f, 0.18f);
-        renderer.draw_text(page_label, 104.0f, 226.0f, 0.30f);
+        renderer.draw_text("CRAFT", 132.0f, 226.0f, 0.30f);
+        renderer.draw_text(page_label, 213.0f, 226.0f, 0.23f);
     }
 
     void render(minidayz::Renderer& renderer) noexcept override {
@@ -734,6 +777,7 @@ private:
         equipment_.clear();
         ground_loot_.clear();
         inventory_page_ = 0;
+        crafting_open_ = false;
         selected_inventory_slot_ = -1;
         world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
         npc_ready_ = world_ready_ && npcs_.initialize(world_);
@@ -807,6 +851,7 @@ private:
     int drag_target_equipment_slot_{-1};
     std::size_t inventory_page_{};
     bool touch_down_{};
+    bool crafting_open_{};
 };
 
 } // namespace
