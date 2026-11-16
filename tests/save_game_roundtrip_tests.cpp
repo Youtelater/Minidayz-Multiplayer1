@@ -18,6 +18,59 @@ struct PreviousSaveV5 {
     GroundLootSnapshot ground_loot{};
 };
 
+
+struct LegacyInventorySlotForTest {
+    std::uint16_t item_id{};
+    std::uint16_t count{};
+};
+struct LegacyInventoryForTest {
+    std::array<LegacyInventorySlotForTest, kMaximumInventorySlotCount> slots{};
+    std::uint16_t capacity{static_cast<std::uint16_t>(kInventorySlotCount)};
+    std::uint16_t equipped_backpack{};
+};
+struct LegacyEquipmentForTest {
+    std::array<std::uint16_t, kEquipmentSlotCount> item_ids{};
+};
+static_assert(sizeof(LegacyInventorySlotForTest) == 4);
+static_assert(sizeof(LegacyInventoryForTest) == 132);
+static_assert(sizeof(LegacyEquipmentForTest) == 14);
+
+// Older native save files wrote this layout without a per-field codec.
+// Replay each version through the same public loader used on the 3DS.
+void write_legacy_save(const char* path, std::uint32_t version,
+                       const PlayerState& player) {
+    auto* file = std::fopen(path, "wb");
+    assert(file);
+    const std::uint32_t header[] = {kSaveMagic, version, 75};
+    assert(std::fwrite(header, sizeof(header), 1, file) == 1);
+    assert(std::fwrite(&player, sizeof(player), 1, file) == 1);
+    std::size_t bytes = sizeof(header) + sizeof(player);
+    if (version == 2 || version == 3) {
+        LegacyInventoryForTest inv{};
+        inv.slots[0] = {11, 2};
+        assert(std::fwrite(&inv, sizeof(inv), 1, file) == 1);
+        bytes += sizeof(inv);
+        if (version == 3) {
+            LegacyEquipmentForTest equipment{};
+            assert(std::fwrite(&equipment, sizeof(equipment), 1, file) == 1);
+            bytes += sizeof(equipment);
+        }
+    } else if (version == 4) {
+        InventorySnapshot inv{};
+        inv.slots[0] = {11, 2, 67};
+        EquipmentSnapshot equipment{};
+        assert(std::fwrite(&inv, sizeof(inv), 1, file) == 1);
+        assert(std::fwrite(&equipment, sizeof(equipment), 1, file) == 1);
+        bytes += sizeof(inv) + sizeof(equipment);
+    }
+    if (version >= 2 && version <= 4) {
+        static constexpr unsigned char zeros[3]{};
+        const std::size_t padding = (4 - bytes % 4) % 4;
+        assert(std::fwrite(zeros, 1, padding, file) == padding);
+    }
+    assert(std::fclose(file) == 0);
+}
+
 int main() {
     constexpr const char* kFile = "stage2_roundtrip_test.sav";
     constexpr const char* kTemp = "stage2_roundtrip_test.tmp";
@@ -123,6 +176,37 @@ int main() {
         assert(std::fclose(f) == 0);
         assert(!load_saved_game_from_path(restored, kFile));
     }
+    // All pre-tent native formats must remain readable after migration.
+    for (std::uint32_t version = 1; version <= 4; ++version) {
+        write_legacy_save(kFile, version, player);
+        assert(load_saved_game_from_path(restored, kFile));
+        assert(restored.version == version);
+        assert(restored.seed == 75);
+        assert(restored.player.x == player.x);
+        assert(restored.ground_loot.count == 0);
+        assert(restored.tents.count == 0);
+        if (version >= 2) {
+            assert(restored.inventory.slots[0].item_id == 11);
+            assert(restored.inventory.slots[0].count == 2);
+            if (version <= 3)
+                assert(restored.inventory.slots[0].condition ==
+                    source_default_condition(11));
+            else
+                assert(restored.inventory.slots[0].condition == 67);
+        } else {
+            assert(restored.inventory.slots[0].empty());
+        }
+    }
+    // Failure must not mutate the last good decoded snapshot.
+    const auto previous = restored.seed;
+    {
+        auto* file = std::fopen(kFile, "wb");
+        assert(file && std::fputc('X', file) != EOF);
+        assert(std::fclose(file) == 0);
+    }
+    assert(!load_saved_game_from_path(restored, kFile));
+    assert(restored.seed == previous);
+
     std::remove(kFile);
     std::remove(kTemp);
     return 0;
