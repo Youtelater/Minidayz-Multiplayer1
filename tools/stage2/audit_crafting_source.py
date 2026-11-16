@@ -75,6 +75,20 @@ def main():
                 if isinstance(args, list) and len(args) > 1 and isinstance(args[1], list):
                     output_ids.append(args[1])
         print(f"  {item['name']}: UID={item['uid']}, events={item['event_count']}, output_expr={output_ids[:12]}")
+        calls = []
+        other_actions = {}
+        for event in item["events"]:
+            for action in event["actions"]:
+                if not isinstance(action, list) or len(action) < 6:
+                    continue
+                key = tuple(action[0:2])
+                other_actions[key] = other_actions.get(key, 0) + 1
+                if key == (189, 69) and len(action[5]) >= 2:
+                    target = action[5][0]
+                    if isinstance(target, list) and len(target) > 1:
+                        calls.append([target[1], action[5][1]])
+        print("  ACTION KINDS:", sorted((str(k), v) for k, v in other_actions.items()))
+        print("  ORIGINAL FUNCTION CALLS:", json.dumps(calls, separators=(",", ":"))[:12000])
         if item["name"] not in ("Craft_1", "Craft_4", "Craft_5"):
             print("  SOURCE RAW FIRST EVENTS:",
                   json.dumps(item["events"][:3], separators=(",", ":"))[:4800])
