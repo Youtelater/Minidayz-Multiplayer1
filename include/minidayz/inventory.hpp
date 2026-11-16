@@ -93,6 +93,9 @@ public:
     bool move(std::size_t from, std::size_t to,
               std::uint16_t amount = 0,
               std::uint16_t max_stack = 0) noexcept;
+    // Split a stack in two without changing its original item condition.
+    // A split is atomic and only targets an empty, active inventory slot.
+    bool split_stack(std::size_t from, std::size_t to) noexcept;
 
     const InventorySlot* slot(std::size_t index) const noexcept;
     std::uint32_t count(std::uint16_t item_id) const noexcept;
