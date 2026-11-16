@@ -373,6 +373,16 @@ int main() {
     assert(migrated_pack.capacity() == 20);
     assert(migrated_pack.count(1) == 1);
     assert(migrated_pack.snapshot().slots[20].empty());
+    // The original item-condition grouping must be respected when merging
+    // overflow into a surviving partially filled stack.
+    auto merge_legacy = legacy_pack_save;
+    merge_legacy.slots[0] = {20, 3, 67};
+    merge_legacy.slots[20] = {20, 2, 67};
+    assert(migrated_pack.restore(merge_legacy));
+    assert(migrated_pack.slot(0)->count == 5);
+    assert(migrated_pack.slot(0)->condition == 67);
+    assert(migrated_pack.snapshot().slots[20].empty());
+    assert(migrated_pack.restore(legacy_pack_save));
     // A full surviving grid must reject the old oversized save rather
     // than deleting or overwriting any original item.
     auto overflowing = legacy_pack_save;
