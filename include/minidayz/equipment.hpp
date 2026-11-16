@@ -46,8 +46,9 @@ public:
     void apply_damage(PlayerSystem& player, float amount) const noexcept;
     // Original Player_temperature clothing term, excluding Day_cold.
     float temperature_offset() const noexcept;
-    // Apply the original clothing contribution to player temperature.
-    void apply_temperature(PlayerSystem& player, float delta_seconds,
+    // Source Update_Stats assigns Player_temperature = Day_cold + clothing term.
+    // This is an absolute target, not a per-second temperature delta.
+    void apply_temperature(PlayerSystem& player, float day_cold,
                            float min_temperature, float max_temperature) const noexcept;
     const EquipmentSnapshot& snapshot() const noexcept { return state_; }
     bool restore(const EquipmentSnapshot& saved) noexcept;
