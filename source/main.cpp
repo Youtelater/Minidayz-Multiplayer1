@@ -433,7 +433,7 @@ public:
         // Apply the source-backed clothing contribution every frame. The
         // equipment term is separate from Day_cold and is already derived
         // from the original Player_temperature item-warmth expression.
-        player_.adjust_temperature(equipment_.temperature_offset() * dt,
+        equipment_.apply_temperature(player_, dt,
             preview_rules_.min_temperature, preview_rules_.max_temperature);
         if (npc_ready_) npcs_.update(dt, player_.state().x, player_.state().y,
                                      &WorldPreviewScene::blocked, this);
