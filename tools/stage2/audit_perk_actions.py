@@ -51,6 +51,29 @@ def main():
     for action in xp_actions[:100]:
         print("SOURCE XP ACTION",json.dumps(action,separators=(",",":"))[:1300])
     print("Total original XP/Perk-cost writes:",len(xp_actions))
+    # Source-backed native event UID adapter must use the exact literal ADD
+    # actions, never a SET or a conditional amount invented by the port.
+    source_literal_awards = {
+        662365640635533:25, 609771835564225:15,
+        184273689853649:200, 853523169384096:200,
+        422420671955084:50, 278938995521251:50,
+        786944914217829:100, 589702583314875:150,
+        979830737090869:100, 120764849871488:150,
+        118494092025457:200, 920613859152657:250,
+        265440217696674:300, 1074032691412307:2,
+        3302144065259174:2, 409652067374260:10,
+        517726037510695:5, 972069878318185:5,
+    }
+    for uid, amount in source_literal_awards.items():
+        verified = [a for a in xp_actions if a["event_uid"] == uid and
+                    a["method"] == 122 and
+                    a["params"] == [[11,"expierence_points"],[7,[0,amount]]]]
+        if not verified:
+            raise SystemExit(
+                f"Original XP source literal event changed: {uid} amount {amount}")
+    print("Verified exact literal original XP event adapters:",
+          len(source_literal_awards))
+
     groups=[e for sheet in project["project"][6] if isinstance(sheet,list) and len(sheet)>1
             for e,_ in walk(sheet[1]) if e[4]==UID]
     if len(groups)!=1:raise SystemExit(f"Original perks group missing: {len(groups)}")
