@@ -8,13 +8,22 @@
 using namespace minidayz::items;
 
 int main() {
-    assert(kSourceCraftRecipeCount == 3);
+    assert(kSourceCraftRecipeCount == 6);
     assert(source_craft_recipe(0)->result_id == 163);
     assert(source_craft_recipe(1)->result_id == 454);
     assert(source_craft_recipe(2)->result_id == 455);
     assert(source_craft_recipe(2)->ingredients[1].item_id == 38);
     assert(source_craft_recipe(2)->ingredients[1].count == 3);
-    assert(source_craft_recipe(3) == nullptr);
+    for (std::size_t i = 3; i < 6; ++i) {
+        assert(source_craft_recipe(i)->result_id == 23);
+        assert(source_craft_recipe(i)->result_in_inventory);
+        assert(source_craft_recipe(i)->ingredients[0].item_id == 50);
+    }
+    assert(source_craft_recipe(3)->ingredients[1].item_id == 26);
+    assert(source_craft_recipe(4)->ingredients[1].item_id == 38);
+    assert(source_craft_recipe(5)->ingredients[1].item_id == 49);
+    assert(!source_craft_recipe(0)->result_in_inventory);
+    assert(source_craft_recipe(6) == nullptr);
 
     InventorySystem player;
     GroundLootSystem ground;
@@ -78,6 +87,34 @@ int main() {
     assert(mixed.slot(2)->empty() && mixed.slot(3)->empty());
     assert(mixed.count(454) == 0);
     assert(mixed_ground.entry(0)->item.item_id == 455);
+
+    // Original Craft_3: one Woodpiles plus one of Rags, Wooden Sticks,
+    // Newspapers produces Campfire Kit directly in inventory. Unlike bow
+    // crafting, no ground object is created.
+    for (std::size_t i = 3; i < 6; ++i) {
+        InventorySystem kit_inventory;
+        GroundLootSystem kit_ground;
+        assert(kit_inventory.add(50, 1));
+        const auto tinder = source_craft_recipe(i)->ingredients[1].item_id;
+        assert(!craft_from_inventory(kit_inventory, kit_ground, 1, 2, i));
+        assert(kit_inventory.add(tinder, 1));
+        assert(can_craft_from_inventory(kit_inventory, kit_ground, 1, 2, i));
+        assert(craft_from_inventory(kit_inventory, kit_ground, 1, 2, i));
+        assert(kit_inventory.count(50) == 0);
+        assert(kit_inventory.count(tinder) == 0);
+        assert(kit_inventory.count(23) == 1);
+        assert(kit_ground.count() == 0);
+    }
+    // The result must fit after ingredients are consumed, not before.
+    InventorySystem tight;
+    GroundLootSystem tight_ground;
+    assert(tight.add_to_slot(0, 50, 1));
+    assert(tight.add_to_slot(1, 26, 1));
+    for (std::size_t i = 2; i < tight.capacity(); ++i)
+        assert(tight.add_to_slot(i, 42, 1));
+    assert(tight.occupied_slots() == tight.capacity());
+    assert(craft_from_inventory(tight, tight_ground, 1, 2, 3));
+    assert(tight.count(23) == 1 && tight_ground.count() == 0);
 
     // Full original ground-entity container and nonfinite positions reject a
     // craft without changing the source inventory or dropping the output.

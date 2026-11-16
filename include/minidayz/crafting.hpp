@@ -8,11 +8,11 @@
 
 namespace minidayz::items {
 
-// Original Construct Craft_1/Craft_4/Craft_5 emit Spawn_drop at player XY.
+// Craft_1/4/5 emit Spawn_drop at player XY; Craft_3 returns an inventory item.
 const SourceCraftRecipe* source_craft_recipe(std::size_t index) noexcept;
 
 // Fail atomically if ingredients are absent, the ground list is full, or the
-// output position is invalid. Original result appears on the ground.
+// output position is invalid. Output location follows its original event.
 bool craft_from_inventory(InventorySystem& inventory,
                           GroundLootSystem& ground,
                           float player_x, float player_y,

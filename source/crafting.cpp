@@ -25,9 +25,11 @@ bool craft_from_inventory(InventorySystem& inventory,
 
     const auto before = inventory.snapshot();
     const auto ground_before = ground.snapshot();
-    // Original Craft_1, Craft_4 and Craft_5 call Spawn_drop with player X/Y,
-    // rather than giving the result directly to an inventory slot.
-    if (!ground.add({recipe->result_id, recipe->result_count,
+    // Craft_1/4/5 call Spawn_drop at player XY. Craft_3 instead calls
+    // Check_space_inventory(-1,23), so its kit belongs in inventory.
+    // The transaction rolls both stores back on any failure.
+    if (!recipe->result_in_inventory &&
+        !ground.add({recipe->result_id, recipe->result_count,
                      kUseSourceItemCondition}, player_x, player_y))
         return false;
 
@@ -50,6 +52,12 @@ bool craft_from_inventory(InventorySystem& inventory,
             (void)ground.restore(ground_before);
             return false;
         }
+    }
+    if (recipe->result_in_inventory &&
+        !inventory.add(recipe->result_id, recipe->result_count)) {
+        (void)inventory.restore(before);
+        (void)ground.restore(ground_before);
+        return false;
     }
     return true;
 }
