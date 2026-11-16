@@ -192,8 +192,8 @@ int main() {
     assert(source_backpack_capacity(451) == 26);
     assert(source_backpack_capacity(452) == 26);
     assert(source_backpack_capacity(453) == 26);
-    assert(source_backpack_capacity(454) == 26);
-    assert(source_backpack_capacity(455) == 26);
+    assert(source_backpack_capacity(454) == 18); // 3 original improvised bag slots
+    assert(source_backpack_capacity(455) == 20); // 5 original improved bag slots
     assert(source_backpack_capacity(457) == 26);
     assert(source_backpack_capacity(458) == 26);
     assert(source_backpack_capacity(459) == 26);
@@ -259,7 +259,31 @@ int main() {
     assert(extended.equipped_backpack() == 0);
     assert(extended.slot(14)->item_id == 450);
 
-    // Every original wearable backpack uses the same 11-slot storage grid.
+    // Source tutorial lists smaller capacities for improvised packs. Check
+    // expansion, downsizing rejection, rollback and save/restore precisely.
+    InventorySystem small_pack;
+    assert(small_pack.add(454, 1));
+    assert(small_pack.equip_backpack_from_slot(0));
+    assert(small_pack.capacity() == 18);
+    assert(!small_pack.add_to_slot(18, 1, 1));
+    assert(small_pack.add(455, 1));
+    assert(small_pack.equip_backpack_from_slot(0));
+    assert(small_pack.capacity() == 20);
+    assert(small_pack.slot(0)->item_id == 454);
+    assert(small_pack.add_to_slot(19, 1, 1));
+    assert(!small_pack.equip_backpack_from_slot(0));
+    assert(small_pack.capacity() == 20);
+    assert(small_pack.equipped_backpack() == 455);
+    assert(small_pack.slot(19)->item_id == 1);
+    assert(small_pack.remove(19, 1));
+    assert(small_pack.equip_backpack_from_slot(0));
+    assert(small_pack.capacity() == 18);
+    assert(small_pack.equipped_backpack() == 454);
+    assert(small_pack.slot(0)->item_id == 455);
+    InventorySystem small_restored;
+    assert(small_restored.restore(small_pack.snapshot()));
+    assert(small_restored.capacity() == 18);
+
     // Replacing a pack from an extended slot preserves the old pack atomically.
     InventorySystem replacement;
     assert(replacement.add(450, 1, 0, 55));
