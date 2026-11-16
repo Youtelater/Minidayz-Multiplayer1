@@ -520,10 +520,10 @@ public:
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
         player_.update_survival(dt, preview_rules_);
-        // Apply the source-backed clothing contribution every frame. The
-        // equipment term is separate from Day_cold and is already derived
-        // from the original Player_temperature item-warmth expression.
-        equipment_.apply_temperature(player_, dt,
+        // Update_Stats assigns an absolute Player_temperature target from
+        // Day_cold plus the exact clothing expression; it is not a frame-rate
+        // accumulation. Dynamic rain/night/map modifiers remain separate.
+        equipment_.apply_temperature(player_, preview_rules_.day_cold,
             preview_rules_.min_temperature, preview_rules_.max_temperature);
         if (npc_ready_) npcs_.update(dt, player_.state().x, player_.state().y,
                                      &WorldPreviewScene::blocked, this);
