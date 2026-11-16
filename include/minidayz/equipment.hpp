@@ -36,6 +36,13 @@ bool source_item_protection(std::uint16_t item_id,
 // A random fraction in [0, 1) is required only by Player_get_hit.
 bool source_condition_wear_loss(std::uint64_t event_uid, bool perk_wxnj,
                                 float random_fraction, float& loss) noexcept;
+/** Source action-specific wear from the generated original Construct catalog.
+ * Event UIDs may be repeated, but each source action UID is exact.
+ * The caller evaluates enclosing event predicates before dispatching.
+ */
+bool source_condition_wear_action(std::uint64_t action_uid, bool perk_wxnj,
+                                  float random_fraction, float crafted,
+                                  float& loss) noexcept;
 
 class EquipmentSystem {
 public:
@@ -69,6 +76,9 @@ public:
     // held weapon; does not invent attack input or collision timing.
     bool apply_source_wear(std::uint64_t event_uid, bool perk_wxnj,
                            float random_fraction = 0.0f) noexcept;
+    bool apply_source_wear_action(std::uint64_t action_uid, bool perk_wxnj,
+                                  float random_fraction = 0.0f,
+                                  float crafted = 0.0f) noexcept;
     // Apply an absolute condition value decoded from a source repair action.
     bool restore_condition(EquipmentSlot slot, float condition) noexcept;
     // Consume one original repair material and apply the source-defined gain.
