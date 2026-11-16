@@ -23,8 +23,8 @@ inline constexpr std::size_t kEquipmentSlotCount =
 
 struct EquipmentSnapshot {
     std::array<std::uint16_t, kEquipmentSlotCount> item_ids{};
-    std::array<std::uint8_t, kEquipmentSlotCount> conditions{
-        100, 100, 100, 100, 100, 100, 100
+    std::array<float, kEquipmentSlotCount> conditions{
+        100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f
     };
 };
 
@@ -57,9 +57,9 @@ public:
     bool equip_from_inventory(InventorySystem& inventory,
                               std::size_t inventory_slot,
                               EquipmentSlot equipment_slot) noexcept;
-    bool damage_condition(EquipmentSlot slot, std::uint8_t loss) noexcept;
+    bool damage_condition(EquipmentSlot slot, float loss) noexcept;
     // Apply an absolute condition value decoded from a source repair action.
-    bool restore_condition(EquipmentSlot slot, std::uint8_t condition) noexcept;
+    bool restore_condition(EquipmentSlot slot, float condition) noexcept;
     // Consume one original repair material and apply the source-defined gain.
     // helmet_lite is a distinct original menu action sharing the head slot.
     bool repair_from_inventory(InventorySystem& inventory,
