@@ -139,10 +139,10 @@ def main() -> None:
             # Verify the exact source comment rather than guessing a
             # storage size for the original fuel reservoir.
             fuel_match = re.search(
-                r"<!--\\s*Fuel Pack\\s*-->\\s*<text>\\s*<id>\\s*313\\s*</id>\\s*"
-                r"<name>(.*?)</name>\\s*</text>", desc_text, flags=re.DOTALL)
-            if not fuel_match or "fuel" not in fuel_match.group(1).lower() or
-                    "Slots:" in fuel_match.group(1):
+                r"<!--\s*Fuel Pack\s*-->\s*<text>\s*<id>\s*313\s*</id>\s*"
+                r"<name>(.*?)</name>\s*</text>", desc_text, flags=re.DOTALL)
+            if (not fuel_match or "fuel" not in fuel_match.group(1).lower() or
+                    "Slots:" in fuel_match.group(1)):
                 raise SystemExit("Original Fuel Pack has no verified storage slots")
             rows.append((item_id, 0, 0))
             continue
