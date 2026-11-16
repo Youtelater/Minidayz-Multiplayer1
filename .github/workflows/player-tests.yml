@@ -227,6 +227,15 @@ jobs:
       - name: Run Player Equipment Regression Tests
         run: ./equipment_system_tests
 
+      - name: Compile Source-Gated NPC Armor Contact Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/player.cpp source/inventory.cpp source/equipment.cpp \
+            tests/contact_damage_tests.cpp -o contact_damage_tests
+
+      - name: Run Source-Gated NPC Armor Contact Tests
+        run: ./contact_damage_tests
+
       - name: Compile Full Save/Load Roundtrip Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
