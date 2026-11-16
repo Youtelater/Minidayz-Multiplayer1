@@ -39,4 +39,17 @@ for name, uid, level in (("perk_camel",774754508115784,1),
     assert any(a[0:2]==[-1,41] and a[5] ==
                [[11,name],[7,[0,level]]] for e in events for a in e[6]), (
                "Original perk level change missing",name,level,uid)
-print("Original perk globals, 2 levels and formula verified")
+# The original Perks menu does not subtract earned experience when a
+# purchased perk increases the next cost. XP is cumulative, not currency.
+perk_group = by_uid.get(680413204391849, [])
+assert len(perk_group) == 1, "Original Perks and stats menu missing"
+experience_actions = [
+    (event[4], action[1]) for event in walk([perk_group[0]])
+    for action in event[6]
+    if isinstance(action, list) and len(action) >= 6 and
+    action[0] == -1 and isinstance(action[5], list) and action[5] and
+    action[5][0] == [11, "expierence_points"]
+]
+assert not experience_actions, (
+    "Original perk purchase XP action changed", experience_actions)
+print("Original perk globals, 2 levels, cumulative XP and cost formula verified")

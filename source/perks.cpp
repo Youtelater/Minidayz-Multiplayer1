@@ -61,7 +61,8 @@ bool SourcePerkSystem::buy(SourcePerk perk) noexcept {
     case SourcePerk::hamster: ++next.hamster_level; break;
     default: return false;
     }
-    next.experience_points -= next.perk_cost;
+    // The original Perks and stats menu tests cumulative experience against
+    // perk_cost. It raises perk_cost on purchase but does not subtract XP.
     ++next.perks_learnt_count;
     const std::uint64_t new_cost = static_cast<std::uint64_t>(next.perk_cost) +
         kOriginalBaseCostIncrement +

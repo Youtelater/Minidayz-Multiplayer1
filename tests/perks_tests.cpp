@@ -16,19 +16,20 @@ int main() {
     assert(p.level(SourcePerk::camel) == 1);
     assert(!p.item_use_flags().camel_active);
     assert(p.snapshot().perk_cost == 220); // 100 + 100 + 20*1
-    assert(p.snapshot().experience_points == 0);
-    assert(p.award_experience(220));
+    assert(p.snapshot().experience_points == 100);
+    assert(!p.can_buy(SourcePerk::camel));
+    assert(p.award_experience(120));
     assert(p.buy(SourcePerk::camel));
     assert(p.level(SourcePerk::camel) == 2);
     assert(p.item_use_flags().camel_active && !p.item_use_flags().hamster_active);
     assert(!p.buy(SourcePerk::camel));
     assert(p.snapshot().perk_cost == 360);
-    assert(p.award_experience(360));
+    assert(p.award_experience(140));
     assert(p.buy(SourcePerk::hamster));
     assert(p.snapshot().perk_cost == 520);
     assert(p.level(SourcePerk::hamster) == 1);
     assert(!p.item_use_flags().hamster_active);
-    assert(p.award_experience(520));
+    assert(p.award_experience(160));
     assert(p.buy(SourcePerk::hamster));
     assert(p.level(SourcePerk::hamster) == 2);
     assert(p.item_use_flags().hamster_active);

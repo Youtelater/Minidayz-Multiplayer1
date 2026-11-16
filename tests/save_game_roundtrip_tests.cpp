@@ -233,7 +233,7 @@ int main() {
     SourcePerkSystem source_perks{};
     assert(source_perks.award_experience(100u));
     assert(source_perks.buy(SourcePerk::camel));
-    assert(source_perks.award_experience(220u));
+    assert(source_perks.award_experience(120u));
     assert(source_perks.buy(SourcePerk::camel));
     assert(source_perks.item_use_flags().camel_active);
     assert(!source_perks.item_use_flags().hamster_active);
