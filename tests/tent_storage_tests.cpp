@@ -24,7 +24,7 @@ int main() {
     assert(!tents.store_from_inventory(inv, 1, 100));
     assert(tents.store_from_inventory(inv, 1, 0));
     assert(inv.count(18) == 2);
-    assert(tents.store_from_inventory(inv, 1, 0));
+    assert(tents.store_from_inventory(inv, 2, 0));
     assert(tents.tent(0)->items[0].item_id == 18);
     assert(tents.tent(0)->items[0].count == 3);
     assert(tents.tent(0)->items[0].condition == 62);
