@@ -90,5 +90,31 @@ int main() {
     assert(perk_player.state().hunger == 50.0f);
     assert(perk_player.state().thirst == 5.0f);
     assert(perk_inventory.count(1) == 0);
+
+    // Source item_activate UIDs 9313426168084632/8412413328012037
+    // require bleeding status == 1 and reset the actual player field.
+    player.set_bleeding(3.0f, 10.0f);
+    assert(inventory.add(18, 1, 0, 77));
+    assert(use_item_from_inventory(inventory, 0, player, rules));
+    assert(player.state().bleeding == 0.0f && inventory.count(18) == 0);
+    assert(inventory.add(18, 1));
+    assert(!use_item_from_inventory(inventory, 0, player, rules));
+    assert(inventory.count(18) == 1);
+    assert(inventory.remove(0, 1));
+    player.set_bleeding(1.0f, 10.0f);
+    assert(inventory.add(26, 1));
+    assert(!use_item_from_inventory(inventory, 0, player, rules, true));
+    assert(inventory.count(26) == 1);
+    assert(use_item_from_inventory(inventory, 0, player, rules));
+    assert(player.state().bleeding == 0.0f && inventory.count(26) == 0);
+
+    // Original Tetracycline source action resets player instance var 35.
+    player.set_infection(4.0f, 10.0f);
+    assert(inventory.add(46, 1));
+    assert(use_item_from_inventory(inventory, 0, player, rules));
+    assert(inventory.count(46) == 0 && player.state().infection == 0.0f);
+    assert(inventory.add(46, 1));
+    assert(use_item_from_inventory(inventory, 0, player, rules));
+    assert(inventory.count(46) == 0);
     return 0;
 }

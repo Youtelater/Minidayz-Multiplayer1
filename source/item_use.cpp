@@ -1,5 +1,6 @@
 #include "minidayz/item_use.hpp"
 #include "minidayz/generated/item_use_effect_catalog.hpp"
+#include "minidayz/generated/item_medical_catalog.hpp"
 
 #include <algorithm>
 
@@ -45,7 +46,25 @@ bool use_item_from_inventory(InventorySystem& inventory,
     if (!item || item->empty() || !player.state().alive) return false;
 
     ItemUseEffect effect{};
-    if (!source_item_use_effect(item->item_id, secondary, perks, effect)) return false;
+    if (!source_item_use_effect(item->item_id, secondary, perks, effect)) {
+        // These cases are not stat deltas. The original item_activate nodes
+        // directly reset the player's bleeding (var 22) or infection (var 35).
+        // A bandage or rags can only be used when the source bleeding flag is
+        // active; tetracycline's source branch has no such prerequisite.
+        if (secondary) return false;
+        for (const auto& rule : kSourceMedicalRules) {
+            if (rule.item_id != item->item_id) continue;
+            if (rule.action == SourceMedicalAction::stop_bleeding &&
+                player.state().bleeding <= 0.0f) return false;
+            if (!inventory.remove(inventory_slot, 1)) return false;
+            if (rule.action == SourceMedicalAction::stop_bleeding)
+                player.set_bleeding(0.0f, rules.max_bleeding);
+            else if (rule.action == SourceMedicalAction::stop_infection)
+                player.set_infection(0.0f, rules.max_infection);
+            return true;
+        }
+        return false;
+    }
     if (!inventory.remove(inventory_slot, 1)) return false;
 
     if (effect.hunger != 0.0f && rules.max_hunger > 0.0f)
