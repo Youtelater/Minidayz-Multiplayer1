@@ -179,7 +179,7 @@ int main() {
     assert(std::fabs(condition_equipment.snapshot().conditions[
         static_cast<std::size_t>(EquipmentSlot::head)] - 64.75f) < 0.0001f);
     assert(condition_equipment.damage_condition(EquipmentSlot::head, 25));
-    assert(condition_equipment.snapshot().conditions[
+    assert(std::fabs(condition_equipment.snapshot().conditions[
         static_cast<std::size_t>(EquipmentSlot::head)] - 39.75f) < 0.0001f);
     assert(condition_equipment.damage_condition(EquipmentSlot::head, 39.75f));
     assert(condition_equipment.equipped(EquipmentSlot::head) == 0);
