@@ -119,8 +119,8 @@ int main() {
     warm_state.temperature = 0.0f;
     PlayerSystem warm_player(warm_state);
     armor.apply_temperature(warm_player, 2.0f, -10.0f, 10.0f);
-    assert(std::fabs(warm_player.state().temperature - (10.0f / 7.0f)) < 0.0001f);
-    armor.apply_temperature(warm_player, -1.0f, -10.0f, 10.0f);
+    assert(std::fabs(warm_player.state().temperature - (2.0f + 5.0f / 7.0f)) < 0.0001f);
+    armor.apply_temperature(warm_player, 2.0f, -10.0f, 10.0f);
     assert(std::fabs(warm_player.state().temperature - (10.0f / 7.0f)) < 0.0001f);
     warm_player.adjust_temperature(20.0f, -10.0f, 10.0f);
     armor.apply_temperature(warm_player, 2.0f, -10.0f, 10.0f);
