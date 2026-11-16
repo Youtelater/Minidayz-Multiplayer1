@@ -89,6 +89,12 @@ def main():
                         calls.append([target[1], action[5][1]])
         print("  ACTION KINDS:", sorted((str(k), v) for k, v in other_actions.items()))
         print("  ORIGINAL FUNCTION CALLS:", json.dumps(calls, separators=(",", ":"))[:12000])
+        if item["name"] in ("Craft_3", "Craft_21", "Craft_22"):
+            for event in item["events"]:
+                if event["actions"]:
+                    print("  DETAIL", item["name"], event["uid"],
+                          json.dumps(event, separators=(",", ":"))[:2400])
+
         if item["name"] not in ("Craft_1", "Craft_4", "Craft_5"):
             print("  SOURCE RAW FIRST EVENTS:",
                   json.dumps(item["events"][:3], separators=(",", ":"))[:4800])
