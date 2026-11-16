@@ -157,6 +157,14 @@ jobs:
           name: original-survival-xp-guards
           path: data/stage2/original_survival_xp_awards.json
 
+      - name: Compile Original Weather Phase Constants Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/weather_cold_phase_tests.cpp -o weather_cold_phase_tests
+
+      - name: Run Original Weather Phase Constants Tests
+        run: ./weather_cold_phase_tests
+
       - name: Compile Original Loot Choice Catalog Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
