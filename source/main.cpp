@@ -524,10 +524,12 @@ public:
             char treatment[48]{};
             const auto* rule = minidayz::items::ItemUseRuntime::medical_rule(
                 item_use_runtime_.snapshot().pending_medical_item_id);
-            const bool reading = item_use_runtime_.snapshot().pending_medical_item_id ==
-                minidayz::items::ItemUseRuntime::kOriginalNewspaperItemId;
+            const auto pending_item_id = item_use_runtime_.snapshot().pending_medical_item_id;
             std::snprintf(treatment, sizeof(treatment), "%s %.1fs",
-                reading ? "READING +50XP" :
+                pending_item_id == minidayz::items::ItemUseRuntime::kOriginalNewspaperItemId
+                    ? "READING +50XP" :
+                pending_item_id == minidayz::items::ItemUseRuntime::kOriginalScoutHandbookItemId
+                    ? "READING +200XP" :
                     rule && rule->action == minidayz::items::SourceMedicalAction::stop_bleeding
                         ? "BANDAGING" : "TREATMENT",
                 static_cast<double>(item_use_runtime_.remaining()));
