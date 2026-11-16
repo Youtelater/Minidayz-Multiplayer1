@@ -18,6 +18,17 @@ struct PreviousSaveV5 {
     GroundLootSnapshot ground_loot{};
 };
 
+struct PreviousSaveV6 {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{6};
+    std::uint32_t seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+};
+
 
 struct LegacyInventorySlotForTest {
     std::uint16_t item_id{};
@@ -165,6 +176,45 @@ int main() {
     assert(restored.version == 5);
     assert(restored.seed == 137 && restored.ground_loot.count == 1);
     assert(restored.tents.count == 0);
+
+    // Version 6 includes tent storage, but not deferred original item Use
+    // actions. The upgrade must preserve every stored tent and item condition.
+    PreviousSaveV6 old6{};
+    old6.seed = 253;
+    old6.player = player;
+    old6.inventory = inventory.snapshot();
+    old6.equipment = equipment.snapshot();
+    old6.ground_loot = ground.snapshot();
+    old6.tents = tents.snapshot();
+    {
+        auto* f = std::fopen(kFile, "wb");
+        assert(f && std::fwrite(&old6, sizeof(old6), 1, f) == 1);
+        assert(std::fclose(f) == 0);
+    }
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 6 && restored.seed == 253);
+    assert(restored.tents.count == 1);
+    assert(restored.tents.tents[0].items[0].condition == 75);
+    assert(restored.pending_item_use.pending_medical_item_id == 0);
+
+    // Version 7 also saves an in-flight 2-second bandage action.
+    ItemUseRuntime pending{};
+    assert(pending.begin(18));
+    assert(pending.snapshot().seconds_remaining == 2.0f);
+    assert(write_saved_game_to_paths(89, player, inventory, equipment, ground,
+                                    tents, kFile, kTemp, &pending));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == kSaveVersion && restored.seed == 89);
+    assert(restored.pending_item_use.pending_medical_item_id == 18);
+    assert(restored.pending_item_use.seconds_remaining == 2.0f);
+    ItemUseRuntime restored_pending{};
+    assert(restored_pending.restore(restored.pending_item_use));
+    PlayerSystem after_restore(player);
+    after_restore.set_bleeding(2.0f, 10.0f);
+    restored_pending.update(1.0f, after_restore);
+    assert(after_restore.state().bleeding == 2.0f);
+    restored_pending.update(1.0f, after_restore);
+    assert(after_restore.state().bleeding == 0.0f);
 
     // Truncation, a spurious trailing byte, NaN, and bad inventory all reject.
     assert(write_saved_game_to_paths(42, player, inventory, equipment,

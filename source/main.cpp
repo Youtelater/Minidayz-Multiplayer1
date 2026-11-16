@@ -53,6 +53,8 @@ public:
             ground_loot_.clear();
         if (restored && !tents_.restore(restored->tents))
             tents_.clear();
+        if (restored && !item_use_runtime_.restore(restored->pending_item_use))
+            item_use_runtime_.clear();
         // Preview-only movement tuning. Source-equivalent values still need
         // to be supplied by the gameplay rules port.
         // Temporary preview movement tuning only. Original source movement
@@ -72,7 +74,7 @@ public:
 
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_);
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
@@ -106,7 +108,7 @@ public:
             } else {
                 (void)minidayz::items::use_item_from_inventory(
                     inventory_, selected_index, player_, preview_rules_,
-                    (input.pressed & KEY_X) != 0);
+                    (input.pressed & KEY_X) != 0, {}, &item_use_runtime_);
             }
             const auto* selected = inventory_.slot(
                 static_cast<std::size_t>(selected_inventory_slot_));
@@ -225,7 +227,7 @@ public:
                         else
                             (void)minidayz::items::use_item_from_inventory(
                                 inventory_, selected, player_, preview_rules_,
-                                action == 1);
+                                action == 1, {}, &item_use_runtime_);
                     } else if (action == 2) {
                         (void)ground_loot_.drop_from_inventory(
                             inventory_, selected, 0, player_.state().x, player_.state().y);
@@ -364,7 +366,8 @@ public:
                             inventory_, source, player_.state().x, player_.state().y);
                     else
                         (void)minidayz::items::use_item_from_inventory(
-                            inventory_, source, player_, preview_rules_);
+                            inventory_, source, player_, preview_rules_,
+                            false, {}, &item_use_runtime_);
                     item = inventory_.slot(source);
                     if (!item || item->empty()) selected_inventory_slot_ = -1;
                 }
@@ -391,12 +394,13 @@ public:
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
         player_.update_survival(dt, preview_rules_);
+        item_use_runtime_.update(dt, player_);
         if (npc_ready_) npcs_.update(dt, player_.state().x, player_.state().y,
                                      &WorldPreviewScene::blocked, this);
         save_elapsed_ += dt;
         if (save_elapsed_ >= 2.0f) {
             save_elapsed_ = 0.0f;
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_);
         }
     }
 
@@ -867,6 +871,7 @@ private:
         equipment_.clear();
         ground_loot_.clear();
         tents_.clear();
+        item_use_runtime_.clear();
         inventory_page_ = 0;
         storage_page_ = 0;
         crafting_page_ = 0;
@@ -882,7 +887,7 @@ private:
         // Never enter a blank gameplay scene when source world generation
         // fails. Keep the menu available so the player can retry instead.
         menu_active_ = !world_ready_;
-        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_);
+        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_);
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
@@ -941,6 +946,7 @@ private:
     minidayz::items::EquipmentSystem equipment_{};
     minidayz::items::GroundLootSystem ground_loot_{};
     minidayz::items::TentStorageSystem tents_{};
+    minidayz::items::ItemUseRuntime item_use_runtime_{};
     minidayz::PlayerRules preview_rules_{};
     int selected_inventory_slot_{-1};
     int drag_source_slot_{-1};

@@ -41,9 +41,12 @@ bool use_item_from_inventory(InventorySystem& inventory,
                              std::size_t inventory_slot,
                              PlayerSystem& player,
                              const PlayerRules& rules,
-                             bool secondary, const ItemUsePerks& perks) noexcept {
+                             bool secondary, const ItemUsePerks& perks,
+                             ItemUseRuntime* delayed) noexcept {
     const auto* item = inventory.slot(inventory_slot);
     if (!item || item->empty() || !player.state().alive) return false;
+
+    if (delayed && delayed->busy()) return false;
 
     ItemUseEffect effect{};
     if (!source_item_use_effect(item->item_id, secondary, perks, effect)) {
@@ -56,11 +59,24 @@ bool use_item_from_inventory(InventorySystem& inventory,
             if (rule.item_id != item->item_id) continue;
             if (rule.action == SourceMedicalAction::stop_bleeding &&
                 player.state().bleeding <= 0.0f) return false;
-            if (!inventory.remove(inventory_slot, 1)) return false;
-            if (rule.action == SourceMedicalAction::stop_bleeding)
-                player.set_bleeding(0.0f, rules.max_bleeding);
-            else if (rule.action == SourceMedicalAction::stop_infection)
-                player.set_infection(0.0f, rules.max_infection);
+            if (delayed) {
+                // Source consumes the material before its timed Wait action.
+                if (!delayed->can_begin(rule.item_id)) return false;
+                const auto previous = inventory.snapshot();
+                if (!inventory.remove(inventory_slot, 1)) return false;
+                if (!delayed->begin(rule.item_id)) {
+                    (void)inventory.restore(previous);
+                    return false;
+                }
+            } else {
+                // Compatibility helper for callers without a native event
+                // scheduler; the 3DS game always supplies one.
+                if (!inventory.remove(inventory_slot, 1)) return false;
+                if (rule.action == SourceMedicalAction::stop_bleeding)
+                    player.set_bleeding(0.0f, rules.max_bleeding);
+                else if (rule.action == SourceMedicalAction::stop_infection)
+                    player.set_infection(0.0f, rules.max_infection);
+            }
             return true;
         }
         return false;

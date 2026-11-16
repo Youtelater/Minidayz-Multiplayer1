@@ -5,12 +5,13 @@
 #include "minidayz/equipment.hpp"
 #include "minidayz/ground_loot.hpp"
 #include "minidayz/tent_storage.hpp"
+#include "minidayz/item_use_runtime.hpp"
 #include <cstdint>
 
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 6u;
+inline constexpr std::uint32_t kSaveVersion = 7u;
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
@@ -21,6 +22,7 @@ struct SavedGame {
     minidayz::items::EquipmentSnapshot equipment{};
     minidayz::items::GroundLootSnapshot ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
+    minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
 };
 
 
@@ -32,7 +34,8 @@ bool write_saved_game(std::uint32_t seed,
                       const items::InventorySystem& inventory,
                       const items::EquipmentSystem& equipment,
                       const items::GroundLootSystem& ground_loot,
-                      const items::TentStorageSystem& tents) noexcept;
+                      const items::TentStorageSystem& tents,
+                      const items::ItemUseRuntime* item_use = nullptr) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
@@ -41,5 +44,6 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                                const items::GroundLootSystem& ground_loot,
                                const items::TentStorageSystem& tents,
                                const char* target_path,
-                               const char* temporary_path) noexcept;
+                               const char* temporary_path,
+                               const items::ItemUseRuntime* item_use = nullptr) noexcept;
 } // namespace minidayz::persistence

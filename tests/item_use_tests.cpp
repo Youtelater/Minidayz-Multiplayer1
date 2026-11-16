@@ -116,5 +116,44 @@ int main() {
     assert(inventory.add(46, 1));
     assert(use_item_from_inventory(inventory, 0, player, rules));
     assert(inventory.count(46) == 0);
+
+    // 3DS runtime preserves the original Wait(2/5/3) ordering. Consuming a
+    // bandage first does not instantly clear bleeding.
+    ItemUseRuntime delayed{};
+    player.set_bleeding(3.0f, 10.0f);
+    assert(inventory.add(18, 1));
+    assert(use_item_from_inventory(inventory, 0, player, rules,
+                                   false, {}, &delayed));
+    assert(inventory.count(18) == 0 && delayed.busy());
+    assert(delayed.remaining() == 2.0f && player.state().bleeding == 3.0f);
+    assert(inventory.add(26, 1));
+    assert(!use_item_from_inventory(inventory, 0, player, rules,
+                                    false, {}, &delayed));
+    assert(inventory.count(26) == 1);
+    delayed.update(1.5f, player);
+    assert(delayed.busy() && player.state().bleeding == 3.0f);
+    auto snap = delayed.snapshot();
+    ItemUseRuntime resumed{};
+    assert(resumed.restore(snap));
+    resumed.update(0.5f, player);
+    assert(!resumed.busy() && player.state().bleeding == 0.0f);
+    assert(!resumed.restore({18, 30.0f}));
+    assert(!resumed.restore({46, -1.0f}));
+    assert(!resumed.restore({999, 1.0f}));
+    player.set_bleeding(1.0f, 10.0f);
+    assert(use_item_from_inventory(inventory, 0, player, rules,
+                                   false, {}, &resumed));
+    assert(resumed.remaining() == 5.0f);
+    resumed.update(4.0f, player);
+    assert(player.state().bleeding == 1.0f);
+    resumed.update(1.0f, player);
+    assert(player.state().bleeding == 0.0f);
+    player.set_infection(2.0f, 10.0f);
+    assert(inventory.add(46, 1));
+    assert(use_item_from_inventory(inventory, 0, player, rules,
+                                   false, {}, &resumed));
+    assert(resumed.remaining() == 3.0f);
+    resumed.update(3.0f, player);
+    assert(player.state().infection == 0.0f);
     return 0;
 }

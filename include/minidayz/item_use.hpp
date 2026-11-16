@@ -2,6 +2,7 @@
 
 #include "minidayz/inventory.hpp"
 #include "minidayz/player.hpp"
+#include "minidayz/item_use_runtime.hpp"
 
 #include <cstdint>
 
@@ -34,6 +35,7 @@ bool use_item_from_inventory(InventorySystem& inventory,
                              PlayerSystem& player,
                              const PlayerRules& rules,
                              bool secondary = false,
-                             const ItemUsePerks& perks = {}) noexcept;
+                             const ItemUsePerks& perks = {},
+                             ItemUseRuntime* delayed = nullptr) noexcept;
 
 } // namespace minidayz::items
