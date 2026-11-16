@@ -1,4 +1,5 @@
 #include "minidayz/equipment.hpp"
+#include "minidayz/weather_source.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -7,6 +8,18 @@ using namespace minidayz;
 using namespace minidayz::items;
 
 int main() {
+    // Exact original source Game_events difficulty weather values.
+    const auto& novice_cold = source_weather_cold(SurvivalDifficulty::novice);
+    const auto& regular_cold = source_weather_cold(SurvivalDifficulty::regular);
+    const auto& veteran_cold = source_weather_cold(SurvivalDifficulty::veteran);
+    assert(novice_cold.day == 6.0f && novice_cold.night == 1.0f &&
+           novice_cold.rain == 1.0f);
+    assert(regular_cold.day == 7.0f && regular_cold.night == 2.0f &&
+           regular_cold.rain == 2.0f);
+    assert(veteran_cold.day == 8.0f && veteran_cold.night == 3.0f &&
+           veteran_cold.rain == 3.0f);
+    assert(kSourceWeatherCold[3].day == 9.0f); // Legend source event
+
     EquipmentSystem equipment;
     EquipmentSlot slot{};
     std::uint8_t repair_gain = 0;
