@@ -20,6 +20,17 @@ Stage 2 ports the original Mini DAYZ 1.6.0 item, inventory, backpack, equipment,
 - Armor protection is summed from the original flat equipment values. The player damage API applies the original flat subtraction; item condition does not scale armor or warmth.
 - Raw Construct inventory behavior records are exported with their source event UIDs, conditions and actions for further porting. The six original combat/obstacle groups containing item-condition writes are also retained and CI-validated; their fractional and perk-dependent action semantics remain unported (see `docs/STAGE2_CONDITION_WEAR_TRACE.md`).
 
+## Original weather difficulty constants
+
+The original root `Game_events` sets **Novice Day/Night/Rain = 6/1/1**,
+**Regular = 7/2/2**, **Veteran = 8/3/3**, and **Legend = 9/3/3**.
+`tools/stage2/build_weather_cold_catalog.py` now verifies these exact
+difficulty-conditional source event UIDs and literal global writes. The
+bottom 3DS touchscreen displays the original `Day_cold - clothing warmth`
+expression using the currently equipped helmet, outerwear and pants.
+Rain/night scheduling and cold-damage thresholds remain unimplemented;
+the source-verified display is not a substitute for those event branches.
+
 ## Original temperature-expression correction
 
 The original Construct player-stat event UID `4824763499434787` sets `Player_temperature = Day_cold - (outerwear warmth + helmet warmth + pants warmth)`. Native equipment calculations now use that exact additive source formula instead of the former incorrect division. The game still needs full timed weather, rain, night, and perk integration.
