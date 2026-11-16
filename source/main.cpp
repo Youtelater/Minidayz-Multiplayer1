@@ -186,13 +186,25 @@ public:
             }
         }
 
+        if (perks_open_ && touch_pressed && input.touch.py >= 223) {
+            constexpr std::size_t page_size = 3;
+            constexpr std::size_t page_count =
+                (minidayz::items::kOriginalPerkCount + page_size - 1) /
+                page_size;
+            if (input.touch.px < 110 && perk_page_ > 0)
+                --perk_page_;
+            else if (input.touch.px >= 210 && perk_page_ + 1 < page_count)
+                ++perk_page_;
+        }
         if (perks_open_ && touch_pressed &&
             input.touch.px >= 16 && input.touch.px < 304 &&
-            input.touch.py >= 110 && input.touch.py < 194) {
-            const auto selection = input.touch.py < 152
-                ? minidayz::items::SourcePerk::camel
-                : minidayz::items::SourcePerk::hamster;
-            (void)perks_.buy(selection);
+            input.touch.py >= 110 && input.touch.py < 203) {
+            constexpr std::size_t page_size = 3;
+            const auto row = static_cast<std::size_t>(
+                (input.touch.py - 110) / 31);
+            const auto index = perk_page_ * page_size + row;
+            if (index < minidayz::items::kOriginalPerkCount)
+                (void)perks_.buy(minidayz::items::kOriginalPerkMenuOrder[index]);
         }
 
         if (storage_open_ && touch_pressed) {
@@ -587,37 +599,43 @@ public:
             }
         }
         if (perks_open_) {
-            // Original XP cost and two-level purchase rules are from
-            // the repository-root Perks and stats menu Construct events.
+            // Source Perks and stats menu has 16 two-level perk variables.
+            // Do not display unported bonuses as if they are active.
             char status[96]{};
-            std::snprintf(status, sizeof(status), "XP %lu  NEXT COST %lu",
+            std::snprintf(status, sizeof(status), "XP %lu NEXT %lu",
                 static_cast<unsigned long>(perks_.snapshot().experience_points),
                 static_cast<unsigned long>(perks_.snapshot().perk_cost));
             renderer.draw_solid_rect(8.0f, 89.0f, 304.0f, 133.0f,
                                      C2D_Color32(22, 31, 25, 255));
-            renderer.draw_text(status, 20.0f, 96.0f, 0.31f);
-            for (int i = 0; i < 2; ++i) {
-                const auto perk = i == 0
-                    ? minidayz::items::SourcePerk::camel
-                    : minidayz::items::SourcePerk::hamster;
-                const float y = 110.0f + static_cast<float>(i) * 42.0f;
-                renderer.draw_solid_rect(16.0f, y, 288.0f, 37.0f,
+            renderer.draw_text(status, 20.0f, 95.0f, 0.28f);
+            constexpr std::size_t perk_page_size = 3;
+            for (std::size_t row = 0; row < perk_page_size; ++row) {
+                const auto index = perk_page_ * perk_page_size + row;
+                if (index >= minidayz::items::kOriginalPerkCount) break;
+                const auto perk = minidayz::items::kOriginalPerkMenuOrder[index];
+                const float y = 110.0f + static_cast<float>(row) * 31.0f;
+                renderer.draw_solid_rect(16.0f, y, 288.0f, 28.0f,
                     perks_.can_buy(perk) ? C2D_Color32(65, 95, 64, 255)
                                          : C2D_Color32(49, 56, 49, 255));
                 char label[80]{};
-                std::snprintf(label, sizeof(label), "%s LVL %u / 2",
-                    i == 0 ? "CAMEL" : "HAMSTER",
+                std::snprintf(label, sizeof(label), "%s  %u / 2",
+                    minidayz::items::kOriginalPerkMenuLabels[index],
                     static_cast<unsigned>(perks_.level(perk)));
-                renderer.draw_text(label, 22.0f, y + 8.0f, 0.36f);
+                renderer.draw_text(label, 22.0f, y + 7.0f, 0.32f);
                 renderer.draw_text(perks_.level(perk) >= 2 ? "MAX" :
                     perks_.can_buy(perk) ? "BUY" : "LOCKED",
-                    242.0f, y + 10.0f, 0.25f);
+                    245.0f, y + 8.0f, 0.24f);
             }
-            renderer.draw_text("ORIGINAL 2-LEVEL SURVIVAL ITEM PERKS",
-                               17.0f, 203.0f, 0.21f);
+            char page_label[56]{};
+            std::snprintf(page_label, sizeof(page_label),
+                          "ORIGINAL PERKS  PAGE %u / %u",
+                          static_cast<unsigned>(perk_page_ + 1), 6u);
+            renderer.draw_text(page_label, 17.0f, 207.0f, 0.23f);
             renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                      C2D_Color32(54, 68, 55, 255));
-            renderer.draw_text("BACK TO BAG", 122.0f, 226.0f, 0.28f);
+            renderer.draw_text("< PREV", 14.0f, 226.0f, 0.25f);
+            renderer.draw_text("BACK TO BAG", 122.0f, 226.0f, 0.25f);
+            renderer.draw_text("NEXT >", 262.0f, 226.0f, 0.25f);
             return;
         }
         if (storage_open_) {
@@ -1044,6 +1062,7 @@ private:
         inventory_page_ = 0;
         storage_page_ = 0;
         crafting_page_ = 0;
+        perk_page_ = 0;
         crafting_feedback_ = CraftFeedback::none;
         crafting_feedback_elapsed_ = 0.0f;
         storage_open_ = false;
@@ -1130,6 +1149,7 @@ private:
     std::size_t inventory_page_{};
     std::size_t storage_page_{};
     std::size_t crafting_page_{};
+    std::size_t perk_page_{};
     enum class CraftFeedback : std::uint8_t { none, success, missing_or_full };
     CraftFeedback crafting_feedback_{CraftFeedback::none};
     float crafting_feedback_elapsed_{};
