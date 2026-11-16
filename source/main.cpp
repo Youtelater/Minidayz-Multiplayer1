@@ -200,6 +200,36 @@ public:
                 }
             }
         }
+        // Source-backed item operations are accessible without physical
+        // buttons. This narrow action strip stays on the lower touchscreen.
+        if (!crafting_open_ && !storage_open_ && touch_pressed &&
+            input.touch.py >= 81 && input.touch.py < 92) {
+            const int action = input.touch.px / 80;
+            if (action == 3) {
+                (void)ground_loot_.pickup_nearest(
+                    inventory_, player_.state().x, player_.state().y, 36.0f);
+            } else if (selected_inventory_slot_ >= 0) {
+                const auto selected = static_cast<std::size_t>(selected_inventory_slot_);
+                const auto* item = inventory_.slot(selected);
+                if (item && !item->empty()) {
+                    if (action == 0 || action == 1) {
+                        if (item->item_id == minidayz::items::kOriginalCivilianTentItemId &&
+                            action == 1)
+                            (void)tents_.deploy_from_inventory(inventory_, selected,
+                                player_.state().x, player_.state().y);
+                        else
+                            (void)minidayz::items::use_item_from_inventory(
+                                inventory_, selected, player_, preview_rules_,
+                                action == 1);
+                    } else if (action == 2) {
+                        (void)ground_loot_.drop_from_inventory(
+                            inventory_, selected, 0, player_.state().x, player_.state().y);
+                    }
+                    item = inventory_.slot(selected);
+                    if (!item || item->empty()) selected_inventory_slot_ = -1;
+                }
+            }
+        }
         if (!crafting_open_ && !storage_open_ && touch_pressed) {
             tap_was_selected_ = false;
             drag_source_slot_ = -1;
@@ -420,9 +450,18 @@ public:
             if (selected && !selected->empty()) {
                 if (const char* name = minidayz::items::source_item_name(
                         selected->item_id))
-                    renderer.draw_text(name, 10.0f, 82.0f, 0.20f);
+                    renderer.draw_text(name, 10.0f, 25.0f, 0.19f);
             }
         }
+        // Bleeding/infection and temperature remain visible while managing
+        // items. These are the actual player state values, not guessed effects.
+        char survival_labels[96]{};
+        std::snprintf(survival_labels, sizeof(survival_labels),
+                      "T %.1f   BLEED %.1f   INFECT %.1f",
+                      static_cast<double>(stats.temperature),
+                      static_cast<double>(stats.bleeding),
+                      static_cast<double>(stats.infection));
+        renderer.draw_text(survival_labels, 163.0f, 25.0f, 0.14f);
         // Original equipment categories: helmet, outerwear, vest, pants,
         // held weapon, plus the separate backpack slot.
         static constexpr const char* equipment_labels[] = {"HELMET","COAT","VEST","PANTS","HANDS","PACK"};
@@ -447,6 +486,15 @@ public:
                 }
             } else {
                 renderer.draw_text(equipment_labels[i], x + 3.0f, 53.0f, 0.18f);
+            }
+        }
+        if (!storage_open_ && !crafting_open_) {
+            static constexpr const char* actions[] = {"USE", "ALT", "DROP", "PICK"};
+            for (int i = 0; i < 4; ++i) {
+                const float x = static_cast<float>(i * 80);
+                renderer.draw_solid_rect(x + 1.0f, 81.0f, 78.0f, 11.0f,
+                                         C2D_Color32(65, 78, 66, 255));
+                renderer.draw_text(actions[i], x + 24.0f, 83.0f, 0.21f);
             }
         }
         if (storage_open_) {
@@ -564,7 +612,7 @@ public:
             static_cast<unsigned>(page_count));
         renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                  C2D_Color32(54, 68, 55, 255));
-        renderer.draw_text("TAP TWICE USE / X ALT", 14.0f, 226.0f, 0.18f);
+        renderer.draw_text("TOUCH ACTIONS ABOVE", 14.0f, 226.0f, 0.18f);
         renderer.draw_text("CRAFT", 132.0f, 226.0f, 0.30f);
         renderer.draw_text(page_label, 213.0f, 226.0f, 0.23f);
     }
