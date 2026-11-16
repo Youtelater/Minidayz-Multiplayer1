@@ -13,4 +13,20 @@ inline const SourceWeatherCold& source_weather_cold(
     }
     return kSourceWeatherCold[1];
 }
+// These are the exact original difficulty constants, not a weather timer.
+// A translated Construct event must decide when each weather state begins.
+enum class SourceColdPhase : std::uint8_t { day, night, rain };
+
+inline float source_weather_cold_for_phase(
+    minidayz::SurvivalDifficulty difficulty,
+    SourceColdPhase phase) noexcept {
+    const auto& source = source_weather_cold(difficulty);
+    switch (phase) {
+    case SourceColdPhase::day: return source.day;
+    case SourceColdPhase::night: return source.night;
+    case SourceColdPhase::rain: return source.rain;
+    }
+    return source.day;
+}
+
 } // namespace minidayz::items
