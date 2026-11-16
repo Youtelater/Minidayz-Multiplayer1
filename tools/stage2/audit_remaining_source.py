@@ -17,6 +17,7 @@ GROUPS = {
     "player_stats": 7463747062628312,
     "perks": 680413204391849,
     "loot_respawn": 3772264929481614,
+    "stash": 709191320420159,
     "firearm_wear": 6904772320561696,
     "melee_wear": 3528035038609865,
     "hit_obstacle": 5836740205504893,
@@ -72,6 +73,10 @@ def main():
         print(f"{label}: {len(data)} events, {sum(ops.values())} actions")
         print(f"  op_counts: {ops.most_common(16)}")
         print(f"  keywords: {dict(keywords)}")
+        if label == "stash":
+            for event in data:
+                print("  ORIGINAL STASH EVENT:",
+                      json.dumps(event, separators=(",", ":"))[:3000])
         # Log bounded raw evidence, not guessed interpretations.
         for word in ("Day_cold", "perk_cybb", "Spawn_drop"):
             matches = [e for e in data if word in json.dumps(
