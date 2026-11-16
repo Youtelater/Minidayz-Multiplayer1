@@ -27,7 +27,7 @@ footer. Three transactions are generated from the original root tutorial
 recipe text and original item IDs: Ashwood Stick + Rope -> Improvised Bow,
 Rope + Burlap Sack -> Improvised Sling Bag, and Improvised Sling Bag +
 three Wooden Sticks -> Improvised Backpack. The generator rejects missing
-or altered root tutorial text; failed crafting does not consume ingredients.
+or altered root tutorial text; failed crafting does not consume ingredients. The source events `Craft_1`, `Craft_4`, and `Craft_5` each call original `Spawn_drop`, so the native craft result now appears at player coordinates as an original ground item (not directly in inventory).
 These are the only recipes currently translated without assuming undocumented
 requirements or outputs. Additional original crafting actions still need
 event-level extraction and porting.

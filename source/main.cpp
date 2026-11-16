@@ -311,7 +311,8 @@ public:
             input.touch.py >= 99 && input.touch.py < 219) {
             const std::size_t recipe = static_cast<std::size_t>(
                 (input.touch.py - 99) / 40);
-            (void)minidayz::items::craft_from_inventory(inventory_, recipe);
+            (void)minidayz::items::craft_from_inventory(
+                inventory_, ground_loot_, player_.state().x, player_.state().y, recipe);
         }
 
         if (!crafting_open_ && touch_pressed) {
@@ -540,7 +541,7 @@ public:
                 if (!recipe) continue;
                 const float y = 99.0f + static_cast<float>(i) * 40.0f;
                 const bool ready = minidayz::items::can_craft_from_inventory(
-                    inventory_, i);
+                    inventory_, ground_loot_, player_.state().x, player_.state().y, i);
                 renderer.draw_solid_rect(12.0f, y, 296.0f, 36.0f,
                     ready ? C2D_Color32(65, 95, 64, 255)
                           : C2D_Color32(49, 56, 49, 255));
@@ -549,7 +550,7 @@ public:
             }
             renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                      C2D_Color32(54, 68, 55, 255));
-            renderer.draw_text("TAP RECIPE TO CRAFT", 14.0f, 226.0f, 0.23f);
+            renderer.draw_text("CRAFTED ITEM DROPS NEAR YOU", 14.0f, 226.0f, 0.19f);
             renderer.draw_text("BACK TO BAG", 123.0f, 226.0f, 0.29f);
             return;
         }
