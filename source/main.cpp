@@ -106,8 +106,9 @@ public:
                 item->item_id == minidayz::items::kOriginalCivilianTentItemId &&
                 (input.pressed & KEY_X) != 0;
             if (deploy_tent) {
-                (void)tents_.deploy_from_inventory(
-                    inventory_, selected_index, player_.state().x, player_.state().y);
+                (void)tents_.deploy_from_inventory_checked(
+                    inventory_, selected_index, player_.state().x, player_.state().y,
+                    &WorldPreviewScene::blocked, this);
             } else {
                 (void)minidayz::items::use_item_from_inventory(
                     inventory_, selected_index, player_, preview_rules_,
@@ -241,8 +242,9 @@ public:
                     if (action == 0 || action == 1) {
                         if (item->item_id == minidayz::items::kOriginalCivilianTentItemId &&
                             action == 1)
-                            (void)tents_.deploy_from_inventory(inventory_, selected,
-                                player_.state().x, player_.state().y);
+                            (void)tents_.deploy_from_inventory_checked(
+                    inventory_, selected, player_.state().x, player_.state().y,
+                    &WorldPreviewScene::blocked, this);
                         else
                             (void)minidayz::items::use_item_from_inventory(
                                 inventory_, selected, player_, preview_rules_,
@@ -391,8 +393,9 @@ public:
                 const auto* item = inventory_.slot(source);
                 if (item && !item->empty()) {
                     if (item->item_id == minidayz::items::kOriginalCivilianTentItemId)
-                        (void)tents_.deploy_from_inventory(
-                            inventory_, source, player_.state().x, player_.state().y);
+                        (void)tents_.deploy_from_inventory_checked(
+                    inventory_, source, player_.state().x, player_.state().y,
+                    &WorldPreviewScene::blocked, this);
                     else
                         (void)minidayz::items::use_item_from_inventory(
                             inventory_, source, player_, preview_rules_,
