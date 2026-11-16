@@ -355,10 +355,19 @@ public:
             drag_target_slot_ = -1;
             drag_target_equipment_slot_ = -1;
         }
+        if (crafting_open_ && touch_pressed && input.touch.py >= 223) {
+            const std::size_t pages =
+                (minidayz::items::kSourceCraftRecipeCount + kCraftPageSize - 1) /
+                kCraftPageSize;
+            if (input.touch.px < 110 && crafting_page_ > 0)
+                --crafting_page_;
+            else if (input.touch.px >= 210 && crafting_page_ + 1 < pages)
+                ++crafting_page_;
+        }
         if (crafting_open_ && touch_pressed &&
             input.touch.py >= 99 && input.touch.py < 219) {
-            const std::size_t recipe = static_cast<std::size_t>(
-                (input.touch.py - 99) / 40);
+            const std::size_t recipe = crafting_page_ * kCraftPageSize +
+                static_cast<std::size_t>((input.touch.py - 99) / 40);
             (void)minidayz::items::craft_from_inventory(
                 inventory_, ground_loot_, player_.state().x, player_.state().y, recipe);
         }
@@ -678,10 +687,11 @@ public:
             // table. The upper 3DS screen remains the game world.
             renderer.draw_solid_rect(8.0f, 89.0f, 304.0f, 133.0f,
                                      C2D_Color32(22, 31, 25, 255));
-            for (std::size_t i = 0; i < minidayz::items::kSourceCraftRecipeCount; ++i) {
+            for (std::size_t row = 0; row < kCraftPageSize; ++row) {
+                const std::size_t i = crafting_page_ * kCraftPageSize + row;
                 const auto* recipe = minidayz::items::source_craft_recipe(i);
                 if (!recipe) continue;
-                const float y = 99.0f + static_cast<float>(i) * 40.0f;
+                const float y = 99.0f + static_cast<float>(row) * 40.0f;
                 const bool ready = minidayz::items::can_craft_from_inventory(
                     inventory_, ground_loot_, player_.state().x, player_.state().y, i);
                 renderer.draw_solid_rect(12.0f, y, 296.0f, 36.0f,
@@ -692,8 +702,9 @@ public:
             }
             renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                      C2D_Color32(54, 68, 55, 255));
-            renderer.draw_text("CRAFTED ITEM DROPS NEAR YOU", 14.0f, 226.0f, 0.19f);
+            renderer.draw_text("< PREV", 14.0f, 226.0f, 0.25f);
             renderer.draw_text("TENTS", 132.0f, 226.0f, 0.29f);
+            renderer.draw_text("NEXT >", 262.0f, 226.0f, 0.25f);
             return;
         }
         // 5 x 3 backpack page, sized for the 320 x 240 touch screen.
@@ -884,6 +895,7 @@ public:
 
 private:
     static constexpr std::size_t kInventoryPageSize = 15;
+    static constexpr std::size_t kCraftPageSize = 3;
 
     static int equipment_slot_at(int x, int y) noexcept {
         if (y < 38 || y >= 81 || x < 5 || x >= 315) return -1;
@@ -932,6 +944,7 @@ private:
         tents_.clear();
         inventory_page_ = 0;
         storage_page_ = 0;
+        crafting_page_ = 0;
         storage_open_ = false;
         crafting_open_ = false;
         selected_inventory_slot_ = -1;
@@ -1008,6 +1021,7 @@ private:
     int drag_target_equipment_slot_{-1};
     std::size_t inventory_page_{};
     std::size_t storage_page_{};
+    std::size_t crafting_page_{};
     bool touch_down_{};
     bool crafting_open_{};
     bool storage_open_{};
