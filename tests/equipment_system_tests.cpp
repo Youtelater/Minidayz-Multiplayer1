@@ -175,6 +175,9 @@ int main() {
         condition_inventory, EquipmentSlot::head, 0));
     assert(condition_inventory.slot(0)->condition == 65);
 
+    assert(condition_equipment.damage_condition(EquipmentSlot::head, 0.25f));
+    assert(std::fabs(condition_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::head)] - 64.75f) < 0.0001f);
     assert(condition_equipment.damage_condition(EquipmentSlot::head, 25));
     assert(condition_equipment.snapshot().conditions[
         static_cast<std::size_t>(EquipmentSlot::head)] == 40);
