@@ -79,6 +79,13 @@ int main() {
     assert(restored.level(SourcePerk::camel) == 0);
     assert(restored.level(SourcePerk::hamster) == 0);
     assert(!restored.can_buy(SourcePerk::camel));
+    assert(!restored.award_original_xp_event(0u));
+    assert(!restored.award_original_xp_event(851818489505241ULL)); // source SET, not ADD
+    assert(restored.award_original_xp_event(662365640635533ULL));
+    assert(restored.snapshot().experience_points == 25u);
+    assert(restored.award_original_xp_event(265440217696674ULL));
+    assert(restored.snapshot().experience_points == 325u);
+    restored.clear();
     assert(!restored.award_experience(0));
     assert(restored.award_experience(std::numeric_limits<std::uint32_t>::max()));
     assert(!restored.award_experience(1));
