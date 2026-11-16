@@ -137,6 +137,18 @@ int main() {
                                       ground, tents, kFile, kTemp));
     assert(load_saved_game_from_path(restored, kFile));
     assert(restored.seed == 42);
+    auto broken_player = player;
+    broken_player.x = std::numeric_limits<float>::quiet_NaN();
+    assert(!write_saved_game_to_paths(43, broken_player, inventory, equipment,
+                                      ground, tents, kFile, kTemp));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.seed == 42);
+    broken_player = player;
+    broken_player.health = 0.0f;
+    assert(!write_saved_game_to_paths(43, broken_player, inventory, equipment,
+                                      ground, tents, kFile, kTemp));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.seed == 42);
 
     PreviousSaveV5 old{};
     old.seed = 137;
