@@ -70,6 +70,8 @@ def main() -> None:
                 yield from child_events(event[7])
 
     source_events = {}
+    by_function = {}
+    function_names = {pair[1] for pair in source_event_uids.values()}
     for sheet in project["project"][6]:
         if not isinstance(sheet, list) or len(sheet) < 2:
             continue
@@ -79,12 +81,28 @@ def main() -> None:
                 if uid in source_events:
                     raise SystemExit(f"Duplicate Construct crafting event UID {uid}")
                 source_events[uid] = event
+            for condition in event[5]:
+                if not isinstance(condition, list) or len(condition) < 10:
+                    continue
+                if condition[0:2] != [292, 71]:
+                    continue
+                for parameter in condition[9]:
+                    if (isinstance(parameter, list) and len(parameter) > 1 and
+                        parameter[0] == 7 and
+                        isinstance(parameter[1], list) and len(parameter[1]) > 1 and
+                        parameter[1][0] == 2 and parameter[1][1] in function_names):
+                        by_function.setdefault(parameter[1][1], []).append(event)
 
     def assert_original_ground_output(result_name, result_id):
         uid, function = source_event_uids[result_name]
         event = source_events.get(uid)
         if event is None:
-            raise SystemExit(f"Missing original Construct craft function {function}")
+            candidates = by_function.get(function, [])
+            if len(candidates) != 1:
+                raise SystemExit(
+                    f"Missing/duplicate source craft function {function}; "
+                    f"UIDs found: {sorted(source_events)}; name matches: {len(candidates)}")
+            event = candidates[0]
         if not any(condition[0:2] == [292, 71] and
                    [10, 0] in condition[9] and
                    [7, [2, function]] in condition[9]
