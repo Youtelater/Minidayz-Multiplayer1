@@ -190,10 +190,10 @@ bool EquipmentSystem::damage_condition(
 }
 
 bool EquipmentSystem::restore_condition(
-    EquipmentSlot slot, std::uint8_t condition) noexcept {
+    EquipmentSlot slot, float condition) noexcept {
     const auto index = static_cast<std::size_t>(slot);
     if (index >= state_.item_ids.size() || state_.item_ids[index] == 0 ||
-        condition > 100 || condition <= state_.conditions[index])
+        !std::isfinite(condition) || condition < 0.0f || condition > 100.0f || condition <= state_.conditions[index])
         return false;
     state_.conditions[index] = condition;
     return true;
@@ -239,8 +239,7 @@ bool EquipmentSystem::repair_from_inventory(
     std::uint8_t gain = 0;
     if (!source_item_repair_gain(material->item_id, target, gain))
         return false;
-    const auto repaired = static_cast<std::uint8_t>(
-        std::min<unsigned>(100, static_cast<unsigned>(current) + gain));
+    const float repaired = std::min(100.0f, current + static_cast<float>(gain));
 
     const auto inventory_before = inventory.snapshot();
     const auto equipment_before = state_;
