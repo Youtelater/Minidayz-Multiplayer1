@@ -25,11 +25,21 @@ struct TentStorageSnapshot {
     std::uint16_t count{};
 };
 
+// Native placement safety gate. Exact original Construct placement conditions
+// are not yet translated; this prevents clipping and overlapping tents.
+using TentPlacementBlocked = bool (*)(void*, float, float) noexcept;
+
 class TentStorageSystem {
 public:
     bool deploy_from_inventory(InventorySystem& inventory,
                                std::size_t inventory_slot,
                                float x, float y) noexcept;
+    bool deploy_from_inventory_checked(InventorySystem& inventory,
+                                       std::size_t inventory_slot,
+                                       float x, float y,
+                                       TentPlacementBlocked blocked,
+                                       void* context,
+                                       float clearance_radius = 8.0f) noexcept;
     // Returns tent_count() when none is within the caller's interaction range.
     std::size_t nearest(float x, float y, float radius) const noexcept;
     bool store_from_inventory(InventorySystem& inventory,
