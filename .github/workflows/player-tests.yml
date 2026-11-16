@@ -214,7 +214,7 @@ jobs:
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
             source/player.cpp source/inventory.cpp source/equipment.cpp \
-            source/ground_loot.cpp source/tent_storage.cpp source/save_game.cpp \
+            source/ground_loot.cpp source/tent_storage.cpp source/save_game.cpp source/perks.cpp \
             tests/save_game_roundtrip_tests.cpp -o save_game_roundtrip_tests
 
       - name: Run Full Save/Load Roundtrip Regression Tests
