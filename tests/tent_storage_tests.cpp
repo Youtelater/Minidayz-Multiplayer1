@@ -94,12 +94,14 @@ int main() {
         placement_inventory, 0, 50.0f, 50.0f,
         &placement_blocked, nullptr));
     assert(placement_tents.tent(0)->condition == 57);
+    // Original tent stacks have max count one. Slot 0 was consumed by the
+    // first deployment; use the still-occupied second slot for this test.
     assert(!placement_tents.deploy_from_inventory_checked(
-        placement_inventory, 0, 54.0f, 54.0f,
+        placement_inventory, 1, 54.0f, 54.0f,
         &placement_blocked, nullptr)); // overlaps the first tent
     assert(placement_inventory.count(456) == 2);
     assert(placement_tents.deploy_from_inventory_checked(
-        placement_inventory, 0, 70.0f, 70.0f,
+        placement_inventory, 1, 70.0f, 70.0f,
         &placement_blocked, nullptr));
     assert(placement_inventory.count(456) == 1);
     return 0;
