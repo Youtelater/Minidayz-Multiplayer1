@@ -18,5 +18,8 @@ int main() {
         assert(!slots.alongside_backpack && slots.unrestricted == 0 &&
                slots.exclusive == 0);
     }
+    assert(source_supplies_stash_slots(461) == 6);
+    assert(source_supplies_stash_slots(456) == 0);
+    assert(source_supplies_stash_slots(460) == 0);
     return 0;
 }
