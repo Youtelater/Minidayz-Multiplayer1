@@ -11,6 +11,7 @@
 #include "minidayz/tent_storage.hpp"
 #include "minidayz/save_game.hpp"
 #include "minidayz/perks.hpp"
+#include "minidayz/stage2_audio.hpp"
 #include "minidayz/item_description.hpp"
 #include "minidayz/weather_source.hpp"
 #include "minidayz/generated/item_catalog.hpp"
@@ -80,9 +81,16 @@ public:
         last_source_snowborn_level_ = perks_.level(minidayz::items::SourcePerk::snowborn);
     }
 
+    void on_enter() noexcept override {
+        // Audio is optional. RomFS is already mounted by Engine::initialize;
+        // DSP failure must never prevent inventory or crafting gameplay.
+        (void)stage2_audio_.initialize();
+    }
+
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
             (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_);
+        stage2_audio_.shutdown();
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
@@ -184,6 +192,7 @@ public:
                     inventory_, ground_loot_, player_.state().x, player_.state().y, recipe);
                 crafting_feedback_ = crafted ? CraftFeedback::success : CraftFeedback::missing_or_full;
                 crafting_feedback_elapsed_ = 0.0f;
+                if (crafted) stage2_audio_.play_crafting();
             }
         }
 
@@ -1195,6 +1204,7 @@ private:
     minidayz::items::TentStorageSystem tents_{};
     minidayz::items::ItemUseRuntime item_use_runtime_{};
     minidayz::items::SourcePerkSystem perks_{};
+    minidayz::Stage2Audio stage2_audio_{};
     minidayz::PlayerRules preview_rules_{};
     bool source_temperature_initialized_{};
     float last_source_warmth_{};
