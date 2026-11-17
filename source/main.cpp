@@ -748,7 +748,18 @@ public:
                 for (std::size_t part = 0; part < recipe->ingredients.size(); ++part) {
                     const auto ingredient = recipe->ingredients[part];
                     if (ingredient.count == 0) continue;
-                    const auto owned = inventory_.count(ingredient.item_id);
+                    std::uint32_t owned = inventory_.count(ingredient.item_id);
+                    if (recipe->selected_stack_only) {
+                        // item_activate2 verifies a single Rags stack, not
+                        // the cumulative total across the backpack.
+                        owned = 0;
+                        for (std::size_t slot_index = 0;
+                             slot_index < inventory_.capacity(); ++slot_index) {
+                            const auto* stack = inventory_.slot(slot_index);
+                            if (stack && stack->item_id == ingredient.item_id)
+                                owned = std::max<std::uint32_t>(owned, stack->count);
+                        }
+                    }
                     const char* name = minidayz::items::source_item_name(ingredient.item_id);
                     const int written = std::snprintf(ingredients + at,
                         sizeof(ingredients) - at, "%s%s %u/%u%s",
