@@ -355,7 +355,10 @@ public:
                     const auto slot = static_cast<minidayz::items::EquipmentSlot>(equipment_target);
                     const auto equipped = equipment_.equipped(slot);
                     if (equipped != 0) {
-                        const std::size_t destination = first_available_inventory_slot(equipped, equipment_.snapshot().conditions[static_cast<std::size_t>(slot)]);
+                        const auto equipment_index = static_cast<std::size_t>(slot);
+                        const std::size_t destination = first_available_inventory_slot(
+                            equipped, equipment_.snapshot().conditions[equipment_index],
+                            equipment_.fraction_snapshot().fractional_loss[equipment_index]);
                         if (destination < inventory_.capacity())
                             (void)equipment_.unequip_to_inventory(inventory_, slot, destination);
                         selected_inventory_slot_ = -1;
@@ -1112,7 +1115,8 @@ private:
     }
 
     std::size_t first_available_inventory_slot(std::uint16_t item_id,
-                                               std::uint8_t condition) const noexcept {
+                                               std::uint8_t condition,
+                                               std::uint8_t fractional_loss) const noexcept {
         const auto limit = minidayz::items::source_max_stack(item_id);
         std::size_t first_empty = inventory_.capacity();
         for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
@@ -1122,7 +1126,9 @@ private:
             if (item->empty()) {
                 if (first_empty == inventory_.capacity()) first_empty = i;
             } else if (item->item_id == item_id &&
-                       item->condition == condition && item->count < limit) {
+                       item->condition == condition &&
+                       item->fractional_loss == fractional_loss &&
+                       item->count < limit) {
                 // Preserve free space by merging only matching-condition stacks.
                 return i;
             }
