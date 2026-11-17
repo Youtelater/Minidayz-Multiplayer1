@@ -13,7 +13,9 @@ SRC = ROOT / "data/stage1/construct_project_parsed.json"
 OUT = ROOT / "data/stage2/crafting_candidate_trace.json"
 WANTED = {
     "Craft_ak", "Craft_rail", "Craft_tent", "Craft_xiaoyinqi",
-    "Craft_fishing_rod", "Craft_molotov_flare", "Craft_molotov_whiskey"
+    "Craft_fishing_rod", "Craft_molotov_flare", "Craft_molotov_whiskey",
+    "Craft_31", "Craft_32", "Craft_33", "Craft_34",
+    "Craft_bed", "Craft_bed1"
 }
 
 def walk(events):
