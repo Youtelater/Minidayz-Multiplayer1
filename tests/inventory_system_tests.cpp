@@ -626,5 +626,41 @@ int main() {
     assert(!both_restored.restore_with_satchel(both_saved, invalid_satchel));
     assert(both_restored.equipped_satchel() == 0);
 
+    // A secondary Army Satchel remains equipped and retains all of its
+    // original cells when the independent main backpack is removed.
+    InventorySystem shift_satchel;
+    assert(shift_satchel.add(450, 1, 0, 73));
+    assert(shift_satchel.equip_backpack_from_slot(0));
+    assert(shift_satchel.add(459, 1, 0, 82));
+    assert(shift_satchel.equip_satchel_from_slot(0));
+    assert(shift_satchel.capacity() == 24);
+    assert(shift_satchel.add_to_slot(19, 12, 1));
+    assert(shift_satchel.add_to_slot(20, 12, 1));
+    assert(shift_satchel.add_to_slot(21, 24, 1));
+    // Never lose an occupied MAIN backpack slot when shrinking its capacity.
+    assert(!shift_satchel.unequip_backpack_to_slot(0));
+    assert(shift_satchel.equipped_backpack() == 450);
+    assert(shift_satchel.slot(20)->item_id == 12);
+    assert(shift_satchel.slot(21)->item_id == 24);
+    assert(shift_satchel.remove(19, 1));
+    assert(shift_satchel.unequip_backpack_to_slot(0));
+    assert(shift_satchel.capacity() == 19);
+    assert(shift_satchel.equipped_backpack() == 0);
+    assert(shift_satchel.equipped_satchel() == 459);
+    assert(shift_satchel.slot(0)->item_id == 450);
+    assert(shift_satchel.slot(0)->condition == 73);
+    assert(shift_satchel.slot(15)->item_id == 12);
+    assert(shift_satchel.slot(16)->item_id == 24);
+    assert(shift_satchel.slot(16)->condition ==
+           source_default_condition(24));
+    assert(shift_satchel.is_exclusive_satchel_slot(16));
+    assert(!shift_satchel.slot_accepts(16, 18));
+    InventorySystem reloaded_shift;
+    assert(reloaded_shift.restore_with_satchel(
+        shift_satchel.snapshot(), shift_satchel.satchel_snapshot()));
+    assert(reloaded_shift.slot(15)->item_id == 12);
+    assert(reloaded_shift.slot(16)->item_id == 24);
+    assert(reloaded_shift.equipped_satchel_condition() == 82);
+
     return 0;
 }
