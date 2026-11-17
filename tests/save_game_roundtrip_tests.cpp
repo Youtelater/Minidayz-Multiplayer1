@@ -433,6 +433,9 @@ int main() {
     old11.seed = 95;
     old11.inventory.slots[0].fractional_loss = 25;
     old11.ground_loot.entries[0].item.fractional_loss = 75;
+    // v11 interprets item padding as exact wear, unlike the v10 record
+    // copied above, whose intentionally invalid bytes were sanitized.
+    old11.tents.tents[0].items[0].fractional_loss = 0;
     {
         auto* f = std::fopen(kFile, "wb");
         assert(f && std::fwrite(&old11, sizeof(old11), 1, f) == 1);
