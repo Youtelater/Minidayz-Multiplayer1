@@ -560,6 +560,11 @@ int main() {
     assert(both_restored.equipped_backpack() == 450);
     assert(both_restored.equipped_satchel() == 458);
     assert(both_restored.count(11) == 1);
+    const auto crafting_rollback = both_restored.snapshot();
+    assert(both_restored.restore(crafting_rollback));
+    assert(both_restored.equipped_satchel() == 458);
+    assert(both_restored.equipped_satchel_condition() == 81);
+    assert(both_restored.capacity() == 22);
     assert(both_restored.add(459, 1, 0, 76));
     assert(both_restored.add_to_slot(21, 12, 1));
     assert(!both_restored.equip_satchel_from_slot(1));
