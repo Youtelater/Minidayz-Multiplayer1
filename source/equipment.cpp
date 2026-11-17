@@ -1,6 +1,7 @@
 #include "minidayz/equipment.hpp"
 #include "minidayz/generated/item_equipment_catalog.hpp"
 #include "minidayz/item_repair.hpp"
+#include "minidayz/source_wear.hpp"
 
 #include <cmath>
 
@@ -100,6 +101,39 @@ bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
             if (normalized.item_ids[i] == normalized.item_ids[j]) return false;
     }
     state_ = normalized;
+    fractions_ = {};
+    return true;
+}
+
+bool EquipmentSystem::restore_with_fraction(
+    const EquipmentSnapshot& saved,
+    const EquipmentFractionSnapshot& fractions) noexcept {
+    EquipmentSystem candidate = *this;
+    if (!candidate.restore(saved)) return false;
+    auto normalized = fractions;
+    // The original save's reserved feet/weapon indices were migrated to
+    // outerwear/hands by restore(), so relocate their exact wear too.
+    const auto feet = static_cast<std::size_t>(EquipmentSlot::feet);
+    const auto weapon = static_cast<std::size_t>(EquipmentSlot::weapon);
+    if (saved.item_ids[feet] != 0) {
+        normalized.fractional_loss[static_cast<std::size_t>(EquipmentSlot::outerwear)] =
+            normalized.fractional_loss[feet];
+        normalized.fractional_loss[feet] = 0;
+    }
+    if (saved.item_ids[weapon] != 0) {
+        normalized.fractional_loss[static_cast<std::size_t>(EquipmentSlot::hands)] =
+            normalized.fractional_loss[weapon];
+        normalized.fractional_loss[weapon] = 0;
+    }
+    for(std::size_t i=0;i<kEquipmentSlotCount;++i) {
+        const auto fraction=normalized.fractional_loss[i];
+        if (fraction>=100 ||
+            (fraction!=0 && (candidate.state_.item_ids[i]==0 ||
+                             candidate.state_.conditions[i]==0)))
+            return false;
+    }
+    candidate.fractions_ = normalized;
+    *this = candidate;
     return true;
 }
 
@@ -158,32 +192,59 @@ bool EquipmentSystem::equip_from_inventory(
     const auto old_inventory = inventory.snapshot();
     const std::uint16_t incoming_id = incoming->item_id;
     const std::uint8_t incoming_condition = incoming->condition;
+    const std::uint8_t incoming_fraction = incoming->fractional_loss;
     const std::uint16_t outgoing_id = state_.item_ids[slot_index];
     const std::uint8_t outgoing_condition = state_.conditions[slot_index];
+    const std::uint8_t outgoing_fraction = fractions_.fractional_loss[slot_index];
     if (!inventory.remove(inventory_slot, 1)) return false;
     if (outgoing_id != 0 &&
-        !inventory.add(outgoing_id, 1, 0, outgoing_condition)) {
+        !inventory.add(outgoing_id, 1, 0, outgoing_condition,
+                       outgoing_fraction)) {
         (void)inventory.restore(old_inventory);
         return false;
     }
     state_.item_ids[slot_index] = incoming_id;
     state_.conditions[slot_index] = incoming_condition;
+    fractions_.fractional_loss[slot_index] = incoming_fraction;
     return true;
 }
 
 bool EquipmentSystem::damage_condition(
     EquipmentSlot slot, std::uint8_t loss) noexcept {
-    const auto index = static_cast<std::size_t>(slot);
-    if (index >= state_.item_ids.size() || state_.item_ids[index] == 0 ||
-        loss == 0) return false;
-    if (loss >= state_.conditions[index]) {
-        state_.item_ids[index] = 0;
-        state_.conditions[index] = 100;
+    return damage_condition_hundredths(slot,static_cast<std::uint16_t>(loss)*100u);
+}
+
+bool EquipmentSystem::damage_condition_hundredths(
+    EquipmentSlot slot, std::uint16_t loss_hundredths) noexcept {
+    const auto i=static_cast<std::size_t>(slot);
+    if (i>=kEquipmentSlotCount || state_.item_ids[i]==0 ||
+        loss_hundredths==0) return false;
+    const auto fraction=fractions_.fractional_loss[i];
+    if (fraction>=100 || state_.conditions[i]*100u<fraction) return false;
+    const auto exact=static_cast<std::uint16_t>(
+        state_.conditions[i]*100u - fraction);
+    if (loss_hundredths>=exact) {
+        state_.item_ids[i]=0;
+        state_.conditions[i]=100;
+        fractions_.fractional_loss[i]=0;
     } else {
-        state_.conditions[index] = static_cast<std::uint8_t>(
-            state_.conditions[index] - loss);
+        const auto remaining=static_cast<std::uint16_t>(exact-loss_hundredths);
+        state_.conditions[i]=static_cast<std::uint8_t>((remaining+99u)/100u);
+        fractions_.fractional_loss[i]=static_cast<std::uint8_t>(
+            state_.conditions[i]*100u-remaining);
     }
     return true;
+}
+
+bool EquipmentSystem::apply_verified_wear_action(
+    EquipmentSlot slot, std::uint64_t group_uid, std::uint64_t event_uid,
+    std::uint64_t action_uid, bool source_guards_satisfied,
+    bool perk_wxnj_active) noexcept {
+    if(!source_guards_satisfied) return false;
+    const auto* source=source_wear_action(group_uid,event_uid,action_uid);
+    if(!source || (source->cancel_when_wxnj_active && perk_wxnj_active))
+        return false;
+    return damage_condition_hundredths(slot,source->loss_hundredths);
 }
 
 bool EquipmentSystem::restore_condition(
@@ -193,6 +254,7 @@ bool EquipmentSystem::restore_condition(
         condition > 100 || condition <= state_.conditions[index])
         return false;
     state_.conditions[index] = condition;
+    fractions_.fractional_loss[index] = 0;
     return true;
 }
 
@@ -259,10 +321,12 @@ bool EquipmentSystem::unequip_to_inventory(
         return false;
     const std::uint16_t outgoing_id = state_.item_ids[slot_index];
     const std::uint8_t outgoing_condition = state_.conditions[slot_index];
+    const std::uint8_t outgoing_fraction = fractions_.fractional_loss[slot_index];
     if (!inventory.add_to_slot(inventory_slot, outgoing_id, 1, 0,
-                               outgoing_condition)) return false;
+                               outgoing_condition, outgoing_fraction)) return false;
     state_.item_ids[slot_index] = 0;
     state_.conditions[slot_index] = 100;
+    fractions_.fractional_loss[slot_index] = 0;
     return true;
 }
 
