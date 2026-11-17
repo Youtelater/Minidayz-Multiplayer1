@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
 raw=(ROOT/"data/stage1/construct_project_parsed.json").read_text(encoding="utf-8-sig")
-project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)","-",raw))
+project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",raw))
 terms=("Regeneration_current","perk_regen","Player_temperature","Night_cold","Rain_cold","Stats_blood_lost")
 def walk(events,parents=()):
     for event in events if isinstance(events,list) else ():
