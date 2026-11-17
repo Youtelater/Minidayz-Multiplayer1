@@ -12,7 +12,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 9u;
+inline constexpr std::uint32_t kSaveVersion = 10u;
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
@@ -25,6 +25,9 @@ struct SavedGame {
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
+    // v10 adds the original simultaneous satchel equipment instance while
+    // keeping the v9 inventory snapshot ABI stable.
+    minidayz::items::SatchelSnapshot satchel{};
 };
 
 
