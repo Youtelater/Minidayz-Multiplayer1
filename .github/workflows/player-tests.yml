@@ -115,6 +115,9 @@ jobs:
           name: original-medical-item-actions
           path: data/stage2/medical_item_source_trace.json
 
+      - name: Audit exclusive Satchel item restrictions
+        run: python3 tools/stage2/audit_satchel_filters.py
+
       - name: Audit original satchel and Supplies Stash events
         run: python3 tools/stage2/audit_satchel_and_stash_source.py
 
