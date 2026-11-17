@@ -129,6 +129,14 @@ public:
     // Day_cold minus clothing warmth. Preserve negative cold exposure
     // without the preview meter's artificial -10..10 limits.
     void set_source_temperature(float source_value) noexcept;
+    // Exact original Player stats -> States five-second tick:
+    // actor var16 += global Player_temperature / 2
+    //   (Construct UID 471091765829229).
+    // If actor var16 < 0, set actor var16=0 and subtract 0.25 health
+    //   (UID 8552060907536112).
+    // The global weather exposure is deliberately NOT the player body
+    // temperature. The latter is persisted in PlayerState.temperature.
+    bool apply_source_body_temperature_tick(float weather_exposure) noexcept;
     void set_bleeding(float severity, float max_severity) noexcept;
     void set_infection(float severity, float max_severity) noexcept;
 
