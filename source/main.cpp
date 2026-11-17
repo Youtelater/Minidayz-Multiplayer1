@@ -133,13 +133,12 @@ public:
         if (selected_inventory_slot_ >= 0 && (input.pressed & (KEY_A | KEY_X))) {
             const auto selected_index = static_cast<std::size_t>(selected_inventory_slot_);
             const auto* item = inventory_.slot(selected_index);
-            const bool deploy_tent = item && !item->empty() &&
-                item->item_id == minidayz::items::kOriginalCivilianTentItemId &&
+            const bool deploy_storage = item && !item->empty() &&
+                (item->item_id == minidayz::items::kOriginalCivilianTentItemId ||
+                 item->item_id == minidayz::items::kOriginalSuppliesStashItemId) &&
                 (input.pressed & KEY_X) != 0;
-            if (deploy_tent) {
-                (void)tents_.deploy_from_inventory_checked(
-                    inventory_, selected_index, player_.state().x, player_.state().y,
-                    &WorldPreviewScene::blocked, this);
+            if (deploy_storage) {
+                (void)deploy_source_storage(selected_index);
             } else {
                 (void)minidayz::items::use_item_from_inventory(
                     inventory_, selected_index, player_, preview_rules_,
@@ -305,11 +304,10 @@ public:
                 const auto* item = inventory_.slot(selected);
                 if (item && !item->empty()) {
                     if (action == 0 || action == 1) {
-                        if (item->item_id == minidayz::items::kOriginalCivilianTentItemId &&
-                            action == 1)
-                            (void)tents_.deploy_from_inventory_checked(
-                    inventory_, selected, player_.state().x, player_.state().y,
-                    &WorldPreviewScene::blocked, this);
+                        if (action == 1 &&
+                            (item->item_id == minidayz::items::kOriginalCivilianTentItemId ||
+                             item->item_id == minidayz::items::kOriginalSuppliesStashItemId))
+                            (void)deploy_source_storage(selected);
                         else
                             (void)minidayz::items::use_item_from_inventory(
                                 inventory_, selected, player_, preview_rules_,
@@ -471,10 +469,9 @@ public:
                 const auto source = static_cast<std::size_t>(drag_source_slot_);
                 const auto* item = inventory_.slot(source);
                 if (item && !item->empty()) {
-                    if (item->item_id == minidayz::items::kOriginalCivilianTentItemId)
-                        (void)tents_.deploy_from_inventory_checked(
-                    inventory_, source, player_.state().x, player_.state().y,
-                    &WorldPreviewScene::blocked, this);
+                    if (item->item_id == minidayz::items::kOriginalCivilianTentItemId ||
+                        item->item_id == minidayz::items::kOriginalSuppliesStashItemId)
+                        (void)deploy_source_storage(source);
                     else
                         (void)minidayz::items::use_item_from_inventory(
                             inventory_, source, player_, preview_rules_,
@@ -1102,6 +1099,20 @@ public:
     }
 
 private:
+    bool deploy_source_storage(std::size_t slot) noexcept {
+        const auto* item = inventory_.slot(slot);
+        if (!item || item->empty()) return false;
+        if (item->item_id == minidayz::items::kOriginalCivilianTentItemId)
+            return tents_.deploy_from_inventory_checked(
+                inventory_, slot, player_.state().x, player_.state().y,
+                &WorldPreviewScene::blocked, this);
+        if (item->item_id == minidayz::items::kOriginalSuppliesStashItemId)
+            return stashes_.deploy_from_inventory_checked(
+                inventory_, slot, player_.state().x, player_.state().y,
+                &WorldPreviewScene::blocked, this);
+        return false;
+    }
+
     static bool award_source_experience(void* context,
                                         std::uint32_t amount) noexcept {
         auto* perks = static_cast<minidayz::items::SourcePerkSystem*>(context);
