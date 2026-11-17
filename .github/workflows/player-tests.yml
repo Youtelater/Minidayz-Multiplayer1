@@ -253,6 +253,9 @@ jobs:
       - name: Run Tent Storage Regression Tests
         run: ./tent_storage_tests
 
+      - name: Audit original item, crafting and equipment WAV events
+        run: python3 tools/stage2/audit_stage2_audio_source.py
+
       - name: Compile and Run Six-slot Supplies Stash Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
