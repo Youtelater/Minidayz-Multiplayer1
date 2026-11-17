@@ -662,5 +662,39 @@ int main() {
     assert(reloaded_shift.slot(16)->item_id == 24);
     assert(reloaded_shift.equipped_satchel_condition() == 82);
 
+    // Swapping between differently sized main backpacks must move all
+    // independent Army Satchel cells, keeping their logical item restrictions.
+    InventorySystem resize_with_satchel;
+    assert(resize_with_satchel.add(450, 1, 0, 61));
+    assert(resize_with_satchel.equip_backpack_from_slot(0));
+    assert(resize_with_satchel.add(459, 1, 0, 87));
+    assert(resize_with_satchel.equip_satchel_from_slot(0));
+    assert(resize_with_satchel.capacity() == 24);
+    assert(resize_with_satchel.add_to_slot(20, 12, 1));
+    assert(resize_with_satchel.add_to_slot(21, 24, 1, 0, 33));
+    assert(resize_with_satchel.add(451, 1, 0, 79));
+    assert(resize_with_satchel.equip_backpack_from_slot(0));
+    assert(resize_with_satchel.capacity() == 26);
+    assert(resize_with_satchel.equipped_backpack() == 451);
+    assert(resize_with_satchel.slot(0)->item_id == 450);
+    assert(resize_with_satchel.slot(0)->condition == 61);
+    assert(resize_with_satchel.slot(22)->item_id == 12);
+    assert(resize_with_satchel.slot(23)->item_id == 24);
+    assert(resize_with_satchel.slot(23)->condition == 33);
+    assert(resize_with_satchel.is_exclusive_satchel_slot(23));
+    assert(resize_with_satchel.equip_backpack_from_slot(0));
+    assert(resize_with_satchel.capacity() == 24);
+    assert(resize_with_satchel.equipped_backpack() == 450);
+    assert(resize_with_satchel.slot(0)->item_id == 451);
+    assert(resize_with_satchel.slot(0)->condition == 79);
+    assert(resize_with_satchel.slot(20)->item_id == 12);
+    assert(resize_with_satchel.slot(21)->item_id == 24);
+    assert(resize_with_satchel.slot(21)->condition == 33);
+    InventorySystem swap_reloaded;
+    assert(swap_reloaded.restore_with_satchel(
+        resize_with_satchel.snapshot(), resize_with_satchel.satchel_snapshot()));
+    assert(swap_reloaded.slot(21)->item_id == 24);
+    assert(swap_reloaded.equipped_satchel_condition() == 87);
+
     return 0;
 }
