@@ -21,10 +21,9 @@ std::uint32_t le32(const unsigned char* p) noexcept {
 }
 }
 
-bool Stage2Audio::initialize() noexcept {
-    if (ndsp_ready_) return pcm_ != nullptr;
+bool Stage2Audio::load_wav(const char* path, Clip& destination) noexcept {
     // The original converted ROMFS sound is used, never a placeholder.
-    std::FILE* file = std::fopen("romfs:/wav/crafting.wav", "rb");
+    std::FILE* file = std::fopen(path, "rb");
     if (!file) return false;
     unsigned char riff[12]{};
     if (std::fread(riff, 1, sizeof(riff), file) != sizeof(riff) ||
@@ -98,38 +97,66 @@ bool Stage2Audio::initialize() noexcept {
         }
     }
     std::fclose(file);
-    if (!loaded || R_FAILED(ndspInit())) {
+    if (!loaded) {
         linearFree(audio);
         return false;
     }
-    ndsp_ready_ = true;
-    pcm_ = audio;
-    bytes_ = output_bytes;
-    frames_ = frames;
-    channels_ = channels;
-    sample_rate_ = rate;
-    ndspChnReset(0);
-    ndspChnSetRate(0, static_cast<float>(rate));
-    ndspChnSetFormat(0, channels == 1
-        ? NDSP_FORMAT_MONO_PCM16 : NDSP_FORMAT_STEREO_PCM16);
-    float mix[12]{};
-    mix[0] = 1.0f;
-    mix[1] = 1.0f;
-    ndspChnSetMix(0, mix);
-    DSP_FlushDataCache(pcm_, bytes_);
+    destination.pcm = audio;
+    destination.bytes = output_bytes;
+    destination.frames = frames;
+    destination.sample_rate = rate;
+    destination.channels = channels;
+    DSP_FlushDataCache(destination.pcm,destination.bytes);
     return true;
 }
 
-void Stage2Audio::play_crafting() noexcept {
-    if (!ndsp_ready_ || !pcm_ || frames_ == 0) return;
-    // This channel is dedicated to the crafting clip: clear an old instance
-    // before reusing the same linear-memory sample buffer.
+bool Stage2Audio::initialize() noexcept {
+    if (ndsp_ready_) return true;
+    if (R_FAILED(ndspInit())) return false;
+    ndsp_ready_ = true;
+    constexpr const char* paths[kClipCount] = {
+        "romfs:/wav/crafting.wav",
+        "romfs:/wav/drop1.wav",
+        "romfs:/wav/drop2.wav"
+    };
+    bool any = false;
+    for (std::size_t i=0;i<kClipCount;++i)
+        any = load_wav(paths[i],clips_[i]) || any;
+    if (!any) {
+        shutdown();
+        return false;
+    }
+    return true;
+}
+
+void Stage2Audio::play(std::size_t which) noexcept {
+    if (!ndsp_ready_ || which>=kClipCount) return;
+    const auto& clip=clips_[which];
+    if (!clip.pcm || clip.frames==0) return;
     ndspChnWaveBufClear(0);
-    wave_ = {};
-    wave_.data_vaddr = pcm_;
-    wave_.nsamples = frames_;
-    wave_.looping = false;
-    ndspChnWaveBufAdd(0, &wave_);
+    ndspChnReset(0);
+    ndspChnSetRate(0, static_cast<float>(clip.sample_rate));
+    ndspChnSetFormat(0, clip.channels==1
+        ? NDSP_FORMAT_MONO_PCM16 : NDSP_FORMAT_STEREO_PCM16);
+    float mix[12]{};
+    mix[0]=1.0f;
+    mix[1]=1.0f;
+    ndspChnSetMix(0,mix);
+    wave_={};
+    wave_.data_vaddr=clip.pcm;
+    wave_.nsamples=clip.frames;
+    wave_.looping=false;
+    ndspChnWaveBufAdd(0,&wave_);
+}
+
+void Stage2Audio::play_crafting() noexcept {
+    play(0);
+}
+
+void Stage2Audio::play_item_drop() noexcept {
+    // Original source chooses between drop1 and drop2. Alternate the two
+    // existing clips without inventing a replacement sound.
+    play(1u + (drop_serial_++ % 2u));
 }
 
 void Stage2Audio::shutdown() noexcept {
@@ -139,12 +166,11 @@ void Stage2Audio::shutdown() noexcept {
         ndspExit();
         ndsp_ready_ = false;
     }
-    if (pcm_) linearFree(pcm_);
-    pcm_ = nullptr;
-    wave_ = {};
-    bytes_ = 0;
-    frames_ = 0;
-    channels_ = 0;
-    sample_rate_ = 0;
+    for (auto& clip:clips_) {
+        if (clip.pcm) linearFree(clip.pcm);
+        clip={};
+    }
+    wave_={};
+    drop_serial_=0;
 }
 }
