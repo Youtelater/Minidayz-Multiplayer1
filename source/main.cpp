@@ -837,10 +837,24 @@ public:
                 const float x = 10.0f + col * 60.0f;
                 const float y = 92.0f + row * 43.0f;
                 const bool selected = index == selected_inventory_slot_;
+                const bool restricted = index >= 0 &&
+                    inventory_.is_exclusive_satchel_slot(
+                        static_cast<std::size_t>(index));
                 renderer.draw_solid_rect(x, y, 56.0f, 39.0f,
-                    selected ? C2D_Color32(225, 190, 105, 255) : C2D_Color32(5, 8, 7, 255));
+                    selected ? C2D_Color32(225, 190, 105, 255)
+                             : restricted ? C2D_Color32(105, 130, 126, 255)
+                             : C2D_Color32(5, 8, 7, 255));
                 renderer.draw_solid_rect(x + 2.0f, y + 2.0f, 52.0f, 35.0f,
-                    selected ? C2D_Color32(76, 76, 54, 255) : C2D_Color32(43, 49, 44, 255));
+                    selected ? C2D_Color32(76, 76, 54, 255)
+                             : restricted ? C2D_Color32(33, 62, 57, 255)
+                             : C2D_Color32(43, 49, 44, 255));
+                if (restricted) {
+                    const auto satchel_id = inventory_.equipped_satchel();
+                    const char* label =
+                        (satchel_id == 459 || satchel_id == 753)
+                            ? "ARMY" : "MED";
+                    renderer.draw_text(label, x + 4.0f, y + 3.0f, 0.17f);
+                }
                 const auto* item = inventory_.slot(static_cast<std::size_t>(index));
                 if (item && !item->empty()) {
                     // Use the exact item ID -> Construct object mapping from
