@@ -384,7 +384,7 @@ def main() -> None:
         lines.append(f"    {{{result_id}, 1, {json.dumps(name)}, "
                      f"{json.dumps(guide)}, {{{{{ingredients}}}}}, "
                      f"{str(inventory_result).lower()}, {str(preserve_second).lower()}, "
-                     f"{str(selected_stack_only).lower()}, {delay_seconds}.0f, {source_ground_object}}},")
+                     f"{str(selected_stack_only).lower()}, {float(delay_seconds):.2f}f, {source_ground_object}}},")
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
