@@ -8,6 +8,9 @@ ROOT=Path(__file__).resolve().parents[2]
 raw=(ROOT/"data/stage1/construct_project_parsed.json").read_text(encoding="utf-8-sig")
 project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",raw))
 terms=("Regeneration_current","perk_regen","Player_temperature","Night_cold","Rain_cold","Stats_blood_lost")
+player_object=project["project"][3][181]
+for index,field in enumerate(player_object[:16]):
+    print("SOURCE_PLAYER_OBJECT",index,str(field)[:2800])
 def walk(events,parents=()):
     for event in events if isinstance(events,list) else ():
         if not isinstance(event,list) or len(event)<7 or event[0]!=0:continue
