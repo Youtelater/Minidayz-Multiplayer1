@@ -10,6 +10,15 @@ using namespace minidayz::items;
 int main() {
     assert(kSourceCraftRecipeCount == 16);
     assert(source_craft_recipe(0)->result_id == 163);
+    // Original Construct results are delayed, not instantaneous.
+    assert(source_craft_recipe(0)->delay_seconds == 5.0f);
+    assert(source_craft_recipe(1)->delay_seconds == 5.0f);
+    assert(source_craft_recipe(2)->delay_seconds == 5.0f);
+    for (std::size_t index = 3; index < 6; ++index)
+        assert(source_craft_recipe(index)->delay_seconds == 3.0f);
+    for (std::size_t index = 6; index < 9; ++index)
+        assert(source_craft_recipe(index)->delay_seconds == 5.0f);
+    assert(source_craft_recipe(9)->delay_seconds == 0.0f);
     assert(source_craft_recipe(1)->result_id == 454);
     assert(source_craft_recipe(2)->result_id == 455);
     assert(source_craft_recipe(2)->ingredients[1].item_id == 38);
