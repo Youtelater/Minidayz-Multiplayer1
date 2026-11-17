@@ -299,6 +299,9 @@ jobs:
             tests/inventory_fractional_wear_tests.cpp -o inventory_fractional_wear_tests
           ./inventory_fractional_wear_tests
 
+      - name: Trace Exact Construct Rain Timer Event Tree
+        run: python3 tools/stage2/audit_rain_source_tree.py
+
       - name: Trace Source Rain and Day-Night Transition Guards
         run: python3 tools/stage2/audit_weather_transition_source.py
 
