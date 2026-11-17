@@ -14,7 +14,8 @@ OUTPUT = ROOT / "data/stage2/original_weather_transitions.json"
 RELEVANT = {"Day_mode", "Rain", "Day_count", "Day_time", "Night_time",
             "Time_of_day", "Weather", "Rain_timer", "Day_timer", "Night_timer",
             "Day_length", "Day_tick", "Timer_Hours", "Timer_Minutes",
-            "Timer_Seconds", "rains_level", "Timer_Days", "Timer_Hour"}
+            "Timer_Seconds", "rains_level", "Timer_Days", "Timer_Hour",
+            "Timer_ALL", "StatTimeMultiplier"}
 
 def walk(events, ancestry=()):
     for event in events if isinstance(events, list) else ():
