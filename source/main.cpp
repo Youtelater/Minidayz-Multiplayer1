@@ -15,6 +15,7 @@
 #include "minidayz/stage2_audio.hpp"
 #include "minidayz/item_description.hpp"
 #include "minidayz/weather_source.hpp"
+#include "minidayz/source_day_night.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -60,6 +61,8 @@ public:
             tents_.clear();
         if (restored && !stashes_.restore(restored->stashes))
             stashes_.clear();
+        if (restored && !day_night_.restore(restored->source_time))
+            day_night_.reset();
         if (restored && !item_use_runtime_.restore(restored->pending_item_use))
             item_use_runtime_.clear();
         if (restored && !perks_.restore(restored->perks)) perks_.clear();
@@ -95,7 +98,7 @@ public:
 
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_);
         stage2_audio_.shutdown();
     }
 
@@ -529,22 +532,29 @@ public:
                 crafting_feedback_elapsed_ = 0.0f;
             }
         }
+        // Original Construct Timer_ALL advances once per 1.5 seconds,
+        // toggling the day/night source cold branch at its real boundary.
+        (void)day_night_.update(std::max(0.0f, dt));
         const float current_source_warmth = equipment_.temperature_offset();
         const auto snowborn_level =
             perks_.level(minidayz::items::SourcePerk::snowborn);
         if (!source_temperature_initialized_ ||
             current_source_warmth != last_source_warmth_ ||
-            snowborn_level != last_source_snowborn_level_) {
+            snowborn_level != last_source_snowborn_level_ ||
+            day_night_.day_mode() != last_source_day_mode_) {
             float source_temperature = 0.0f;
             if (minidayz::items::source_weather_temperature_with_snowborn(
                     minidayz::SurvivalDifficulty::regular,
-                    minidayz::items::SourceColdPhase::day,
+                    day_night_.day_mode()
+                        ? minidayz::items::SourceColdPhase::day
+                        : minidayz::items::SourceColdPhase::night,
                     current_source_warmth,
                     minidayz::items::SourceRainColdBranch::full,
                     snowborn_level, source_temperature))
                 source_weather_exposure_ = source_temperature;
             last_source_warmth_ = current_source_warmth;
             last_source_snowborn_level_ = snowborn_level;
+            last_source_day_mode_ = day_night_.day_mode();
             source_temperature_initialized_ = true;
         }
         player_.update_movement(movement, dt, preview_rules_,
@@ -566,7 +576,7 @@ public:
         save_elapsed_ += dt;
         if (save_elapsed_ >= 2.0f) {
             save_elapsed_ = 0.0f;
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_);
         }
     }
 
@@ -1267,6 +1277,7 @@ private:
         ground_loot_.clear();
         tents_.clear();
         stashes_.clear();
+        day_night_.reset();
         item_use_runtime_.clear();
         perks_.clear();
         source_temperature_initialized_ = false;
@@ -1295,7 +1306,7 @@ private:
         // Never enter a blank gameplay scene when source world generation
         // fails. Keep the menu available so the player can retry instead.
         menu_active_ = !world_ready_;
-        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_);
+        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_);
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
@@ -1355,6 +1366,7 @@ private:
     minidayz::items::GroundLootSystem ground_loot_{};
     minidayz::items::TentStorageSystem tents_{};
     minidayz::items::StashStorageSystem stashes_{};
+    minidayz::items::SourceDayNightClock day_night_{};
     minidayz::items::ItemUseRuntime item_use_runtime_{};
     minidayz::items::SourcePerkSystem perks_{};
     minidayz::Stage2Audio stage2_audio_{};
@@ -1364,6 +1376,7 @@ private:
     float source_body_tick_elapsed_{};
     float last_source_warmth_{};
     std::uint8_t last_source_snowborn_level_{};
+    bool last_source_day_mode_{true};
     int selected_inventory_slot_{-1};
     int drag_source_slot_{-1};
     int drag_target_slot_{-1};
