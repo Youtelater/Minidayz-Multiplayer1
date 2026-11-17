@@ -45,6 +45,8 @@ int main() {
     assert(effects.source_trunk_bonus() == 0);
     assert(effects.source_bleeding_timer_seconds() == 60);
     assert(effects.source_sweethome_needs_gain() == 0.0f);
+    assert(effects.source_runner_speed_bonus() == 0);
+    assert(effects.source_farmer_growth_bonus() == 0);
     assert(effects.award_experience(50000));
     assert(effects.buy(SourcePerk::meleedef));
     assert(effects.source_melee_defense_percent_bonus() == 5);
@@ -62,6 +64,12 @@ int main() {
     assert(effects.source_sweethome_needs_gain() == 0.0f);
     assert(effects.buy(SourcePerk::sweethome));
     assert(effects.source_sweethome_needs_gain() == 0.15f);
+    assert(effects.buy(SourcePerk::runner));
+    assert(effects.source_runner_speed_bonus() == 5);
+    assert(effects.buy(SourcePerk::runner));
+    assert(effects.source_runner_speed_bonus() == 15);
+    assert(effects.buy(SourcePerk::farmer));
+    assert(effects.source_farmer_growth_bonus() == 10);
 
     // The Construct source exposes sixteen two-level perks. All can be
     // purchased through the exact cumulative XP threshold progression.
