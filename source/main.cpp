@@ -272,9 +272,10 @@ public:
                         // Half-stack split on the 3DS lower touchscreen.
                         for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
                             const auto* target = inventory_.slot(i);
-                            if (target && target->empty()) {
-                                if (inventory_.split_half(selected, i))
-                                    selected_inventory_slot_ = static_cast<int>(i);
+                            if (target && target->empty() &&
+                                inventory_.slot_accepts(i, item->item_id) &&
+                                inventory_.split_half(selected, i)) {
+                                selected_inventory_slot_ = static_cast<int>(i);
                                 break;
                             }
                         }
