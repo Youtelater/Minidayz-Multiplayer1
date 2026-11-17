@@ -84,7 +84,7 @@ jobs:
         run: |
           set -euo pipefail
           g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
-            source/inventory.cpp source/equipment.cpp \
+            source/inventory.cpp source/equipment.cpp source/player.cpp \
             tests/equipment_system_tests.cpp -o /tmp/minidayz_equipment_tests
           /tmp/minidayz_equipment_tests
           g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
