@@ -77,6 +77,7 @@ public:
         // a fresh run initializes the original daytime exposure once.
         source_temperature_initialized_ = restored != nullptr;
         last_source_warmth_ = equipment_.temperature_offset();
+        last_source_snowborn_level_ = perks_.level(minidayz::items::SourcePerk::snowborn);
     }
 
     void on_exit() noexcept override {
@@ -458,17 +459,21 @@ public:
             }
         }
         const float current_source_warmth = equipment_.temperature_offset();
+        const auto snowborn_level =
+            perks_.level(minidayz::items::SourcePerk::snowborn);
         if (!source_temperature_initialized_ ||
-            current_source_warmth != last_source_warmth_) {
+            current_source_warmth != last_source_warmth_ ||
+            snowborn_level != last_source_snowborn_level_) {
             float source_temperature = 0.0f;
-            if (minidayz::items::source_weather_temperature(
+            if (minidayz::items::source_weather_temperature_with_snowborn(
                     minidayz::SurvivalDifficulty::regular,
                     minidayz::items::SourceColdPhase::day,
                     current_source_warmth,
                     minidayz::items::SourceRainColdBranch::full,
-                    source_temperature))
+                    snowborn_level, source_temperature))
                 player_.set_source_temperature(source_temperature);
             last_source_warmth_ = current_source_warmth;
+            last_source_snowborn_level_ = snowborn_level;
             source_temperature_initialized_ = true;
         }
         player_.update_movement(movement, dt, preview_rules_,
@@ -1092,6 +1097,7 @@ private:
         perks_.clear();
         source_temperature_initialized_ = false;
         last_source_warmth_ = 0.0f;
+        last_source_snowborn_level_ = 0;
         inventory_page_ = 0;
         storage_page_ = 0;
         crafting_page_ = 0;
@@ -1175,6 +1181,7 @@ private:
     minidayz::PlayerRules preview_rules_{};
     bool source_temperature_initialized_{};
     float last_source_warmth_{};
+    std::uint8_t last_source_snowborn_level_{};
     int selected_inventory_slot_{-1};
     int drag_source_slot_{-1};
     int drag_target_slot_{-1};
