@@ -18,6 +18,7 @@ UI = ROOT / "l_eng_ui.xml"
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_crafting_catalog.hpp"
 SECONDARY = ROOT / "include/minidayz/generated/item_secondary_crafting_catalog.hpp"
+NEW_ITEMS = ROOT / "l_eng_new.xml"
 
 # The root tutorial states each recipe explicitly. The last recipe explicitly
 # says 3 wooden sticks. All others are two singular item ingredients.
@@ -40,7 +41,7 @@ RECIPES = (
 
 
 def main() -> None:
-    for path in (ITEMS, UI, PROJECT, SECONDARY):
+    for path in (ITEMS, UI, PROJECT, SECONDARY, NEW_ITEMS):
         if not path.is_file():
             raise SystemExit(f"Missing root-level Mini DAYZ file: {path}")
     item_names: dict[str, list[int]] = {}
@@ -70,6 +71,10 @@ def main() -> None:
         "Campfire Kit": (6293809025927058, "Craft_3"),
         "Crafted Arrow": (5857097494378506, "Craft_21"),
         "Crafted Arrow Alternate": (6171369527712243, "Craft_22"),
+        "Laser AK Grip": (8016043411981855, "Craft_ak"),
+        "Laser Rail Grip": (7958912387827208, "Craft_rail"),
+        "Molotov Cocktail": (554787549161111, "Craft_molotov_flare"),
+        "Molotov Cocktail Alternate": (832456160298927, "Craft_molotov_whiskey"),
     }
 
     def child_events(events):
@@ -142,7 +147,9 @@ def main() -> None:
                         isinstance(args[2], list) and args[2][0] == 7 and
                         isinstance(args[2][1], list) and args[2][1][0] == 0):
                         inventory_output_ids.append(args[2][1][1])
-        if result_name in ("Campfire Kit", "Crafted Arrow", "Crafted Arrow Alternate"):
+        if result_name in ("Campfire Kit", "Crafted Arrow", "Crafted Arrow Alternate",
+                            "Laser AK Grip", "Laser Rail Grip",
+                            "Molotov Cocktail", "Molotov Cocktail Alternate"):
             if output_ids or inventory_output_ids != [result_id]:
                 raise SystemExit(
                     f"Original {function} inventory outputs {inventory_output_ids}, "
@@ -184,6 +191,25 @@ def main() -> None:
         secondary_id("OutputId") != resolve("Rope")):
         raise SystemExit("Verified Rags to Rope recipe changed")
 
+    # Original root l_eng_new.xml provides these ingredients verbatim.
+    # Verify that the Construct source creates the item in inventory.
+    descriptions = {
+        int(row.findtext("id")): (row.findtext("name") or "")
+        for row in ET.parse(NEW_ITEMS).getroot().findall("text")
+    }
+    extra_recipes = (
+        ("Laser AK Grip", (("Laser Sight", 1), ("AK Grip", 1)),
+         "Crafting Reipe: Laser Sight + AK Grip"),
+        ("Laser Rail Grip", (("Laser Sight", 1), ("Rail Grip", 1)),
+         "Crafting Reipe: Laser Sight + Rail Grip"),
+        ("Molotov Cocktail", (("Whiskey", 1), ("Flare", 1)),
+         "Crafting Recipe: Whiskey + Flare"),
+    )
+    for label, _, phrase in extra_recipes:
+        if descriptions.get(resolve(label), "").count(phrase) != 1:
+            raise SystemExit(f"Source crafting guide changed: {label}")
+    assert_original_output("Molotov Cocktail Alternate", resolve("Molotov Cocktail"))
+
     rows = []
     for result_name, ingredients, pattern in RECIPES:
         source_text = [phrase for phrase in tutorial
@@ -209,6 +235,15 @@ def main() -> None:
                  [(resolve("Rags"), 3), (0, 0)],
                  "item_activate2: selected Rags stack >= 3 -> Rope",
                  True, False, True))
+
+    for result_name, ingredients, guide in extra_recipes:
+        result_id = resolve(result_name)
+        if not assert_original_output(result_name, result_id):
+            raise SystemExit("Expected original inventory craft result")
+        parts = [(resolve(label), amount) for label, amount in ingredients]
+        if result_id in (parts[0][0], parts[1][0]):
+            raise SystemExit("Self-consuming source craft")
+        rows.append((result_id, result_name, parts, guide, True, False, False))
 
     lines = [
         "#pragma once",
