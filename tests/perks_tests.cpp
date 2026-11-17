@@ -40,6 +40,8 @@ int main() {
     // The Construct source exposes sixteen two-level perks. All can be
     // purchased through the exact cumulative XP threshold progression.
     assert(kOriginalPerkCount == 16);
+    assert(!p.can_buy(static_cast<SourcePerk>(255)));
+    assert(!p.buy(static_cast<SourcePerk>(255)));
     assert(kOriginalPerkMenuOrder[3] == SourcePerk::camel);
     assert(kOriginalPerkMenuOrder[4] == SourcePerk::hamster);
     assert(kOriginalPerkMenuOrder[7] == SourcePerk::regen);
