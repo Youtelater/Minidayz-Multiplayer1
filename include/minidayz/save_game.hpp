@@ -13,7 +13,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 13u;
+inline constexpr std::uint32_t kSaveVersion = 14u;
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
@@ -34,6 +34,8 @@ struct SavedGame {
     // leaving every older EquipmentSnapshot binary layout unchanged.
     minidayz::items::EquipmentFractionSnapshot equipment_fraction{};
     // v13 adds independent six-slot Supplies Stash positions and cargo.
+    // v14 keeps the same layout but switches PlayerState.temperature from the
+    // old preview weather exposure to the original persisted BODY warmth.
     minidayz::items::StashStorageSnapshot stashes{};
 };
 
