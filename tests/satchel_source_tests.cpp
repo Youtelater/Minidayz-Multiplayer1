@@ -1,5 +1,6 @@
 #include "minidayz/satchel_source.hpp"
 #include <cassert>
+#include <initializer_list>
 using namespace minidayz::items;
 int main() {
     for (auto id : {458u, 752u}) {
