@@ -142,6 +142,9 @@ jobs:
           name: original-stage2-item-wear
           path: data/stage2/original_item_wear_actions.json
 
+      - name: Audit original body temperature dynamics and weather globals
+        run: python3 tools/stage2/audit_temperature_dynamics.py
+
       - name: Trace exact source cold injury damage thresholds
         run: python3 tools/stage2/audit_cold_injury_source.py
 
