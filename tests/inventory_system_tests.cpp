@@ -538,5 +538,49 @@ int main() {
     assert(!broken_backpack_repair.repair_equipped_backpack_from_inventory_slot(1));
     assert(broken_backpack_repair.count(39) == 1);
 
+    // Original satchel and ordinary backpack occupy separate equipment slots.
+    // Only unrestricted +2/+1 satchel cells are activated until the three
+    // original Army/Medical exclusive-slot item filters are translated.
+    InventorySystem dual_pack;
+    assert(dual_pack.add(450, 1, 0, 74));
+    assert(dual_pack.equip_backpack_from_slot(0));
+    assert(dual_pack.capacity() == 20);
+    assert(dual_pack.add(458, 1, 0, 81));
+    assert(dual_pack.equip_satchel_from_slot(0));
+    assert(dual_pack.capacity() == 22);
+    assert(dual_pack.equipped_backpack() == 450);
+    assert(dual_pack.equipped_satchel() == 458);
+    assert(dual_pack.equipped_satchel_condition() == 81);
+    assert(dual_pack.add(11, 1));
+    auto both_saved = dual_pack.snapshot();
+    auto satchel_saved = dual_pack.satchel_snapshot();
+    InventorySystem both_restored;
+    assert(both_restored.restore_with_satchel(both_saved, satchel_saved));
+    assert(both_restored.capacity() == 22);
+    assert(both_restored.equipped_backpack() == 450);
+    assert(both_restored.equipped_satchel() == 458);
+    assert(both_restored.count(11) == 1);
+    assert(both_restored.add(459, 1, 0, 76));
+    assert(both_restored.equip_satchel_from_slot(1));
+    assert(both_restored.equipped_satchel() == 459);
+    assert(both_restored.capacity() == 21);
+    assert(both_restored.slot(1)->item_id == 458);
+    // Satchel-only tail cargo must be moved before the smaller satchel
+    // can replace it; failed swaps must not consume an item.
+    assert(both_restored.add_to_slot(20, 12, 1));
+    assert(both_restored.add(460, 1, 0, 66));
+    assert(!both_restored.equip_satchel_from_slot(2));
+    assert(both_restored.equipped_satchel() == 459);
+    assert(both_restored.slot(2)->item_id == 460);
+    assert(both_restored.remove(20, 1));
+    assert(both_restored.unequip_satchel_to_slot(2));
+    assert(both_restored.equipped_satchel() == 0);
+    assert(both_restored.capacity() == 20);
+    assert(both_restored.slot(2)->item_id == 459);
+    auto invalid_satchel = satchel_saved;
+    invalid_satchel.item_id = 461;
+    assert(!both_restored.restore_with_satchel(both_saved, invalid_satchel));
+    assert(both_restored.equipped_satchel() == 0);
+
     return 0;
 }
