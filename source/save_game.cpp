@@ -81,6 +81,20 @@ struct SavedGameV8 {
 static_assert(sizeof(LegacyPerkSnapshotV8) == 12,
               "v8 perk layout changed");
 
+// V9 persisted all 16 original perks, before the separate satchel slot.
+struct SavedGameV9 {
+    std::uint32_t magic{};
+    std::uint32_t version{};
+    std::uint32_t seed{};
+    minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
+    minidayz::items::GroundLootSnapshot ground_loot{};
+    minidayz::items::TentStorageSnapshot tents{};
+    minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
+    minidayz::items::SourcePerkSnapshot perks{};
+};
+
 // Version 6 introduced native persistent tents, before timed medical actions.
 struct SavedGameV6 {
     std::uint32_t magic{};
@@ -237,6 +251,20 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.perks.camel_level = old.perks.camel_level;
             candidate.perks.hamster_level = old.perks.hamster_level;
         }
+    } else if (header_ok && candidate.version == 9u) {
+        SavedGameV9 old{};
+        body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
+                  std::fread(&old, sizeof(old), 1, file) == 1;
+        if (body_ok) {
+            candidate.seed = old.seed;
+            candidate.player = old.player;
+            candidate.inventory = old.inventory;
+            candidate.equipment = old.equipment;
+            candidate.ground_loot = old.ground_loot;
+            candidate.tents = old.tents;
+            candidate.pending_item_use = old.pending_item_use;
+            candidate.perks = old.perks;
+        }
     } else if (header_ok && candidate.version == kSaveVersion) {
         // Read the actual on-disk struct, including compiler alignment.
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
@@ -264,7 +292,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
     minidayz::items::ItemUseRuntime item_use_validation;
     minidayz::items::SourcePerkSystem perk_validation;
     if (!player_validation.restore(candidate.player) ||
-        !inventory_validation.restore(candidate.inventory) ||
+        !inventory_validation.restore_with_satchel(candidate.inventory, candidate.satchel) ||
         !equipment_validation.restore(candidate.equipment) ||
         !ground_loot_validation.restore(candidate.ground_loot) ||
         !tent_validation.restore(candidate.tents) ||
@@ -292,6 +320,7 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     save.seed = seed;
     save.player = player;
     save.inventory = inventory.snapshot();
+    save.satchel = inventory.satchel_snapshot();
     save.equipment = equipment.snapshot();
     save.ground_loot = ground_loot.snapshot();
     save.tents = tents.snapshot();
@@ -312,7 +341,7 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     minidayz::items::ItemUseRuntime item_use_validation;
     minidayz::items::SourcePerkSystem perk_validation;
     if (!player_validation.restore(save.player) ||
-        !inventory_validation.restore(save.inventory) ||
+        !inventory_validation.restore_with_satchel(save.inventory, save.satchel) ||
         !equipment_validation.restore(save.equipment) ||
         !ground_validation.restore(save.ground_loot) ||
         !tent_validation.restore(save.tents) ||
