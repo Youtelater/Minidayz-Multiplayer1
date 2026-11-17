@@ -299,6 +299,12 @@ jobs:
             tests/inventory_fractional_wear_tests.cpp -o inventory_fractional_wear_tests
           ./inventory_fractional_wear_tests
 
+      - name: Test Original Update_Stats Weather Phase Overrides
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_weather_event_tests.cpp -o source_weather_event_tests
+          ./source_weather_event_tests
+
       - name: Test Source 5s Body Temperature and Cold Damage
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
