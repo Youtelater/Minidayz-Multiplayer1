@@ -493,12 +493,39 @@ bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
 
 bool InventorySystem::damage_condition(
     std::size_t slot_index, std::uint8_t loss) noexcept {
-    if (slot_index >= capacity_ || slots_[slot_index].empty() || loss == 0)
-        return false;
+    return damage_condition_hundredths(slot_index,
+        static_cast<std::uint16_t>(loss) * 100u);
+}
+
+bool InventorySystem::damage_condition_hundredths(
+    std::size_t slot_index, std::uint16_t loss_hundredths) noexcept {
+    if (slot_index >= capacity_ || slots_[slot_index].empty() ||
+        loss_hundredths == 0) return false;
     auto& item = slots_[slot_index];
-    if (loss >= item.condition) item = {};
-    else item.condition = static_cast<std::uint8_t>(item.condition - loss);
+    if (item.condition > 100 || item.fractional_loss >= 100 ||
+        item.condition * 100u < item.fractional_loss) return false;
+    const auto exact = static_cast<std::uint16_t>(
+        item.condition * 100u - item.fractional_loss);
+    if (loss_hundredths >= exact) {
+        item = {};
+    } else {
+        const auto remaining = static_cast<std::uint16_t>(exact - loss_hundredths);
+        item.condition = static_cast<std::uint8_t>((remaining + 99u) / 100u);
+        item.fractional_loss = static_cast<std::uint8_t>(
+            item.condition * 100u - remaining);
+    }
     return true;
+}
+
+bool InventorySystem::apply_verified_wear_action(
+    std::size_t slot_index, std::uint64_t group_uid,
+    std::uint64_t event_uid, std::uint64_t action_uid,
+    bool source_guards_satisfied, bool perk_wxnj_active) noexcept {
+    if (!source_guards_satisfied) return false;
+    const auto* action = source_wear_action(group_uid,event_uid,action_uid);
+    if (!action || (action->cancel_when_wxnj_active && perk_wxnj_active))
+        return false;
+    return damage_condition_hundredths(slot_index,action->loss_hundredths);
 }
 
 bool InventorySystem::restore_condition(
@@ -507,6 +534,7 @@ bool InventorySystem::restore_condition(
         condition > 100 || condition <= slots_[slot_index].condition)
         return false;
     slots_[slot_index].condition = condition;
+    slots_[slot_index].fractional_loss = 0;
     return true;
 }
 
@@ -546,7 +574,8 @@ bool InventorySystem::pickup(GroundItem& ground, std::uint16_t max_stack) noexce
     if (max_stack == 0) return false;
     const std::uint8_t condition = ground.condition == kUseSourceItemCondition
         ? source_default_condition(ground.item_id) : ground.condition;
-    if (condition > 100 || !add(ground.item_id, ground.count, max_stack, condition))
+    if (condition > 100 || !add(ground.item_id, ground.count, max_stack, condition,
+                                   ground.fractional_loss))
         return false;
     ground = {};
     return true;
@@ -570,7 +599,9 @@ bool InventorySystem::drop(std::size_t index, std::uint16_t amount,
             ground.condition == kUseSourceItemCondition
                 ? source_default_condition(ground.item_id) : ground.condition;
         if (!valid_item(ground.item_id) || ground.item_id != source.item_id ||
-            ground_condition != source.condition || ground_condition > 100 ||
+            ground_condition != source.condition ||
+            ground.fractional_loss != source.fractional_loss ||
+            ground_condition > 100 ||
             ground.count > stack_limit ||
             moving > stack_limit - ground.count)
             return false;
@@ -579,7 +610,7 @@ bool InventorySystem::drop(std::size_t index, std::uint16_t amount,
     }
 
     if (ground.empty()) {
-        ground = {source.item_id, moving, source.condition};
+        ground = {source.item_id, moving, source.condition, source.fractional_loss};
     } else {
         ground.count = static_cast<std::uint16_t>(ground.count + moving);
     }
