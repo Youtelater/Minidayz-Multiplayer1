@@ -61,6 +61,12 @@ public:
     InventorySystem() noexcept = default;
 
     bool set_capacity(std::size_t capacity) noexcept;
+    // Three source-restricted Army/Medical satchel cells. The final three
+    // slots of a satchel-extended inventory accept only the original
+    // Construct item whitelist for that bag. Normal inventory is unrestricted.
+    bool slot_accepts(std::size_t slot_index,
+                      std::uint16_t item_id) const noexcept;
+    bool is_exclusive_satchel_slot(std::size_t slot_index) const noexcept;
 
     // Backpack equipment is a real equipment slot. Capacity is resolved
     // internally from the original Construct UI catalog; callers cannot guess it.
