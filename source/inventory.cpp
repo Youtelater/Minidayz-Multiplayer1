@@ -156,6 +156,23 @@ std::uint16_t source_max_stack(std::uint16_t item_id) noexcept {
     }
 }
 
+bool InventorySystem::is_exclusive_satchel_slot(
+    std::size_t slot_index) const noexcept {
+    const auto& satchel = source_satchel_capacity(equipped_satchel_);
+    if (satchel.exclusive == 0 || slot_index >= capacity_) return false;
+    const auto backpack_capacity = equipped_backpack_ == 0
+        ? kInventorySlotCount : source_backpack_capacity(equipped_backpack_);
+    return slot_index >= backpack_capacity + satchel.unrestricted;
+}
+
+bool InventorySystem::slot_accepts(
+    std::size_t slot_index, std::uint16_t item_id) const noexcept {
+    if (slot_index >= capacity_) return false;
+    if (item_id == 0) return true;
+    return !is_exclusive_satchel_slot(slot_index) ||
+        source_satchel_exclusive_accepts(equipped_satchel_, item_id);
+}
+
 bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
     // Capacity is a consequence of the equipped source backpack, not a
     // caller-selected upgrade. Keep this compatibility setter constrained
@@ -163,7 +180,8 @@ bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
     const std::size_t source_capacity = (equipped_backpack_ == 0
         ? kInventorySlotCount
         : source_backpack_capacity(equipped_backpack_)) +
-        source_satchel_capacity(equipped_satchel_).unrestricted;
+        source_satchel_capacity(equipped_satchel_).unrestricted +
+        source_satchel_capacity(equipped_satchel_).exclusive;
     if (capacity != source_capacity || capacity != capacity_)
         return false;
     return true;
@@ -175,7 +193,8 @@ bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
         return equip_satchel_from_slot(index);
     const std::size_t source_capacity =
         source_backpack_capacity(slots_[index].item_id) +
-        source_satchel_capacity(equipped_satchel_).unrestricted;
+        source_satchel_capacity(equipped_satchel_).unrestricted +
+        source_satchel_capacity(equipped_satchel_).exclusive;
     if (!is_backpack_item(slots_[index].item_id) ||
         slots_[index].count != 1 || slots_[index].condition > 100 ||
         source_capacity < kInventorySlotCount ||
@@ -204,8 +223,22 @@ bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
         if (i >= source_capacity && !slots_[i].empty()) return false;
     }
 
-    slots_[index] = {};
-    if (outgoing != 0) slots_[return_slot] = {outgoing, 1, outgoing_condition};
+    // Changing the main backpack moves the satchel's three restricted
+    // cells relative to the new main pack capacity. Never silently place
+    // a forbidden item into a newly restricted slot.
+    const auto satchel = source_satchel_capacity(equipped_satchel_);
+    const auto restricted_start =
+        source_backpack_capacity(incoming) + satchel.unrestricted;
+    auto proposed = slots_;
+    proposed[index] = {};
+    if (outgoing != 0) proposed[return_slot] =
+        {outgoing, 1, outgoing_condition};
+    for (std::size_t i = restricted_start; i < source_capacity; ++i)
+        if (!proposed[i].empty() &&
+            !source_satchel_exclusive_accepts(equipped_satchel_,
+                                              proposed[i].item_id))
+            return false;
+    slots_ = proposed;
     capacity_ = source_capacity;
     equipped_backpack_ = incoming;
     equipped_backpack_condition_ = incoming_condition;
@@ -214,12 +247,20 @@ bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
 
 bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
     const std::size_t remaining_capacity = kInventorySlotCount +
-        source_satchel_capacity(equipped_satchel_).unrestricted;
+        source_satchel_capacity(equipped_satchel_).unrestricted +
+        source_satchel_capacity(equipped_satchel_).exclusive;
     if (equipped_backpack_ == 0 || index >= remaining_capacity ||
         index >= capacity_ || !slots_[index].empty())
         return false;
     for (std::size_t i = remaining_capacity; i < capacity_; ++i)
         if (!slots_[i].empty()) return false;
+    const auto satchel = source_satchel_capacity(equipped_satchel_);
+    const std::size_t exclusive_start = kInventorySlotCount + satchel.unrestricted;
+    for (std::size_t i = exclusive_start; i < remaining_capacity; ++i)
+        if (!slots_[i].empty() &&
+            !source_satchel_exclusive_accepts(equipped_satchel_,
+                                              slots_[i].item_id))
+            return false;
 
     const std::uint16_t outgoing = equipped_backpack_;
     const std::uint8_t condition = equipped_backpack_condition_;
@@ -238,7 +279,8 @@ bool InventorySystem::equip_satchel_from_slot(std::size_t index) noexcept {
         return false;
     const auto source_capacity = (equipped_backpack_ == 0
         ? kInventorySlotCount : source_backpack_capacity(equipped_backpack_)) +
-        source_satchel_capacity(incoming->item_id).unrestricted;
+        source_satchel_capacity(incoming->item_id).unrestricted +
+        source_satchel_capacity(incoming->item_id).exclusive;
     if (source_capacity < kInventorySlotCount ||
         source_capacity > kMaximumInventorySlotCount) return false;
 
@@ -260,9 +302,22 @@ bool InventorySystem::equip_satchel_from_slot(std::size_t index) noexcept {
         if (i != index && (outgoing_id == 0 || i != return_slot) &&
             !slots_[i].empty()) return false;
     }
-    slots_[index] = {};
-    if (outgoing_id) slots_[return_slot] =
+    // Source-exclusive cells 2..4 belong to the Army/Medical satchel.
+    // An incoming satchel changes those cells' eligibility: reject any
+    // forbidden cargo atomically rather than discarding or relocating it.
+    auto proposed = slots_;
+    proposed[index] = {};
+    if (outgoing_id) proposed[return_slot] =
         {outgoing_id, 1, outgoing_condition};
+    const auto incoming_bag = source_satchel_capacity(incoming_id);
+    const auto base = equipped_backpack_ == 0
+        ? kInventorySlotCount : source_backpack_capacity(equipped_backpack_);
+    const auto exclusive_start = base + incoming_bag.unrestricted;
+    for (std::size_t i = exclusive_start; i < source_capacity; ++i)
+        if (!proposed[i].empty() &&
+            !source_satchel_exclusive_accepts(incoming_id, proposed[i].item_id))
+            return false;
+    slots_ = proposed;
     equipped_satchel_ = incoming_id;
     equipped_satchel_condition_ = incoming_condition;
     capacity_ = source_capacity;
@@ -296,6 +351,7 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
     std::uint32_t available = 0;
     for (std::size_t i = 0; i < capacity_; ++i) {
         const auto& entry = slots_[i];
+        if (!slot_accepts(i, item_id)) continue;
         if (entry.empty()) {
             available += max_stack;
         } else if (entry.item_id == item_id && entry.condition == condition &&
@@ -308,6 +364,7 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
     std::uint32_t remaining = amount;
     for (std::size_t i = 0; i < capacity_; ++i) {
         auto& entry = slots_[i];
+        if (!slot_accepts(i, item_id)) continue;
         if (entry.item_id != item_id || entry.condition != condition ||
             entry.count >= max_stack) continue;
         const auto room = static_cast<std::uint32_t>(max_stack - entry.count);
@@ -318,7 +375,7 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
     }
     for (std::size_t i = 0; i < capacity_; ++i) {
         auto& entry = slots_[i];
-        if (!entry.empty()) continue;
+        if (!slot_accepts(i, item_id) || !entry.empty()) continue;
         const auto added = remaining < max_stack ? remaining : max_stack;
         entry = {item_id, static_cast<std::uint16_t>(added), condition};
         remaining -= added;
@@ -331,7 +388,8 @@ bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
                                   std::uint16_t amount,
                                   std::uint16_t max_stack,
                                   std::uint8_t condition) noexcept {
-    if (index >= capacity_ || !valid_item(item_id) || amount == 0)
+    if (index >= capacity_ || !valid_item(item_id) || amount == 0 ||
+        !slot_accepts(index, item_id))
         return false;
     if (condition == kUseSourceItemCondition)
         condition = source_default_condition(item_id);
@@ -453,6 +511,9 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
                            std::uint16_t max_stack) noexcept {
     if (from >= capacity_ || to >= capacity_ || from == to ||
         slots_[from].empty()) return false;
+    if (!slot_accepts(to, slots_[from].item_id) ||
+        (!slots_[to].empty() &&
+         !slot_accepts(from, slots_[to].item_id))) return false;
     auto& source = slots_[from];
     auto& destination = slots_[to];
     const std::uint16_t moving = amount == 0 ? source.count : amount;
@@ -577,7 +638,8 @@ bool InventorySystem::restore_with_satchel(
     std::size_t restored_capacity = normalized_input.equipped_backpack == 0
         ? kInventorySlotCount
         : source_backpack_capacity(normalized_input.equipped_backpack);
-    restored_capacity += source_satchel_capacity(satchel.item_id).unrestricted;
+    const auto source_satchel = source_satchel_capacity(satchel.item_id);
+    restored_capacity += source_satchel.unrestricted + source_satchel.exclusive;
     if (restored_capacity < kInventorySlotCount ||
         restored_capacity > kMaximumInventorySlotCount)
         return false;
@@ -611,6 +673,18 @@ bool InventorySystem::restore_with_satchel(
             if (!displaced.empty()) return false; // no loss or silent overflow
         }
     }
+
+    const std::size_t source_main_capacity =
+        normalized_input.equipped_backpack == 0
+            ? kInventorySlotCount
+            : source_backpack_capacity(normalized_input.equipped_backpack);
+    const std::size_t restricted_start =
+        source_main_capacity + source_satchel.unrestricted;
+    for (std::size_t i = restricted_start; i < restored_capacity; ++i)
+        if (!normalized.slots[i].empty() &&
+            !source_satchel_exclusive_accepts(satchel.item_id,
+                                              normalized.slots[i].item_id))
+            return false;
 
     slots_ = normalized.slots;
     capacity_ = restored_capacity;
