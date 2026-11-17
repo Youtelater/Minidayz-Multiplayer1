@@ -59,4 +59,19 @@ inline bool source_weather_temperature(
     return false;
 }
 
+// Original Update_Stats event UID 4443176652070612:
+// IF perk_snowborn > 1 THEN Add 2 to Player_temperature.
+// This operates on the source weather calculation, not a guessed penalty
+// or a per-frame heat accumulation.
+inline bool source_weather_temperature_with_snowborn(
+    minidayz::SurvivalDifficulty difficulty, SourceColdPhase phase,
+    float clothing_warmth, SourceRainColdBranch rain_branch,
+    std::uint8_t snowborn_perk_level, float& temperature) noexcept {
+    if (!source_weather_temperature(
+            difficulty, phase, clothing_warmth, rain_branch, temperature))
+        return false;
+    if (snowborn_perk_level >= 2) temperature += 2.0f;
+    return true;
+}
+
 } // namespace minidayz::items
