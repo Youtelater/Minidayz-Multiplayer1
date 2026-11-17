@@ -252,6 +252,12 @@ bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
     if (equipped_backpack_ == 0 || index >= remaining_capacity ||
         index >= capacity_ || !slots_[index].empty())
         return false;
+    const auto satchel_for_target = source_satchel_capacity(equipped_satchel_);
+    const auto target_restricted_start =
+        kInventorySlotCount + satchel_for_target.unrestricted;
+    if (index >= target_restricted_start &&
+        !source_satchel_exclusive_accepts(
+            equipped_satchel_, equipped_backpack_)) return false;
     for (std::size_t i = remaining_capacity; i < capacity_; ++i)
         if (!slots_[i].empty()) return false;
     const auto satchel = source_satchel_capacity(equipped_satchel_);
