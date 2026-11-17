@@ -37,6 +37,32 @@ int main() {
     assert(p.snapshot().perks_learnt_count == 4);
     assert(!p.can_buy(SourcePerk::hamster));
 
+    // Original source mechanic values only; the individual event's
+    // conditions are checked separately by its native gameplay caller.
+    SourcePerkSystem effects;
+    assert(effects.source_melee_defense_percent_bonus() == 0);
+    assert(effects.source_melee_critical_bonus() == 0);
+    assert(effects.source_trunk_bonus() == 0);
+    assert(effects.source_bleeding_timer_seconds() == 60);
+    assert(effects.source_sweethome_needs_gain() == 0.0f);
+    assert(effects.award_experience(50000));
+    assert(effects.buy(SourcePerk::meleedef));
+    assert(effects.source_melee_defense_percent_bonus() == 5);
+    assert(effects.buy(SourcePerk::meleedef));
+    assert(effects.source_melee_defense_percent_bonus() == 15);
+    assert(effects.buy(SourcePerk::meleeatk));
+    assert(effects.source_melee_critical_bonus() == 10);
+    assert(effects.buy(SourcePerk::trunkster));
+    assert(effects.source_trunk_bonus() == 10);
+    assert(effects.buy(SourcePerk::metabolism));
+    assert(effects.source_bleeding_timer_seconds() == 60);
+    assert(effects.buy(SourcePerk::metabolism));
+    assert(effects.source_bleeding_timer_seconds() == 30);
+    assert(effects.buy(SourcePerk::sweethome));
+    assert(effects.source_sweethome_needs_gain() == 0.0f);
+    assert(effects.buy(SourcePerk::sweethome));
+    assert(effects.source_sweethome_needs_gain() == 0.15f);
+
     // The Construct source exposes sixteen two-level perks. All can be
     // purchased through the exact cumulative XP threshold progression.
     assert(kOriginalPerkCount == 16);
