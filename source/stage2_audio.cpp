@@ -91,7 +91,7 @@ bool Stage2Audio::initialize() noexcept {
                 auto* output = static_cast<std::int16_t*>(audio);
                 for (std::size_t i = 0; i < data_bytes; ++i)
                     output[i] = static_cast<std::int16_t>(
-                        (static_cast<int>(raw[i]) - 128) << 8);
+                        (static_cast<int>(raw[i]) - 128) * 256);
                 loaded = true;
             }
             std::free(raw);
@@ -112,6 +112,10 @@ bool Stage2Audio::initialize() noexcept {
     ndspChnSetRate(0, static_cast<float>(rate));
     ndspChnSetFormat(0, channels == 1
         ? NDSP_FORMAT_MONO_PCM16 : NDSP_FORMAT_STEREO_PCM16);
+    float mix[12]{};
+    mix[0] = 1.0f;
+    mix[1] = 1.0f;
+    ndspChnSetMix(0, mix);
     DSP_FlushDataCache(pcm_, bytes_);
     return true;
 }
