@@ -117,7 +117,8 @@ bool Stage2Audio::initialize() noexcept {
     constexpr const char* paths[kClipCount] = {
         "romfs:/wav/crafting.wav",
         "romfs:/wav/drop1.wav",
-        "romfs:/wav/drop2.wav"
+        "romfs:/wav/drop2.wav",
+        "romfs:/wav/zippero.wav"
     };
     bool any = false;
     for (std::size_t i=0;i<kClipCount;++i)
@@ -157,6 +158,11 @@ void Stage2Audio::play_item_drop() noexcept {
     // Original source chooses between drop1 and drop2. Alternate the two
     // existing clips without inventing a replacement sound.
     play(1u + (drop_serial_++ % 2u));
+}
+
+void Stage2Audio::play_backpack_zip() noexcept {
+    // Source event 443039046724475 plays zippero for backpack activation.
+    play(3);
 }
 
 void Stage2Audio::shutdown() noexcept {
