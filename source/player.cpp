@@ -344,6 +344,25 @@ void PlayerSystem::set_source_temperature(float source_value) noexcept {
     state_.temperature = source_value;
 }
 
+bool PlayerSystem::apply_source_body_temperature_tick(
+    float weather_exposure) noexcept {
+    if (!state_.alive || !std::isfinite(weather_exposure) ||
+        !std::isfinite(state_.temperature)) return false;
+    // Original Construct Game_events Player stats -> States:
+    // five-second condition UID 2665582317889917, action UID
+    // 471091765829229: actor variable 16 += Player_temperature / 2.
+    const float next = state_.temperature + weather_exposure / 2.0f;
+    if (!std::isfinite(next)) return false;
+    state_.temperature = next;
+    if (state_.temperature < 0.0f) {
+        // Original branch 8552060907536112 resets body cold to zero and
+        // subtracts a quarter health via its nested source action.
+        state_.temperature = 0.0f;
+        apply_damage(0.25f, PlayerDeathReason::cold);
+    }
+    return true;
+}
+
 void PlayerSystem::set_bleeding(float severity, float max_severity) noexcept {
     if (!std::isfinite(severity) || !std::isfinite(max_severity)) return;
     state_.bleeding = clamp(severity, 0.0f, std::max(0.0f, max_severity));
