@@ -87,6 +87,23 @@ struct PreviousSaveV12 {
     EquipmentFractionSnapshot equipment_fraction{};
 };
 
+// v13/v14 saved the same six-slot stash layout without Timer_ALL.
+struct PreviousSaveV14 {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{14};
+    std::uint32_t seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+    SourcePerkSnapshot perks{};
+    SatchelSnapshot satchel{};
+    EquipmentFractionSnapshot equipment_fraction{};
+    StashStorageSnapshot stashes{};
+};
+
 struct LegacyPerkSnapshotV8ForTest {
     std::uint32_t experience_points{};
     std::uint32_t perk_cost{100};
@@ -485,7 +502,7 @@ int main() {
 
     // v13 stored preview weather EXPOSURE, not original actor body warmth.
     // The old field must reset on migration, without losing other stats.
-    SavedGame old13{};
+    PreviousSaveV14 old13{};
     old13.version = 13u;
     old13.seed = 1301;
     old13.player = player;
@@ -510,8 +527,36 @@ int main() {
                                     equipment, fractional_ground, tents,
                                     kFile, kTemp));
     assert(load_saved_game_from_path(restored, kFile));
-    assert(restored.version == 14u && restored.seed == 1401);
+    assert(restored.version == kSaveVersion && restored.seed == 1401);
+    assert(restored.source_time.timer_all == 361);
     assert(restored.player.temperature == 3.75f);
+
+    // The exact v14 file is byte-shorter than v15 and must load without
+    // interpreting absent time bytes as existing clock state.
+    PreviousSaveV14 old14 = old13;
+    old14.version = 14;
+    old14.seed = 1402;
+    old14.player.temperature = 7.5f;
+    {
+        auto* file = std::fopen(kFile,"wb");
+        assert(file && std::fwrite(&old14,sizeof(old14),1,file)==1);
+        assert(std::fclose(file)==0);
+    }
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==14u && restored.seed==1402);
+    assert(restored.player.temperature==7.5f);
+    assert(restored.source_time.timer_all==361);
+
+    SourceDayNightClock source_clock;
+    assert(source_clock.restore({60, 0.75f, false}));
+    assert(write_saved_game_to_paths(1501,warm_player,fractional_inventory,
+        equipment,fractional_ground,tents,kFile,kTemp,
+        nullptr,nullptr,nullptr,&source_clock));
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==kSaveVersion && restored.seed==1501);
+    assert(restored.source_time.timer_all==60);
+    assert(restored.source_time.elapsed_seconds==0.75f);
+    assert(!restored.source_time.day_mode);
 
     // v13 retains the six-source-slot Supplies Stash and its exact
     // subpercent item wear independently of permanent Civilian Tent storage.
