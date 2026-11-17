@@ -15,6 +15,29 @@ inline const SourceLootPool* source_loot_pool(std::size_t record_index) noexcept
         ? &kSourceLootPools[record_index] : nullptr;
 }
 
+// A source event can spawn a drop only after ALL original Construct
+// ancestry has been evaluated. Literal marker (object 218 variable 0)
+// and SEED_pubg comparisons are extracted directly from the same event
+// tree as the choice pool; unsupported conditions are explicitly caller
+// validated, never assumed true by a timer or random choice.
+struct SourceLootGuardContext {
+    std::int16_t marker{};
+    std::int8_t seed_pubg{};
+    bool original_respawn_event_fired{};
+    bool all_remaining_original_guards_satisfied{};
+};
+
+inline bool source_loot_dispatch_guarded(
+    std::size_t record_index,
+    const SourceLootGuardContext& guards) noexcept {
+    const auto* pool = source_loot_pool(record_index);
+    if (!pool || !guards.original_respawn_event_fired ||
+        !guards.all_remaining_original_guards_satisfied)
+        return false;
+    return (pool->marker < 0 || guards.marker == pool->marker) &&
+           (pool->seed_pubg < 0 || guards.seed_pubg == pool->seed_pubg);
+}
+
 inline std::uint16_t source_loot_choice(std::size_t record_index,
                                          std::size_t choice_index) noexcept {
     const auto* pool = source_loot_pool(record_index);
