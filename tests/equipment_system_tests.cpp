@@ -351,5 +351,20 @@ int main() {
     assert(fraction_inventory.slot(0)->condition == 100);
     assert(fraction_inventory.slot(0)->fractional_loss == 50);
 
+    // A 99.75%-exact jacket displays as 100% with the source byte
+    // compatibility field, but it is still legitimately repairable.
+    EquipmentSystem subpercent_jacket;
+    InventorySystem jacket_inventory;
+    assert(jacket_inventory.add(350,1,0,100,25));
+    assert(jacket_inventory.add(39,1));
+    assert(subpercent_jacket.equip_from_inventory(
+        jacket_inventory,0,EquipmentSlot::outerwear));
+    assert(subpercent_jacket.repair_from_inventory(
+        jacket_inventory,1,SourceRepairTarget::outerwear));
+    const auto outer=static_cast<std::size_t>(EquipmentSlot::outerwear);
+    assert(subpercent_jacket.snapshot().conditions[outer]==100);
+    assert(subpercent_jacket.fraction_snapshot().fractional_loss[outer]==0);
+    assert(jacket_inventory.count(39)==0);
+
     return 0;
 }
