@@ -88,6 +88,9 @@ jobs:
       - name: Audit all original crafting functions
         run: python3 tools/stage2/audit_crafting_source.py
 
+      - name: Trace remaining exact crafting predicates
+        run: python3 tools/stage2/audit_crafting_candidates.py
+
       - name: Upload original crafting action trace
         uses: actions/upload-artifact@v4
         with:
