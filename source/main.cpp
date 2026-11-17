@@ -660,11 +660,16 @@ public:
                 : equipment_.snapshot().conditions[i];
             if (item_id != 0) {
                 (void)renderer.draw_item_icon(item_id, x + 21.5f, 55.0f, 30.0f, 25.0f);
-                if (condition > 0 && condition < 100) {
+                const auto fraction = i < 5
+                    ? equipment_.fraction_snapshot().fractional_loss[i] : 0u;
+                const float exact_condition =
+                    static_cast<float>(condition) -
+                    static_cast<float>(fraction) / 100.0f;
+                if (exact_condition > 0.0f && exact_condition < 100.0f) {
                     renderer.draw_solid_rect(x + 5.0f, 77.0f, 40.0f, 2.0f,
                                              C2D_Color32(30, 30, 30, 255));
                     renderer.draw_solid_rect(x + 5.0f, 77.0f,
-                        40.0f * static_cast<float>(condition) / 100.0f, 2.0f,
+                        40.0f * exact_condition / 100.0f, 2.0f,
                         C2D_Color32(190, 170, 85, 255));
                 }
             } else {
@@ -872,10 +877,14 @@ public:
                 const char* description =
                     minidayz::items::source_item_description(selected->item_id);
                 char heading[80]{};
-                std::snprintf(heading, sizeof(heading), "ITEM %u  x%u  CONDITION %u%%",
+                const unsigned exact_hundredths =
+                    static_cast<unsigned>(selected->condition) * 100u -
+                    static_cast<unsigned>(selected->fractional_loss);
+                std::snprintf(heading, sizeof(heading),
+                    "ITEM %u x%u CONDITION %u.%02u%%",
                     static_cast<unsigned>(selected->item_id),
                     static_cast<unsigned>(selected->count),
-                    static_cast<unsigned>(selected->condition));
+                    exact_hundredths / 100u, exact_hundredths % 100u);
                 renderer.draw_text(heading, 16.0f, 101.0f, 0.27f);
                 if (description && *description) {
                     // Simple bounded word-wrapping for the original XML text.
