@@ -50,7 +50,8 @@ public:
           player_(restored ? restored->player : make_initial_state()) {
         if (restored && !inventory_.restore_with_satchel(restored->inventory, restored->satchel))
             inventory_.clear();
-        if (restored && !equipment_.restore(restored->equipment))
+        if (restored && !equipment_.restore_with_fraction(
+                restored->equipment, restored->equipment_fraction))
             equipment_.clear();
         if (restored && !ground_loot_.restore(restored->ground_loot))
             ground_loot_.clear();
