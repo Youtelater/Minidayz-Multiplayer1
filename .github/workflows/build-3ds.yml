@@ -79,6 +79,31 @@ jobs:
             tests/crafting_system_tests.cpp -o /tmp/minidayz_crafting_tests
           /tmp/minidayz_crafting_tests
 
+      - name: Test Stage 2 equipment, ground loot, tents, perks, and item use
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
+            source/inventory.cpp source/equipment.cpp \
+            tests/equipment_system_tests.cpp -o /tmp/minidayz_equipment_tests
+          /tmp/minidayz_equipment_tests
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
+            source/inventory.cpp source/ground_loot.cpp \
+            tests/ground_loot_tests.cpp -o /tmp/minidayz_ground_loot_tests
+          /tmp/minidayz_ground_loot_tests
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
+            source/inventory.cpp source/tent_storage.cpp \
+            tests/tent_storage_tests.cpp -o /tmp/minidayz_tent_storage_tests
+          /tmp/minidayz_tent_storage_tests
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
+            source/perks.cpp tests/perks_tests.cpp \
+            -o /tmp/minidayz_perks_tests
+          /tmp/minidayz_perks_tests
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
+            source/inventory.cpp source/item_use.cpp source/player.cpp \
+            tests/item_use_tests.cpp -o /tmp/minidayz_item_use_tests
+          /tmp/minidayz_item_use_tests
+
       - name: Test Construct location event interpreter
         run: |
           g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/construct_expression.cpp source/construct_event_interpreter.cpp tests/construct_event_interpreter_tests.cpp -o /tmp/construct_event_interpreter_tests
