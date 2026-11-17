@@ -12,7 +12,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 11u;
+inline constexpr std::uint32_t kSaveVersion = 12u;
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
@@ -29,6 +29,9 @@ struct SavedGame {
     // padding bytes as exact fractional source durability. The on-disk item
     // ABI remains six bytes, and older versions migrate with zero fraction.
     minidayz::items::SatchelSnapshot satchel{};
+    // v12 adds independently saved subpercent condition for equipped slots,
+    // leaving every older EquipmentSnapshot binary layout unchanged.
+    minidayz::items::EquipmentFractionSnapshot equipment_fraction{};
 };
 
 
