@@ -206,6 +206,70 @@ bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
     const std::uint16_t outgoing = equipped_backpack_;
     const std::uint8_t outgoing_condition = equipped_backpack_condition_;
 
+    if (equipped_satchel_ != 0) {
+        // Satchel slots are a separate container. A change in main backpack
+        // capacity changes their physical indices, not their logical contents.
+        const auto satchel = source_satchel_capacity(equipped_satchel_);
+        const std::size_t satchel_slots =
+            satchel.unrestricted + satchel.exclusive;
+        const std::size_t old_main = equipped_backpack_ == 0
+            ? kInventorySlotCount : source_backpack_capacity(equipped_backpack_);
+        const std::size_t new_main = source_backpack_capacity(incoming);
+        if (old_main + satchel_slots != capacity_ ||
+            new_main + satchel_slots != source_capacity) return false;
+
+        std::array<InventorySlot, kMaximumInventorySlotCount> proposed{};
+        for (std::size_t i = 0; i < old_main; ++i) {
+            if (i == index) continue; // Incoming backpack is consumed.
+            if (i >= new_main) {
+                if (!slots_[i].empty()) return false; // Main pack overflow.
+            } else {
+                proposed[i] = slots_[i];
+            }
+        }
+
+        for (std::size_t i = 0; i < satchel_slots; ++i) {
+            const std::size_t old_index = old_main + i;
+            if (old_index == index) continue;
+            const auto& item = slots_[old_index];
+            if (i >= satchel.unrestricted && !item.empty() &&
+                !source_satchel_exclusive_accepts(
+                    equipped_satchel_, item.item_id)) return false;
+            proposed[new_main + i] = item;
+        }
+
+        if (outgoing != 0) {
+            auto eligible = [&](std::size_t i) noexcept {
+                return i < source_capacity &&
+                    (i < new_main + satchel.unrestricted ||
+                     source_satchel_exclusive_accepts(equipped_satchel_, outgoing));
+            };
+            // First use the incoming bag's vacated logical cell, if retained.
+            std::size_t return_slot = source_capacity;
+            if (index < old_main && index < new_main)
+                return_slot = index;
+            else if (index >= old_main)
+                return_slot = new_main + (index - old_main);
+            if (return_slot >= source_capacity ||
+                !eligible(return_slot) || !proposed[return_slot].empty()) {
+                return_slot = source_capacity;
+                for (std::size_t i = 0; i < source_capacity; ++i)
+                    if (eligible(i) && proposed[i].empty()) {
+                        return_slot = i;
+                        break;
+                    }
+            }
+            if (return_slot == source_capacity) return false;
+            proposed[return_slot] = {outgoing, 1, outgoing_condition};
+        }
+
+        slots_ = proposed;
+        capacity_ = source_capacity;
+        equipped_backpack_ = incoming;
+        equipped_backpack_condition_ = incoming_condition;
+        return true;
+    }
+
     std::size_t return_slot = index;
     if (outgoing != 0 && index >= source_capacity) {
         return_slot = source_capacity;
