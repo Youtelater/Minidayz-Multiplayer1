@@ -315,5 +315,41 @@ int main() {
     assert(atomic.restore(EquipmentSnapshot{{251, 0, 0, 0, 0, 0, 0}}));
     for (std::uint16_t id = 1; id <= 15; ++id) assert(full.add(id, 1));
     assert(full.add(264, 1) == false);
+    // Source-authenticated subpercent damage must follow a held weapon
+    // through equipping, saving and unequipping without rounding away 0.25%.
+    InventorySystem fraction_inventory;
+    EquipmentSystem fractional_gear;
+    assert(fraction_inventory.add(244, 1, 0, 100));
+    assert(fraction_inventory.damage_condition_hundredths(0, 25));
+    assert(fractional_gear.equip_from_inventory(
+        fraction_inventory,0,EquipmentSlot::hands));
+    const auto held=static_cast<std::size_t>(EquipmentSlot::hands);
+    assert(fractional_gear.snapshot().item_ids[held] == 244);
+    assert(fractional_gear.snapshot().conditions[held] == 100);
+    assert(fractional_gear.fraction_snapshot().fractional_loss[held] == 25);
+    assert(!fractional_gear.apply_verified_wear_action(
+        EquipmentSlot::hands,6904772320561696ULL,875054325568454ULL,
+        744011060201717ULL,false,false));
+    assert(fractional_gear.apply_verified_wear_action(
+        EquipmentSlot::hands,6904772320561696ULL,875054325568454ULL,
+        744011060201717ULL,true,false));
+    assert(fractional_gear.fraction_snapshot().fractional_loss[held] == 50);
+    assert(!fractional_gear.apply_verified_wear_action(
+        EquipmentSlot::hands,6904772320561696ULL,875054325568454ULL,
+        744011060201717ULL,true,true));
+    EquipmentSystem fraction_loaded;
+    assert(fraction_loaded.restore_with_fraction(
+        fractional_gear.snapshot(),fractional_gear.fraction_snapshot()));
+    auto bad_fraction=fractional_gear.fraction_snapshot();
+    bad_fraction.fractional_loss[held]=255;
+    assert(!fraction_loaded.restore_with_fraction(
+        fractional_gear.snapshot(),bad_fraction));
+    assert(fraction_loaded.fraction_snapshot().fractional_loss[held] == 50);
+    assert(fraction_loaded.unequip_to_inventory(
+        fraction_inventory,EquipmentSlot::hands,0));
+    assert(fraction_inventory.slot(0)->item_id == 244);
+    assert(fraction_inventory.slot(0)->condition == 100);
+    assert(fraction_inventory.slot(0)->fractional_loss == 50);
+
     return 0;
 }
