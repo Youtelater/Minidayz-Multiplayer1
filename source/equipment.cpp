@@ -251,7 +251,10 @@ bool EquipmentSystem::restore_condition(
     EquipmentSlot slot, std::uint8_t condition) noexcept {
     const auto index = static_cast<std::size_t>(slot);
     if (index >= state_.item_ids.size() || state_.item_ids[index] == 0 ||
-        condition > 100 || condition <= state_.conditions[index])
+        condition > 100 ||
+        static_cast<unsigned>(condition) * 100u <=
+            static_cast<unsigned>(state_.conditions[index]) * 100u -
+                fractions_.fractional_loss[index])
         return false;
     state_.conditions[index] = condition;
     fractions_.fractional_loss[index] = 0;
@@ -293,7 +296,9 @@ bool EquipmentSystem::repair_from_inventory(
     if (state_.item_ids[equipment_index] == 0) return false;
     const auto current = state_.conditions[equipment_index];
     // Original repair menu conditions require condition > 0 and < 100.
-    if (current == 0 || current >= 100) return false;
+    const auto exact = static_cast<unsigned>(current) * 100u -
+        fractions_.fractional_loss[equipment_index];
+    if (exact == 0 || exact >= 10000u) return false;
 
     std::uint8_t gain = 0;
     if (!source_item_repair_gain(material->item_id, target, gain))
