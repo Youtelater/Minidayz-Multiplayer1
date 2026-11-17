@@ -1,29 +1,36 @@
 #pragma once
 #include <3ds.h>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
 namespace minidayz {
 
-// Source media name: romfs/wav/crafting.wav. A single optional native
-// 3DS NDSP voice for successful crafting; never fabricates missing samples.
-// Failure to access DSP or a supported PCM wave must not stop gameplay.
+// The original Construct drop actions choose drop1/drop2; successful
+// crafting uses crafting.wav. All samples come from repository romfs/wav.
 class Stage2Audio {
 public:
     bool initialize() noexcept;
     void play_crafting() noexcept;
+    void play_item_drop() noexcept;
     void shutdown() noexcept;
     ~Stage2Audio() { shutdown(); }
     Stage2Audio() = default;
     Stage2Audio(const Stage2Audio&) = delete;
     Stage2Audio& operator=(const Stage2Audio&) = delete;
 private:
+    struct Clip {
+        void* pcm{};
+        std::size_t bytes{};
+        std::uint32_t frames{};
+        std::uint32_t sample_rate{};
+        std::uint16_t channels{};
+    };
+    static constexpr std::size_t kClipCount = 3;
+    bool load_wav(const char* path, Clip& destination) noexcept;
+    void play(std::size_t clip) noexcept;
+    std::array<Clip,kClipCount> clips_{};
     ndspWaveBuf wave_{};
-    void* pcm_{};
-    std::size_t bytes_{};
-    std::uint32_t frames_{};
-    std::uint32_t sample_rate_{};
-    std::uint16_t channels_{};
     bool ndsp_ready_{};
+    unsigned drop_serial_{};
 };
-}
