@@ -63,6 +63,22 @@ jobs:
           make clean
           make
 
+      # Compile the native Stage 2 inventory/crafting runtime against the same
+      # source-generated headers that the .3dsx just used. Keep these tests
+      # outside the 3DS target so they can run on the CI host.
+      - name: Test Stage 2 backpack, satchel, and crafting transactions
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
+            source/inventory.cpp tests/inventory_system_tests.cpp \
+            -o /tmp/minidayz_inventory_tests
+          /tmp/minidayz_inventory_tests
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
+            source/inventory.cpp source/ground_loot.cpp source/crafting.cpp \
+            tests/crafting_system_tests.cpp -o /tmp/minidayz_crafting_tests
+          /tmp/minidayz_crafting_tests
+
       - name: Test Construct location event interpreter
         run: |
           g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/construct_expression.cpp source/construct_event_interpreter.cpp tests/construct_event_interpreter_tests.cpp -o /tmp/construct_event_interpreter_tests
