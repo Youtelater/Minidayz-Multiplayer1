@@ -35,8 +35,8 @@ int main() {
     assert(clock.restore({359,0.0f,false}));
     assert(clock.update(1.5f,true));
     assert(clock.hour()==6 && !clock.day_mode());
-    assert(!clock.restore({361,0.0f,false}));
-    assert(!clock.restore({0,0.0f,true}));
+    assert(clock.restore({361,0.0f,false})); // bunker can keep night mode
+    assert(clock.restore({0,0.0f,true})); // bunker can keep day mode
     assert(!clock.restore({2000,0.0f,false}));
     assert(!clock.restore({361,1.5f,true}));
     assert(!clock.restore({361,-1.0f,true}));
