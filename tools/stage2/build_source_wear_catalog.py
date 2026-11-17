@@ -69,11 +69,20 @@ def main():
                 continue
             delta,perk=parsed
             rows.append((group,int(entry["uid"]),int(action[3]),delta,perk))
+    # Construct exports reuse some event/action UIDs in cloned ACE branches.
+    # Do not collapse them into an ambiguous runtime dispatch key: leave
+    # every such occurrence untranslated until original ancestor identity
+    # is passed with the event.
+    occurrences={}
+    for row in rows:
+        key=row[:3]
+        occurrences[key]=occurrences.get(key,0)+1
+    ambiguous=sum(1 for row in rows if occurrences[row[:3]]>1)
+    rows=[row for row in rows if occurrences[row[:3]]==1]
+    unsupported+=ambiguous
     rows.sort()
-    if len(rows)<90 or unsupported<5:
+    if len(rows)<80 or unsupported<5:
         raise SystemExit(f"Unexpected original wear extraction {len(rows)} supported, {unsupported} unresolved")
-    if len(set((a,b,c) for a,b,c,_,_ in rows))!=len(rows):
-        raise SystemExit("Duplicate source action identity in wear catalog")
     lines=[
         "#pragma once",
         "#include <cstdint>",
