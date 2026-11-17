@@ -15,6 +15,13 @@ def walk(events,parents=()):
         yield from walk(event[7] if len(event)>7 else [],(*parents,event))
 for sheet in project["project"][6]:
     if not isinstance(sheet,list) or len(sheet)<2:continue
+    for row in sheet[1] if isinstance(sheet[1],list) else []:
+        if (isinstance(row,list) and len(row)>3 and row[0]==1 and
+            row[1] in ("Novice_regeneration","Regular_regeneration",
+                       "Veteran_regeneration","Regeneration_current")):
+            print("SOURCE_REGEN_DEFAULT",sheet[0],row[1],row[3])
+for sheet in project["project"][6]:
+    if not isinstance(sheet,list) or len(sheet)<2:continue
     for event,parents in walk(sheet[1]):
         hits=[]
         for action in event[6] if isinstance(event[6],list) else ():
