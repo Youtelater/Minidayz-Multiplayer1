@@ -175,16 +175,17 @@ int main() {
     assert(rags_split.slot(2)->item_id == 41);
     assert(rags_ground.count() == 0);
 
-    // A full inventory with no output slot must roll the Rags back.
+    // Source max stack for Rags is exactly 3. Consuming one full Rags
+    // stack frees its slot, so conversion works even in a full inventory.
     InventorySystem rags_full;
     GroundLootSystem rags_full_ground;
-    assert(rags_full.add_to_slot(0, 26, 4));
+    assert(rags_full.add_to_slot(0, 26, 3));
     for (std::size_t i = 1; i < rags_full.capacity(); ++i)
         assert(rags_full.add_to_slot(i, 42, 1));
-    assert(!can_craft_from_inventory(rags_full, rags_full_ground, 0, 0, 9));
-    assert(!craft_from_inventory(rags_full, rags_full_ground, 0, 0, 9));
-    assert(rags_full.slot(0)->item_id == 26 && rags_full.slot(0)->count == 4);
-    assert(rags_full.count(41) == 0);
+    assert(can_craft_from_inventory(rags_full, rags_full_ground, 0, 0, 9));
+    assert(craft_from_inventory(rags_full, rags_full_ground, 0, 0, 9));
+    assert(rags_full.slot(0)->item_id == 41 && rags_full.slot(0)->count == 1);
+    assert(rags_full.count(26) == 0 && rags_full_ground.count() == 0);
 
     // Full original ground-entity container and nonfinite positions reject a
     // craft without changing the source inventory or dropping the output.
