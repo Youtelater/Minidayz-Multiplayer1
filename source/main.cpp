@@ -9,6 +9,7 @@
 #include "minidayz/ground_loot.hpp"
 #include "minidayz/crafting.hpp"
 #include "minidayz/tent_storage.hpp"
+#include "minidayz/stash_storage.hpp"
 #include "minidayz/save_game.hpp"
 #include "minidayz/perks.hpp"
 #include "minidayz/stage2_audio.hpp"
@@ -57,6 +58,8 @@ public:
             ground_loot_.clear();
         if (restored && !tents_.restore(restored->tents))
             tents_.clear();
+        if (restored && !stashes_.restore(restored->stashes))
+            stashes_.clear();
         if (restored && !item_use_runtime_.restore(restored->pending_item_use))
             item_use_runtime_.clear();
         if (restored && !perks_.restore(restored->perks)) perks_.clear();
@@ -90,7 +93,7 @@ public:
 
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_);
         stage2_audio_.shutdown();
     }
 
@@ -535,7 +538,7 @@ public:
         save_elapsed_ += dt;
         if (save_elapsed_ >= 2.0f) {
             save_elapsed_ = 0.0f;
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_);
         }
     }
 
@@ -1165,6 +1168,7 @@ private:
         equipment_.clear();
         ground_loot_.clear();
         tents_.clear();
+        stashes_.clear();
         item_use_runtime_.clear();
         perks_.clear();
         source_temperature_initialized_ = false;
@@ -1191,7 +1195,7 @@ private:
         // Never enter a blank gameplay scene when source world generation
         // fails. Keep the menu available so the player can retry instead.
         menu_active_ = !world_ready_;
-        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_);
+        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_);
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
@@ -1250,6 +1254,7 @@ private:
     minidayz::items::EquipmentSystem equipment_{};
     minidayz::items::GroundLootSystem ground_loot_{};
     minidayz::items::TentStorageSystem tents_{};
+    minidayz::items::StashStorageSystem stashes_{};
     minidayz::items::ItemUseRuntime item_use_runtime_{};
     minidayz::items::SourcePerkSystem perks_{};
     minidayz::Stage2Audio stage2_audio_{};
