@@ -18,17 +18,23 @@ const char* source_item_name(std::uint16_t item_id) noexcept;
 struct InventorySlot {
     std::uint16_t item_id{};
     std::uint16_t count{};
-    std::uint8_t condition{100}; // Original Construct item instance variable 6.
+    std::uint8_t condition{100}; // Ceiling of original variable 6.
+    // Exact source condition = condition*100 - fractional_loss.
+    // Occupies previous padding byte, retaining v10 item layout.
+    std::uint8_t fractional_loss{};
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
 struct GroundItem {
     std::uint16_t item_id{};
     std::uint16_t count{};
-    std::uint8_t condition{kUseSourceItemCondition}; // Resolve from original item variable 6 on pickup.
+    std::uint8_t condition{kUseSourceItemCondition};
+    std::uint8_t fractional_loss{};
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
+static_assert(sizeof(InventorySlot) == 6 && sizeof(GroundItem) == 6,
+              "Fractional durability cannot change the old item layout");
 struct SatchelSnapshot {
     std::uint16_t item_id{};
     std::uint8_t condition{100};
@@ -95,14 +101,24 @@ public:
     // max_stack == 0 selects the original game's baseline rule for item_id.
     bool add(std::uint16_t item_id, std::uint16_t amount,
              std::uint16_t max_stack = 0,
-             std::uint8_t condition = kUseSourceItemCondition) noexcept;
+             std::uint8_t condition = kUseSourceItemCondition,
+             std::uint8_t fractional_loss = 0) noexcept;
     // Place or merge into one exact slot without silently choosing another.
     bool add_to_slot(std::size_t slot, std::uint16_t item_id,
                      std::uint16_t amount, std::uint16_t max_stack = 0,
-                     std::uint8_t condition = kUseSourceItemCondition) noexcept;
+                     std::uint8_t condition = kUseSourceItemCondition,
+                     std::uint8_t fractional_loss = 0) noexcept;
     bool remove(std::size_t slot, std::uint16_t amount) noexcept;
     // Apply source condition loss; an item is destroyed when condition reaches zero.
     bool damage_condition(std::size_t slot, std::uint8_t loss) noexcept;
+    // Fractional original wear (one hundredth of one percent per unit).
+    bool damage_condition_hundredths(
+        std::size_t slot, std::uint16_t loss_hundredths) noexcept;
+    // Source-UID specific action: caller must evaluate Construct ancestry.
+    bool apply_verified_wear_action(std::size_t slot,
+        std::uint64_t group_uid, std::uint64_t event_uid,
+        std::uint64_t action_uid, bool source_guards_satisfied,
+        bool perk_wxnj_active) noexcept;
     // Apply an absolute condition value decoded from a source repair action.
     // This deliberately does not invent repair amounts or repair eligibility.
     bool restore_condition(std::size_t slot, std::uint8_t condition) noexcept;
