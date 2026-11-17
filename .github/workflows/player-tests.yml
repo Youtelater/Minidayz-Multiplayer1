@@ -94,6 +94,9 @@ jobs:
           name: original-crafting-source
           path: data/stage2/craft_source_audit.json
 
+      - name: Audit original regeneration and cold damage conditions
+        run: python3 tools/stage2/audit_regeneration_source.py
+
       - name: Audit original survival, perks, loot and wear events
         run: python3 tools/stage2/audit_remaining_source.py
 
