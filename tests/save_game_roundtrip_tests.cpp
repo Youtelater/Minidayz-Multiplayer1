@@ -42,6 +42,19 @@ struct PreviousSaveV7 {
     ItemUseRuntimeSnapshot pending_item_use{};
 };
 
+struct PreviousSaveV9 {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{9};
+    std::uint32_t seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+    SourcePerkSnapshot perks{};
+};
+
 struct LegacyPerkSnapshotV8ForTest {
     std::uint32_t experience_points{};
     std::uint32_t perk_cost{100};
@@ -304,6 +317,50 @@ int main() {
     assert(restored.perks.perk_cost == 360);
     for (const auto level : restored.perks.other_levels)
         assert(level == 0);
+
+    // v10 adds simultaneous satchel equipment as a separately persisted
+    // source instance. Its own extra slots must survive the native save.
+    InventorySystem dual_pack;
+    assert(dual_pack.add(450, 1, 0, 76));
+    assert(dual_pack.equip_backpack_from_slot(0));
+    assert(dual_pack.add(459, 1, 0, 68));
+    assert(dual_pack.equip_satchel_from_slot(0));
+    assert(dual_pack.capacity() == 21);
+    assert(dual_pack.add_to_slot(20, 11, 2));
+    assert(write_saved_game_to_paths(91, player, dual_pack, equipment, ground,
+                                    tents, kFile, kTemp, &pending, &source_perks));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == kSaveVersion && restored.seed == 91);
+    assert(restored.satchel.item_id == 459);
+    assert(restored.satchel.condition == 68);
+    InventorySystem dual_loaded;
+    assert(dual_loaded.restore_with_satchel(restored.inventory, restored.satchel));
+    assert(dual_loaded.capacity() == 21);
+    assert(dual_loaded.equipped_backpack() == 450);
+    assert(dual_loaded.equipped_satchel() == 459);
+    assert(dual_loaded.slot(20)->item_id == 11);
+    assert(dual_loaded.slot(20)->count == 2);
+
+    // The previous v9 binary save layout must remain loadable. The new
+    // secondary satchel slot migrates as unequipped by default.
+    PreviousSaveV9 old9{};
+    old9.seed = 92;
+    old9.player = player;
+    old9.inventory = inventory.snapshot();
+    old9.equipment = equipment.snapshot();
+    old9.ground_loot = ground.snapshot();
+    old9.tents = tents.snapshot();
+    old9.pending_item_use = pending.snapshot();
+    old9.perks = source_perks.snapshot();
+    {
+        auto* file = std::fopen(kFile, "wb");
+        assert(file && std::fwrite(&old9, sizeof(old9), 1, file) == 1);
+        assert(std::fclose(file) == 0);
+    }
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 9 && restored.seed == 92);
+    assert(restored.satchel.item_id == 0);
+    assert(restored.satchel.condition == 100);
 
     // The old v7 binary layout must migrate without losing in-flight
     // medical treatment while leaving newly introduced perk XP at defaults.
