@@ -149,6 +149,27 @@ Stage 2 100% source-equivalent.
   implemented before calling them. The existing delayed book/newspaper awards
   must not be double-dispatched.
 
+## Source-verified weather and regeneration (17 November 2026)
+
+- `weather_source.hpp` now expresses the original Update_Stats event
+  assignments, not merely the difficulty constants: daytime subtracts
+  actual clothing warmth (UID 4824763499434787), nighttime directly
+  assigns Night_cold (UID 1386894733047937), and rain's source branches
+  assign either Rain_cold or Rain_cold / 2 (UIDs 110661674372728,
+  551577037849239, 927448526676784 and 629017975270922).
+- The native daytime world update calls this event-exact helper. The
+  original Day_mode/Rain scheduler, the source conditions selecting the
+  rain branches, and cold-damage trigger conditions remain unported.
+- `regeneration_source.hpp` implements the literal 5-second
+  source regeneration amounts Novice=2, Regular=1.75, Veteran=1.5,
+  and the source Regen perk's below-50-health additional heal. It
+  accepts every required original instance variable and status guard
+  explicitly to avoid silently inventing how the source actor's
+  var50, status52 or other variables map into the native preview state.
+  **No live regeneration ticks fire until those guards are mapped.**
+- Source audit, native behavior tests, and workflow checks validate
+  the known values and fail on changed original regeneration data.
+
 ## Remaining Stage 2 work
 
 - Port the original item-condition wear/loss events and connect them to the correct gameplay actions. Do not infer wear from damage or item names.
