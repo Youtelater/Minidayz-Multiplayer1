@@ -160,6 +160,15 @@ jobs:
           name: original-survival-xp-guards
           path: data/stage2/original_survival_xp_awards.json
 
+      - name: Compile Guarded Original Regen Event Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/player.cpp source/perks.cpp tests/regeneration_source_tests.cpp \
+            -o regeneration_source_tests
+
+      - name: Run Guarded Original Regen Event Tests
+        run: ./regeneration_source_tests
+
       - name: Compile Original Weather Phase Constants Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
