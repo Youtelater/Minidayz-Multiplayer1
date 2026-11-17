@@ -253,6 +253,13 @@ jobs:
       - name: Run Tent Storage Regression Tests
         run: ./tent_storage_tests
 
+      - name: Compile and Run Six-slot Supplies Stash Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp source/stash_storage.cpp \
+            tests/stash_storage_tests.cpp -o stash_storage_tests
+          ./stash_storage_tests
+
       - name: Verify All 19 Original Craft Function Result Types
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
