@@ -153,8 +153,10 @@ public:
         if ((input.pressed & KEY_L) && selected_inventory_slot_ >= 0) {
             if (ground_loot_.drop_from_inventory(
                     inventory_, static_cast<std::size_t>(selected_inventory_slot_),
-                    0, player_.state().x, player_.state().y))
+                    0, player_.state().x, player_.state().y)) {
+                stage2_audio_.play_item_drop();
                 selected_inventory_slot_ = -1;
+            }
         }
         if (input.pressed & KEY_R)
             (void)ground_loot_.pickup_nearest(
@@ -325,8 +327,10 @@ public:
                                 inventory_, selected, player_, preview_rules_,
                                 action == 1, perks_.item_use_flags(), &item_use_runtime_);
                     } else if (action == 2) {
-                        (void)ground_loot_.drop_from_inventory(
-                            inventory_, selected, 0, player_.state().x, player_.state().y);
+                        if (ground_loot_.drop_from_inventory(
+                                inventory_, selected, 0, player_.state().x,
+                                player_.state().y))
+                            stage2_audio_.play_item_drop();
                     } else if (action == 4) {
                         // Half-stack split on the 3DS lower touchscreen.
                         for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
