@@ -178,12 +178,17 @@ Stage 2 100% source-equivalent.
   Drag a satchel to the seventh equipment cell or tap it to unequip.
   The untouched gameplay view remains on the top screen.
 - Source-verified unrestricted capacities stack with the main backpack:
-  +2 for Satchel, +1 for Army/Medical. Their original additional **three
-  exclusive category slots are not activated until the exact Construct
-  item eligibility predicates are translated**; no item can bypass
-  those original restrictions.
-- The new equip/swap/unequip transactions preflight capacity and preserve
-  items when swapping packs of different sizes. Native save v10 persists
+  +2 for Satchel, +1 for Army/Medical, **plus three exclusive slots
+  in each Army/Medical Satchel**. The source-provenance event guards
+  315583148629362/699699206748072/962634450988744 (Army, var9=10)
+  and 926789927221036/353303031815206/250048865204980
+  (Medical, var9=11) supply their exact permitted item ID sets.
+  Every native add, pickup, drag/drop move and restore rejects forbidden
+  cargo in those slots. They are visibly marked ARMY / MED on the
+  lower 3DS touchscreen.
+- The new equip/swap/unequip transactions preflight source-specific
+  capacity **and the outgoing/incoming restricted-slot item filters**,
+  preserving all items on rejected swaps. Native save v10 persists
   satchel ID and condition without changing the original 15+ backpack
   snapshot binary layout, and loads v1-v9 saves including the former
   single-slot satchel representation.
