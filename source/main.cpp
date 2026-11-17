@@ -309,7 +309,7 @@ public:
                     const auto slot = static_cast<minidayz::items::EquipmentSlot>(equipment_target);
                     const auto equipped = equipment_.equipped(slot);
                     if (equipped != 0) {
-                        const std::size_t destination = first_available_inventory_slot(equipped);
+                        const std::size_t destination = first_available_inventory_slot(equipped, equipment_.snapshot().conditions[static_cast<std::size_t>(slot)]);
                         if (destination < inventory_.capacity())
                             (void)equipment_.unequip_to_inventory(inventory_, slot, destination);
                         selected_inventory_slot_ = -1;
@@ -1046,13 +1046,15 @@ private:
         return index >= 0 && index < 7 ? index : -1;
     }
 
-    std::size_t first_available_inventory_slot(std::uint16_t item_id) const noexcept {
+    std::size_t first_available_inventory_slot(std::uint16_t item_id,
+                                               std::uint8_t condition) const noexcept {
         const auto limit = minidayz::items::source_max_stack(item_id);
         for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
             const auto* item = inventory_.slot(i);
             if (!inventory_.slot_accepts(i, item_id)) continue;
             if (!item || item->empty()) return i;
-            if (item->item_id == item_id && item->count < limit) return i;
+            if (item->item_id == item_id && item->condition == condition &&
+                item->count < limit) return i;
         }
         return inventory_.capacity();
     }
