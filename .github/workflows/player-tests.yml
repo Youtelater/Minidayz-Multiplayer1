@@ -142,6 +142,9 @@ jobs:
           name: original-stage2-item-wear
           path: data/stage2/original_item_wear_actions.json
 
+      - name: Audit gameplay effects for all sixteen source perks
+        run: python3 tools/stage2/audit_other_perk_mechanics.py
+
       - name: Trace original perk unlock and progression guards
         run: python3 tools/stage2/audit_perk_actions.py
 
