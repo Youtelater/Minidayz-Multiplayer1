@@ -61,7 +61,7 @@ The original `Craft_21` and `Craft_22` each create Crafted Arrow item 51 in inve
 ## Original crafting source audit
 
 - The root Construct export contains **19** distinct `Craft_*` functions. `tools/stage2/audit_crafting_source.py` now exports their exact source UIDs, nested condition/action expressions, and called functions to a CI artifact named `original-crafting-source`.
-- **Nine** source-validated crafting transactions are implemented: `Craft_1` (Improvised Sling Bag), `Craft_4` (Improvised Backpack), `Craft_5` (Improvised Bow), and three tinder alternatives for `Craft_3` (Campfire Kit). `Craft_3` calls `Check_space_inventory(-1, 23)`, unlike the three ground-spawn recipes. Another three transactions come from `Craft_21`/`Craft_22`, turning a wooden stick into one crafted arrow using one reusable original knife. Other original crafting functions have different item/stack and world-placement semantics and are not yet translated.
+- **Ten** source-validated crafting transactions are implemented (nine original `Craft_*` tutorial transactions plus the verified `item_activate2` Rags-to-Rope action): `Craft_1` (Improvised Sling Bag), `Craft_4` (Improvised Backpack), `Craft_5` (Improvised Bow), and three tinder alternatives for `Craft_3` (Campfire Kit). `Craft_3` calls `Check_space_inventory(-1, 23)`, unlike the three ground-spawn recipes. Another three transactions come from `Craft_21`/`Craft_22`, turning a wooden stick into one crafted arrow using one reusable original knife. The tenth touchscreen entry is the original `item_activate2` recipe **3 Rags in one stack → 1 Rope**, source UID and item IDs validated by `build_item_secondary_crafting_catalog.py`. Unlike the other recipes, it must not combine smaller stacks to meet the requirement; crafting rolls back if the Rope cannot fit. Other original crafting functions have different item/stack and world-placement semantics and are not yet translated.
 - The bottom touchscreen crafting panel now pages three recipes at a time; adding verified source recipes does not require shrinking the screen layout.
 
 ## Original backpack description mismatch
@@ -216,3 +216,10 @@ The native regression and 3DS build workflows passed on commit `4e91ae672230afcd
 - A second worn Army/Medical Satchel now retains its unrestricted and exclusive contents while the main backpack is unequipped or changed to a different capacity. These slots are remapped atomically, preserving original item IDs, conditions, and category eligibility; occupied main-backpack-only cells still block downsizing.
 - Inventory regression tests exercise the remapping, failed downsizing, saved state restoration, and restricted Army Satchel eligibility after main pack swaps.
 - These are native interaction safety fixes; the original-source gameplay gaps above and a fresh full 3DS CI/runtime validation are still required before claiming 100% Stage 2 parity.
+
+## Original secondary craft on lower 3DS touchscreen (17 November 2026)
+
+- The original secondary Rags (26) item_activate2 action generates Rope (41) only from a selected stack with **at least three Rags**, not any sum of separated piles. This was already implemented for direct Use2; it is now available in the lower-screen craft list as a tenth transaction.
+- The source validator runs before generating the main recipe table. The generator imports its checked condition and item IDs, preventing a guessed or inconsistent extra recipe.
+- The craft list shows the largest eligible single-stack count instead of the total Rags quantity, and the transaction never consumes an unqualified stack. The existing nine source-backed tutorial recipes remain unchanged.
+- The remaining original Craft_* functions with world-building, placement, pickpile and special cooldown events need their distinct source-event mechanics, not invented two-item recipes.
