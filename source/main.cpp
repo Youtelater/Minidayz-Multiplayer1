@@ -1164,14 +1164,20 @@ private:
     bool deploy_source_storage(std::size_t slot) noexcept {
         const auto* item = inventory_.slot(slot);
         if (!item || item->empty()) return false;
-        if (item->item_id == minidayz::items::kOriginalCivilianTentItemId)
+        if (item->item_id == minidayz::items::kOriginalCivilianTentItemId) {
+            if (stashes_.nearest(player_.state().x, player_.state().y, 16.0f) <
+                stashes_.count()) return false;
             return tents_.deploy_from_inventory_checked(
                 inventory_, slot, player_.state().x, player_.state().y,
                 &WorldPreviewScene::blocked, this);
-        if (item->item_id == minidayz::items::kOriginalSuppliesStashItemId)
+        }
+        if (item->item_id == minidayz::items::kOriginalSuppliesStashItemId) {
+            if (tents_.nearest(player_.state().x, player_.state().y, 16.0f) <
+                tents_.tent_count()) return false;
             return stashes_.deploy_from_inventory_checked(
                 inventory_, slot, player_.state().x, player_.state().y,
                 &WorldPreviewScene::blocked, this);
+        }
         return false;
     }
 
