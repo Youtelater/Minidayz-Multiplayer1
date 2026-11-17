@@ -726,15 +726,19 @@ public:
             // not invented gameplay capacities.
             renderer.draw_solid_rect(6.0f, 85.0f, 308.0f, 137.0f,
                                      C2D_Color32(22, 31, 25, 255));
-            const auto tent_index = tents_.nearest(
-                player_.state().x, player_.state().y, 36.0f);
-            const auto* tent = tents_.tent(tent_index);
-            if (!tent) {
-                renderer.draw_text("NO DEPLOYED TENT NEARBY", 22.0f, 130.0f, 0.36f);
-                renderer.draw_text("SELECT CIVILIAN TENT IN BAG, PRESS X", 14.0f, 153.0f, 0.25f);
+            const auto storage = nearest_source_storage();
+            const auto* tent = storage.found && !storage.stash
+                ? tents_.tent(storage.index) : nullptr;
+            const auto* stash = storage.found && storage.stash
+                ? stashes_.stash(storage.index) : nullptr;
+            if (!storage.found) {
+                renderer.draw_text("NO STORAGE NEARBY", 34.0f, 130.0f, 0.36f);
+                renderer.draw_text("DEPLOY TENT OR SUPPLIES STASH FROM BAG", 12.0f, 153.0f, 0.23f);
             } else {
                 char labels[64]{};
-                std::snprintf(labels, sizeof(labels), "BAG %u    TAP TO PAGE    TENT %u",
+                std::snprintf(labels, sizeof(labels),
+                    storage.stash ? "BAG %u     SUPPLIES STASH %u" :
+                        "BAG %u    TAP TO PAGE    TENT %u",
                     static_cast<unsigned>(inventory_page_ + 1),
                     static_cast<unsigned>(storage_page_ + 1));
                 renderer.draw_text(labels, 12.0f, 87.0f, 0.28f);
@@ -744,8 +748,11 @@ public:
                         const auto* carried = inventory_.slot(
                             inventory_page_ * kInventoryPageSize + offset);
                         const auto tent_slot = storage_page_ * kInventoryPageSize + offset;
-                        const auto* stored = tent_slot < tent->items.size()
-                            ? &tent->items[tent_slot] : nullptr;
+                        const auto* stored = storage.stash
+                            ? (stash && tent_slot < stash->items.size()
+                                ? &stash->items[tent_slot] : nullptr)
+                            : (tent && tent_slot < tent->items.size()
+                                ? &tent->items[tent_slot] : nullptr);
                         for (int side = 0; side < 2; ++side) {
                             const auto* item = side == 0 ? carried : stored;
                             const float x = static_cast<float>(
@@ -1026,6 +1033,17 @@ public:
                 tent->y > camera_y + view_h + 24.0f) continue;
             (void)renderer.draw_item_icon(minidayz::items::kOriginalCivilianTentItemId,
                                           tent->x, tent->y, 28.0f, 28.0f);
+        }
+
+        for (std::size_t i = 0; i < stashes_.count(); ++i) {
+            const auto* stash = stashes_.stash(i);
+            if (!stash || stash->x < camera_x - 24.0f ||
+                stash->x > camera_x + view_w + 24.0f ||
+                stash->y < camera_y - 24.0f ||
+                stash->y > camera_y + view_h + 24.0f) continue;
+            (void)renderer.draw_item_icon(
+                minidayz::items::kOriginalSuppliesStashItemId,
+                stash->x, stash->y, 28.0f, 28.0f);
         }
 
         for (std::size_t i = 0; i < ground_loot_.count(); ++i) {
