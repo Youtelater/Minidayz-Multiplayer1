@@ -33,7 +33,7 @@ def function_name(event):
     return None
 
 def main():
-    data=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)","-",
+    data=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",
                            SRC.read_text(encoding="utf-8-sig")))
     found={}
     for sheet in data["project"][6]:
