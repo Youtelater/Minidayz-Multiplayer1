@@ -51,9 +51,17 @@ bool craft_from_inventory(InventorySystem& inventory,
     // Craft_1/4/5 call Spawn_drop at player XY. Craft_3 instead calls
     // Check_space_inventory(-1,23), so its kit belongs in inventory.
     // The transaction rolls both stores back on any failure.
+    // Craft_fishing_rod creates original Construct object t837 directly on
+    // items_on_ground at Player.X, Player.Y + 10, with condition 100. The
+    // source item/object table maps that exact instance to item ID 87.
+    const float ground_y = player_y +
+        (recipe->source_ground_object == 837 ? 10.0f : 0.0f);
+    const std::uint8_t ground_condition =
+        recipe->source_ground_object == 837
+            ? static_cast<std::uint8_t>(100) : kUseSourceItemCondition;
     if (!recipe->result_in_inventory &&
         !ground.add({recipe->result_id, recipe->result_count,
-                     kUseSourceItemCondition}, player_x, player_y))
+                     ground_condition}, player_x, ground_y))
         return false;
 
     for (std::size_t part = 0; part < recipe->ingredients.size(); ++part) {
