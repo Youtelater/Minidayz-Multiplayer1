@@ -8,7 +8,7 @@
 using namespace minidayz::items;
 
 int main() {
-    assert(kSourceCraftRecipeCount == 10);
+    assert(kSourceCraftRecipeCount == 13);
     assert(source_craft_recipe(0)->result_id == 163);
     assert(source_craft_recipe(1)->result_id == 454);
     assert(source_craft_recipe(2)->result_id == 455);
@@ -30,7 +30,36 @@ int main() {
     assert(source_craft_recipe(9)->ingredients[0].item_id == 26);
     assert(source_craft_recipe(9)->ingredients[0].count == 3);
     assert(source_craft_recipe(9)->ingredients[1].count == 0);
-    assert(source_craft_recipe(10) == nullptr);
+    assert(source_craft_recipe(10)->result_id == 147);
+    assert(source_craft_recipe(11)->result_id == 148);
+    assert(source_craft_recipe(12)->result_id == 102);
+    assert(source_craft_recipe(13) == nullptr);
+
+    // Verify source-exact laser grip and Molotov ingredients and that crafted
+    // items enter the inventory (not an invented ground-drop recipe).
+    constexpr std::uint16_t source_inputs[3][2] = {
+        {124, 111}, // Laser Sight + AK Grip -> Laser AK Grip
+        {124, 112}, // Laser Sight + Rail Grip -> Laser Rail Grip
+        {25, 20},   // Whiskey + Flare -> Molotov Cocktail
+    };
+    constexpr std::uint16_t expected_outputs[3] = {147,148,102};
+    for (std::size_t n = 0; n < 3; ++n) {
+        const auto* recipe = source_craft_recipe(10+n);
+        assert(recipe && recipe->result_in_inventory);
+        assert(recipe->ingredients[0].item_id == source_inputs[n][0]);
+        assert(recipe->ingredients[1].item_id == source_inputs[n][1]);
+        InventorySystem inv;
+        GroundLootSystem loot;
+        assert(inv.add(source_inputs[n][0], 1));
+        assert(!can_craft_from_inventory(inv, loot, 20, 40, 10+n));
+        assert(inv.add(source_inputs[n][1], 1));
+        assert(can_craft_from_inventory(inv, loot, 20, 40, 10+n));
+        assert(craft_from_inventory(inv, loot, 20, 40, 10+n));
+        assert(inv.count(source_inputs[n][0]) == 0);
+        assert(inv.count(source_inputs[n][1]) == 0);
+        assert(inv.count(expected_outputs[n]) == 1);
+        assert(loot.count() == 0);
+    }
 
     InventorySystem player;
     GroundLootSystem ground;
