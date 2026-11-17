@@ -8,7 +8,7 @@
 using namespace minidayz::items;
 
 int main() {
-    assert(kSourceCraftRecipeCount == 15);
+    assert(kSourceCraftRecipeCount == 16);
     assert(source_craft_recipe(0)->result_id == 163);
     assert(source_craft_recipe(1)->result_id == 454);
     assert(source_craft_recipe(2)->result_id == 455);
@@ -39,7 +39,26 @@ int main() {
     assert(source_craft_recipe(14)->result_id == 127);
     assert(source_craft_recipe(14)->result_in_inventory);
     assert(source_craft_recipe(14)->delay_seconds == 5.0f);
-    assert(source_craft_recipe(15) == nullptr);
+    assert(source_craft_recipe(15)->result_id == 87);
+    assert(!source_craft_recipe(15)->result_in_inventory);
+    assert(source_craft_recipe(15)->source_ground_object == 837);
+    assert(source_craft_recipe(16) == nullptr);
+
+    // The native ground entry is original Construct t837 (Simple Fishing
+    // Rod item 87), created at Player.X/Player.Y + 10 with condition 100.
+    InventorySystem fishing;
+    GroundLootSystem fishing_ground;
+    assert(fishing.add(37, 1)); // Ashwood Stick
+    assert(!can_craft_from_inventory(fishing, fishing_ground, 51, 63, 15));
+    assert(fishing.add(41, 1)); // Rope
+    assert(can_craft_from_inventory(fishing, fishing_ground, 51, 63, 15));
+    assert(craft_from_inventory(fishing, fishing_ground, 51, 63, 15));
+    assert(fishing.count(37) == 0 && fishing.count(41) == 0);
+    assert(fishing_ground.count() == 1);
+    assert(fishing_ground.entry(0)->item.item_id == 87);
+    assert(fishing_ground.entry(0)->item.condition == 100);
+    assert(fishing_ground.entry(0)->x == 51);
+    assert(fishing_ground.entry(0)->y == 73);
 
     // Craft_tent: the source item description requires two Burlap Sacks,
     // followed by a 5-second wait, then a Canvas ground drop.
