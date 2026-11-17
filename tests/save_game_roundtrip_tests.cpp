@@ -366,6 +366,50 @@ int main() {
     assert(restored.satchel.item_id == 0);
     assert(restored.satchel.condition == 100);
 
+    // Current v11 saves exact 0.25% wear without discarding it on reload.
+    InventorySystem fractional_inventory;
+    assert(fractional_inventory.add(244, 1, 0, 100));
+    assert(fractional_inventory.damage_condition_hundredths(0, 25));
+    GroundLootSystem fractional_ground;
+    assert(fractional_ground.add({244, 1, 100, 75}, 40.0f, 80.0f));
+    assert(write_saved_game_to_paths(93, player, fractional_inventory,
+                                    equipment, fractional_ground, tents,
+                                    kFile, kTemp));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == kSaveVersion);
+    assert(restored.inventory.slots[0].item_id == 244);
+    assert(restored.inventory.slots[0].condition == 100);
+    assert(restored.inventory.slots[0].fractional_loss == 25);
+    assert(restored.ground_loot.entries[0].item.fractional_loss == 75);
+
+    // v10 wrote the same six-byte items, but its sixth byte was unused
+    // padding. Simulate old padding containing garbage and ensure migration
+    // never treats it as actual damage.
+    SavedGame old10{};
+    old10.version = 10u;
+    old10.seed = 94;
+    old10.player = player;
+    old10.inventory = fractional_inventory.snapshot();
+    old10.inventory.slots[0].fractional_loss = 255;
+    old10.equipment = equipment.snapshot();
+    old10.ground_loot = fractional_ground.snapshot();
+    old10.ground_loot.entries[0].item.fractional_loss = 255;
+    old10.tents = tents.snapshot();
+    old10.tents.tents[0].items[0].fractional_loss = 255;
+    old10.pending_item_use = pending.snapshot();
+    old10.perks = source_perks.snapshot();
+    old10.satchel = {};
+    {
+        auto* f = std::fopen(kFile, "wb");
+        assert(f && std::fwrite(&old10, sizeof(old10), 1, f) == 1);
+        assert(std::fclose(f) == 0);
+    }
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 10u && restored.seed == 94);
+    assert(restored.inventory.slots[0].fractional_loss == 0);
+    assert(restored.ground_loot.entries[0].item.fractional_loss == 0);
+    assert(restored.tents.tents[0].items[0].fractional_loss == 0);
+
     // The old v7 binary layout must migrate without losing in-flight
     // medical treatment while leaving newly introduced perk XP at defaults.
     PreviousSaveV7 old7{};
