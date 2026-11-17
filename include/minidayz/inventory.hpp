@@ -78,8 +78,8 @@ public:
     }
     std::size_t capacity() const noexcept { return capacity_; }
     // Original Satchel/Army Satchel/Medical Satchel can be worn alongside
-    // an ordinary backpack. Exclusive three-slot item filters are NOT yet
-    // inferred from the untranslated Construct source.
+    // an ordinary backpack. Army/Medical exclusive cells enforce the verified
+    // Construct item-ID whitelists for each satchel type.
     bool equip_satchel_from_slot(std::size_t inventory_slot) noexcept;
     bool unequip_satchel_to_slot(std::size_t inventory_slot) noexcept;
     std::uint16_t equipped_satchel() const noexcept { return equipped_satchel_; }
