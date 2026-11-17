@@ -302,6 +302,12 @@ jobs:
       - name: Trace Source Rain and Day-Night Transition Guards
         run: python3 tools/stage2/audit_weather_transition_source.py
 
+      - name: Test Original 1.5s Day and Night Clock
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_day_night_tests.cpp -o source_day_night_tests
+          ./source_day_night_tests
+
       - name: Test Original Update_Stats Weather Phase Overrides
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
