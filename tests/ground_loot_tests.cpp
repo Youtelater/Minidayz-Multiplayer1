@@ -65,5 +65,26 @@ int main() {
     assert(!spawned.spawn_verified_source_choice(
         0, 0, std::numeric_limits<float>::infinity(), 0.0f));
     assert(spawned.count() == 2);
+
+    // Native world dispatch rejects every skipped original guard, without
+    // adding any random loot or mutating the existing ground list.
+    const auto previous_count = spawned.count();
+    SourceLootGuardContext trigger{};
+    trigger.marker = original->marker;
+    trigger.seed_pubg = original->seed_pubg;
+    assert(!spawned.spawn_source_choice_guarded(0,0,20,30,trigger));
+    trigger.original_respawn_event_fired = true;
+    assert(!spawned.spawn_source_choice_guarded(0,0,20,30,trigger));
+    trigger.all_remaining_original_guards_satisfied = true;
+    if (original->marker >= 0) {
+        trigger.marker = static_cast<std::int16_t>(original->marker+1);
+        assert(!spawned.spawn_source_choice_guarded(0,0,20,30,trigger));
+        trigger.marker = original->marker;
+    }
+    assert(spawned.count() == previous_count);
+    assert(spawned.spawn_source_choice_guarded(0,0,20,30,trigger));
+    assert(spawned.count() == previous_count+1);
+    assert(spawned.entry(previous_count)->item.item_id ==
+        source_loot_choice(0,0));
     return 0;
 }
