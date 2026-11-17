@@ -282,6 +282,13 @@ jobs:
             tests/source_wear_event_tests.cpp -o source_wear_event_tests
           ./source_wear_event_tests
 
+      - name: Test Fractional Item Wear Transfer, Storage, and Rollback
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp source/ground_loot.cpp source/tent_storage.cpp \
+            tests/inventory_fractional_wear_tests.cpp -o inventory_fractional_wear_tests
+          ./inventory_fractional_wear_tests
+
       - name: Compile Player Equipment Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
