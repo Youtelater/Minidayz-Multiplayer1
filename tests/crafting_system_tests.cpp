@@ -42,6 +42,7 @@ int main() {
     assert(source_craft_recipe(15)->result_id == 87);
     assert(!source_craft_recipe(15)->result_in_inventory);
     assert(source_craft_recipe(15)->source_ground_object == 837);
+    assert(source_craft_recipe(15)->delay_seconds == 4.0f);
     assert(source_craft_recipe(16) == nullptr);
 
     // The native ground entry is original Construct t837 (Simple Fishing
