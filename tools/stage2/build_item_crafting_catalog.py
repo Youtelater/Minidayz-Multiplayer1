@@ -75,6 +75,8 @@ def main() -> None:
         "Laser Rail Grip": (7958912387827208, "Craft_rail"),
         "Molotov Cocktail": (554787549161111, "Craft_molotov_flare"),
         "Molotov Cocktail Alternate": (832456160298927, "Craft_molotov_whiskey"),
+        "Canvas": (596327516047430, "Craft_tent"),
+        "Makeshift Suppressor": (9837716596519874, "Craft_xiaoyinqi"),
     }
 
     def child_events(events):
@@ -149,7 +151,8 @@ def main() -> None:
                         inventory_output_ids.append(args[2][1][1])
         if result_name in ("Campfire Kit", "Crafted Arrow", "Crafted Arrow Alternate",
                             "Laser AK Grip", "Laser Rail Grip",
-                            "Molotov Cocktail", "Molotov Cocktail Alternate"):
+                            "Molotov Cocktail", "Molotov Cocktail Alternate",
+                            "Makeshift Suppressor"):
             if output_ids or inventory_output_ids != [result_id]:
                 raise SystemExit(
                     f"Original {function} inventory outputs {inventory_output_ids}, "
@@ -197,17 +200,38 @@ def main() -> None:
         int(row.findtext("id")): (row.findtext("name") or "")
         for row in ET.parse(NEW_ITEMS).getroot().findall("text")
     }
+    def assert_original_five_second_wait(result_name):
+        uid, _ = source_event_uids[result_name]
+        event = source_events[uid]
+        actions = [action for nested in child_events([event])
+                   for action in nested[6]
+                   if isinstance(action, list) and len(action) > 5]
+        waits = [a for a in actions
+                 if a[0:2] == [-1, 54] and a[5] == [[0, [0, 5]]]]
+        cooldowns = [a for a in actions
+                     if a[0:2] == [189, 69] and len(a[5]) > 1
+                     and a[5][0] == [1, [2, "Wpn_cooldown"]]
+                     and a[5][1] == [13, [7, [0, 5]]]]
+        if len(waits) != 1 or len(cooldowns) != 1:
+            raise SystemExit(f"Original delayed craft changed: {result_name}")
+
     extra_recipes = (
         ("Laser AK Grip", (("Laser Sight", 1), ("AK Grip", 1)),
-         "Crafting Reipe: Laser Sight + AK Grip"),
+         "Crafting Reipe: Laser Sight + AK Grip", 0),
         ("Laser Rail Grip", (("Laser Sight", 1), ("Rail Grip", 1)),
-         "Crafting Reipe: Laser Sight + Rail Grip"),
+         "Crafting Reipe: Laser Sight + Rail Grip", 0),
         ("Molotov Cocktail", (("Whiskey", 1), ("Flare", 1)),
-         "Crafting Recipe: Whiskey + Flare"),
+         "Crafting Recipe: Whiskey + Flare", 0),
+        ("Canvas", (("Burlap Sack", 2),),
+         "Crafting Recipe: 2 Burlap Sacks", 5),
+        ("Makeshift Suppressor", (("Water Bottle", 1), ("Duct Tape", 1)),
+         "Crafting Recipe: Water Bottle + Duct Tape", 5),
     )
-    for label, _, phrase in extra_recipes:
+    for label, _, phrase, delay in extra_recipes:
         if descriptions.get(resolve(label), "").count(phrase) != 1:
             raise SystemExit(f"Source crafting guide changed: {label}")
+        if delay == 5:
+            assert_original_five_second_wait(label)
     assert_original_output("Molotov Cocktail Alternate", resolve("Molotov Cocktail"))
 
     rows = []
@@ -221,29 +245,29 @@ def main() -> None:
         parts = [(resolve(label), count) for label, count in ingredients]
         if result_id in [id for id, _ in parts]:
             raise SystemExit(f"Self-consuming recipe: {result_name}")
-        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result), False, False))
+        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result), False, False, 0))
     for knife in knives:
         # Exact source check gives one arrow to inventory, no Spawn_drop.
         # The original knife is a crafting tool, not a consumed ingredient.
         rows.append((resolve("Crafted Arrow"), f"Crafted Arrow / {knife}",
                      [(resolve("Wooden Sticks"), 1), (resolve(knife), 1)],
-                     arrow_guide[0], True, True, False))
+                     arrow_guide[0], True, True, False, 0))
 
     # The selected stack, not the sum of separate Rags stacks, must
     # contain at least three. The 3DS panel selects an eligible stack.
     rows.append((resolve("Rope"), "Rope / Rags x3",
                  [(resolve("Rags"), 3), (0, 0)],
                  "item_activate2: selected Rags stack >= 3 -> Rope",
-                 True, False, True))
+                 True, False, True, 0))
 
-    for result_name, ingredients, guide in extra_recipes:
+    for result_name, ingredients, guide, delay in extra_recipes:
         result_id = resolve(result_name)
-        if not assert_original_output(result_name, result_id):
-            raise SystemExit("Expected original inventory craft result")
+        result_in_inventory = bool(assert_original_output(result_name, result_id))
         parts = [(resolve(label), amount) for label, amount in ingredients]
+        if len(parts) == 1: parts.append((0, 0))
         if result_id in (parts[0][0], parts[1][0]):
             raise SystemExit("Self-consuming source craft")
-        rows.append((result_id, result_name, parts, guide, True, False, False))
+        rows.append((result_id, result_name, parts, guide, result_in_inventory, False, False, delay))
 
     lines = [
         "#pragma once",
@@ -261,16 +285,17 @@ def main() -> None:
         "    bool result_in_inventory;",
         "    bool preserve_second_ingredient;",
         "    bool selected_stack_only;",
+        "    float delay_seconds;",
         "};",
         f"inline constexpr std::size_t kSourceCraftRecipeCount = {len(rows)};",
         "inline constexpr SourceCraftRecipe kSourceCraftRecipes[] = {",
     ]
-    for result_id, name, parts, guide, inventory_result, preserve_second, selected_stack_only in rows:
+    for result_id, name, parts, guide, inventory_result, preserve_second, selected_stack_only, delay_seconds in rows:
         ingredients = ", ".join(f"{{{id}, {count}}}" for id, count in parts)
         lines.append(f"    {{{result_id}, 1, {json.dumps(name)}, "
                      f"{json.dumps(guide)}, {{{{{ingredients}}}}}, "
                      f"{str(inventory_result).lower()}, {str(preserve_second).lower()}, "
-                     f"{str(selected_stack_only).lower()}}},")
+                     f"{str(selected_stack_only).lower()}, {delay_seconds}.0f}}},")
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
