@@ -95,6 +95,21 @@ struct SavedGameV9 {
     minidayz::items::SourcePerkSnapshot perks{};
 };
 
+// v10 and v11 share the previous save ABI before equipped fractions.
+struct SavedGameV11 {
+    std::uint32_t magic{};
+    std::uint32_t version{};
+    std::uint32_t seed{};
+    minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
+    minidayz::items::GroundLootSnapshot ground_loot{};
+    minidayz::items::TentStorageSnapshot tents{};
+    minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
+    minidayz::items::SourcePerkSnapshot perks{};
+    minidayz::items::SatchelSnapshot satchel{};
+};
+
 // Version 6 introduced native persistent tents, before timed medical actions.
 struct SavedGameV6 {
     std::uint32_t magic{};
@@ -265,9 +280,23 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks = old.perks;
         }
-    } else if (header_ok && (candidate.version == 10u ||
-                             candidate.version == kSaveVersion)) {
-        // Read the actual on-disk struct, including compiler alignment.
+    } else if (header_ok &&
+               (candidate.version == 10u || candidate.version == 11u)) {
+        SavedGameV11 old{};
+        body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
+                  std::fread(&old, sizeof(old), 1, file) == 1;
+        if (body_ok) {
+            candidate.seed = old.seed;
+            candidate.player = old.player;
+            candidate.inventory = old.inventory;
+            candidate.equipment = old.equipment;
+            candidate.ground_loot = old.ground_loot;
+            candidate.tents = old.tents;
+            candidate.pending_item_use = old.pending_item_use;
+            candidate.perks = old.perks;
+            candidate.satchel = old.satchel;
+        }
+    } else if (header_ok && candidate.version == kSaveVersion) {
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
     }
@@ -305,7 +334,8 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
     minidayz::items::SourcePerkSystem perk_validation;
     if (!player_validation.restore(candidate.player) ||
         !inventory_validation.restore_with_satchel(candidate.inventory, candidate.satchel) ||
-        !equipment_validation.restore(candidate.equipment) ||
+        !equipment_validation.restore_with_fraction(
+            candidate.equipment, candidate.equipment_fraction) ||
         !ground_loot_validation.restore(candidate.ground_loot) ||
         !tent_validation.restore(candidate.tents) ||
         !item_use_validation.restore(candidate.pending_item_use) ||
@@ -334,6 +364,7 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     save.inventory = inventory.snapshot();
     save.satchel = inventory.satchel_snapshot();
     save.equipment = equipment.snapshot();
+    save.equipment_fraction = equipment.fraction_snapshot();
     save.ground_loot = ground_loot.snapshot();
     save.tents = tents.snapshot();
     save.pending_item_use = item_use ? item_use->snapshot() : minidayz::items::ItemUseRuntimeSnapshot{};
@@ -354,7 +385,8 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     minidayz::items::SourcePerkSystem perk_validation;
     if (!player_validation.restore(save.player) ||
         !inventory_validation.restore_with_satchel(save.inventory, save.satchel) ||
-        !equipment_validation.restore(save.equipment) ||
+        !equipment_validation.restore_with_fraction(
+            save.equipment, save.equipment_fraction) ||
         !ground_validation.restore(save.ground_loot) ||
         !tent_validation.restore(save.tents) ||
         !item_use_validation.restore(save.pending_item_use) ||
