@@ -71,6 +71,22 @@ struct PreviousSaveV11 {
     SatchelSnapshot satchel{};
 };
 
+// Old v12 contains equipment fractions but no Supplies Stash extension.
+struct PreviousSaveV12 {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{12};
+    std::uint32_t seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+    SourcePerkSnapshot perks{};
+    SatchelSnapshot satchel{};
+    EquipmentFractionSnapshot equipment_fraction{};
+};
+
 struct LegacyPerkSnapshotV8ForTest {
     std::uint32_t experience_points{};
     std::uint32_t perk_cost{100};
@@ -447,6 +463,49 @@ int main() {
     assert(restored.ground_loot.entries[0].item.fractional_loss == 75);
     for (auto fraction : restored.equipment_fraction.fractional_loss)
         assert(fraction == 0);
+
+    // v12 saves must migrate without inventing deployed stashes.
+    PreviousSaveV12 old12{};
+    old12.seed = 97;
+    old12.player = player;
+    old12.inventory = fractional_inventory.snapshot();
+    old12.equipment = equipment.snapshot();
+    old12.ground_loot = fractional_ground.snapshot();
+    old12.tents = tents.snapshot();
+    old12.pending_item_use = pending.snapshot();
+    old12.perks = source_perks.snapshot();
+    {
+        auto* f=std::fopen(kFile,"wb");
+        assert(f && std::fwrite(&old12,sizeof(old12),1,f)==1);
+        assert(std::fclose(f)==0);
+    }
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==12u && restored.seed==97);
+    assert(restored.stashes.count==0);
+
+    // v13 retains the six-source-slot Supplies Stash and its exact
+    // subpercent item wear independently of permanent Civilian Tent storage.
+    InventorySystem stash_inventory;
+    StashStorageSystem stash_native;
+    assert(stash_inventory.add(461,1));
+    assert(stash_native.deploy_from_inventory_checked(
+        stash_inventory,0,100,150,nullptr,nullptr));
+    assert(stash_inventory.add(26,2,0,100,75));
+    assert(stash_native.store_from_inventory(stash_inventory,0,0));
+    assert(write_saved_game_to_paths(98,player,stash_inventory,
+        equipment,ground,tents,kFile,kTemp,
+        nullptr,nullptr,&stash_native));
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==kSaveVersion);
+    assert(restored.stashes.count==1);
+    assert(restored.stashes.stashes[0].x==100);
+    assert(restored.stashes.stashes[0].y==150);
+    assert(restored.stashes.stashes[0].items[0].item_id==26);
+    assert(restored.stashes.stashes[0].items[0].fractional_loss==75);
+    StashStorageSystem stash_loaded;
+    assert(stash_loaded.restore(restored.stashes));
+    assert(stash_loaded.take_to_inventory(stash_inventory,0,0));
+    assert(stash_inventory.count(26)==2);
 
     // Equipment wear stays exact across equipping, native saves and
     // unequipping back to an inventory slot.
