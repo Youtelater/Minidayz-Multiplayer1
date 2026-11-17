@@ -8,10 +8,10 @@ Stage 2 ports the original Mini DAYZ 1.6.0 item, inventory, backpack, equipment,
 - The original sprite catalog resolves 329 item IDs to exact Construct object identities; 76 IDs remain explicitly unmapped rather than receiving substitute art.
 - InventorySystem provides 15 base slots, atomic additions/removals, source stack limits, moving, swapping, splitting, ground pickup/drop, per-stack item condition, and snapshots. The bottom 3DS touchscreen now exposes a fifth **SPLIT** action that moves half the selected stack into a free slot while preserving condition and rejecting invalid splits atomically.
 - The original `Check_stack_size` baseline groups are ported. The `perk_cybb` branch returns 31,415,926 in the source; the native `uint16_t` representation uses `UINT16_MAX` as its safe upper bound when that override is explicitly supplied.
-- Backpack UI grid limits come from original `Items_update` (11 positions). Root `l_eng_new.xml` documents **individual backpack capacities** under a separate description-ID scheme; the generator matches each adjacent source comment to the original item name. Taloon +5, Hunting +7, Mountain +11, School +3, Tortilla +9, Satchel +2, Army/Medical Satchel +1 unrestricted slot. Root `l_eng_ui.xml` takes priority for the conflicting Improvised Sling Bag +3 and Improvised Backpack +5 tutorial counts. Exclusive satchel slots (+3) are tracked but cannot yet be equipped simultaneously with backpacks. Fuel Pack (462) is wearable in the backpack slot but provides **zero** inventory slots: its original description grants fuel capacity only.
+- Backpack UI grid limits come from original `Items_update` (11 positions). Root `l_eng_new.xml` documents **individual backpack capacities** under a separate description-ID scheme; the generator matches each adjacent source comment to the original item name. Taloon +5, Hunting +7, Mountain +11, School +3, Tortilla +9, Satchel +2, Army/Medical Satchel +1 unrestricted slot. Root `l_eng_ui.xml` takes priority for the conflicting Improvised Sling Bag +3 and Improvised Backpack +5 tutorial counts. The three exclusive Army/Medical Satchel cells are now wearable alongside backpacks and enforce the exact original item-ID whitelists. Fuel Pack (462) is wearable in the backpack slot but provides **zero** inventory slots: its original description grants fuel capacity only.
 - Original wearable backpack IDs are represented by the dedicated backpack equipment state. The item list excludes the Civilian Tent (456) and Supplies Stash (461), which are not wearable backpacks.
 - Equipping consumes a single backpack from inventory. Replacing a backpack returns the old one atomically; if the incoming pack is in a slot that disappears during a capacity change, the old pack is returned to a free slot in the surviving grid or the replacement fails without changing inventory.
-- Unequipping is allowed only when all 11 backpack storage slots are empty. Capacity cannot be manually increased or reduced independently of the equipped source backpack.
+- Unequipping a backpack is allowed only when its removed storage cells are empty and the surviving inventory remains valid; the original 15 base slots are preserved. Capacity cannot be manually increased or reduced independently of the equipped source backpack.
 - Backpack condition is preserved through equipment swaps and inventory snapshots. Restore now **losslessly migrates** old +11-slot saves to the correct source-defined capacity: overflow stacks are merged into matching surviving stacks or moved into free surviving slots, preserving item condition. If nothing fits, restore fails atomically instead of deleting items.
 - Ground pickup/drop and inventory moves preserve item condition; stacks with different conditions do not merge.
 - Forty direct literal stat-effect rows are extracted from original `item_activate` and `item_activate2` events and applied by the item-use runtime. Original `perk_hamster` (+10 hunger) and `perk_camel` (+10 thirst) conditional bonuses are now connected to a persistent two-level perk system, with bonuses activating only at source level 2.
@@ -74,8 +74,7 @@ tutorial-verified +3/+5 and uses the named original descriptions for the
 other packs. Army and Medical Satchel descriptions specify three additional
 **exclusive** slots that require item-category restrictions; those are not
 silently added as general-purpose slots. Fuel Pack describes a fuel reservoir,
-not item storage; it equips with no extra inventory slots. This conflict and those equipment restrictions remain
-explicit until the corresponding original Construct equip events are ported.
+not item storage; it equips with no extra inventory slots. This conflict and the exclusive item-ID restrictions are implemented from the original Construct source guards.
 
 ## Original perk progression and timed experience
 
@@ -114,7 +113,7 @@ explicit until the corresponding original Construct equip events are ported.
 - **Part 7, backpacks:** Fourteen source backpack item types, source-derived
   capacities, the Fuel Pack exception, original condition preservation and
   lossless legacy-save migration are already live. Restricted/exclusive
-  Army and Medical Satchel slots still need their original category guards.
+  Army and Medical Satchel slots now enforce source-verified item eligibility guards.
 - **Part 8, tents/storage:** The native 3DS deploy actions now reject
   obstructed corners and overlap with previously deployed tents before
   consuming the item. Storage transactions remain atomic and persisted;
@@ -203,8 +202,15 @@ Stage 2 100% source-equivalent.
 - Connect the existing clothing warmth expression to the original weather/temperature update, including the separate `Day_cold` contribution. Do not substitute an invented weather formula.
 - Finish original loot spawning and remaining item-specific secondary actions from the exported Construct traces.
 - Add the remaining original perk effects and connect their exact XP award triggers; Camel/Hamster leveling and item bonuses are now in runtime.
-- Validate per-item backpack and satchel descriptions against the original Construct equip conditions. Source-documented capacity values are now applied; simultaneous satchel/backpack equipment and exclusive item filters remain incomplete.
+- Validate any remaining per-item backpack and satchel behavior against the original Construct equip conditions. Simultaneous satchel/backpack equipment and the three exclusive slot ID filters are now implemented.
 - Extract original tent capacity, placement restrictions, and interaction radius; current native storage bounds and interaction distance are technical defaults, not claims of source fidelity.
 - Finish the full source inventory/equipment UI and end-to-end save/load testing on the 3DS runtime.
 
 The native regression and 3DS build workflows passed on commit `4e91ae672230afcda9e72e9ab1615574256ebbd8`. Those results are not a physical 3DS hardware test, and they must be rerun after subsequent source changes. Unresolved values remain explicitly unresolved rather than being inferred from item names.
+
+## Touchscreen inventory safety fixes (17 November 2026)
+
+- Stack splitting skips source-restricted satchel cells that reject the incoming item, rather than stopping at the first incompatible empty cell.
+- Unequipping equipment searches only item-eligible inventory cells; matching stack merges also require identical condition, and are preferred over consuming an additional empty cell.
+- Unequipping an equipped backpack or satchel targets a genuinely empty surviving **base** inventory cell, because those operations cannot merge a worn bag with a partial stack.
+- These are native interaction safety fixes; the original-source gameplay gaps above and a fresh full 3DS CI/runtime validation are still required before claiming 100% Stage 2 parity.
