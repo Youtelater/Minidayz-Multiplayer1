@@ -17,6 +17,7 @@ ITEMS = ROOT / "l_eng_items.xml"
 UI = ROOT / "l_eng_ui.xml"
 PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_crafting_catalog.hpp"
+SECONDARY = ROOT / "include/minidayz/generated/item_secondary_crafting_catalog.hpp"
 
 # The root tutorial states each recipe explicitly. The last recipe explicitly
 # says 3 wooden sticks. All others are two singular item ingredients.
@@ -39,7 +40,7 @@ RECIPES = (
 
 
 def main() -> None:
-    for path in (ITEMS, UI, PROJECT):
+    for path in (ITEMS, UI, PROJECT, SECONDARY):
         if not path.is_file():
             raise SystemExit(f"Missing root-level Mini DAYZ file: {path}")
     item_names: dict[str, list[int]] = {}
@@ -169,6 +170,20 @@ def main() -> None:
     if len(arrow_guide) != 1:
         raise SystemExit("Original root arrow recipe guide changed")
 
+    # Source-validated item_activate2 recipe, not a Craft_* function.
+    # The secondary catalog generator verifies the exact Construct action.
+    secondary_source = SECONDARY.read_text(encoding="utf-8")
+    def secondary_id(name: str) -> int:
+        match = re.search(
+            rf"kSourceRagsToRope{name}\\s*=\\s*(\\d+)\\s*;", secondary_source)
+        if not match:
+            raise SystemExit(f"Missing verified secondary craft {name}")
+        return int(match.group(1))
+    if (secondary_id("InputId") != resolve("Rags") or
+        secondary_id("RequiredCount") != 3 or
+        secondary_id("OutputId") != resolve("Rope")):
+        raise SystemExit("Verified Rags to Rope recipe changed")
+
     rows = []
     for result_name, ingredients, pattern in RECIPES:
         source_text = [phrase for phrase in tutorial
@@ -180,13 +195,20 @@ def main() -> None:
         parts = [(resolve(label), count) for label, count in ingredients]
         if result_id in [id for id, _ in parts]:
             raise SystemExit(f"Self-consuming recipe: {result_name}")
-        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result), False))
+        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result), False, False))
     for knife in knives:
         # Exact source check gives one arrow to inventory, no Spawn_drop.
         # The original knife is a crafting tool, not a consumed ingredient.
         rows.append((resolve("Crafted Arrow"), f"Crafted Arrow / {knife}",
                      [(resolve("Wooden Sticks"), 1), (resolve(knife), 1)],
-                     arrow_guide[0], True, True))
+                     arrow_guide[0], True, True, False))
+
+    # The selected stack, not the sum of separate Rags stacks, must
+    # contain at least three. The 3DS panel selects an eligible stack.
+    rows.append((resolve("Rope"), "Rope / Rags x3",
+                 [(resolve("Rags"), 3), (0, 0)],
+                 "item_activate2: selected Rags stack >= 3 -> Rope",
+                 True, False, True))
 
     lines = [
         "#pragma once",
@@ -203,15 +225,17 @@ def main() -> None:
         "    std::array<SourceCraftIngredient, 2> ingredients;",
         "    bool result_in_inventory;",
         "    bool preserve_second_ingredient;",
+        "    bool selected_stack_only;",
         "};",
         f"inline constexpr std::size_t kSourceCraftRecipeCount = {len(rows)};",
         "inline constexpr SourceCraftRecipe kSourceCraftRecipes[] = {",
     ]
-    for result_id, name, parts, guide, inventory_result, preserve_second in rows:
+    for result_id, name, parts, guide, inventory_result, preserve_second, selected_stack_only in rows:
         ingredients = ", ".join(f"{{{id}, {count}}}" for id, count in parts)
         lines.append(f"    {{{result_id}, 1, {json.dumps(name)}, "
                      f"{json.dumps(guide)}, {{{{{ingredients}}}}}, "
-                     f"{str(inventory_result).lower()}, {str(preserve_second).lower()}}},")
+                     f"{str(inventory_result).lower()}, {str(preserve_second).lower()}, "
+                     f"{str(selected_stack_only).lower()}}},")
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
