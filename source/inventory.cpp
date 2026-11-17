@@ -246,34 +246,42 @@ bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
 }
 
 bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
-    const std::size_t remaining_capacity = kInventorySlotCount +
-        source_satchel_capacity(equipped_satchel_).unrestricted +
-        source_satchel_capacity(equipped_satchel_).exclusive;
-    if (equipped_backpack_ == 0 || index >= remaining_capacity ||
-        index >= capacity_ || !slots_[index].empty())
-        return false;
-    const auto satchel_for_target = source_satchel_capacity(equipped_satchel_);
-    const auto target_restricted_start =
-        kInventorySlotCount + satchel_for_target.unrestricted;
-    if (index >= target_restricted_start &&
-        !source_satchel_exclusive_accepts(
-            equipped_satchel_, equipped_backpack_)) return false;
-    for (std::size_t i = remaining_capacity; i < capacity_; ++i)
-        if (!slots_[i].empty()) return false;
+    // The worn main backpack must return to one genuinely empty base cell.
+    // Satchel cells are a separate equipped container: keep their contents
+    // when the main backpack is removed instead of treating them as overflow.
+    if (equipped_backpack_ == 0 || index >= kInventorySlotCount ||
+        !slots_[index].empty()) return false;
+    const std::size_t old_main_capacity =
+        source_backpack_capacity(equipped_backpack_);
     const auto satchel = source_satchel_capacity(equipped_satchel_);
-    const std::size_t exclusive_start = kInventorySlotCount + satchel.unrestricted;
-    for (std::size_t i = exclusive_start; i < remaining_capacity; ++i)
-        if (!slots_[i].empty() &&
-            !source_satchel_exclusive_accepts(equipped_satchel_,
-                                              slots_[i].item_id))
-            return false;
+    const std::size_t satchel_slots = satchel.unrestricted + satchel.exclusive;
+    const std::size_t remaining_capacity = kInventorySlotCount + satchel_slots;
+    if (old_main_capacity < kInventorySlotCount ||
+        old_main_capacity + satchel_slots != capacity_ ||
+        remaining_capacity > kMaximumInventorySlotCount) return false;
 
-    const std::uint16_t outgoing = equipped_backpack_;
-    const std::uint8_t condition = equipped_backpack_condition_;
+    // Only the actual main backpack storage must be empty; items in an
+    // independently equipped satchel can remain in that satchel.
+    for (std::size_t i = kInventorySlotCount; i < old_main_capacity; ++i)
+        if (!slots_[i].empty()) return false;
+
+    std::array<InventorySlot, kMaximumInventorySlotCount> proposed{};
+    for (std::size_t i = 0; i < kInventorySlotCount; ++i)
+        proposed[i] = slots_[i];
+    for (std::size_t i = 0; i < satchel_slots; ++i) {
+        const auto& item = slots_[old_main_capacity + i];
+        const std::size_t new_slot = kInventorySlotCount + i;
+        if (!item.empty() && i >= satchel.unrestricted &&
+            !source_satchel_exclusive_accepts(equipped_satchel_, item.item_id))
+            return false;
+        proposed[new_slot] = item;
+    }
+
+    proposed[index] = {equipped_backpack_, 1, equipped_backpack_condition_};
+    slots_ = proposed;
     capacity_ = remaining_capacity;
     equipped_backpack_ = 0;
     equipped_backpack_condition_ = 100;
-    slots_[index] = {outgoing, 1, condition};
     return true;
 }
 
