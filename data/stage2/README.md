@@ -191,9 +191,14 @@ Stage 2 100% source-equivalent.
   satchel ID and condition without changing the original 15+ backpack
   snapshot binary layout, and loads v1-v9 saves including the former
   single-slot satchel representation.
-- `Supplies Stash` (461) has six slots in the source description, but
-  that source item is not treated as a wearable backpack; its
-  dimensional-stash interactions still require exact event translation.
+- `Supplies Stash` (461) has exactly six cells in the original item
+  description and is **not** a wearable backpack. Native `StashStorageSystem`
+  now provides six-slot atomic stack transfers, condition/fractional-wear
+  preservation, checked deployment with non-overlapping tent/stash safeguards,
+  top-screen world sprites, and lower-screen touch storage access. Save v13
+  persists stashes and v12-and-earlier loads with empty stash state. Native
+  collision bounds are explicit safety checks; precise original Construct
+  placement conditions still require source event translation.
 
 ## Remaining Stage 2 work
 
@@ -236,3 +241,11 @@ The native regression and 3DS build workflows passed on commit `4e91ae672230afcd
 - `tools/stage2/build_source_craft_events.py` indexes all **19 original Construct `Craft_*` functions**, retaining the exact source function UID, inventory-vs-ground-vs-world-object-vs-building-mode output, result ID/object ID, and source wait duration. The catalog is regenerated and tested by 3DS/host CI.
 - Sixteen ordinary source-verified native transactions are in the lower-screen crafting menu. A source-created Fishing Rod uses Construct object t837 with source Y+10 placement and a 4-second delay. `Craft_31`-`Craft_34` are distinct source pickpile sequences producing Campfire Kit (23) after three seconds; the two bed variants enter source `Building_mode(12)`. They require original world resource/placement event interpretation and cannot be represented as unguarded inventory recipes. Do not claim full original crafting parity until these world events are connected.
 - Fractional durability is now exact for inventory and equipped items and is saved, including 0.01% increments. New tests cover dropping, picking up, tent storage, equipping, unequipping, repair, and migration from v10/v11 binary saves. The complete original action guard evaluation and other dynamic wear expressions remain unresolved.
+
+## Native source event additions (17 November 2026)
+
+- Supplies Stash ID 461 uses the original six storage cells; native transfer, save, reload, collision and touch activation integration is covered by host regression tests. Save format v13 persists stash locations/cargo and continues v1-v12 saves with no invented stashes.
+- Item details now display original fractional durability to two decimal places, and worn equipment durability bars preserve subpercent wear. Touchscreen unequipping matches exact fraction as well as whole-percent condition before merging.
+- `tools/stage2/audit_stage2_audio_source.py` identifies exact Construct events for original WAV clips. Native NDSP audio loads `crafting.wav`, `drop1.wav`, `drop2.wav`, and `zippero.wav` from `romfs:/wav`; the successful crafting, item-to-ground drop, and backpack equip/unequip paths now trigger their respective original clips. No clips are synthesized; unavailable/unsupported files fail safely. Console/emulator audio playback still needs a live runtime check.
+- The original five-second `Player stats -> States` body warmth event UID 2665582317889917 is now dispatched during active gameplay. Source action UID 471091765829229 adds `Player_temperature/2` to actor variable 16 and the negative-temperature branch resets to zero and applies 0.25 cold damage. Native weather **exposure** is stored separately from the body's persistent temperature. Save format v14 migrates old v1-v13 preview exposure to neutral body warmth instead of reinterpreting it as saved body cold, and v14 saves retain the new body state. Weather phase switching (rain/night) and all other source condition ancestry still require integration; this does not mean full survival parity.
+- The rest of Stage 2's true original world-building Craft_* branches, guarded combat and object wear, full source loot respawn timing, remaining perk gameplay effects and end-to-end physical hardware testing are still incomplete. CI passing validates these added native mechanics, not entire original-game parity.
