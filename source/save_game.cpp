@@ -328,7 +328,11 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.satchel = old.satchel;
             candidate.equipment_fraction = old.equipment_fraction;
         }
-    } else if (header_ok && candidate.version == kSaveVersion) {
+    } else if (header_ok &&
+               (candidate.version == 13u ||
+                candidate.version == kSaveVersion)) {
+        // v13 and v14 are byte-identical. v14 changes only the source
+        // semantics of the persisted player.temperature field.
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
     }
@@ -342,6 +346,13 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
         candidate.player.x <= minidayz::WorldSystem::kSourceMapWidth &&
         candidate.player.y <= minidayz::WorldSystem::kSourceMapHeight;
     if (!header_and_body_valid) return false;
+    if (candidate.version < 14u) {
+        // Earlier native saves stored the GLOBAL preview weather exposure
+        // in PlayerState.temperature, rather than Construct actor variable
+        // 16 (body warmth). That number cannot be reinterpreted as body
+        // warmth; start at neutral on migration, retaining all other stats.
+        candidate.player.temperature = 0.0f;
+    }
     if (candidate.version <= 10u) {
         // Previously this sixth item byte was undefined struct padding.
         // All old saves use whole-percent condition, never fractional wear.
