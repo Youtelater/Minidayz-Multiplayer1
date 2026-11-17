@@ -1054,14 +1054,20 @@ private:
     std::size_t first_available_inventory_slot(std::uint16_t item_id,
                                                std::uint8_t condition) const noexcept {
         const auto limit = minidayz::items::source_max_stack(item_id);
+        std::size_t first_empty = inventory_.capacity();
         for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
-            const auto* item = inventory_.slot(i);
             if (!inventory_.slot_accepts(i, item_id)) continue;
-            if (!item || item->empty()) return i;
-            if (item->item_id == item_id && item->condition == condition &&
-                item->count < limit) return i;
+            const auto* item = inventory_.slot(i);
+            if (!item) continue;
+            if (item->empty()) {
+                if (first_empty == inventory_.capacity()) first_empty = i;
+            } else if (item->item_id == item_id &&
+                       item->condition == condition && item->count < limit) {
+                // Preserve free space by merging only matching-condition stacks.
+                return i;
+            }
         }
-        return inventory_.capacity();
+        return first_empty;
     }
 
     // The original backpack equipment slot is outside the 15 base slots.
