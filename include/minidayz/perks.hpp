@@ -63,6 +63,19 @@ public:
     // The following are exact original conditional event outputs, not
     // unconditional combat/bleeding timers. The caller must satisfy the
     // original attack, wound or storage event before applying them.
+    // Original runner events 462218097561396 / 756237149504407
+    // add respectively +5 / +15 to original player object 193 variable 3.
+    // Only apply during the actual source movement event, not to NPCs.
+    std::uint8_t source_runner_speed_bonus() const noexcept {
+        const auto acquired = level(SourcePerk::runner);
+        return acquired >= 2 ? 15 : acquired == 1 ? 5 : 0;
+    }
+    // Original farmer's crop growth action explicitly adds ten to
+    // source crop object variable 1 when perk_farmer >= 1. Not a global
+    // instant crop yield increase; callers must meet the source event.
+    std::uint8_t source_farmer_growth_bonus() const noexcept {
+        return level(SourcePerk::farmer) > 0 ? 10 : 0;
+    }
     // Melee defense events 692233337832379 / 417286342579831
     // ADD 5/15 to global def_percent for levels 1/2.
     std::uint8_t source_melee_defense_percent_bonus() const noexcept {
