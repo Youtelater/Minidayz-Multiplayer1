@@ -55,7 +55,7 @@ The original `Craft_21` and `Craft_22` each create Crafted Arrow item 51 in inve
 - The original root `l_eng_items.xml` identifies item **456** as **Civilian Tent**. The original root `l_eng_ui.xml` states that civilian tents can be deployed and that items stored there persist permanently. `tools/stage2/validate_tent_storage_source.py` verifies both source facts.
 - `TentStorageSystem` deploys one actual tent item, preserves its condition, transfers item stacks atomically while preserving their condition, and rejects corrupt save snapshots.
 - The bottom 3DS touchscreen cycles **Backpack → Crafting → Tent Storage → Perks → Backpack**. In storage mode, tap the left pane to store an inventory stack and the right pane to retrieve it; tap the header of either pane to page. The top screen continues to render the world and deployed tents.
-- Current save version **9** persists player, inventory, equipment, dropped items, deployed tent positions and contents, in-flight original medical/reading actions, and native Camel/Hamster experience and levels. Old v1-v8 save files are validated and migrated without losing existing items or tent contents.
+- Current save version **10** persists player, inventory, equipment, dropped items, deployed tent positions and contents, in-flight original medical/reading actions, and native Camel/Hamster experience and levels. Old v1-v9 save files are validated and migrated without losing existing items or tent contents.
 - **Scope limit:** 8 deployed tents and 32 stored stacks per tent are *native memory-safety limits*, not extracted original gameplay capacities. The exact original tent capacity, placement restrictions, and interaction range still require a verified Construct event translation.
 
 ## Original crafting source audit
@@ -169,6 +169,27 @@ Stage 2 100% source-equivalent.
   **No live regeneration ticks fire until those guards are mapped.**
 - Source audit, native behavior tests, and workflow checks validate
   the known values and fail on changed original regeneration data.
+
+## Source satchel equipment integration (17 November 2026)
+
+- The original `Satchel` (458/752), `Army Satchel` (459/753),
+  and `Medical Satchel` (460/754) can now occupy a **separate
+  equip slot alongside a normal backpack** on the 3DS bottom touchscreen.
+  Drag a satchel to the seventh equipment cell or tap it to unequip.
+  The untouched gameplay view remains on the top screen.
+- Source-verified unrestricted capacities stack with the main backpack:
+  +2 for Satchel, +1 for Army/Medical. Their original additional **three
+  exclusive category slots are not activated until the exact Construct
+  item eligibility predicates are translated**; no item can bypass
+  those original restrictions.
+- The new equip/swap/unequip transactions preflight capacity and preserve
+  items when swapping packs of different sizes. Native save v10 persists
+  satchel ID and condition without changing the original 15+ backpack
+  snapshot binary layout, and loads v1-v9 saves including the former
+  single-slot satchel representation.
+- `Supplies Stash` (461) has six slots in the source description, but
+  that source item is not treated as a wearable backpack; its
+  dimensional-stash interactions still require exact event translation.
 
 ## Remaining Stage 2 work
 
