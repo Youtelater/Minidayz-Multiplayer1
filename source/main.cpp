@@ -47,7 +47,7 @@ public:
         : world_seed_(restored ? restored->seed : make_new_world_seed()),
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
-        if (restored && !inventory_.restore(restored->inventory))
+        if (restored && !inventory_.restore_with_satchel(restored->inventory, restored->satchel))
             inventory_.clear();
         if (restored && !equipment_.restore(restored->equipment))
             equipment_.clear();
@@ -298,6 +298,12 @@ public:
                     if (backpack != 0 && destination < minidayz::items::kInventorySlotCount)
                         (void)inventory_.unequip_backpack_to_slot(destination);
                     selected_inventory_slot_ = -1;
+                } else if (equipment_target == 6) {
+                    const auto satchel = inventory_.equipped_satchel();
+                    const auto destination = first_available_base_inventory_slot(satchel);
+                    if (satchel != 0 && destination < minidayz::items::kInventorySlotCount)
+                        (void)inventory_.unequip_satchel_to_slot(destination);
+                    selected_inventory_slot_ = -1;
                 } else {
                     const auto slot = static_cast<minidayz::items::EquipmentSlot>(equipment_target);
                     const auto equipped = equipment_.equipped(slot);
@@ -338,7 +344,7 @@ public:
         }
         if (!crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ && input.touching && drag_source_slot_ >= 0) {
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
-            if (equipment_target >= 0 && equipment_target < 6) {
+            if (equipment_target >= 0 && equipment_target < 7) {
                 drag_target_equipment_slot_ = equipment_target;
                 drag_target_slot_ = -1;
             } else {
@@ -355,6 +361,10 @@ public:
                 // invokes the source-defined repair event; otherwise it equips.
                 if (inventory_.repair_equipped_backpack_from_inventory_slot(source_slot) ||
                     inventory_.equip_backpack_from_slot(source_slot))
+                    selected_inventory_slot_ = -1;
+            } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 6) {
+                if (inventory_.equip_satchel_from_slot(
+                        static_cast<std::size_t>(drag_source_slot_)))
                     selected_inventory_slot_ = -1;
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
@@ -570,19 +580,19 @@ public:
         }
         // Original equipment categories: helmet, outerwear, vest, pants,
         // held weapon, plus the separate backpack slot.
-        static constexpr const char* equipment_labels[] = {"HELMET","COAT","VEST","PANTS","HANDS","PACK"};
-        for (std::size_t i = 0; i < 6; ++i) {
-            const float x = 5.0f + static_cast<float>(i) * 52.0f;
-            renderer.draw_solid_rect(x, 38.0f, 50.0f, 43.0f, C2D_Color32(8, 11, 10, 255));
-            renderer.draw_solid_rect(x + 2.0f, 40.0f, 46.0f, 39.0f, C2D_Color32(47, 54, 48, 255));
-            const auto item_id = i == 5
-                ? inventory_.equipped_backpack()
+        static constexpr const char* equipment_labels[] = {"HELM","COAT","VEST","PANTS","HAND","PACK","SATCH"};
+        for (std::size_t i = 0; i < 7; ++i) {
+            const float x = 5.0f + static_cast<float>(i) * 45.0f;
+            renderer.draw_solid_rect(x, 38.0f, 43.0f, 43.0f, C2D_Color32(8, 11, 10, 255));
+            renderer.draw_solid_rect(x + 2.0f, 40.0f, 39.0f, 39.0f, C2D_Color32(47, 54, 48, 255));
+            const auto item_id = i == 5 ? inventory_.equipped_backpack()
+                : i == 6 ? inventory_.equipped_satchel()
                 : equipment_.equipped(static_cast<minidayz::items::EquipmentSlot>(i));
-            const auto condition = i == 5
-                ? inventory_.equipped_backpack_condition()
+            const auto condition = i == 5 ? inventory_.equipped_backpack_condition()
+                : i == 6 ? inventory_.equipped_satchel_condition()
                 : equipment_.snapshot().conditions[i];
             if (item_id != 0) {
-                (void)renderer.draw_item_icon(item_id, x + 25.0f, 55.0f, 34.0f, 25.0f);
+                (void)renderer.draw_item_icon(item_id, x + 21.5f, 55.0f, 30.0f, 25.0f);
                 if (condition > 0 && condition < 100) {
                     renderer.draw_solid_rect(x + 5.0f, 77.0f, 40.0f, 2.0f,
                                              C2D_Color32(30, 30, 30, 255));
@@ -1016,9 +1026,9 @@ private:
     static constexpr std::size_t kCraftPageSize = 3;
 
     static int equipment_slot_at(int x, int y) noexcept {
-        if (y < 38 || y >= 81 || x < 5 || x >= 315) return -1;
-        const int index = (x - 5) / 52;
-        return index >= 0 && index < 6 ? index : -1;
+        if (y < 38 || y >= 81 || x < 5 || x >= 320) return -1;
+        const int index = (x - 5) / 45;
+        return index >= 0 && index < 7 ? index : -1;
     }
 
     std::size_t first_available_inventory_slot(std::uint16_t item_id) const noexcept {
