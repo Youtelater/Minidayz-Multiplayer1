@@ -299,6 +299,13 @@ jobs:
             tests/inventory_fractional_wear_tests.cpp -o inventory_fractional_wear_tests
           ./inventory_fractional_wear_tests
 
+      - name: Test Source 5s Body Temperature and Cold Damage
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/player.cpp tests/source_body_temperature_tick_tests.cpp \
+            -o source_body_temperature_tick_tests
+          ./source_body_temperature_tick_tests
+
       - name: Compile Player Equipment Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
