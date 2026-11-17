@@ -1,6 +1,7 @@
 #include "minidayz/generated/source_craft_events.hpp"
 #include <cassert>
 #include <cstring>
+#include <initializer_list>
 
 using namespace minidayz::items;
 
