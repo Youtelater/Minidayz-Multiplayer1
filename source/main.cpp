@@ -296,13 +296,13 @@ public:
                 if (equipment_target == 5) {
                     const auto backpack = inventory_.equipped_backpack();
                     const std::size_t destination =
-                        first_available_base_inventory_slot(backpack);
+                        first_available_base_inventory_slot();
                     if (backpack != 0 && destination < minidayz::items::kInventorySlotCount)
                         (void)inventory_.unequip_backpack_to_slot(destination);
                     selected_inventory_slot_ = -1;
                 } else if (equipment_target == 6) {
                     const auto satchel = inventory_.equipped_satchel();
-                    const auto destination = first_available_base_inventory_slot(satchel);
+                    const auto destination = first_available_base_inventory_slot();
                     if (satchel != 0 && destination < minidayz::items::kInventorySlotCount)
                         (void)inventory_.unequip_satchel_to_slot(destination);
                     selected_inventory_slot_ = -1;
@@ -1067,12 +1067,12 @@ private:
     // The original backpack equipment slot is outside the 15 base slots.
     // Unequipping must return it to a base slot; an empty backpack-storage
     // slot cannot be used as the destination while shrinking the grid.
-    std::size_t first_available_base_inventory_slot(std::uint16_t item_id) const noexcept {
-        const auto limit = minidayz::items::source_max_stack(item_id);
+    std::size_t first_available_base_inventory_slot() const noexcept {
+        // Backpack/satchel unequip requires an EMPTY surviving base cell.
+        // A matching partial stack cannot receive a whole equipped bag.
         for (std::size_t i = 0; i < minidayz::items::kInventorySlotCount; ++i) {
             const auto* item = inventory_.slot(i);
-            if (!item || item->empty()) return i;
-            if (item->item_id == item_id && item->count < limit) return i;
+            if (item && item->empty()) return i;
         }
         return minidayz::items::kInventorySlotCount;
     }
