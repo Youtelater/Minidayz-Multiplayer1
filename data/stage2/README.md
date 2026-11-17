@@ -213,4 +213,6 @@ The native regression and 3DS build workflows passed on commit `4e91ae672230afcd
 - Stack splitting skips source-restricted satchel cells that reject the incoming item, rather than stopping at the first incompatible empty cell.
 - Unequipping equipment searches only item-eligible inventory cells; matching stack merges also require identical condition, and are preferred over consuming an additional empty cell.
 - Unequipping an equipped backpack or satchel targets a genuinely empty surviving **base** inventory cell, because those operations cannot merge a worn bag with a partial stack.
+- A second worn Army/Medical Satchel now retains its unrestricted and exclusive contents while the main backpack is unequipped or changed to a different capacity. These slots are remapped atomically, preserving original item IDs, conditions, and category eligibility; occupied main-backpack-only cells still block downsizing.
+- Inventory regression tests exercise the remapping, failed downsizing, saved state restoration, and restricted Army Satchel eligibility after main pack swaps.
 - These are native interaction safety fixes; the original-source gameplay gaps above and a fresh full 3DS CI/runtime validation are still required before claiming 100% Stage 2 parity.
