@@ -27,4 +27,13 @@ inline bool is_source_satchel(std::uint16_t item_id) noexcept {
     return source_satchel_capacity(item_id).alongside_backpack;
 }
 
+// ROOT l_eng_new.xml entry 312 describes original Supplies Stash (+6
+// storage slots), while root l_eng_items.xml maps item ID 461.
+// This is capacity metadata only: its dimensional-stash transfer action
+// has not been translated, so do not treat it as a wearable backpack.
+inline std::uint8_t source_supplies_stash_slots(
+    std::uint16_t item_id) noexcept {
+    return item_id == 461 ? 6 : 0;
+}
+
 } // namespace minidayz::items
