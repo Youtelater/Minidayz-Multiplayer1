@@ -265,7 +265,8 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks = old.perks;
         }
-    } else if (header_ok && candidate.version == kSaveVersion) {
+    } else if (header_ok && (candidate.version == 10u ||
+                             candidate.version == kSaveVersion)) {
         // Read the actual on-disk struct, including compiler alignment.
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
@@ -280,6 +281,17 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
         candidate.player.x <= minidayz::WorldSystem::kSourceMapWidth &&
         candidate.player.y <= minidayz::WorldSystem::kSourceMapHeight;
     if (!header_and_body_valid) return false;
+    if (candidate.version <= 10u) {
+        // Previously this sixth item byte was undefined struct padding.
+        // All old saves use whole-percent condition, never fractional wear.
+        for (auto& slot : candidate.inventory.slots)
+            slot.fractional_loss = 0;
+        for (auto& entry : candidate.ground_loot.entries)
+            entry.item.fractional_loss = 0;
+        for (auto& tent : candidate.tents.tents)
+            for (auto& item : tent.items)
+                item.fractional_loss = 0;
+    }
 
     // Validate every persisted subsystem before offering Continue. Previously
     // malformed inventory/equipment/loot could pass the file check and then be
