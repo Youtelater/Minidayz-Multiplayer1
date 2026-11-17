@@ -256,34 +256,46 @@ public:
         }
 
         if (storage_open_ && touch_pressed) {
-            const auto tent_index = tents_.nearest(
-                player_.state().x, player_.state().y, 36.0f);
+            const auto storage = nearest_source_storage();
             if (input.touch.py >= 84 && input.touch.py < 99) {
                 if (input.touch.px < 160) {
                     const std::size_t pages =
                         (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize;
                     inventory_page_ = (inventory_page_ + 1) % pages;
                 } else {
+                    const std::size_t storage_slots = storage.stash
+                        ? minidayz::items::kSourceSuppliesStashSlots
+                        : minidayz::items::kNativeTentStorageSlots;
                     const std::size_t pages =
-                        (minidayz::items::kNativeTentStorageSlots +
-                         kInventoryPageSize - 1) / kInventoryPageSize;
+                        (storage_slots + kInventoryPageSize - 1) / kInventoryPageSize;
                     storage_page_ = (storage_page_ + 1) % pages;
                 }
-            } else if (tent_index < tents_.tent_count() &&
+            } else if (storage.found &&
                        input.touch.py >= 99 && input.touch.py < 219) {
                 const int col = input.touch.px < 160
                     ? (input.touch.px - 8) / 30 : (input.touch.px - 166) / 30;
                 const int row = (input.touch.py - 99) / 40;
                 if (col >= 0 && col < 5 && row >= 0 && row < 3) {
                     const std::size_t cell = static_cast<std::size_t>(row * 5 + col);
-                    if (input.touch.px >= 8 && input.touch.px < 158)
-                        (void)tents_.store_from_inventory(
-                            inventory_, inventory_page_ * kInventoryPageSize + cell,
-                            tent_index);
-                    else if (input.touch.px >= 166 && input.touch.px < 316)
-                        (void)tents_.take_to_inventory(
-                            inventory_, tent_index,
-                            storage_page_ * kInventoryPageSize + cell);
+                    if (input.touch.px >= 8 && input.touch.px < 158) {
+                        if (storage.stash)
+                            (void)stashes_.store_from_inventory(
+                                inventory_, inventory_page_ * kInventoryPageSize + cell,
+                                storage.index);
+                        else
+                            (void)tents_.store_from_inventory(
+                                inventory_, inventory_page_ * kInventoryPageSize + cell,
+                                storage.index);
+                    } else if (input.touch.px >= 166 && input.touch.px < 316) {
+                        if (storage.stash)
+                            (void)stashes_.take_to_inventory(
+                                inventory_,storage.index,
+                                storage_page_ * kInventoryPageSize + cell);
+                        else
+                            (void)tents_.take_to_inventory(
+                                inventory_,storage.index,
+                                storage_page_ * kInventoryPageSize + cell);
+                    }
                 }
             }
         }
@@ -1099,6 +1111,29 @@ public:
     }
 
 private:
+    struct StorageTarget {
+        std::size_t index{};
+        bool stash{};
+        bool found{};
+    };
+
+    StorageTarget nearest_source_storage() const noexcept {
+        const auto x = player_.state().x;
+        const auto y = player_.state().y;
+        const auto tent_index = tents_.nearest(x,y,36.0f);
+        const auto stash_index = stashes_.nearest(x,y,36.0f);
+        const auto* tent = tents_.tent(tent_index);
+        const auto* stash = stashes_.stash(stash_index);
+        if (!tent && !stash) return {};
+        if (!tent) return {stash_index,true,true};
+        if (!stash) return {tent_index,false,true};
+        const auto tx = tent->x-x, ty = tent->y-y;
+        const auto sx = stash->x-x, sy = stash->y-y;
+        return sx*sx+sy*sy <= tx*tx+ty*ty
+            ? StorageTarget{stash_index,true,true}
+            : StorageTarget{tent_index,false,true};
+    }
+
     bool deploy_source_storage(std::size_t slot) noexcept {
         const auto* item = inventory_.slot(slot);
         if (!item || item->empty()) return false;
