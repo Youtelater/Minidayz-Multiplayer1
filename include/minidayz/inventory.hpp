@@ -29,6 +29,11 @@ struct GroundItem {
     bool empty() const noexcept { return item_id == 0 || count == 0; }
 };
 
+struct SatchelSnapshot {
+    std::uint16_t item_id{};
+    std::uint8_t condition{100};
+};
+
 struct InventorySnapshot {
     std::array<InventorySlot, kMaximumInventorySlotCount> slots{};
     std::uint16_t capacity{static_cast<std::uint16_t>(kInventorySlotCount)};
@@ -66,6 +71,20 @@ public:
         return equipped_backpack_condition_;
     }
     std::size_t capacity() const noexcept { return capacity_; }
+    // Original Satchel/Army Satchel/Medical Satchel can be worn alongside
+    // an ordinary backpack. Exclusive three-slot item filters are NOT yet
+    // inferred from the untranslated Construct source.
+    bool equip_satchel_from_slot(std::size_t inventory_slot) noexcept;
+    bool unequip_satchel_to_slot(std::size_t inventory_slot) noexcept;
+    std::uint16_t equipped_satchel() const noexcept { return equipped_satchel_; }
+    std::uint8_t equipped_satchel_condition() const noexcept {
+        return equipped_satchel_condition_;
+    }
+    SatchelSnapshot satchel_snapshot() const noexcept {
+        return {equipped_satchel_, equipped_satchel_condition_};
+    }
+    bool restore_with_satchel(const InventorySnapshot& inventory,
+                              const SatchelSnapshot& satchel) noexcept;
 
     // max_stack == 0 selects the original game's baseline rule for item_id.
     bool add(std::uint16_t item_id, std::uint16_t amount,
@@ -108,6 +127,8 @@ public:
         capacity_ = kInventorySlotCount;
         equipped_backpack_ = 0;
         equipped_backpack_condition_ = 100;
+        equipped_satchel_ = 0;
+        equipped_satchel_condition_ = 100;
     }
 
 private:
@@ -115,6 +136,8 @@ private:
     std::size_t capacity_{kInventorySlotCount};
     std::uint16_t equipped_backpack_{};
     std::uint8_t equipped_backpack_condition_{100};
+    std::uint16_t equipped_satchel_{};
+    std::uint8_t equipped_satchel_condition_{100};
 };
 
 } // namespace minidayz::items
