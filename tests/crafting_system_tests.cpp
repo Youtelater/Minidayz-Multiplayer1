@@ -8,7 +8,7 @@
 using namespace minidayz::items;
 
 int main() {
-    assert(kSourceCraftRecipeCount == 9);
+    assert(kSourceCraftRecipeCount == 10);
     assert(source_craft_recipe(0)->result_id == 163);
     assert(source_craft_recipe(1)->result_id == 454);
     assert(source_craft_recipe(2)->result_id == 455);
@@ -24,7 +24,13 @@ int main() {
     assert(source_craft_recipe(5)->ingredients[1].item_id == 49);
     assert(!source_craft_recipe(0)->result_in_inventory);
     assert(source_craft_recipe(6)->result_id == 51);
-    assert(source_craft_recipe(9) == nullptr);
+    assert(source_craft_recipe(9)->result_id == 41);
+    assert(source_craft_recipe(9)->result_in_inventory);
+    assert(source_craft_recipe(9)->selected_stack_only);
+    assert(source_craft_recipe(9)->ingredients[0].item_id == 26);
+    assert(source_craft_recipe(9)->ingredients[0].count == 3);
+    assert(source_craft_recipe(9)->ingredients[1].count == 0);
+    assert(source_craft_recipe(10) == nullptr);
 
     InventorySystem player;
     GroundLootSystem ground;
@@ -149,6 +155,36 @@ int main() {
         }
         assert(preserved);
     }
+
+    // Source item_activate2: three rags must be in ONE selected stack.
+    // The 3DS recipe panel chooses an eligible stack without merging stacks.
+    InventorySystem rags_split;
+    GroundLootSystem rags_ground;
+    assert(rags_split.add_to_slot(0, 26, 2, 0, 71));
+    assert(rags_split.add_to_slot(1, 26, 1, 0, 54));
+    assert(!can_craft_from_inventory(rags_split, rags_ground, 0, 0, 9));
+    assert(!craft_from_inventory(rags_split, rags_ground, 0, 0, 9));
+    assert(rags_split.count(26) == 3 && rags_split.count(41) == 0);
+    assert(rags_split.add_to_slot(2, 26, 3, 0, 63));
+    assert(can_craft_from_inventory(rags_split, rags_ground, 0, 0, 9));
+    assert(craft_from_inventory(rags_split, rags_ground, 0, 0, 9));
+    assert(rags_split.count(41) == 1);
+    assert(rags_split.count(26) == 3);
+    assert(rags_split.slot(0)->count == 2 && rags_split.slot(0)->condition == 71);
+    assert(rags_split.slot(1)->count == 1 && rags_split.slot(1)->condition == 54);
+    assert(rags_split.slot(2)->item_id == 41);
+    assert(rags_ground.count() == 0);
+
+    // A full inventory with no output slot must roll the Rags back.
+    InventorySystem rags_full;
+    GroundLootSystem rags_full_ground;
+    assert(rags_full.add_to_slot(0, 26, 4));
+    for (std::size_t i = 1; i < rags_full.capacity(); ++i)
+        assert(rags_full.add_to_slot(i, 42, 1));
+    assert(!can_craft_from_inventory(rags_full, rags_full_ground, 0, 0, 9));
+    assert(!craft_from_inventory(rags_full, rags_full_ground, 0, 0, 9));
+    assert(rags_full.slot(0)->item_id == 26 && rags_full.slot(0)->count == 4);
+    assert(rags_full.count(41) == 0);
 
     // Full original ground-entity container and nonfinite positions reject a
     // craft without changing the source inventory or dropping the output.
