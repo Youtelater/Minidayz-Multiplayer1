@@ -28,6 +28,12 @@ struct EquipmentSnapshot {
     };
 };
 
+// Persisted separately from the legacy EquipmentSnapshot so v1-v11 saves
+// remain byte-compatible and gain zero subpercent wear on migration.
+struct EquipmentFractionSnapshot {
+    std::array<std::uint8_t, kEquipmentSlotCount> fractional_loss{};
+};
+
 bool source_item_protection(std::uint16_t item_id,
                             SourceItemProtection& protection) noexcept;
 
@@ -50,6 +56,11 @@ public:
     float day_cooling(float day_cold) const noexcept;
     const EquipmentSnapshot& snapshot() const noexcept { return state_; }
     bool restore(const EquipmentSnapshot& saved) noexcept;
+    bool restore_with_fraction(const EquipmentSnapshot& saved,
+                               const EquipmentFractionSnapshot& fractions) noexcept;
+    EquipmentFractionSnapshot fraction_snapshot() const noexcept {
+        return fractions_;
+    }
 
     // Equipping is atomic: the incoming item is consumed and any replaced
     // item is returned to inventory. Equipment items must be single-count.
@@ -57,6 +68,12 @@ public:
                               std::size_t inventory_slot,
                               EquipmentSlot equipment_slot) noexcept;
     bool damage_condition(EquipmentSlot slot, std::uint8_t loss) noexcept;
+    bool damage_condition_hundredths(
+        EquipmentSlot slot, std::uint16_t loss_hundredths) noexcept;
+    bool apply_verified_wear_action(EquipmentSlot slot,
+        std::uint64_t group_uid, std::uint64_t event_uid,
+        std::uint64_t action_uid, bool source_guards_satisfied,
+        bool perk_wxnj_active) noexcept;
     // Apply an absolute condition value decoded from a source repair action.
     bool restore_condition(EquipmentSlot slot, std::uint8_t condition) noexcept;
     // Consume one original repair material and apply the source-defined gain.
@@ -67,10 +84,11 @@ public:
     bool unequip_to_inventory(InventorySystem& inventory,
                               EquipmentSlot equipment_slot,
                               std::size_t inventory_slot) noexcept;
-    void clear() noexcept { state_ = {}; }
+    void clear() noexcept { state_ = {}; fractions_ = {}; }
 
 private:
     EquipmentSnapshot state_{};
+    EquipmentFractionSnapshot fractions_{};
 };
 
 } // namespace minidayz::items
