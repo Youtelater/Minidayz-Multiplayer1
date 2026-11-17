@@ -1,6 +1,7 @@
 #include "minidayz/source_weather_event.hpp"
 #include <cassert>
 #include <cmath>
+#include <initializer_list>
 #include <limits>
 
 using namespace minidayz;
