@@ -88,6 +88,9 @@ std::uint8_t SourcePerkSystem::level(SourcePerk perk) const noexcept {
 }
 
 bool SourcePerkSystem::can_buy(SourcePerk perk) const noexcept {
+    // Never advertise unknown enum values as purchasable. The source has
+    // exactly sixteen purchasable perks (indices 0..15).
+    if (static_cast<std::size_t>(perk) >= kOriginalPerkCount) return false;
     return level(perk) < 2 && state_.experience_points >= state_.perk_cost &&
         state_.perks_learnt_count < 2 * kOriginalPerkCount;
 }
