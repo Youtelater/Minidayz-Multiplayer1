@@ -63,6 +63,12 @@ jobs:
           make clean
           make
 
+      - name: Verify actual Stage 2 sound files and original texture atlases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage2/validate_stage2_media.py
+
       # Compile the native Stage 2 inventory/crafting runtime against the same
       # source-generated headers that the .3dsx just used. Keep these tests
       # outside the 3DS target so they can run on the CI host.
