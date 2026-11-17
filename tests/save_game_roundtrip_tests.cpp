@@ -325,8 +325,9 @@ int main() {
     assert(dual_pack.equip_backpack_from_slot(0));
     assert(dual_pack.add(459, 1, 0, 68));
     assert(dual_pack.equip_satchel_from_slot(0));
-    assert(dual_pack.capacity() == 21);
+    assert(dual_pack.capacity() == 24);
     assert(dual_pack.add_to_slot(20, 11, 2));
+    assert(dual_pack.add_to_slot(21, 24, 1, 0, 70));
     assert(write_saved_game_to_paths(91, player, dual_pack, equipment, ground,
                                     tents, kFile, kTemp, &pending, &source_perks));
     assert(load_saved_game_from_path(restored, kFile));
@@ -335,7 +336,10 @@ int main() {
     assert(restored.satchel.condition == 68);
     InventorySystem dual_loaded;
     assert(dual_loaded.restore_with_satchel(restored.inventory, restored.satchel));
-    assert(dual_loaded.capacity() == 21);
+    assert(dual_loaded.capacity() == 24);
+    assert(dual_loaded.is_exclusive_satchel_slot(21));
+    assert(dual_loaded.slot(21)->item_id == 24);
+    assert(dual_loaded.slot(21)->condition == 70);
     assert(dual_loaded.equipped_backpack() == 450);
     assert(dual_loaded.equipped_satchel() == 459);
     assert(dual_loaded.slot(20)->item_id == 11);
