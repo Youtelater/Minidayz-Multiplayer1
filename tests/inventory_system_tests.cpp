@@ -561,6 +561,11 @@ int main() {
     assert(both_restored.equipped_satchel() == 458);
     assert(both_restored.count(11) == 1);
     assert(both_restored.add(459, 1, 0, 76));
+    assert(both_restored.add_to_slot(21, 12, 1));
+    assert(!both_restored.equip_satchel_from_slot(1));
+    assert(both_restored.equipped_satchel() == 458);
+    assert(both_restored.slot(1)->item_id == 459);
+    assert(both_restored.remove(21, 1));
     assert(both_restored.equip_satchel_from_slot(1));
     assert(both_restored.equipped_satchel() == 459);
     assert(both_restored.capacity() == 21);
@@ -569,14 +574,15 @@ int main() {
     // can replace it; failed swaps must not consume an item.
     assert(both_restored.add_to_slot(20, 12, 1));
     assert(both_restored.add(460, 1, 0, 66));
-    assert(!both_restored.equip_satchel_from_slot(2));
-    assert(both_restored.equipped_satchel() == 459);
-    assert(both_restored.slot(2)->item_id == 460);
+    assert(both_restored.equip_satchel_from_slot(2));
+    assert(both_restored.equipped_satchel() == 460);
+    assert(both_restored.slot(2)->item_id == 459);
     assert(both_restored.remove(20, 1));
-    assert(both_restored.unequip_satchel_to_slot(2));
+    assert(both_restored.unequip_satchel_to_slot(3));
     assert(both_restored.equipped_satchel() == 0);
     assert(both_restored.capacity() == 20);
     assert(both_restored.slot(2)->item_id == 459);
+    assert(both_restored.slot(3)->item_id == 460);
     auto invalid_satchel = satchel_saved;
     invalid_satchel.item_id = 461;
     assert(!both_restored.restore_with_satchel(both_saved, invalid_satchel));
