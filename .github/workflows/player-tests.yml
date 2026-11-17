@@ -269,6 +269,12 @@ jobs:
       - name: Run Original Fractional Condition Wear Tests
         run: ./fractional_wear_tests
 
+      - name: Test Original Source Wear Event Actions
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_wear_event_tests.cpp -o source_wear_event_tests
+          ./source_wear_event_tests
+
       - name: Compile Player Equipment Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
