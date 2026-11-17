@@ -449,9 +449,14 @@ public:
         const float current_source_warmth = equipment_.temperature_offset();
         if (!source_temperature_initialized_ ||
             current_source_warmth != last_source_warmth_) {
-            const float day_cold = minidayz::items::source_weather_cold(
-                minidayz::SurvivalDifficulty::regular).day;
-            player_.set_source_temperature(day_cold - current_source_warmth);
+            float source_temperature = 0.0f;
+            if (minidayz::items::source_weather_temperature(
+                    minidayz::SurvivalDifficulty::regular,
+                    minidayz::items::SourceColdPhase::day,
+                    current_source_warmth,
+                    minidayz::items::SourceRainColdBranch::full,
+                    source_temperature))
+                player_.set_source_temperature(source_temperature);
             last_source_warmth_ = current_source_warmth;
             source_temperature_initialized_ = true;
         }
