@@ -112,6 +112,20 @@ public:
                 start_new_game();
             return;
         }
+        if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount) {
+            pending_craft_seconds_ -= std::max(0.0f, dt);
+            if (pending_craft_seconds_ <= 0.0f) {
+                const bool crafted = minidayz::items::craft_from_inventory(
+                    inventory_, ground_loot_, player_.state().x,
+                    player_.state().y, pending_craft_recipe_);
+                pending_craft_recipe_ = minidayz::items::kSourceCraftRecipeCount;
+                pending_craft_seconds_ = 0.0f;
+                crafting_feedback_ = crafted
+                    ? CraftFeedback::success : CraftFeedback::missing_or_full;
+                crafting_feedback_elapsed_ = 0.0f;
+                if (crafted) stage2_audio_.play_crafting();
+            }
+        }
         if (selected_inventory_slot_ >= 0 && (input.pressed & (KEY_A | KEY_X))) {
             const auto selected_index = static_cast<std::size_t>(selected_inventory_slot_);
             const auto* item = inventory_.slot(selected_index);
@@ -187,12 +201,33 @@ public:
             input.touch.py >= 99 && input.touch.py < 219) {
             const std::size_t recipe = crafting_page_ * kCraftPageSize +
                 static_cast<std::size_t>((input.touch.py - 99) / 40);
-            if (minidayz::items::source_craft_recipe(recipe)) {
-                const bool crafted = minidayz::items::craft_from_inventory(
-                    inventory_, ground_loot_, player_.state().x, player_.state().y, recipe);
-                crafting_feedback_ = crafted ? CraftFeedback::success : CraftFeedback::missing_or_full;
+            const auto* source_recipe =
+                minidayz::items::source_craft_recipe(recipe);
+            if (source_recipe &&
+                pending_craft_recipe_ >= minidayz::items::kSourceCraftRecipeCount) {
+                if (source_recipe->delay_seconds > 0.0f) {
+                    if (minidayz::items::can_craft_from_inventory(
+                            inventory_, ground_loot_, player_.state().x,
+                            player_.state().y, recipe)) {
+                        // Original Craft_tent and Craft_xiaoyinqi include
+                        // a five-second wait before the result action.
+                        // Commit only on completion, without consuming
+                        // ingredients on cancelled native sessions.
+                        pending_craft_recipe_ = recipe;
+                        pending_craft_seconds_ = source_recipe->delay_seconds;
+                        crafting_feedback_ = CraftFeedback::pending;
+                    } else {
+                        crafting_feedback_ = CraftFeedback::missing_or_full;
+                    }
+                } else {
+                    const bool crafted = minidayz::items::craft_from_inventory(
+                        inventory_, ground_loot_, player_.state().x,
+                        player_.state().y, recipe);
+                    crafting_feedback_ = crafted
+                        ? CraftFeedback::success : CraftFeedback::missing_or_full;
+                    if (crafted) stage2_audio_.play_crafting();
+                }
                 crafting_feedback_elapsed_ = 0.0f;
-                if (crafted) stage2_audio_.play_crafting();
             }
         }
 
@@ -460,7 +495,8 @@ public:
             drag_target_slot_ = -1;
             drag_target_equipment_slot_ = -1;
         }
-        if (crafting_feedback_ != CraftFeedback::none) {
+        if (crafting_feedback_ != CraftFeedback::none &&
+            crafting_feedback_ != CraftFeedback::pending) {
             crafting_feedback_elapsed_ += std::max(0.0f, dt);
             if (crafting_feedback_elapsed_ >= 2.5f) {
                 crafting_feedback_ = CraftFeedback::none;
@@ -789,9 +825,12 @@ public:
                 renderer.draw_solid_rect(10.0f, 209.0f, 300.0f, 13.0f,
                     success ? C2D_Color32(46, 105, 52, 255)
                             : C2D_Color32(115, 66, 46, 255));
-                renderer.draw_text(success ? "CRAFTED - CHECK BAG OR GROUND"
-                                         : "NEED MATERIALS OR OUTPUT SPACE",
-                                   24.0f, 211.0f, 0.22f);
+                renderer.draw_text(
+                    success ? "CRAFTED - CHECK BAG OR GROUND"
+                    : crafting_feedback_ == CraftFeedback::pending
+                        ? "CRAFTING - WAIT FOR ORIGINAL SOURCE DELAY"
+                        : "NEED MATERIALS OR OUTPUT SPACE",
+                    18.0f, 211.0f, 0.19f);
             }
             renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                      C2D_Color32(54, 68, 55, 255));
@@ -1130,6 +1169,8 @@ private:
         perk_page_ = 0;
         crafting_feedback_ = CraftFeedback::none;
         crafting_feedback_elapsed_ = 0.0f;
+        pending_craft_recipe_ = minidayz::items::kSourceCraftRecipeCount;
+        pending_craft_seconds_ = 0.0f;
         storage_open_ = false;
         crafting_open_ = false;
         perks_open_ = false;
@@ -1217,9 +1258,11 @@ private:
     std::size_t storage_page_{};
     std::size_t crafting_page_{};
     std::size_t perk_page_{};
-    enum class CraftFeedback : std::uint8_t { none, success, missing_or_full };
+    enum class CraftFeedback : std::uint8_t { none, success, missing_or_full, pending };
     CraftFeedback crafting_feedback_{CraftFeedback::none};
     float crafting_feedback_elapsed_{};
+    std::size_t pending_craft_recipe_{minidayz::items::kSourceCraftRecipeCount};
+    float pending_craft_seconds_{};
     bool touch_down_{};
     bool tap_was_selected_{};
     bool crafting_open_{};
