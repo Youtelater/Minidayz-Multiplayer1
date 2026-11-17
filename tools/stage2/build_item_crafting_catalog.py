@@ -189,6 +189,44 @@ def main() -> None:
                 f"Original {function} ground outputs {output_ids}, "
                 f"not expected item {result_id}")
 
+    # Preserve verified Construct Wait() before every original Craft result.
+    # Earlier tutorial-only native actions executed instantly, even though
+    # the source waits five seconds for Bow/Bag/Backpack/Arrows and three
+    # seconds for Campfire Kit. These exact delays are read from root events.
+    expected_waits = {
+        "Improvised Bow": 5.0,
+        "Improvised Sling Bag": 5.0,
+        "Improvised Backpack": 5.0,
+        "Campfire Kit": 3.0,
+        "Crafted Arrow": 5.0,
+        "Crafted Arrow Alternate": 5.0,
+    }
+
+    def source_wait_for(result_name: str) -> float:
+        uid, function = source_event_uids[result_name]
+        event = source_events.get(uid)
+        if event is None:
+            candidates = by_function.get(function, [])
+            if len(candidates) != 1:
+                raise SystemExit(f"Missing original wait source for {function}")
+            event = candidates[0]
+        waits = set()
+        for nested in child_events([event]):
+            for a in nested[6]:
+                if (isinstance(a, list) and len(a) > 5 and
+                    a[:2] == [-1, 54] and isinstance(a[5], list) and
+                    len(a[5]) == 1 and isinstance(a[5][0], list) and
+                    len(a[5][0]) == 2 and a[5][0][0] == 0 and
+                    isinstance(a[5][0][1], list) and
+                    len(a[5][0][1]) == 2 and a[5][0][1][0] == 0):
+                    value = a[5][0][1][1]
+                    if isinstance(value, (int, float)) and value >= 1:
+                        waits.add(float(value))
+        expected = expected_waits[result_name]
+        if waits != {expected}:
+            raise SystemExit(f"Changed original source wait: {function} {waits}, expected {expected}")
+        return expected
+
     # Original Craft_21 and Craft_22 both return one item 51 through
     # Check_space_inventory. Root tutorial says Wooden Sticks + any knife;
     # all three exact root item names containing "Knife" are catalysts.
@@ -269,13 +307,13 @@ def main() -> None:
         parts = [(resolve(label), count) for label, count in ingredients]
         if result_id in [id for id, _ in parts]:
             raise SystemExit(f"Self-consuming recipe: {result_name}")
-        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result), False, False, 0, 0))
+        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result), False, False, source_wait_for(result_name), 0))
     for knife in knives:
         # Exact source check gives one arrow to inventory, no Spawn_drop.
         # The original knife is a crafting tool, not a consumed ingredient.
         rows.append((resolve("Crafted Arrow"), f"Crafted Arrow / {knife}",
                      [(resolve("Wooden Sticks"), 1), (resolve(knife), 1)],
-                     arrow_guide[0], True, True, False, 0, 0))
+                     arrow_guide[0], True, True, False, source_wait_for("Crafted Arrow"), 0))
 
     # The selected stack, not the sum of separate Rags stacks, must
     # contain at least three. The 3DS panel selects an eligible stack.
