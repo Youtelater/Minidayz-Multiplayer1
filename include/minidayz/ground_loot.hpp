@@ -29,6 +29,11 @@ public:
     bool spawn_verified_source_choice(std::size_t source_record,
                                       std::uint32_t random_draw,
                                       float x, float y) noexcept;
+    // The active world must prove both the original location marker and
+    // the complete source LOOT Respawn event guards before spawning.
+    bool spawn_source_choice_guarded(
+        std::size_t source_record, std::uint32_t random_draw,
+        float x, float y, const struct SourceLootGuardContext& guards) noexcept;
     bool drop_from_inventory(InventorySystem& inventory, std::size_t slot,
                              std::uint16_t amount, float x, float y) noexcept;
     bool pickup_nearest(InventorySystem& inventory, float x, float y,
