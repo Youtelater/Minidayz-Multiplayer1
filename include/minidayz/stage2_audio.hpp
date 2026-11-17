@@ -35,3 +35,5 @@ private:
     bool ndsp_ready_{};
     unsigned drop_serial_{};
 };
+
+} // namespace minidayz
