@@ -1,5 +1,6 @@
 #include "minidayz/stash_storage.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 
