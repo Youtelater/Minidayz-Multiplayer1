@@ -5,6 +5,7 @@
 #include "minidayz/equipment.hpp"
 #include "minidayz/ground_loot.hpp"
 #include "minidayz/tent_storage.hpp"
+#include "minidayz/stash_storage.hpp"
 #include "minidayz/item_use_runtime.hpp"
 #include "minidayz/perks.hpp"
 #include <cstdint>
@@ -12,7 +13,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 12u;
+inline constexpr std::uint32_t kSaveVersion = 13u;
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
@@ -32,6 +33,8 @@ struct SavedGame {
     // v12 adds independently saved subpercent condition for equipped slots,
     // leaving every older EquipmentSnapshot binary layout unchanged.
     minidayz::items::EquipmentFractionSnapshot equipment_fraction{};
+    // v13 adds independent six-slot Supplies Stash positions and cargo.
+    minidayz::items::StashStorageSnapshot stashes{};
 };
 
 
@@ -45,7 +48,8 @@ bool write_saved_game(std::uint32_t seed,
                       const items::GroundLootSystem& ground_loot,
                       const items::TentStorageSystem& tents,
                       const items::ItemUseRuntime* item_use = nullptr,
-                      const items::SourcePerkSystem* perks = nullptr) noexcept;
+                      const items::SourcePerkSystem* perks = nullptr,
+                      const items::StashStorageSystem* stashes = nullptr) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
@@ -56,5 +60,6 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                                const char* target_path,
                                const char* temporary_path,
                                const items::ItemUseRuntime* item_use = nullptr,
-                               const items::SourcePerkSystem* perks = nullptr) noexcept;
+                               const items::SourcePerkSystem* perks = nullptr,
+                      const items::StashStorageSystem* stashes = nullptr) noexcept;
 } // namespace minidayz::persistence
