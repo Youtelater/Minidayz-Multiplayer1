@@ -520,7 +520,10 @@ InventorySnapshot InventorySystem::snapshot() const noexcept {
 }
 
 bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
-    return restore_with_satchel(saved, SatchelSnapshot{});
+    // Native crafting/equipment/item-use rollback snapshots intentionally
+    // predate the extra satchel field. Preserve the live satchel on rollback;
+    // disk loading always uses restore_with_satchel with the saved identity.
+    return restore_with_satchel(saved, satchel_snapshot());
 }
 
 bool InventorySystem::restore_with_satchel(
