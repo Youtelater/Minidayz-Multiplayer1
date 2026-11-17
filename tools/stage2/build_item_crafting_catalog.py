@@ -175,7 +175,7 @@ def main() -> None:
     secondary_source = SECONDARY.read_text(encoding="utf-8")
     def secondary_id(name: str) -> int:
         match = re.search(
-            rf"kSourceRagsToRope{name}\\s*=\\s*(\\d+)\\s*;", secondary_source)
+            rf"kSourceRagsToRope{name}\s*=\s*(\d+)\s*;", secondary_source)
         if not match:
             raise SystemExit(f"Missing verified secondary craft {name}")
         return int(match.group(1))
