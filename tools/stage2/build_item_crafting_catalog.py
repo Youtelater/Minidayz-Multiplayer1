@@ -295,6 +295,15 @@ def main() -> None:
         "Simple Fishing Rod" not in descriptions[resolve("Rope")]):
         raise SystemExit("Original fishing rod ingredients changed")
     assert_original_output("Simple Fishing Rod", resolve("Simple Fishing Rod"))
+    # Craft_fishing_rod uses Wait(4) before CreateObject(t837), not an
+    # immediate item craft. Reject a changed source event rather than guess.
+    rod_event = source_events[source_event_uids["Simple Fishing Rod"][0]]
+    rod_waits = [a for nested in child_events([rod_event])
+                 for a in nested[6]
+                 if isinstance(a, list) and len(a) > 5 and
+                 a[:2] == [-1, 54] and a[5] == [[0, [0, 4]]]]
+    if len(rod_waits) != 1:
+        raise SystemExit("Original Craft_fishing_rod wait(4) changed")
 
     for result_name, ingredients, guide, delay in extra_recipes:
         result_id = resolve(result_name)
@@ -308,7 +317,7 @@ def main() -> None:
     rows.append((resolve("Simple Fishing Rod"), "Simple Fishing Rod",
                  [(resolve("Ashwood Stick"), 1), (resolve("Rope"), 1)],
                  "Original Craft_fishing_rod: Ashwood Stick + Rope",
-                 False, False, False, 0, 837))
+                 False, False, False, 4, 837))
 
     lines = [
         "#pragma once",
