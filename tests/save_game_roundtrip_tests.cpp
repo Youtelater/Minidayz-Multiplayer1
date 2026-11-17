@@ -483,6 +483,36 @@ int main() {
     assert(restored.version==12u && restored.seed==97);
     assert(restored.stashes.count==0);
 
+    // v13 stored preview weather EXPOSURE, not original actor body warmth.
+    // The old field must reset on migration, without losing other stats.
+    SavedGame old13{};
+    old13.version = 13u;
+    old13.seed = 1301;
+    old13.player = player;
+    old13.player.temperature = -9.0f;
+    old13.inventory = fractional_inventory.snapshot();
+    old13.equipment = equipment.snapshot();
+    old13.ground_loot = fractional_ground.snapshot();
+    old13.tents = tents.snapshot();
+    {
+        auto* file = std::fopen(kFile, "wb");
+        assert(file && std::fwrite(&old13, sizeof(old13), 1, file) == 1);
+        assert(std::fclose(file) == 0);
+    }
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 13u && restored.seed == 1301);
+    assert(restored.player.temperature == 0.0f);
+    assert(restored.inventory.slots[0].fractional_loss == 25);
+    // Current v14 persists body temperature as a separate actor stat.
+    PlayerState warm_player = player;
+    warm_player.temperature = 3.75f;
+    assert(write_saved_game_to_paths(1401, warm_player, fractional_inventory,
+                                    equipment, fractional_ground, tents,
+                                    kFile, kTemp));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 14u && restored.seed == 1401);
+    assert(restored.player.temperature == 3.75f);
+
     // v13 retains the six-source-slot Supplies Stash and its exact
     // subpercent item wear independently of permanent Civilian Tent storage.
     InventorySystem stash_inventory;
