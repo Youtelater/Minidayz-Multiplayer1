@@ -17,8 +17,31 @@ bool craft_from_inventory(InventorySystem& inventory,
     const auto* recipe = source_craft_recipe(recipe_index);
     if (!recipe || !source_item_exists(recipe->result_id)) return false;
 
+    if (recipe->selected_stack_only) {
+        // Original item_activate2 checks the SELECTED Rags stack, rather
+        // than summing separate stacks. This crafting panel chooses the
+        // first eligible selected-stack equivalent; the source-validated
+        // secondary item action remains available from inventory Use2.
+        const auto ingredient = recipe->ingredients[0];
+        if (ingredient.count == 0 || recipe->ingredients[1].count != 0 ||
+            !recipe->result_in_inventory ||
+            recipe->preserve_second_ingredient) return false;
+        for (std::size_t i = 0; i < inventory.capacity(); ++i) {
+            const auto* slot = inventory.slot(i);
+            if (!slot || slot->item_id != ingredient.item_id ||
+                slot->count < ingredient.count) continue;
+            const auto before = inventory.snapshot();
+            if (!inventory.remove(i, ingredient.count)) return false;
+            if (inventory.add(recipe->result_id, recipe->result_count))
+                return true;
+            (void)inventory.restore(before);
+            return false;
+        }
+        return false;
+    }
+
     for (const auto& ingredient : recipe->ingredients) {
-        if (ingredient.count == 0 ||
+        if (ingredient.count != 0 &&
             inventory.count(ingredient.item_id) < ingredient.count)
             return false;
     }
