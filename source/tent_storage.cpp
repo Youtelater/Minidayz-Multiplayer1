@@ -8,6 +8,8 @@ namespace {
 bool valid_stack(const InventorySlot& item) noexcept {
     return item.item_id != 0 && item.count != 0 &&
            source_item_exists(item.item_id) && item.condition <= 100 &&
+           item.fractional_loss < 100 &&
+           (item.fractional_loss == 0 || item.condition != 0) &&
            item.count <= source_max_stack(item.item_id);
 }
 }
@@ -84,7 +86,9 @@ bool TentStorageSystem::store_from_inventory(InventorySystem& inventory,
     const std::uint16_t limit = source_max_stack(moving.item_id);
     for (auto& stored : updated) {
         if (stored.item_id != moving.item_id ||
-            stored.condition != moving.condition || stored.count >= limit)
+            stored.condition != moving.condition ||
+            stored.fractional_loss != moving.fractional_loss ||
+            stored.count >= limit)
             continue;
         const auto room = static_cast<std::uint32_t>(limit - stored.count);
         const auto amount = remaining < room ? remaining : room;
@@ -96,7 +100,7 @@ bool TentStorageSystem::store_from_inventory(InventorySystem& inventory,
         if (!remaining) break;
         if (!stored.empty()) continue;
         const auto amount = remaining < limit ? remaining : limit;
-        stored = {moving.item_id, static_cast<std::uint16_t>(amount), moving.condition};
+        stored = {moving.item_id, static_cast<std::uint16_t>(amount), moving.condition, moving.fractional_loss};
         remaining -= amount;
     }
     if (remaining || !inventory.remove(inventory_slot, moving.count)) return false;
@@ -111,7 +115,8 @@ bool TentStorageSystem::take_to_inventory(InventorySystem& inventory,
         return false;
     auto& item = tents_[tent_index].items[tent_slot];
     if (!valid_stack(item) ||
-        !inventory.add(item.item_id, item.count, 0, item.condition)) return false;
+        !inventory.add(item.item_id, item.count, 0, item.condition,
+                       item.fractional_loss)) return false;
     item = {};
     return true;
 }
