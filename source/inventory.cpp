@@ -531,7 +531,10 @@ bool InventorySystem::apply_verified_wear_action(
 bool InventorySystem::restore_condition(
     std::size_t slot_index, std::uint8_t condition) noexcept {
     if (slot_index >= capacity_ || slots_[slot_index].empty() ||
-        condition > 100 || condition <= slots_[slot_index].condition)
+        condition > 100 ||
+        static_cast<unsigned>(condition) * 100u <=
+            static_cast<unsigned>(slots_[slot_index].condition) * 100u -
+                slots_[slot_index].fractional_loss)
         return false;
     slots_[slot_index].condition = condition;
     slots_[slot_index].fractional_loss = 0;
