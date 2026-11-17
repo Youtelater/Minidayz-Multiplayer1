@@ -8,7 +8,7 @@
 using namespace minidayz::items;
 
 int main() {
-    assert(kSourceCraftRecipeCount == 13);
+    assert(kSourceCraftRecipeCount == 15);
     assert(source_craft_recipe(0)->result_id == 163);
     assert(source_craft_recipe(1)->result_id == 454);
     assert(source_craft_recipe(2)->result_id == 455);
@@ -33,7 +33,40 @@ int main() {
     assert(source_craft_recipe(10)->result_id == 147);
     assert(source_craft_recipe(11)->result_id == 148);
     assert(source_craft_recipe(12)->result_id == 102);
-    assert(source_craft_recipe(13) == nullptr);
+    assert(source_craft_recipe(13)->result_id == 117);
+    assert(!source_craft_recipe(13)->result_in_inventory);
+    assert(source_craft_recipe(13)->delay_seconds == 5.0f);
+    assert(source_craft_recipe(14)->result_id == 127);
+    assert(source_craft_recipe(14)->result_in_inventory);
+    assert(source_craft_recipe(14)->delay_seconds == 5.0f);
+    assert(source_craft_recipe(15) == nullptr);
+
+    // Craft_tent: the source item description requires two Burlap Sacks,
+    // followed by a 5-second wait, then a Canvas ground drop.
+    InventorySystem canvas_inv;
+    GroundLootSystem canvas_ground;
+    assert(canvas_inv.add(40, 1));
+    assert(!can_craft_from_inventory(canvas_inv, canvas_ground, 20, 30, 13));
+    assert(canvas_inv.add(40, 1));
+    assert(can_craft_from_inventory(canvas_inv, canvas_ground, 20, 30, 13));
+    assert(craft_from_inventory(canvas_inv, canvas_ground, 20, 30, 13));
+    assert(canvas_inv.count(40) == 0);
+    assert(canvas_ground.count() == 1);
+    assert(canvas_ground.entry(0)->item.item_id == 117);
+    assert(canvas_ground.entry(0)->x == 20);
+    assert(canvas_ground.entry(0)->y == 30);
+
+    // Craft_xiaoyinqi: Water Bottle + Duct Tape, 5-second source wait.
+    InventorySystem suppress_inv;
+    GroundLootSystem suppress_ground;
+    assert(suppress_inv.add(54, 1));
+    assert(!can_craft_from_inventory(suppress_inv, suppress_ground, 3, 4, 14));
+    assert(suppress_inv.add(39, 1));
+    assert(can_craft_from_inventory(suppress_inv, suppress_ground, 3, 4, 14));
+    assert(craft_from_inventory(suppress_inv, suppress_ground, 3, 4, 14));
+    assert(suppress_inv.count(54) == 0 && suppress_inv.count(39) == 0);
+    assert(suppress_inv.count(127) == 1);
+    assert(suppress_ground.count() == 0);
 
     // Verify source-exact laser grip and Molotov ingredients and that crafted
     // items enter the inventory (not an invented ground-drop recipe).
