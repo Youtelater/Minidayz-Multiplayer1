@@ -7,6 +7,7 @@
 #include "minidayz/generated/item_source_catalog.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
 #include "minidayz/generated/item_condition_catalog.hpp"
+#include "minidayz/source_wear.hpp"
 #include "minidayz/generated/backpack_capacity_catalog.hpp"
 
 #include <limits>
@@ -418,11 +419,12 @@ bool InventorySystem::unequip_satchel_to_slot(std::size_t index) noexcept {
 
 bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
                           std::uint16_t max_stack,
-                          std::uint8_t condition) noexcept {
+                          std::uint8_t condition, std::uint8_t fractional_loss) noexcept {
     if (!valid_item(item_id) || amount == 0) return false;
     if (condition == kUseSourceItemCondition)
         condition = source_default_condition(item_id);
-    if (condition > 100) return false;
+    if (condition > 100 || fractional_loss >= 100 ||
+        (fractional_loss != 0 && condition == 0)) return false;
     if (max_stack == 0) max_stack = source_max_stack(item_id);
     if (max_stack == 0) return false;
 
@@ -433,6 +435,7 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
         if (entry.empty()) {
             available += max_stack;
         } else if (entry.item_id == item_id && entry.condition == condition &&
+                   entry.fractional_loss == fractional_loss &&
                    entry.count < max_stack) {
             available += static_cast<std::uint32_t>(max_stack - entry.count);
         }
@@ -444,6 +447,7 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
         auto& entry = slots_[i];
         if (!slot_accepts(i, item_id)) continue;
         if (entry.item_id != item_id || entry.condition != condition ||
+            entry.fractional_loss != fractional_loss ||
             entry.count >= max_stack) continue;
         const auto room = static_cast<std::uint32_t>(max_stack - entry.count);
         const auto added = remaining < room ? remaining : room;
@@ -455,7 +459,7 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
         auto& entry = slots_[i];
         if (!slot_accepts(i, item_id) || !entry.empty()) continue;
         const auto added = remaining < max_stack ? remaining : max_stack;
-        entry = {item_id, static_cast<std::uint16_t>(added), condition};
+        entry = {item_id, static_cast<std::uint16_t>(added), condition, fractional_loss};
         remaining -= added;
         if (remaining == 0) return true;
     }
@@ -465,22 +469,23 @@ bool InventorySystem::add(std::uint16_t item_id, std::uint16_t amount,
 bool InventorySystem::add_to_slot(std::size_t index, std::uint16_t item_id,
                                   std::uint16_t amount,
                                   std::uint16_t max_stack,
-                                  std::uint8_t condition) noexcept {
+                                  std::uint8_t condition, std::uint8_t fractional_loss) noexcept {
     if (index >= capacity_ || !valid_item(item_id) || amount == 0 ||
         !slot_accepts(index, item_id))
         return false;
     if (condition == kUseSourceItemCondition)
         condition = source_default_condition(item_id);
-    if (condition > 100) return false;
+    if (condition > 100 || fractional_loss >= 100 ||
+        (fractional_loss != 0 && condition == 0)) return false;
     if (max_stack == 0) max_stack = source_max_stack(item_id);
     if (max_stack == 0 || amount > max_stack) return false;
     auto& entry = slots_[index];
     if (entry.empty()) {
-        entry = {item_id, amount, condition};
+        entry = {item_id, amount, condition, fractional_loss};
         return true;
     }
     if (entry.item_id != item_id || entry.condition != condition ||
-        entry.count > max_stack || amount > max_stack - entry.count)
+        entry.fractional_loss != fractional_loss || entry.count > max_stack || amount > max_stack - entry.count)
         return false;
     entry.count = static_cast<std::uint16_t>(entry.count + amount);
     return true;
@@ -600,9 +605,10 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
     if (destination.empty()) {
         if (max_stack == 0) max_stack = source_max_stack(source.item_id);
         if (max_stack == 0 || moving > max_stack) return false;
-        destination = {source.item_id, moving, source.condition};
+        destination = {source.item_id, moving, source.condition, source.fractional_loss};
     } else if (destination.item_id == source.item_id &&
-               destination.condition == source.condition) {
+               destination.condition == source.condition &&
+               destination.fractional_loss == source.fractional_loss) {
         if (max_stack == 0) max_stack = source_max_stack(source.item_id);
         if (max_stack == 0 || destination.count > max_stack ||
             moving > max_stack - destination.count)
@@ -696,7 +702,9 @@ bool InventorySystem::restore_with_satchel(
 
     for (std::size_t i = 0; i < kMaximumInventorySlotCount; ++i) {
         const auto& entry = normalized_input.slots[i];
-        if (entry.condition > 100) return false;
+        if (entry.condition > 100 || entry.fractional_loss >= 100 ||
+            (entry.fractional_loss > 0 && (entry.condition == 0 || entry.empty())))
+            return false;
         if (i >= normalized_input.capacity) {
             if (!entry.empty()) return false;
             continue;
@@ -731,6 +739,7 @@ bool InventorySystem::restore_with_satchel(
                 auto& target = normalized.slots[j];
                 if (target.empty() || target.item_id != displaced.item_id ||
                     target.condition != displaced.condition ||
+                    target.fractional_loss != displaced.fractional_loss ||
                     target.count >= limit)
                     continue;
                 const std::uint16_t amount = std::min<std::uint16_t>(
