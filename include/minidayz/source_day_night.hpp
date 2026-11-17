@@ -28,9 +28,9 @@ public:
             candidate.elapsed_seconds<0.0f ||
             candidate.elapsed_seconds>=kOriginalMinuteSeconds)
             return false;
-        const unsigned hours=candidate.timer_all/60u;
-        if ((hours>=6 && hours<=23 && !candidate.day_mode) ||
-            (hours<=5 && candidate.day_mode)) return false;
+        // Day_mode can legitimately differ from Timer_Hours while the
+        // original inBunker guard suppresses the day/night write.
+        // Therefore validate the time, not a guessed phase invariant.
         state_=candidate;
         return true;
     }
