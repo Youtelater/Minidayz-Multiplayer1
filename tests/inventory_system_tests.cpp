@@ -696,5 +696,25 @@ int main() {
     assert(swap_reloaded.slot(21)->item_id == 24);
     assert(swap_reloaded.equipped_satchel_condition() == 87);
 
+    // Wearing an Army Satchel before finding any main backpack must also
+    // keep its original cell contents when the main bag is equipped later.
+    InventorySystem satchel_first;
+    assert(satchel_first.add(459, 1, 0, 69));
+    assert(satchel_first.equip_satchel_from_slot(0));
+    assert(satchel_first.capacity() == 19);
+    assert(satchel_first.add_to_slot(15, 12, 1));
+    assert(satchel_first.add_to_slot(16, 24, 1));
+    assert(satchel_first.add(450, 1, 0, 81));
+    assert(satchel_first.equip_backpack_from_slot(0));
+    assert(satchel_first.capacity() == 24);
+    assert(satchel_first.slot(20)->item_id == 12);
+    assert(satchel_first.slot(21)->item_id == 24);
+    assert(satchel_first.equipped_backpack_condition() == 81);
+    assert(satchel_first.unequip_backpack_to_slot(0));
+    assert(satchel_first.capacity() == 19);
+    assert(satchel_first.slot(15)->item_id == 12);
+    assert(satchel_first.slot(16)->item_id == 24);
+    assert(satchel_first.equipped_satchel_condition() == 69);
+
     return 0;
 }
