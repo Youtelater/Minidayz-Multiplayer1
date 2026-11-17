@@ -359,8 +359,9 @@ public:
                     const auto backpack = inventory_.equipped_backpack();
                     const std::size_t destination =
                         first_available_base_inventory_slot();
-                    if (backpack != 0 && destination < minidayz::items::kInventorySlotCount)
-                        (void)inventory_.unequip_backpack_to_slot(destination);
+                    if (backpack != 0 && destination < minidayz::items::kInventorySlotCount &&
+                        inventory_.unequip_backpack_to_slot(destination))
+                        stage2_audio_.play_backpack_zip();
                     selected_inventory_slot_ = -1;
                 } else if (equipment_target == 6) {
                     const auto satchel = inventory_.equipped_satchel();
@@ -426,9 +427,12 @@ public:
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
                 // Dragging an original repair material onto the backpack slot
                 // invokes the source-defined repair event; otherwise it equips.
-                if (inventory_.repair_equipped_backpack_from_inventory_slot(source_slot) ||
-                    inventory_.equip_backpack_from_slot(source_slot))
+                if (inventory_.repair_equipped_backpack_from_inventory_slot(source_slot)) {
                     selected_inventory_slot_ = -1;
+                } else if (inventory_.equip_backpack_from_slot(source_slot)) {
+                    stage2_audio_.play_backpack_zip();
+                    selected_inventory_slot_ = -1;
+                }
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 6) {
                 if (inventory_.equip_satchel_from_slot(
                         static_cast<std::size_t>(drag_source_slot_)))
