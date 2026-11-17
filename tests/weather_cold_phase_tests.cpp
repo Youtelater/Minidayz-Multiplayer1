@@ -38,5 +38,22 @@ int main() {
         std::numeric_limits<float>::quiet_NaN(),
         SourceRainColdBranch::half, temperature));
     assert(temperature == 0.5f);
+    // Original Update_Stats Snowborn only adds +2 when level > 1.
+    assert(source_weather_temperature_with_snowborn(
+        SurvivalDifficulty::regular, SourceColdPhase::day, 4.0f,
+        SourceRainColdBranch::full, 0, temperature));
+    assert(temperature == 3.0f);
+    assert(source_weather_temperature_with_snowborn(
+        SurvivalDifficulty::regular, SourceColdPhase::day, 4.0f,
+        SourceRainColdBranch::full, 1, temperature));
+    assert(temperature == 3.0f);
+    assert(source_weather_temperature_with_snowborn(
+        SurvivalDifficulty::regular, SourceColdPhase::day, 4.0f,
+        SourceRainColdBranch::full, 2, temperature));
+    assert(temperature == 5.0f);
+    assert(source_weather_temperature_with_snowborn(
+        SurvivalDifficulty::regular, SourceColdPhase::rain, 4.0f,
+        SourceRainColdBranch::half, 2, temperature));
+    assert(temperature == 3.0f);
     return 0;
 }
