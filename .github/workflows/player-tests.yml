@@ -253,6 +253,12 @@ jobs:
       - name: Run Tent Storage Regression Tests
         run: ./tent_storage_tests
 
+      - name: Verify All 19 Original Craft Function Result Types
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_craft_events_tests.cpp -o source_craft_events_tests
+          ./source_craft_events_tests
+
       - name: Compile Source Crafting Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
