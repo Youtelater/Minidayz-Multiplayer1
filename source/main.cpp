@@ -80,7 +80,9 @@ public:
         if (world_ready_) npc_ready_ = npcs_.initialize(world_);
         // Continuing a save preserves its exact persisted temperature;
         // a fresh run initializes the original daytime exposure once.
-        source_temperature_initialized_ = restored != nullptr;
+        // A save persists body warmth; weather exposure is recalculated
+        // separately from the current world/clothing state on Continue.
+        source_temperature_initialized_ = false;
         last_source_warmth_ = equipment_.temperature_offset();
         last_source_snowborn_level_ = perks_.level(minidayz::items::SourcePerk::snowborn);
     }
@@ -540,7 +542,7 @@ public:
                     current_source_warmth,
                     minidayz::items::SourceRainColdBranch::full,
                     snowborn_level, source_temperature))
-                player_.set_source_temperature(source_temperature);
+                source_weather_exposure_ = source_temperature;
             last_source_warmth_ = current_source_warmth;
             last_source_snowborn_level_ = snowborn_level;
             source_temperature_initialized_ = true;
@@ -548,6 +550,15 @@ public:
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
         player_.update_survival(dt, preview_rules_);
+        // Exact original Player stats -> States five-second event
+        // (UID 2665582317889917). This world preview has no original
+        // tutorial UI, so Tutor_hint_* guards remain zero while playing.
+        source_body_tick_elapsed_ += std::max(0.0f, dt);
+        while (source_body_tick_elapsed_ >= 5.0f) {
+            source_body_tick_elapsed_ -= 5.0f;
+            (void)player_.apply_source_body_temperature_tick(
+                source_weather_exposure_);
+        }
         item_use_runtime_.update(dt, player_,
             &WorldPreviewScene::award_source_experience, &perks_);
         if (npc_ready_) npcs_.update(dt, player_.state().x, player_.state().y,
@@ -1259,6 +1270,8 @@ private:
         item_use_runtime_.clear();
         perks_.clear();
         source_temperature_initialized_ = false;
+        source_weather_exposure_ = 0.0f;
+        source_body_tick_elapsed_ = 0.0f;
         last_source_warmth_ = 0.0f;
         last_source_snowborn_level_ = 0;
         inventory_page_ = 0;
@@ -1347,6 +1360,8 @@ private:
     minidayz::Stage2Audio stage2_audio_{};
     minidayz::PlayerRules preview_rules_{};
     bool source_temperature_initialized_{};
+    float source_weather_exposure_{};
+    float source_body_tick_elapsed_{};
     float last_source_warmth_{};
     std::uint8_t last_source_snowborn_level_{};
     int selected_inventory_slot_{-1};
