@@ -169,10 +169,23 @@ bool Renderer::draw_item_icon(std::uint16_t item_id,float center_x,float center_
  const auto* frame=std::lower_bound(begin,end,key,[](const stage1::SpriteFrameDef& item,const auto& wanted){
   return std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{item.object,item.animation,item.frame}<wanted;
  });
+ // Prefer the original object's animation 0/frame 0 icon. Some source
+ // objects start at a nonzero animation: use their first real source frame
+ // instead of displaying a blank item cell. Never substitute another object.
  if(frame==end||frame->object!=object||frame->animation!=0||frame->frame!=0 ||
-    frame->width<=0.0f||frame->height<=0.0f) return false;
+    frame->width<=0.0f||frame->height<=0.0f) {
+   frame=std::lower_bound(begin,end,object,
+       [](const stage1::SpriteFrameDef& candidate,std::uint16_t wanted) {
+         return candidate.object<wanted;
+       });
+   while(frame!=end && frame->object==object &&
+         (frame->width<=0.0f||frame->height<=0.0f)) ++frame;
+   if(frame==end||frame->object!=object) return false;
+ }
+ if(max_width<=0.0f||max_height<=0.0f) return false;
  const float scale=std::min(max_width/frame->width,max_height/frame->height);
- return draw_source_sprite(object,0,0,center_x,center_y,scale,scale,0.2f);
+ return draw_source_sprite(object,frame->animation,frame->frame,
+                           center_x,center_y,scale,scale,0.2f);
 }
 bool Engine::initialize() noexcept {
  gfxInitDefault();
