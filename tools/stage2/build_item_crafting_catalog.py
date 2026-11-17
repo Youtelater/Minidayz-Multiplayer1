@@ -19,6 +19,7 @@ PROJECT = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "include/minidayz/generated/item_crafting_catalog.hpp"
 SECONDARY = ROOT / "include/minidayz/generated/item_secondary_crafting_catalog.hpp"
 NEW_ITEMS = ROOT / "l_eng_new.xml"
+ITEM_TABLE = ROOT / "mp_itemtable.js"
 
 # The root tutorial states each recipe explicitly. The last recipe explicitly
 # says 3 wooden sticks. All others are two singular item ingredients.
@@ -41,7 +42,7 @@ RECIPES = (
 
 
 def main() -> None:
-    for path in (ITEMS, UI, PROJECT, SECONDARY, NEW_ITEMS):
+    for path in (ITEMS, UI, PROJECT, SECONDARY, NEW_ITEMS, ITEM_TABLE):
         if not path.is_file():
             raise SystemExit(f"Missing root-level Mini DAYZ file: {path}")
     item_names: dict[str, list[int]] = {}
@@ -77,6 +78,7 @@ def main() -> None:
         "Molotov Cocktail Alternate": (832456160298927, "Craft_molotov_whiskey"),
         "Canvas": (596327516047430, "Craft_tent"),
         "Makeshift Suppressor": (9837716596519874, "Craft_xiaoyinqi"),
+        "Simple Fishing Rod": (642735773637272, "Craft_fishing_rod"),
     }
 
     def child_events(events):
@@ -128,10 +130,16 @@ def main() -> None:
             raise SystemExit(f"Changed Craft function signature: {function}")
         output_ids = []
         inventory_output_ids = []
+        world_spawn_actions = []
+        world_condition_actions = []
         for nested in child_events([event]):
             for action in nested[6] if isinstance(nested[6], list) else []:
                 if not isinstance(action, list) or len(action) < 6:
                     continue
+                if action[0:2] == [-1, 94]:
+                    world_spawn_actions.append(action)
+                if action[0:2] == [837, 88]:
+                    world_condition_actions.append(action)
                 if (action[0:2] == [189, 69] and
                     len(action[5]) >= 2 and
                     action[5][0] == [1, [2, "Spawn_drop"]]):
@@ -149,6 +157,22 @@ def main() -> None:
                         isinstance(args[2], list) and args[2][0] == 7 and
                         isinstance(args[2][1], list) and args[2][1][0] == 0):
                         inventory_output_ids.append(args[2][1][1])
+        if result_name == "Simple Fishing Rod":
+            # Original Craft_fishing_rod creates object 837 on the
+            # items_on_ground layer at Player.X, Player.Y + 10, then sets
+            # its original instance variable 1 to 100.
+            expected_spawn = [
+                [4, 837], [5, [2, "items_on_ground"]],
+                [0, [20, 181, 65, False, None]],
+                [0, [4, [20, 181, 66, False, None], [0, 10]]],
+            ]
+            exact = [a for a in world_spawn_actions
+                     if a[5] == expected_spawn]
+            exact_condition = [a for a in world_condition_actions
+                               if a[5] == [[10, 1], [7, [0, 100]]]]
+            if output_ids or inventory_output_ids or len(exact) != 1 or len(exact_condition) != 1:
+                raise SystemExit("Craft_fishing_rod original world item changed")
+            return False
         if result_name in ("Campfire Kit", "Crafted Arrow", "Crafted Arrow Alternate",
                             "Laser AK Grip", "Laser Rail Grip",
                             "Molotov Cocktail", "Molotov Cocktail Alternate",
@@ -245,20 +269,32 @@ def main() -> None:
         parts = [(resolve(label), count) for label, count in ingredients]
         if result_id in [id for id, _ in parts]:
             raise SystemExit(f"Self-consuming recipe: {result_name}")
-        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result), False, False, 0))
+        rows.append((result_id, result_name, parts, source_text[0], bool(inventory_result), False, False, 0, 0))
     for knife in knives:
         # Exact source check gives one arrow to inventory, no Spawn_drop.
         # The original knife is a crafting tool, not a consumed ingredient.
         rows.append((resolve("Crafted Arrow"), f"Crafted Arrow / {knife}",
                      [(resolve("Wooden Sticks"), 1), (resolve(knife), 1)],
-                     arrow_guide[0], True, True, False, 0))
+                     arrow_guide[0], True, True, False, 0, 0))
 
     # The selected stack, not the sum of separate Rags stacks, must
     # contain at least three. The 3DS panel selects an eligible stack.
     rows.append((resolve("Rope"), "Rope / Rags x3",
                  [(resolve("Rags"), 3), (0, 0)],
                  "item_activate2: selected Rags stack >= 3 -> Rope",
-                 True, False, True, 0))
+                 True, False, True, 0, 0))
+
+    # The original table explicitly maps item ID 87 to Construct object t837.
+    # Its original item descriptions explicitly list the two ingredients.
+    table = ITEM_TABLE.read_text(encoding="utf-8-sig")
+    source_object = re.search(r'(?:^|[,{])87:"([^"]+)"', table)
+    if (source_object is None or
+        source_object.group(1).encode("ascii").decode("unicode_escape") != "t837"):
+        raise SystemExit("Original fishing rod item/object mapping changed")
+    if ("Simple Fishing Rod" not in descriptions[resolve("Ashwood Stick")] or
+        "Simple Fishing Rod" not in descriptions[resolve("Rope")]):
+        raise SystemExit("Original fishing rod ingredients changed")
+    assert_original_output("Simple Fishing Rod", resolve("Simple Fishing Rod"))
 
     for result_name, ingredients, guide, delay in extra_recipes:
         result_id = resolve(result_name)
@@ -267,7 +303,12 @@ def main() -> None:
         if len(parts) == 1: parts.append((0, 0))
         if result_id in (parts[0][0], parts[1][0]):
             raise SystemExit("Self-consuming source craft")
-        rows.append((result_id, result_name, parts, guide, result_in_inventory, False, False, delay))
+        rows.append((result_id, result_name, parts, guide, result_in_inventory, False, False, delay, 0))
+
+    rows.append((resolve("Simple Fishing Rod"), "Simple Fishing Rod",
+                 [(resolve("Ashwood Stick"), 1), (resolve("Rope"), 1)],
+                 "Original Craft_fishing_rod: Ashwood Stick + Rope",
+                 False, False, False, 0, 837))
 
     lines = [
         "#pragma once",
@@ -286,16 +327,17 @@ def main() -> None:
         "    bool preserve_second_ingredient;",
         "    bool selected_stack_only;",
         "    float delay_seconds;",
+        "    std::uint16_t source_ground_object;",
         "};",
         f"inline constexpr std::size_t kSourceCraftRecipeCount = {len(rows)};",
         "inline constexpr SourceCraftRecipe kSourceCraftRecipes[] = {",
     ]
-    for result_id, name, parts, guide, inventory_result, preserve_second, selected_stack_only, delay_seconds in rows:
+    for result_id, name, parts, guide, inventory_result, preserve_second, selected_stack_only, delay_seconds, source_ground_object in rows:
         ingredients = ", ".join(f"{{{id}, {count}}}" for id, count in parts)
         lines.append(f"    {{{result_id}, 1, {json.dumps(name)}, "
                      f"{json.dumps(guide)}, {{{{{ingredients}}}}}, "
                      f"{str(inventory_result).lower()}, {str(preserve_second).lower()}, "
-                     f"{str(selected_stack_only).lower()}, {delay_seconds}.0f}},")
+                     f"{str(selected_stack_only).lower()}, {delay_seconds}.0f, {source_ground_object}}},")
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
