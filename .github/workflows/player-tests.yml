@@ -172,6 +172,14 @@ jobs:
       - name: Run Guarded Original Regen Event Tests
         run: ./regeneration_source_tests
 
+      - name: Compile Original Satchel Capacity and Exclusivity Tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/satchel_source_tests.cpp -o satchel_source_tests
+
+      - name: Run Original Satchel Capacity Tests
+        run: ./satchel_source_tests
+
       - name: Compile Original Weather Phase Constants Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
