@@ -538,9 +538,8 @@ int main() {
     assert(!broken_backpack_repair.repair_equipped_backpack_from_inventory_slot(1));
     assert(broken_backpack_repair.count(39) == 1);
 
-    // Original satchel and ordinary backpack occupy separate equipment slots.
-    // Only unrestricted +2/+1 satchel cells are activated until the three
-    // original Army/Medical exclusive-slot item filters are translated.
+    // Original satchel and ordinary backpack coexist. The Army/Medical
+    // three exclusive cells enforce exact Construct source item categories.
     InventorySystem dual_pack;
     assert(dual_pack.add(450, 1, 0, 74));
     assert(dual_pack.equip_backpack_from_slot(0));
@@ -565,24 +564,58 @@ int main() {
     assert(both_restored.equipped_satchel() == 458);
     assert(both_restored.equipped_satchel_condition() == 81);
     assert(both_restored.capacity() == 22);
+
+    // General Satchel slot 21 contains an item invalid for Army's first
+    // restricted cell: swapping must reject, never delete cargo.
     assert(both_restored.add(459, 1, 0, 76));
     assert(both_restored.add_to_slot(21, 12, 1));
     assert(!both_restored.equip_satchel_from_slot(1));
     assert(both_restored.equipped_satchel() == 458);
     assert(both_restored.slot(1)->item_id == 459);
+    assert(both_restored.slot(21)->item_id == 12);
     assert(both_restored.remove(21, 1));
     assert(both_restored.equip_satchel_from_slot(1));
     assert(both_restored.equipped_satchel() == 459);
-    assert(both_restored.capacity() == 21);
+    assert(both_restored.capacity() == 24);
     assert(both_restored.slot(1)->item_id == 458);
-    // Satchel-only tail cargo must be moved before the smaller satchel
-    // can replace it; failed swaps must not consume an item.
-    assert(both_restored.add_to_slot(20, 12, 1));
+    assert(!both_restored.is_exclusive_satchel_slot(20));
+    for (std::size_t slot = 21; slot < 24; ++slot)
+        assert(both_restored.is_exclusive_satchel_slot(slot));
+    assert(!both_restored.slot_accepts(21, 18)); // medical only
+    assert(both_restored.slot_accepts(21, 24));  // matches, original Army EDC
+    assert(!both_restored.add_to_slot(21, 18, 1));
+    assert(both_restored.add_to_slot(21, 24, 1));
+    assert(both_restored.move(21, 22));
+    assert(both_restored.move(22, 21));
+    assert(both_restored.slot(21)->item_id == 24);
+    const auto army_saved = both_restored.snapshot();
+    InventorySystem army_reloaded;
+    assert(army_reloaded.restore_with_satchel(
+        army_saved, both_restored.satchel_snapshot()));
+    assert(army_reloaded.slot(21)->item_id == 24);
+    auto corrupt_slots = army_saved;
+    corrupt_slots.slots[21] = {18, 1, 100};
+    assert(!army_reloaded.restore_with_satchel(
+        corrupt_slots, both_restored.satchel_snapshot()));
+    assert(army_reloaded.slot(21)->item_id == 24);
+
+    // A Medical Satchel accepts Bandages etc, not Army-only matches.
     assert(both_restored.add(460, 1, 0, 66));
+    assert(!both_restored.equip_satchel_from_slot(2));
+    assert(both_restored.equipped_satchel() == 459);
+    assert(both_restored.slot(21)->item_id == 24);
+    assert(both_restored.remove(21, 1));
     assert(both_restored.equip_satchel_from_slot(2));
     assert(both_restored.equipped_satchel() == 460);
+    assert(both_restored.capacity() == 24);
     assert(both_restored.slot(2)->item_id == 459);
-    assert(both_restored.remove(20, 1));
+    assert(both_restored.slot_accepts(21, 18));
+    assert(!both_restored.slot_accepts(21, 24));
+    assert(both_restored.add_to_slot(21, 18, 1));
+    assert(both_restored.move(21, 22));
+    assert(both_restored.move(22, 21));
+    assert(!both_restored.unequip_satchel_to_slot(3));
+    assert(both_restored.remove(21, 1));
     assert(both_restored.unequip_satchel_to_slot(3));
     assert(both_restored.equipped_satchel() == 0);
     assert(both_restored.capacity() == 20);
