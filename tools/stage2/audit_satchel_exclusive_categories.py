@@ -30,5 +30,5 @@ for sheet in proj["project"][6]:
                       expr[1][0]==0) else None
             conditions.append([name,comparator,number])
         print("EXCLUSIVE_CATEGORY",e[4],json.dumps(conditions,separators=(",",":")),
-              "parents",json.dumps([p[4] for p in parents],separators=(",",":")))
+              "parents",json.dumps([{"uid":p[4],"guards":p[5]} for p in parents[-2:]],separators=(",",":"))[:2200])
 if found!=TARGETS:raise SystemExit(f"Missing exclusive categories {TARGETS-found}")
