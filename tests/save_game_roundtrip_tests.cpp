@@ -55,6 +55,22 @@ struct PreviousSaveV9 {
     SourcePerkSnapshot perks{};
 };
 
+// v10/v11 predate the appended exact equipped wear field. Keep their
+// on-disk layout independent of the current v12 SavedGame struct.
+struct PreviousSaveV11 {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{11};
+    std::uint32_t seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+    SourcePerkSnapshot perks{};
+    SatchelSnapshot satchel{};
+};
+
 struct LegacyPerkSnapshotV8ForTest {
     std::uint32_t experience_points{};
     std::uint32_t perk_cost{100};
@@ -385,7 +401,7 @@ int main() {
     // v10 wrote the same six-byte items, but its sixth byte was unused
     // padding. Simulate old padding containing garbage and ensure migration
     // never treats it as actual damage.
-    SavedGame old10{};
+    PreviousSaveV11 old10{};
     old10.version = 10u;
     old10.seed = 94;
     old10.player = player;
@@ -409,6 +425,52 @@ int main() {
     assert(restored.inventory.slots[0].fractional_loss == 0);
     assert(restored.ground_loot.entries[0].item.fractional_loss == 0);
     assert(restored.tents.tents[0].items[0].fractional_loss == 0);
+
+    // v11 already stored fractional inventory items, but not the
+    // equipped-item fraction extension introduced by v12.
+    PreviousSaveV11 old11 = old10;
+    old11.version = 11u;
+    old11.seed = 95;
+    old11.inventory.slots[0].fractional_loss = 25;
+    old11.ground_loot.entries[0].item.fractional_loss = 75;
+    {
+        auto* f = std::fopen(kFile, "wb");
+        assert(f && std::fwrite(&old11, sizeof(old11), 1, f) == 1);
+        assert(std::fclose(f) == 0);
+    }
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 11u && restored.seed == 95);
+    assert(restored.inventory.slots[0].fractional_loss == 25);
+    assert(restored.ground_loot.entries[0].item.fractional_loss == 75);
+    for (auto fraction : restored.equipment_fraction.fractional_loss)
+        assert(fraction == 0);
+
+    // Equipment wear stays exact across equipping, native saves and
+    // unequipping back to an inventory slot.
+    InventorySystem held_inv;
+    EquipmentSystem held_equipment;
+    assert(held_inv.add(244, 1, 0, 100));
+    assert(held_equipment.equip_from_inventory(held_inv, 0, EquipmentSlot::hands));
+    assert(held_equipment.apply_verified_wear_action(EquipmentSlot::hands,
+        6904772320561696ULL, 875054325568454ULL, 744011060201717ULL,
+        true, false));
+    assert(held_equipment.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::hands)] == 100);
+    assert(held_equipment.fraction_snapshot().fractional_loss[
+        static_cast<std::size_t>(EquipmentSlot::hands)] == 25);
+    assert(write_saved_game_to_paths(96, player, held_inv,
+                                    held_equipment, ground, tents, kFile, kTemp));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == kSaveVersion && restored.seed == 96);
+    EquipmentSystem loaded_held;
+    assert(loaded_held.restore_with_fraction(
+        restored.equipment,restored.equipment_fraction));
+    assert(loaded_held.fraction_snapshot().fractional_loss[
+        static_cast<std::size_t>(EquipmentSlot::hands)] == 25);
+    InventorySystem unequipped{};
+    assert(loaded_held.unequip_to_inventory(unequipped,EquipmentSlot::hands,0));
+    assert(unequipped.slot(0)->item_id == 244);
+    assert(unequipped.slot(0)->fractional_loss == 25);
 
     // The old v7 binary layout must migrate without losing in-flight
     // medical treatment while leaving newly introduced perk XP at defaults.
