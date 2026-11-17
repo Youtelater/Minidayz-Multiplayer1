@@ -60,6 +60,36 @@ public:
     ItemUsePerks item_use_flags() const noexcept {
         return {state_.hamster_level == 2, state_.camel_level == 2};
     }
+    // The following are exact original conditional event outputs, not
+    // unconditional combat/bleeding timers. The caller must satisfy the
+    // original attack, wound or storage event before applying them.
+    // Melee defense events 692233337832379 / 417286342579831
+    // ADD 5/15 to global def_percent for levels 1/2.
+    std::uint8_t source_melee_defense_percent_bonus() const noexcept {
+        const auto acquired = level(SourcePerk::meleedef);
+        return acquired >= 2 ? 15 : acquired == 1 ? 5 : 0;
+    }
+    // Crit_bonus global SET 10 at event 8638551322453103,
+    // if original perk_meleeatk > 0.
+    std::uint8_t source_melee_critical_bonus() const noexcept {
+        return level(SourcePerk::meleeatk) > 0 ? 10 : 0;
+    }
+    // Trunk_bonus global SET 10 at events 792853637969588 and
+    // 960702164997405 when source perk_trunkster > 0.
+    std::uint8_t source_trunk_bonus() const noexcept {
+        return level(SourcePerk::trunkster) > 0 ? 10 : 0;
+    }
+    // Wound timers from event 791147402355693 / 507447921773060:
+    // ternary perk_metabolism == 2 ? 30 seconds : 60 seconds.
+    std::uint8_t source_bleeding_timer_seconds() const noexcept {
+        return level(SourcePerk::metabolism) == 2 ? 30 : 60;
+    }
+    // Sweethome event 376072841791098 adds 0.15 to each of hunger
+    // and thirst in its guarded player-home context, only above level 1.
+    float source_sweethome_needs_gain() const noexcept {
+        return level(SourcePerk::sweethome) >= 2 ? 0.15f : 0.0f;
+    }
+
 private:
     SourcePerkSnapshot state_{};
 };
