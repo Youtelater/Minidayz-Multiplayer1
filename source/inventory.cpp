@@ -1,5 +1,6 @@
 #include "minidayz/inventory.hpp"
 #include "minidayz/item_repair.hpp"
+#include "minidayz/satchel_source.hpp"
 
 #include <algorithm>
 #include "minidayz/generated/item_catalog.hpp"
@@ -159,9 +160,10 @@ bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
     // Capacity is a consequence of the equipped source backpack, not a
     // caller-selected upgrade. Keep this compatibility setter constrained
     // to the two states that can be produced by the original game.
-    const std::size_t source_capacity = equipped_backpack_ == 0
+    const std::size_t source_capacity = (equipped_backpack_ == 0
         ? kInventorySlotCount
-        : source_backpack_capacity(equipped_backpack_);
+        : source_backpack_capacity(equipped_backpack_)) +
+        source_satchel_capacity(equipped_satchel_).unrestricted;
     if (capacity != source_capacity || capacity != capacity_)
         return false;
     return true;
@@ -169,8 +171,11 @@ bool InventorySystem::set_capacity(std::size_t capacity) noexcept {
 
 bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
     if (index >= capacity_) return false;
+    if (is_source_satchel(slots_[index].item_id))
+        return equip_satchel_from_slot(index);
     const std::size_t source_capacity =
-        source_backpack_capacity(slots_[index].item_id);
+        source_backpack_capacity(slots_[index].item_id) +
+        source_satchel_capacity(equipped_satchel_).unrestricted;
     if (!is_backpack_item(slots_[index].item_id) ||
         slots_[index].count != 1 || slots_[index].condition > 100 ||
         source_capacity < kInventorySlotCount ||
@@ -208,18 +213,73 @@ bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
 }
 
 bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
-    if (equipped_backpack_ == 0 || index >= kInventorySlotCount ||
+    const std::size_t remaining_capacity = kInventorySlotCount +
+        source_satchel_capacity(equipped_satchel_).unrestricted;
+    if (equipped_backpack_ == 0 || index >= remaining_capacity ||
         index >= capacity_ || !slots_[index].empty())
         return false;
-    for (std::size_t i = kInventorySlotCount; i < capacity_; ++i)
+    for (std::size_t i = remaining_capacity; i < capacity_; ++i)
         if (!slots_[i].empty()) return false;
 
     const std::uint16_t outgoing = equipped_backpack_;
     const std::uint8_t condition = equipped_backpack_condition_;
-    capacity_ = kInventorySlotCount;
+    capacity_ = remaining_capacity;
     equipped_backpack_ = 0;
     equipped_backpack_condition_ = 100;
     slots_[index] = {outgoing, 1, condition};
+    return true;
+}
+
+bool InventorySystem::equip_satchel_from_slot(std::size_t index) noexcept {
+    if (index >= capacity_) return false;
+    const auto* incoming = slot(index);
+    if (!incoming || incoming->count != 1 ||
+        incoming->condition > 100 || !is_source_satchel(incoming->item_id))
+        return false;
+    const auto source_capacity = (equipped_backpack_ == 0
+        ? kInventorySlotCount : source_backpack_capacity(equipped_backpack_)) +
+        source_satchel_capacity(incoming->item_id).unrestricted;
+    if (source_capacity < kInventorySlotCount ||
+        source_capacity > kMaximumInventorySlotCount) return false;
+
+    const auto incoming_id = incoming->item_id;
+    const auto incoming_condition = incoming->condition;
+    const auto outgoing_id = equipped_satchel_;
+    const auto outgoing_condition = equipped_satchel_condition_;
+    std::size_t return_slot = index;
+    if (outgoing_id != 0 && index >= source_capacity) {
+        return_slot = source_capacity;
+        for (std::size_t i = 0; i < source_capacity; ++i) {
+            if (i != index && slots_[i].empty()) {
+                return_slot = i; break;
+            }
+        }
+        if (return_slot == source_capacity) return false;
+    }
+    for (std::size_t i = source_capacity; i < capacity_; ++i) {
+        if (i != index && (outgoing_id == 0 || i != return_slot) &&
+            !slots_[i].empty()) return false;
+    }
+    slots_[index] = {};
+    if (outgoing_id) slots_[return_slot] =
+        {outgoing_id, 1, outgoing_condition};
+    equipped_satchel_ = incoming_id;
+    equipped_satchel_condition_ = incoming_condition;
+    capacity_ = source_capacity;
+    return true;
+}
+
+bool InventorySystem::unequip_satchel_to_slot(std::size_t index) noexcept {
+    const auto remaining = equipped_backpack_ == 0
+        ? kInventorySlotCount : source_backpack_capacity(equipped_backpack_);
+    if (!equipped_satchel_ || index >= remaining ||
+        !slots_[index].empty()) return false;
+    for (std::size_t i = remaining; i < capacity_; ++i)
+        if (!slots_[i].empty()) return false;
+    slots_[index] = {equipped_satchel_, 1, equipped_satchel_condition_};
+    capacity_ = remaining;
+    equipped_satchel_ = 0;
+    equipped_satchel_condition_ = 100;
     return true;
 }
 
@@ -460,21 +520,42 @@ InventorySnapshot InventorySystem::snapshot() const noexcept {
 }
 
 bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
-    if (saved.capacity < kInventorySlotCount ||
-        saved.capacity > kMaximumInventorySlotCount ||
-        saved.equipped_backpack_condition > 100)
+    return restore_with_satchel(saved, SatchelSnapshot{});
+}
+
+bool InventorySystem::restore_with_satchel(
+    const InventorySnapshot& saved,
+    const SatchelSnapshot& requested_satchel) noexcept {
+    SatchelSnapshot satchel = requested_satchel;
+    InventorySnapshot corrected = saved;
+    if (satchel.item_id == 0 && satchel.condition != 100) return false;
+    if (satchel.item_id != 0 && (!is_source_satchel(satchel.item_id) ||
+                                 satchel.condition > 100)) return false;
+    // Legacy v1-v9 saves used a satchel as the main pack. Migrate it
+    // into the genuine source secondary slot without dropping cargo.
+    if (satchel.item_id == 0 &&
+        is_source_satchel(corrected.equipped_backpack)) {
+        satchel = {corrected.equipped_backpack,
+                   corrected.equipped_backpack_condition};
+        corrected.equipped_backpack = 0;
+        corrected.equipped_backpack_condition = 100;
+    }
+    const InventorySnapshot& normalized_input = corrected;
+    if (normalized_input.capacity < kInventorySlotCount ||
+        normalized_input.capacity > kMaximumInventorySlotCount ||
+        normalized_input.equipped_backpack_condition > 100)
         return false;
-    if (saved.equipped_backpack != 0 &&
-        !is_backpack_item(saved.equipped_backpack))
+    if (normalized_input.equipped_backpack != 0 &&
+        !is_backpack_item(normalized_input.equipped_backpack))
         return false;
-    if (saved.equipped_backpack == 0 &&
-        saved.equipped_backpack_condition != 100)
+    if (normalized_input.equipped_backpack == 0 &&
+        normalized_input.equipped_backpack_condition != 100)
         return false;
 
     for (std::size_t i = 0; i < kMaximumInventorySlotCount; ++i) {
-        const auto& entry = saved.slots[i];
+        const auto& entry = normalized_input.slots[i];
         if (entry.condition > 100) return false;
-        if (i >= saved.capacity) {
+        if (i >= normalized_input.capacity) {
             if (!entry.empty()) return false;
             continue;
         }
@@ -490,18 +571,16 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
     // into the surviving slots (merge only matching ID AND condition)
     // instead of deleting items or rejecting otherwise recoverable saves.
     // Everything happens in a local snapshot: a failed migration is atomic.
-    std::size_t restored_capacity = saved.capacity;
-    if (saved.equipped_backpack != 0) {
-        restored_capacity = source_backpack_capacity(saved.equipped_backpack);
-        if (restored_capacity < kInventorySlotCount ||
-            restored_capacity > kMaximumInventorySlotCount)
-            return false;
-    } else {
-        restored_capacity = kInventorySlotCount;
-    }
-    InventorySnapshot normalized = saved;
-    if (restored_capacity < saved.capacity) {
-        for (std::size_t i = restored_capacity; i < saved.capacity; ++i) {
+    std::size_t restored_capacity = normalized_input.equipped_backpack == 0
+        ? kInventorySlotCount
+        : source_backpack_capacity(normalized_input.equipped_backpack);
+    restored_capacity += source_satchel_capacity(satchel.item_id).unrestricted;
+    if (restored_capacity < kInventorySlotCount ||
+        restored_capacity > kMaximumInventorySlotCount)
+        return false;
+    InventorySnapshot normalized = normalized_input;
+    if (restored_capacity < normalized_input.capacity) {
+        for (std::size_t i = restored_capacity; i < normalized_input.capacity; ++i) {
             auto& displaced = normalized.slots[i];
             if (displaced.empty()) continue;
             const std::uint16_t limit = source_max_stack(displaced.item_id);
@@ -532,8 +611,10 @@ bool InventorySystem::restore(const InventorySnapshot& saved) noexcept {
 
     slots_ = normalized.slots;
     capacity_ = restored_capacity;
-    equipped_backpack_ = saved.equipped_backpack;
-    equipped_backpack_condition_ = saved.equipped_backpack_condition;
+    equipped_backpack_ = normalized_input.equipped_backpack;
+    equipped_backpack_condition_ = normalized_input.equipped_backpack_condition;
+    equipped_satchel_ = satchel.item_id;
+    equipped_satchel_condition_ = satchel.condition;
     return true;
 }
 
