@@ -32,12 +32,53 @@ def find_uid(events, uid):
             return found
     return None
 
-def walk(events):
+def walk(events, ancestry=()):
     for event in events if isinstance(events, list) else []:
         if not isinstance(event, list) or len(event) < 7 or event[0] != 0:
             continue
-        yield event
-        yield from walk(children(event))
+        yield event, ancestry
+        yield from walk(children(event), (*ancestry, event))
+
+def literal_comparison(condition, obj, ace, name=None):
+    if not isinstance(condition, list) or len(condition) < 10 or condition[:2] != [obj, ace]:
+        return None
+    args = condition[9]
+    if len(args) != 3 or args[1] != [8, 0]:
+        return None
+    if name is not None and args[0] != [11, name]:
+        return None
+    if name is None and args[0] != [10, 0]:
+        return None
+    expr = args[2]
+    if not (isinstance(expr, list) and len(expr) == 2 and expr[0] == 7 and
+            isinstance(expr[1], list) and len(expr[1]) == 2 and
+            expr[1][0] == 0 and isinstance(expr[1][1], int)):
+        return None
+    return expr[1][1]
+
+def source_dispatch_context(event, ancestry):
+    """Preserve source guard subsets, fail closed on unsupported ancestry."""
+    marker = -1
+    pubg = -1
+    unknown = 0
+    for ancestor in (*ancestry, event):
+        for condition in ancestor[5]:
+            category = literal_comparison(condition, 218, 71)
+            if category is not None:
+                if marker >= 0 and marker != category:
+                    raise SystemExit("Conflicting source marker ancestry")
+                marker = category
+                continue
+            flag = literal_comparison(condition, -1, 46, "SEED_pubg")
+            if flag is not None:
+                if pubg >= 0 and pubg != flag:
+                    raise SystemExit("Conflicting source SEED_pubg ancestry")
+                pubg = flag
+                continue
+            unknown += 1
+    if marker > 32767 or pubg > 127 or unknown > 65535:
+        raise SystemExit("Source loot guard does not fit generated metadata")
+    return marker, pubg, unknown
 
 def literal_pool(expr):
     if isinstance(expr, list) and len(expr) == 2 and expr[0] == 0 and isinstance(expr[1], int):
@@ -68,7 +109,7 @@ def main():
     pools = []
     dynamic = []
     audit = []
-    for event in walk([group]):
+    for event, ancestry in walk([group]):
         for action in event[6] if isinstance(event[6], list) else []:
             if not isinstance(action, list) or len(action) < 6 or action[0:2] != [189, 69]:
                 continue
@@ -93,29 +134,31 @@ def main():
             missing = sorted(set(selected) - known)
             if missing:
                 raise SystemExit(f"Original Spawn_drop references IDs not in root XML: {missing}")
-            pools.append((action[3], event[4], selected))
+            marker, pubg, other = source_dispatch_context(event, ancestry)
+            pools.append((action[3], event[4], selected, marker, pubg, other))
     if not pools:
         raise SystemExit("No literal source loot pools were found")
     # The original Construct export reuses some ACE action UIDs in cloned
     # event branches. Preserve each occurrence, never coalesce by UID.
-    repeated = len(pools) - len({uid for uid, _, _ in pools})
+    repeated = len(pools) - len({row[0] for row in pools})
     pools.sort()
     flat = []
     rows = []
-    for action_uid, event_uid, items in pools:
-        rows.append((action_uid, event_uid, len(flat), len(items)))
+    for action_uid, event_uid, items, marker, pubg, other in pools:
+        rows.append((action_uid, event_uid, len(flat), len(items),
+                     marker, pubg, other))
         flat.extend(items)
     lines = ["#pragma once", "#include <cstddef>", "#include <cstdint>",
              "namespace minidayz::items {",
-             "struct SourceLootPool { std::uint64_t action_uid; std::uint64_t event_uid; std::uint32_t first; std::uint16_t choices; };",
+             "struct SourceLootPool { std::uint64_t action_uid; std::uint64_t event_uid; std::uint32_t first; std::uint16_t choices; std::int16_t marker; std::int8_t seed_pubg; std::uint16_t other_guard_count; };",
              f"inline constexpr std::size_t kSourceLootPoolCount = {len(pools)};",
              f"inline constexpr std::size_t kSourceLootChoiceCount = {len(flat)};",
              "inline constexpr std::uint16_t kSourceLootChoices[] = {"]
     for i in range(0, len(flat), 22):
         lines.append("    " + ", ".join(map(str, flat[i:i+22])) + ",")
     lines += ["};", "inline constexpr SourceLootPool kSourceLootPools[] = {"]
-    for uid, event_uid, first, count in rows:
-        lines.append(f"    {{{uid}ULL, {event_uid}ULL, {first}, {count}}},")
+    for uid, event_uid, first, count, marker, pubg, other in rows:
+        lines.append(f"    {{{uid}ULL, {event_uid}ULL, {first}, {count}, {marker}, {pubg}, {other}}},")
     lines += ["};", "} // namespace minidayz::items", ""]
     HEADER.parent.mkdir(parents=True, exist_ok=True)
     HEADER.write_text("\n".join(lines), encoding="utf-8")
@@ -127,7 +170,7 @@ def main():
           f"{len(pools)} literal source pools, {len(dynamic)} dynamic expressions, "
           f"{len(flat)} weighted choices, {repeated} reused source action UIDs")
     print("Original exemplar event 673982235644371:",
-          [list(items) for _, uid, items in pools if uid == 673982235644371])
+          [list(row[2]) for row in pools if row[1] == 673982235644371])
 
 if __name__ == "__main__":
     main()
