@@ -36,6 +36,13 @@ bool GroundLootSystem::spawn_verified_source_choice(
     return add({selected, 1, kUseSourceItemCondition}, x, y);
 }
 
+bool GroundLootSystem::spawn_source_choice_guarded(
+    std::size_t source_record, std::uint32_t random_draw,
+    float x, float y, const SourceLootGuardContext& guards) noexcept {
+    if (!source_loot_dispatch_guarded(source_record, guards)) return false;
+    return spawn_verified_source_choice(source_record, random_draw, x, y);
+}
+
 bool GroundLootSystem::drop_from_inventory(
     InventorySystem& inventory, std::size_t slot, std::uint16_t amount,
     float x, float y) noexcept {
