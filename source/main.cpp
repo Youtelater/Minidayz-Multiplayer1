@@ -1050,6 +1050,7 @@ private:
         const auto limit = minidayz::items::source_max_stack(item_id);
         for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
             const auto* item = inventory_.slot(i);
+            if (!inventory_.slot_accepts(i, item_id)) continue;
             if (!item || item->empty()) return i;
             if (item->item_id == item_id && item->count < limit) return i;
         }
