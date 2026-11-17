@@ -13,7 +13,8 @@ SOURCE = ROOT / "data/stage1/construct_project_parsed.json"
 OUTPUT = ROOT / "data/stage2/original_weather_transitions.json"
 RELEVANT = {"Day_mode", "Rain", "Day_count", "Day_time", "Night_time",
             "Time_of_day", "Weather", "Rain_timer", "Day_timer", "Night_timer",
-            "Day_length", "Day_tick"}
+            "Day_length", "Day_tick", "Timer_Hours", "Timer_Minutes",
+            "Timer_Seconds", "rains_level", "Timer_Days", "Timer_Hour"}
 
 def walk(events, ancestry=()):
     for event in events if isinstance(events, list) else ():
