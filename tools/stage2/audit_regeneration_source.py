@@ -16,6 +16,7 @@ def walk(events,parents=()):
         if not isinstance(event,list) or len(event)<7 or event[0]!=0:continue
         yield event,parents
         yield from walk(event[7] if len(event)>7 else [],(*parents,event))
+defaults={}
 for sheet in project["project"][6]:
     if not isinstance(sheet,list) or len(sheet)<2:continue
     for row in sheet[1] if isinstance(sheet[1],list) else []:
@@ -23,6 +24,11 @@ for sheet in project["project"][6]:
             row[1] in ("Novice_regeneration","Regular_regeneration",
                        "Veteran_regeneration","Regeneration_current")):
             print("SOURCE_REGEN_DEFAULT",sheet[0],row[1],row[3])
+            defaults[row[1]]=row[3]
+if (defaults.get("Novice_regeneration")!=2 or
+    defaults.get("Regular_regeneration")!=1.75 or
+    defaults.get("Veteran_regeneration")!=1.5):
+    raise SystemExit("Original regeneration base values changed")
 for sheet in project["project"][6]:
     if not isinstance(sheet,list) or len(sheet)<2:continue
     for event,parents in walk(sheet[1]):
