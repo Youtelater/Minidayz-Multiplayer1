@@ -168,7 +168,7 @@ bool Renderer::draw_menu_art(std::size_t index,float x,float y,float width,float
  C2D_SpriteSetDepth(&sprite,depth);
  return C2D_DrawSprite(&sprite);
 }
-bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float width,float height,std::uint8_t source_level) noexcept {
+bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float width,float height,std::uint8_t source_level,float second_half_y) noexcept {
  // Exact original Construct Map ground tile placements, generated from the
  // root data.deobfuscated.js into a compact 3DS RomFS tilemap.
  if(width<=0.0f||height<=0.0f) return false;
@@ -251,9 +251,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
  }
  if(!ground_loaded_) return false;
  // Each source map level has its own original terrain image.
- const std::uint32_t theme=terrain::active_ground_texture(source_level);
- const std::uint32_t ground_object=terrain::active_ground_object(source_level);
- if(!base_floor_sheets_[theme]) return false;
+ if(!base_floor_sheets_[terrain::active_ground_texture(source_level)]) return false;
  const float tile=static_cast<float>(ground_tile_pixels_);
  const float base_tile=stage1::kOriginalFloorBaseTileSize;
  // Source Map object 482 has only two authored ground strips. The original
@@ -265,6 +263,10 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
                                    visible)) return false;
  for(int row=visible.first_row;row<visible.last_row;++row)
   for(int col=visible.first_column;col<visible.last_column;++col){
+   const float tile_world_y=(static_cast<float>(row)+0.5f)*base_tile;
+   const auto theme=terrain::ground_texture_at(
+      source_level,tile_world_y,second_half_y);
+   if(!base_floor_sheets_[theme]) return false;
    C2D_Sprite sprite{};
    C2D_SpriteFromSheet(&sprite,base_floor_sheets_[theme],0);
    if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f) return false;
@@ -276,7 +278,11 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   }
  // Preserve the exact source RLE cells at their original Map positions.
  for(const GroundMap& map:ground_maps_){
-  if(map.object_id!=ground_object) continue;
+  // Preserve source-authored tilemap identity for the active half.
+  // The final map has a second original terrain sheet below row 18.
+  const auto map_theme=terrain::ground_texture_at(
+      source_level,map.y+tile*0.5f,second_half_y);
+  if(map.object_id!=terrain::kGroundObjectByTexture[map_theme]) continue;
   const int x0=std::max(0,static_cast<int>(std::floor((camera_x-map.x)/tile)));
   const int y0=std::max(0,static_cast<int>(std::floor((camera_y-map.y)/tile)));
   const int x1=std::min(static_cast<int>(map.columns),
