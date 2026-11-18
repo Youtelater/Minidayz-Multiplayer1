@@ -177,6 +177,57 @@ void Stage2Audio::play_backpack_zip() noexcept {
     play(3);
 }
 
+void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
+    if (!ndsp_ready_) return;
+    // Original WAV sets are grouped by terrain in the Construct source.
+    // Each NDSP footstep voice retains its own variant until the surface
+    // actually changes, avoiding WAV reloads on every step.
+    const char* prefix = nullptr;
+    switch (surface) {
+    case terrain::FootstepSurface::road: prefix = "road_run"; break;
+    case terrain::FootstepSurface::forest: prefix = "forest_run"; break;
+    case terrain::FootstepSurface::sand: prefix = "sand_run"; break;
+    case terrain::FootstepSurface::shallow_water: prefix = "swamp_step"; break;
+    default: prefix = "hard_ground"; break;
+    }
+    const unsigned variant=step_serial_++ & 1u;
+    const std::size_t voice=7u+variant;
+    const auto surface_id=static_cast<int>(surface);
+    if (loaded_step_surfaces_[variant]!=surface_id) {
+        ndspChnWaveBufClear(static_cast<int>(voice));
+        ndspChnReset(static_cast<int>(voice));
+        if (clips_[voice].pcm) linearFree(clips_[voice].pcm);
+        clips_[voice]={};
+        waves_[voice]={};
+        loaded_step_surfaces_[variant]=-1;
+        char path[80]{};
+        std::snprintf(path,sizeof(path),"romfs:/wav/%s_%u.wav",
+                      prefix,variant+1u);
+        if (!load_wav(path,clips_[voice])) return;
+        loaded_step_surfaces_[variant]=surface_id;
+    }
+    play(voice);
+}
+
+void Stage2Audio::play_item_pickup() noexcept {
+    if (!ndsp_ready_) return;
+    const int variant=static_cast<int>(pickup_serial_++ & 1u);
+    constexpr const char* paths[2]={"romfs:/wav/pick1.wav",
+                                    "romfs:/wav/pick2.wav"};
+    constexpr std::size_t voice=9;
+    if (loaded_pickup_variant_!=variant) {
+        ndspChnWaveBufClear(static_cast<int>(voice));
+        ndspChnReset(static_cast<int>(voice));
+        if (clips_[voice].pcm) linearFree(clips_[voice].pcm);
+        clips_[voice]={};
+        waves_[voice]={};
+        loaded_pickup_variant_=-1;
+        if (!load_wav(paths[variant],clips_[voice])) return;
+        loaded_pickup_variant_=variant;
+    }
+    play(voice);
+}
+
 void Stage2Audio::start_rain_loop() noexcept {
     if (!ndsp_ready_) return;
     if (!clips_[6].pcm &&
@@ -215,5 +266,9 @@ void Stage2Audio::shutdown() noexcept {
     waves_={};
     drop_serial_=0;
     gear_drop_serial_=0;
+    pickup_serial_=0;
+    step_serial_=0;
+    loaded_step_surfaces_={{-1,-1}};
+    loaded_pickup_variant_=-1;
 }
 }
