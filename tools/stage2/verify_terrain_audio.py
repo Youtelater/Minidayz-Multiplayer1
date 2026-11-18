@@ -18,7 +18,7 @@ required={
     "snow_run_1.wav","snow_run_2.wav",
     "swamp_step_1.wav","swamp_step_2.wav",
     "pick1.wav","pick2.wav",
-    "ambient.wav","night_loop.wav","rain_loop.wav",
+    "ambient.wav","night_loop.wav","rain_loop.wav","blizzard.wav",
     "md_winter_amb.wav","md_winter_night_amb.wav",
     "crafting.wav","drop1.wav","drop2.wav","zippero.wav",
     "geardrop1.wav","geardrop2.wav",
@@ -53,6 +53,8 @@ assert "FootstepSurface" in surface
 assert "source_variant" in audio
 assert "step_serial_++ % 4u" in audio
 assert "kSourceFootstepSeconds=0.25f" in scene
+assert "kSourceDefaultRainsLevel=2" in scene
+assert "blizzard.wav" in audio
 all_wavs=list(sounds.glob("*.wav"))
 print(f"Verified {len(required)} original terrain/gameplay WAVs out of "
       f"{len(all_wavs)} supplied RomFS WAV files, audio event connections, "
