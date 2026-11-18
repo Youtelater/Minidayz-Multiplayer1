@@ -439,21 +439,30 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
                                      cell_w,cell_h,road_width);
    if(!terrain::intersects_view(band,camera_x,camera_y,
                                 view_width,view_height))continue;
-   const float x0=std::max(band.x,camera_x);
-   const float x1=std::min(band.x+band.width,camera_x+view_width);
-   const float y0=std::max(band.y,camera_y);
-   const float y1=std::min(band.y+band.height,camera_y+view_height);
-   // Quad clip by scaling a source-authored road texture to one
-   // source cell. Grid codes and source art both come from Construct.
-   C2D_Sprite sprite{};
-   C2D_SpriteFromSheet(&sprite,road_sheets_[theme],0);
-   if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)
-    return false;
-   C2D_SpriteSetPos(&sprite,x0,y0);
-   C2D_SpriteSetScale(&sprite,(x1-x0)/sprite.params.pos.w,
-                            (y1-y0)/sprite.params.pos.h);
-   C2D_SpriteSetDepth(&sprite,0.96f);
-   if(!C2D_DrawSprite(&sprite))return false;
+   // Repeat native 60px Construct stone tiles instead of stretching
+   // one source tile across a 2300px world cell. Limit draw calls to
+   // the pieces visible in the 400x240 native top-screen camera.
+   const float tile=stage1::kOriginalFloorTileSize;
+   const int first_x=std::max(0,static_cast<int>(
+       std::floor((camera_x-band.x)/tile)));
+   const int first_y=std::max(0,static_cast<int>(
+       std::floor((camera_y-band.y)/tile)));
+   const int last_x=std::min(static_cast<int>(std::ceil(band.width/tile)),
+       static_cast<int>(std::ceil((camera_x+view_width-band.x)/tile)));
+   const int last_y=std::min(static_cast<int>(std::ceil(band.height/tile)),
+       static_cast<int>(std::ceil((camera_y+view_height-band.y)/tile)));
+   for(int y=first_y;y<last_y;++y)
+    for(int x=first_x;x<last_x;++x){
+     C2D_Sprite sprite{};
+     C2D_SpriteFromSheet(&sprite,road_sheets_[theme],0);
+     if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)
+      return false;
+     C2D_SpriteSetPos(&sprite,band.x+x*tile,band.y+y*tile);
+     C2D_SpriteSetScale(&sprite,tile/sprite.params.pos.w,
+                              tile/sprite.params.pos.h);
+     C2D_SpriteSetDepth(&sprite,0.96f);
+     if(!C2D_DrawSprite(&sprite))return false;
+    }
   }
  }
  return true;
