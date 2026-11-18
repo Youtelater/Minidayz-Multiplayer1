@@ -80,6 +80,14 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude tests/terrain_collision_tests.cpp -o /tmp/minidayz_terrain_collision_tests
           /tmp/minidayz_terrain_collision_tests
 
+      - name: Verify original buildings trees and bridges remain in camera view
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/terrain_source_visibility_tests.cpp -o /tmp/minidayz_world_sprite_view
+          /tmp/minidayz_world_sprite_view
+
       - name: Verify source road corridors and crossings
         shell: bash
         run: |
