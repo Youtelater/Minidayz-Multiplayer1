@@ -172,5 +172,6 @@ stage1-assets:
 	@python3 tools/stage2/build_item_effect_catalog.py
 	@python3 tools/stage2/build_item_medical_catalog.py
 	@python3 tools/stage2/build_item_equipment_catalog.py
+	@python3 tools/stage1/verify_all_graphics.py
 
 
