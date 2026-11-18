@@ -75,9 +75,16 @@ ROMFS.mkdir(parents=True,exist_ok=True)
 HEADER.parent.mkdir(parents=True,exist_ok=True)
 destination=ROMFS/"original_map_ground_floor.t3x"
 with tempfile.TemporaryDirectory(prefix="minidayz_ground_") as tmp:
-    src=Path(tmp)/"original_floor.png"
+    tmpdir=Path(tmp)
+    src=tmpdir/"original_floor.png"
     source_tile.save(src)
-    subprocess.run(["tex3ds","-o",str(destination),str(src)],check=True)
+    # Citro2D expects a Tex3DS sprite SHEET (atlas manifest), not a bare
+    # standalone texture. The former exposes image 0 to SpriteSheetCount.
+    manifest=tmpdir/"floor.t3s"
+    manifest.write_text("--atlas -f rgba -z auto\\noriginal_floor.png\\n",
+                        encoding="utf-8")
+    subprocess.run(["tex3ds","-i",str(manifest),"-o",str(destination)],
+                   cwd=tmpdir,check=True)
 if not destination.is_file():raise SystemExit("No generated floor atlas")
 HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 {\n"
     +f"inline constexpr std::uint16_t kOriginalFloorTileObject={ground_object};\n"
