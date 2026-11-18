@@ -187,6 +187,7 @@ void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
     case terrain::FootstepSurface::road: prefix = "road_run"; break;
     case terrain::FootstepSurface::forest: prefix = "forest_run"; break;
     case terrain::FootstepSurface::sand: prefix = "sand_run"; break;
+    case terrain::FootstepSurface::snow: prefix = "snow_run"; break;
     case terrain::FootstepSurface::shallow_water: prefix = "swamp_step"; break;
     default: prefix = "hard_ground"; break;
     }
@@ -228,15 +229,21 @@ void Stage2Audio::play_item_pickup() noexcept {
     play(voice);
 }
 
-void Stage2Audio::set_environment_ambience(bool night) noexcept {
+void Stage2Audio::set_environment_ambience(bool night,bool winter) noexcept {
     if (!ndsp_ready_) return;
-    const int wanted=night ? 1 : 0;
+    const int wanted=(winter ? 2 : 0) + (night ? 1 : 0);
     if (ambient_variant_==wanted) return;
     stop_environment_ambience();
-    // Original Construct audio resources: ambient / night_loop.
-    // Load only one loop on demand to protect original 3DS linear memory.
-    const char* path=night ? "romfs:/wav/night_loop.wav"
-                           : "romfs:/wav/ambient.wav";
+    // Original day, night and winter loops. Original ground_lvl5 is snowy;
+    // later-world autumn artwork does not use the winter sound variants.
+    // Load one loop on demand to protect original 3DS linear memory.
+    constexpr const char* paths[4]={
+        "romfs:/wav/ambient.wav",
+        "romfs:/wav/night_loop.wav",
+        "romfs:/wav/md_winter_amb.wav",
+        "romfs:/wav/md_winter_night_amb.wav"
+    };
+    const char* path=paths[wanted];
     // Do not hammer the SD/RomFS with a multi-megabyte WAV load every
     // frame if this optional ambience cannot fit in 3DS linear memory.
     ambient_variant_=wanted;
