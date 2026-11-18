@@ -89,5 +89,6 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       const items::SourceDayNightClock* source_time = nullptr,
                       const items::SourceRainTimer* source_rain = nullptr,
                       const items::SourceLootTimer* source_loot = nullptr,
-                      const PendingCraftSnapshot* pending_craft = nullptr) noexcept;
+                      const PendingCraftSnapshot* pending_craft = nullptr,
+                      std::uint8_t world_level = 0) noexcept;
 } // namespace minidayz::persistence
