@@ -1,4 +1,5 @@
 #include "minidayz/player.hpp"
+#include "minidayz/terrain_source_collision.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -162,6 +163,18 @@ int main() {
     assert(turning.source_skin()==999);
     turning.set_source_skin(65535); // Invalid object cannot replace skin.
     assert(turning.source_skin()==999);
+
+    // The original sprite hotspot and rotation determine which source
+    // building pixels physically block the player.
+    using minidayz::terrain::source_solid_sprite_contains;
+    assert(source_solid_sprite_contains(
+        100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,0.0f,100.0f,100.0f));
+    assert(!source_solid_sprite_contains(
+        100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,0.0f,119.0f,100.0f));
+    assert(source_solid_sprite_contains(
+        100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,90.0f,95.0f,105.0f));
+    assert(!source_solid_sprite_contains(
+        100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,90.0f,105.0f,105.0f));
 
     // Non-finite input must not poison player coordinates or stats.
     PlayerInput invalid{};
