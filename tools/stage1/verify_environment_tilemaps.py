@@ -8,6 +8,7 @@ import json
 import re
 import struct
 from pathlib import Path
+from PIL import Image
 
 ROOT=Path(__file__).resolve().parents[2]
 source=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",
@@ -35,8 +36,20 @@ for layer_index,layer in enumerate(layout[6]):
         palette[obj].update(c&0x1fffffff for c in expanded if c!=-1)
         instances.append((obj,layer_index,float(ins[0][0]),float(ins[0][1]),
                           int(ins[5][1]),int(raw[0]),int(raw[1]),expanded))
-mapping={obj:{tile:i for i,tile in enumerate(sorted(keys))}
-         for obj,keys in palette.items()}
+# Runtime-painted Construct Tilemaps 208 and 230 package every original
+# source frame (including IDs absent from preauthored Map RLE).
+source_sizes={obj:next(row[4] for row in instances if row[0]==obj)
+              for obj in objects}
+mapping={}
+for obj,keys in palette.items():
+    if obj in (208,230):
+        filename=Path(source[3][obj][6][0]).name
+        with Image.open(ROOT/"assets/gfx"/filename) as image:
+            cell=source_sizes[obj]
+            ordered=list(range((image.width//cell)*(image.height//cell)))
+    else:
+        ordered=sorted(keys)
+    mapping[obj]={tile:i for i,tile in enumerate(ordered)}
 assert len(instances)>10 and {x[0] for x in instances}==objects
 file=ROOT/"romfs/gfx/original_map_details_layout.bin"
 with file.open("rb") as data:
