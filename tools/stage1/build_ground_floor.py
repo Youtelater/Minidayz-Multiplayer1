@@ -174,14 +174,15 @@ for level, object_id in enumerate(SOURCE_GROUND):
     else:
         # Select the first visible, nontransparent source tile. Do not
         # fabricate pixel art or borrow artwork from another level.
-        base_id = next(
-            (index for index in range((source.width // tile_width) *
-                                       (source.height // tile_width))
-             if source.crop(((index % sheet_columns[object_id]) * tile_width,
-                             (index // sheet_columns[object_id]) * tile_width,
-                             ((index % sheet_columns[object_id]) + 1) * tile_width,
-                             ((index // sheet_columns[object_id]) + 1) * tile_width)
-             .getbbox() is not None), None)
+        base_id = None
+        columns = sheet_columns[object_id]
+        for index in range(columns * (source.height // tile_width)):
+            x0 = (index % columns) * tile_width
+            y0 = (index // columns) * tile_width
+            tile = source.crop((x0, y0, x0 + tile_width, y0 + tile_width))
+            if tile.getbbox() is not None:
+                base_id = index
+                break
         if base_id is None:
             raise SystemExit(f"Ground level {level} sheet contains no visible tile")
     x = (base_id % sheet_columns[object_id]) * tile_width
