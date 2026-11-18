@@ -66,7 +66,7 @@ with file.open("rb") as data:
         unpacked=struct.unpack("<"+"I"*len(cells),buffer)
         for source_cell,native in zip(cells,unpacked):
             expected_value=(0xffffffff if source_cell==-1
-                            else mapping[obj][source_cell&0x1fffffff])
+                            else (source_cell&0xe0000000)|mapping[obj][source_cell&0x1fffffff])
             assert native==expected_value,(obj,source_cell,native,expected_value)
         total+=len(cells)
     assert not data.read(1)
