@@ -31,6 +31,19 @@ available={p.name for p in sounds.glob("*.wav")}
 missing=required-available
 assert not missing, f"Missing original RomFS WAV files: {sorted(missing)}"
 
+# Cross-check the original root Construct event export, not an invented
+# material-to-sound table. All step families occur in exact source audio ACEs.
+source=(root/"data/stage1/construct_project_parsed.json").read_text(
+    encoding="utf-8-sig").lower()
+for family in ("run","forest_run","road_run","sand_run","snow_run",
+               "swamp_step"):
+    for n in range(1,5):
+        assert f'"{family}_{n}"' in source, (family,n)
+for name in ("pick1","pick2","ambient","night_loop",
+             "md_winter_amb","md_winter_night_amb","blizzard","rain_loop"):
+    assert f'"{name}"' in source, f"Original audio event missing {name}"
+assert "609331584746158" in source, "Original Rain audio event UID changed"
+
 for name in required:
     p=sounds/name
     with p.open("rb") as fp:
