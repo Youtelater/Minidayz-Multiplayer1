@@ -18,7 +18,7 @@ def original_image_references():
     parsed = ROOT / "data/stage1/construct_project_parsed.json"
     if not parsed.is_file():
         raise SystemExit("Run stage1-assets first (missing parsed Construct data)")
-    data = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-",
+    data = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-",
                              parsed.read_text(encoding="utf-8-sig")))
     objects = data["project"][3]
     referenced = set()
@@ -46,7 +46,7 @@ def runtime_audio_references():
     sources += list((ROOT / "include").rglob("*.hpp"))
     texts = [p.read_text(encoding="utf-8", errors="replace") for p in sources]
     direct = {name.casefold() for text in texts
-              for name in re.findall(r'romfs:/wav/([^"\\s]+\\.wav)', text)}
+              for name in re.findall(r'romfs:/wav/([^"\s]+\.wav)', text)}
     # Source creates footstep names at runtime from a format string. These
     # are reachable, but their playback depends on actual terrain movement.
     dynamic = set()
