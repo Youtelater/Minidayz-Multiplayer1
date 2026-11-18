@@ -43,7 +43,7 @@ def rle_cells(payload, expected):
         raise ValueError(f"Original tilemap requires {expected} cells, found {len(cells)}")
     return cells
 
-project = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\d)", "-",
+project = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-",
     SOURCE.read_text(encoding="utf-8-sig")))["project"]
 obj = project[3][OBJECT]
 for object_id, filename in SOURCE_GROUND.items():
