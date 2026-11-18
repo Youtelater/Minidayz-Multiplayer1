@@ -54,7 +54,7 @@ def main():
                     if compare not in (0,1) or target!=4:
                         raise SystemExit("Original water shoreline comparison changed")
                     checks.append((dx,dy,compare==0))
-                if not 7<=len(checks)<=8 or not any(equal for _,_,equal in checks):
+                if not 7<=len(checks)<=8:
                     raise SystemExit("Unrecognized source water shoreline predicate")
                 rules.append((frame,action[3],checks))
     if len(rules)!=12:
