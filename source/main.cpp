@@ -1394,7 +1394,11 @@ public:
                 : 0;
             for (std::size_t i = 0; i < world_.placement_count(); ++i) {
                 const auto* placement = world_.placement(i);
-                if (!placement) continue;
+                if (!placement || placement->layer >= 44) continue;
+                // The original Map layers 44+ contain Rain/NVG/night,
+                // browser/mobile GUI controls, and event triggers. These
+                // cannot be painted as static world sprites on the 3DS:
+                // weather has separate runtime state and UI lives below.
                 // Original source Tilemaps, Arrays and invisible trigger
                 // objects must not be drawn as bogus marker rectangles.
                 const auto* source_object =
@@ -1415,8 +1419,15 @@ public:
                     py < camera_y - 96.0f || py > camera_y + view_h + 96.0f)
                     continue;
                 const float sx = placement->scale_x > 0.0f ? placement->scale_x : 1.0f;
+                // Source Map layer 32 is player, with Buildings_bg (31)
+                // below it and Buildings/Trees (41-43) above it. Preserve
+                // those layers through Citro2D's depth ordering instead of
+                // drawing every building behind the player.
+                const float layer_depth = std::clamp(
+                    0.90f - 0.0125f * static_cast<float>(placement->layer),
+                    0.10f, 0.90f);
                 if (!renderer.draw_source_sprite(placement->object, 0, 0,
-                        px, py, sx, sx, 0.5f,
+                        px, py, sx, sx, layer_depth,
                         placement->angle * 0.01745329251994329577f)) {
                     // Original art was not loaded: do not draw a fake object.
                     // Missing source atlas frames are audited during CI.
