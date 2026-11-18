@@ -103,8 +103,9 @@ with tempfile.TemporaryDirectory(prefix="mdz_source_terrain_") as scratch:
             # preauthored cells silently drops almost all real scenery art.
             # Pack every ORIGINAL tile from these two source sheets, keeping
             # source ID == atlas frame for dynamic SetTile event integration.
-            ordered=(list(range(count)) if object_id in (208,230)
-                     else sorted(palette[object_id]))
+            # Keep every source tile available for dynamic painting across
+            # water, forest, sand and ground environment objects.
+            ordered=list(range(count))
             if len(ordered)>128 or not ordered:
                 raise SystemExit(f"Unexpected source terrain tile count: {object_id}")
             directory=work/str(object_id)
