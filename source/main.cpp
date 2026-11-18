@@ -186,9 +186,11 @@ public:
                 if (y >= 52 && y <= 102) {
                     paused_ = false;
                 } else if (y >= 109 && y <= 157) {
+                    pause_save_attempted_ = true;
                     pause_save_feedback_ = write_scene_save();
                     has_saved_game_ = has_saved_game_ || pause_save_feedback_;
                 } else if (y >= 164 && y <= 216) {
+                    pause_save_attempted_ = true;
                     pause_save_feedback_ = write_scene_save();
                     has_saved_game_ = has_saved_game_ || pause_save_feedback_;
                     if (pause_save_feedback_) {
@@ -200,6 +202,7 @@ public:
             return;
         }
         pause_save_feedback_ = false;
+        pause_save_attempted_ = false;
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount) {
             pending_craft_seconds_ -= std::max(0.0f, dt);
             if (pending_craft_seconds_ <= 0.0f) {
@@ -782,8 +785,10 @@ public:
             renderer.draw_text("RESUME", 115.0f, 67.0f, 0.47f);
             renderer.draw_text("SAVE GAME", 91.0f, 124.0f, 0.47f);
             renderer.draw_text("MAIN MENU", 86.0f, 180.0f, 0.47f);
-            if (pause_save_feedback_)
-                renderer.draw_text("GAME SAVED", 115.0f, 220.0f, 0.28f);
+            if (pause_save_attempted_) {
+                renderer.draw_text(pause_save_feedback_ ? "GAME SAVED" : "SAVE FAILED",
+                                   110.0f, 220.0f, 0.28f);
+            }
             return;
         }
         // Native 3DS inventory: use the actual Construct GUI frames
@@ -1718,6 +1723,7 @@ private:
     bool menu_active_{true};
     bool paused_{};
     bool pause_save_feedback_{};
+    bool pause_save_attempted_{};
     bool loading_world_{};
     bool new_game_generation_{};
     bool generation_failed_{};
