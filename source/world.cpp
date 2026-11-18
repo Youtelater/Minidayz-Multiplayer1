@@ -550,6 +550,12 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
                 static_cast<float>((static_cast<double>(y) + 0.5) * cell_height)
             };
 
+            // The root game's create_map_location reads Array 525 after
+            // each generate_location() call. Its columns 0,1,2,3 and 6
+            // are the original create_map_element var1, var2, x, y, var6.
+            // Without translating these location proposals, only invisible
+            // zombie respawn markers are created and the map looks empty.
+            if (!runtime.reset_location_array()) return false;
             for (const auto& source : stage1::kLocationTemplateSource) {
                 bool tile_matches = false;
                 for (std::uint8_t i = 0; i < source.tile_code_count; ++i) {
@@ -566,6 +572,30 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
                 bool matched = false;
                 if (!runtime.execute_branch(source.event_uid, matched)) return false;
                 if (!matched) continue;
+            }
+            const auto& locations=runtime.location_array();
+            if (locations.height()<7 || locations.width()>256)
+                return false;
+            for (std::size_t entry=0;entry<locations.width();++entry) {
+                const double raw_type=locations.at(static_cast<int>(entry),0).as_number();
+                const double raw_variant=locations.at(static_cast<int>(entry),1).as_number();
+                const double raw_x=locations.at(static_cast<int>(entry),2).as_number();
+                const double raw_y=locations.at(static_cast<int>(entry),3).as_number();
+                const double raw_extra=locations.at(static_cast<int>(entry),6).as_number();
+                if (!std::isfinite(raw_type)||!std::isfinite(raw_variant)||
+                    !std::isfinite(raw_x)||!std::isfinite(raw_y)||
+                    !std::isfinite(raw_extra)) return false;
+                // The source Array includes unused rows. Only populated
+                // entries select one of the original element categories.
+                if (raw_type<1.0 || raw_variant<1.0) continue;
+                if (raw_type>255.0 || raw_variant>255.0 ||
+                    raw_extra<0.0 || raw_extra>255.0) continue;
+                (void)expand_map_element(
+                    static_cast<std::uint8_t>(raw_type),
+                    static_cast<std::uint8_t>(raw_variant),
+                    static_cast<std::uint8_t>(raw_extra),
+                    WorldPoint{static_cast<float>(raw_x),
+                               static_cast<float>(raw_y)});
             }
         }
     }
