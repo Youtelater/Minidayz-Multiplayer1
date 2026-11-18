@@ -8,6 +8,7 @@ is counted as source faithful unless its object AND tile ID match.
 import json
 import re
 import struct
+from collections import Counter
 from pathlib import Path
 from PIL import Image
 
@@ -28,10 +29,6 @@ for key, name in source_objects.items():
     with Image.open(ROOT / "assets/gfx" / name) as im:
         original = im.convert("RGBA")
         assert original.width == original.height and original.width % 2 == 0
-        base_art = original.crop((original.width // 2, original.height // 2,
-                                  original.width, original.height))
-        assert base_art.getbbox() is not None, f"Blank base art: {name}"
-        assert len(base_art.getcolors(maxcolors=50000) or []) > 8
         source_tiles[key] = original.size
 
 instances = [inst for layer in layout[6]
@@ -62,6 +59,23 @@ for inst in instances:
     assert len(cells) == cols * rows
     expected.append((float(t[0]), float(t[1]), cols, rows, object_id, cells))
 
+# Verify the specific ORIGINAL 60px tile selected for each backdrop.
+# A non-empty atlas file alone cannot detect a transparent wrong crop.
+for object_id, filename in source_objects.items():
+    population = Counter((v & 0x1fffffff)
+        for x, y, cols, rows, obj, cells in expected
+        if obj == object_id for v in cells if v != -1)
+    assert population, object_id
+    selected = population.most_common(1)[0][0]
+    with Image.open(ROOT / "assets/gfx" / filename) as image_source:
+        source = image_source.convert("RGBA")
+        columns = source.width // tile_pixels
+        x = (selected % columns) * tile_pixels
+        y = (selected // columns) * tile_pixels
+        base = source.crop((x, y, x + tile_pixels, y + tile_pixels))
+        assert base.getbbox() is not None, f"Transparent terrain tile {object_id}:{selected}"
+        assert len(base.getcolors(maxcolors=50000) or []) > 8, (
+            f"Incorrect background crop {object_id}:{selected}")
 per_page = min(128, max(1, 1024 // tile_pixels) ** 2)
 mapping = {key: (i // per_page, i % per_page) for i, key in enumerate(sorted(visible))}
 path = ROOT / "romfs/gfx/original_map_ground_layout.bin"
