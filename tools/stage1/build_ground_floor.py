@@ -151,29 +151,33 @@ with tempfile.TemporaryDirectory(prefix="mdz_original_ground_") as tmp:
 # ground_lvl1_tilemap.png; never synthesize artwork or use images/ copies.
 # Keep this separate from source tile IDs so the authored RLE tiles remain
 # exact and the existing source layout verifier is not weakened.
-BASE_GROUND = ROMFS / "original_map_base_ground.t3x"
-source = images[OBJECT]
-
-# The PNG is a 2-by-2 art sheet of full grass/road/shore textures.
-    # Its Construct tilemap metadata can use a different *map cell* size.
-    # Cropping only a map cell would take a tiny fragment, even a one-pixel
-    # transparent fragment, and leave the 3DS terrain effectively black.
+# CurrentLevel 0/1/2 source events create tilemap objects 482/687/688.
+# Package their ORIGINAL distinct ground art for native level-aware rendering.
+base_tile_pixels = None
+for level, object_id in enumerate(SOURCE_GROUND):
+    source = images[object_id]
     if source.width % 2 or source.height % 2:
-        raise SystemExit("Original 2x2 source terrain artwork dimensions changed")
-    base_tile_pixels = min(source.width // 2, source.height // 2)
-    if base_tile_pixels < 8:
-        raise SystemExit("Original source grass base has invalid dimensions")
-    with tempfile.TemporaryDirectory(prefix="mdz_original_base_floor_") as tmp:
+        raise SystemExit(f"Original ground atlas dimensions changed: {object_id}")
+    quadrant = min(source.width // 2, source.height // 2)
+    if quadrant < 8 or (base_tile_pixels is not None and quadrant != base_tile_pixels):
+        raise SystemExit("Original ground levels use incompatible tile dimensions")
+    base_tile_pixels = quadrant
+    if level == 0:
+        destination_base = ROMFS / "original_map_base_ground.t3x"
+    else:
+        destination_base = ROMFS / f"original_map_base_ground_lvl{level + 1}.t3x"
+    with tempfile.TemporaryDirectory(prefix=f"mdz_base_{level}_") as tmp:
         work = Path(tmp)
-        source.crop((source.width - base_tile_pixels,
-                     source.height - base_tile_pixels,
+        source.crop((source.width - quadrant, source.height - quadrant,
                      source.width, source.height)).save(work / "base.png")
         (work / "base.t3s").write_text(
-            "--atlas -f rgba -z auto" + chr(10) + "base.png" + chr(10), encoding="utf-8")
+            "--atlas -f rgba -z auto" + chr(10) + "base.png" + chr(10),
+            encoding="utf-8")
         subprocess.run(["tex3ds", "-i", str(work / "base.t3s"),
-                        "-o", str(BASE_GROUND)], cwd=work, check=True)
-if not BASE_GROUND.is_file() or BASE_GROUND.stat().st_size < 32:
-    raise SystemExit(f"Original source base ground atlas not generated: tile={base_tile_pixels}, size={BASE_GROUND.stat().st_size if BASE_GROUND.is_file() else -1}")
+                        "-o", str(destination_base)], cwd=work, check=True)
+    if not destination_base.is_file() or destination_base.stat().st_size < 32:
+        raise SystemExit(f"Original source level {level} ground atlas missing")
+BASE_GROUND = ROMFS / "original_map_base_ground.t3x"
 
 # Format: magic (4), tile width (u32), atlas pages (u32), instance count (u32);
 # each instance: x,y (float), width,height (u32), then width*height
@@ -205,5 +209,5 @@ HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 
     f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\n" +
     "}\n", encoding="utf-8")
 print(f"Original Map: {len(instances)} authored tilemap strips; {len(tile_keys)} source tiles across three ground sheets; "
-      f"{page_count} authored atlases plus 1 original grass base; "
+      f"{page_count} authored atlases plus 3 original map-level grass bases; "
       f"packed layout {destination.stat().st_size} bytes")
