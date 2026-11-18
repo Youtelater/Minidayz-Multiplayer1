@@ -36,3 +36,16 @@ for l in p[5]:
             print("GROUND_LAYER",y,layer[0],"HEAD",str(layer[:14])[:250])
             for inst in layer[14][:2] if len(layer)>14 and isinstance(layer[14],list) else []:
                 print("  INSTANCE",str(inst)[:1600])
+
+
+for index in (230,482,687):
+    obj=p[3][index]
+    print("TILEMAP_DEF",index,"length",len(obj),"META",
+          [(k,str(v)[:1500]) for k,v in enumerate(obj) if k!=7])
+for layout in p[5]:
+    if layout[0]!="Map":continue
+    for layer in layout[6]:
+        for inst in layer[14] if len(layer)>14 and isinstance(layer[14],list) else []:
+            if isinstance(inst,list) and len(inst)>2 and inst[1] in (230,482,687):
+                print("MAP_TILEMAP_INSTANCE","layer",layer[0],"object",inst[1],
+                      "HEAD",repr(inst[:5])[:400],"TAIL",repr(inst[5:])[:1800])
