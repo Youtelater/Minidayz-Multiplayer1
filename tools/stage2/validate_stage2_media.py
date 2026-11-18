@@ -60,6 +60,22 @@ def validate_atlas() -> None:
             "Original Construct sprite atlases missing from ROMFS: " +
             ", ".join(missing[:15]))
     print(f"Original Construct atlases OK: {len(sheets)} ROMFS .t3x files")
+    # Ground tiles are Construct Tilemaps (type 16), not sprites, so the
+    # regular source animation atlas cannot cover them.
+    floor = ATLAS / "original_map_ground_floor.t3x"
+    floor_header = ROOT / "include/minidayz/generated/ground_floor_source.hpp"
+    ui_header = ROOT / "include/minidayz/generated/inventory_ui_art.hpp"
+    if not floor.is_file() or floor.stat().st_size < 32:
+        raise SystemExit("Original ground floor texture missing from 3DS ROMFS")
+    if not floor_header.is_file() or "kOriginalFloorTileObject=482" not in floor_header.read_text(encoding="utf-8"):
+        raise SystemExit("Original ground tilemap source metadata is absent or changed")
+    if not ui_header.is_file():
+        raise SystemExit("Original inventory GUI source atlas mapping missing")
+    for name in ("InventoryBackground","InventoryCard","SlotBackground",
+                 "EquipmentVest","EquipmentCoat","EquipmentBackpack"):
+        if f"kOriginal{name}Art" not in ui_header.read_text(encoding="utf-8"):
+            raise SystemExit(f"Original MiniDAYZ GUI source frame missing: {name}")
+    print(f"Original Map floor and inventory GUI artwork OK: {floor.stat().st_size} T3X bytes")
 
 
 def main() -> None:
