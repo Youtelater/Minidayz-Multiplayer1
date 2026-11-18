@@ -23,6 +23,10 @@ required={
     "crafting.wav","drop1.wav","drop2.wav","zippero.wav",
     "geardrop1.wav","geardrop2.wav",
 }
+# Construct source has choose(*_1,*_2,*_3,*_4) for these
+# material families; hard_ground uses the two authored variants.
+for family in ("forest_run","road_run","sand_run","snow_run","swamp_step"):
+    required.update(f"{family}_{i}.wav" for i in range(1,5))
 available={p.name for p in sounds.glob("*.wav")}
 missing=required-available
 assert not missing, f"Missing original RomFS WAV files: {sorted(missing)}"
@@ -44,8 +48,10 @@ for symbol in ("play_footstep","play_item_pickup",
     assert symbol in scene,symbol
 assert 'night_loop.wav' in audio and 'ambient.wav' in audio
 assert 'md_winter_amb.wav' in audio and 'md_winter_night_amb.wav' in audio
-assert 'wave.looping=(which==6 || which==10)' in audio
+assert 'wave.looping=(which==6 || which==12)' in audio
 assert "FootstepSurface" in surface
+assert "source_variant" in audio
+assert "step_serial_++ % 4u" in audio
 all_wavs=list(sounds.glob("*.wav"))
 print(f"Verified {len(required)} original terrain/gameplay WAVs out of "
       f"{len(all_wavs)} supplied RomFS WAV files, audio event connections, "
