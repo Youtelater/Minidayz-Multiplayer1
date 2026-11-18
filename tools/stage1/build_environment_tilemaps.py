@@ -139,7 +139,8 @@ with path.open("wb") as output:
         output.write(struct.pack("<HHffIII",object_id,layer,x,y,
                                  tile_sizes[object_id],cols,rows))
         frames=[0xffffffff if cell==-1 else
-                mapping[object_id,cell & MASK] for cell in cells]
+                ((cell & 0xe0000000) | mapping[object_id,cell & MASK])
+                for cell in cells]
         output.write(struct.pack("<"+"I"*len(frames),*frames))
 print(f"Exported {len(instances)} original environment tilemaps, "
       f"{sum(len(i[-1]) for i in instances)} cells, "
