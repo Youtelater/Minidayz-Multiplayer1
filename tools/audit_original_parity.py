@@ -115,8 +115,10 @@ require((ROOT / "romfs/gfx/original_map_ground_layout.bin").is_file(),
 warning("TERRAIN: original tile IDs and placements are ported; Construct tile flipping and layered tilemap effects still require 3DS visual parity tests.")
 if "preview_rules_.walk_speed = 72.0f" in game:
     warning("MOVEMENT: fixed preview speeds and hitbox do not establish original Construct equivalence.")
-if "state.x = 160.0f" in game and "state.y = 120.0f" in game:
-    warning("SPAWN: fixed (160,120) starting point is not verified against original spawn selection.")
+if "place_new_player_on_generated_map()" in game:
+    warning("SPAWN: generated source location with collision checks is a 3DS fallback; exact original Construct spawn selection is not yet traced.")
+else:
+    warning("SPAWN: original Construct player spawning has not been verified.")
 if "Map preview cannot enter Bridge layout" in game:
     warning("WORLD: bridge-layout travel is not yet ported.")
 if "WorldPreviewScene" in game:
