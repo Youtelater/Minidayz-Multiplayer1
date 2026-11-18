@@ -28,7 +28,7 @@ bool Renderer::initialize() noexcept {
 void Renderer::shutdown() noexcept {
  unload_all();
  for(auto& sheet:floor_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
- if(base_floor_sheet_){C2D_SpriteSheetFree(base_floor_sheet_);base_floor_sheet_=nullptr;}
+ for(auto& sheet:base_floor_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  ground_maps_.clear();ground_load_attempted_=false;ground_loaded_=false;
  for(auto& sheet:menu_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  if(debug_buffer_) C2D_TextBufDelete(debug_buffer_);
@@ -162,7 +162,7 @@ bool Renderer::draw_menu_art(std::size_t index,float x,float y,float width,float
  C2D_SpriteSetDepth(&sprite,depth);
  return C2D_DrawSprite(&sprite);
 }
-bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float width,float height) noexcept {
+bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float width,float height,std::uint8_t source_level) noexcept {
  // Exact original Construct Map ground tile placements, generated from the
  // root data.deobfuscated.js into a compact 3DS RomFS tilemap.
  if(width<=0.0f||height<=0.0f) return false;
@@ -210,14 +210,22 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
    }
   }
   if(valid){
-   base_floor_sheet_=C2D_SpriteSheetLoad("romfs:/gfx/original_map_base_ground.t3x");
-   if(!base_floor_sheet_ || C2D_SpriteSheetCount(base_floor_sheet_)==0)
-    valid=false;
+   const char* const paths[3]={
+    "romfs:/gfx/original_map_base_ground.t3x",
+    "romfs:/gfx/original_map_base_ground_lvl2.t3x",
+    "romfs:/gfx/original_map_base_ground_lvl3.t3x"
+   };
+   for(int i=0;i<3;++i){
+    base_floor_sheets_[i]=C2D_SpriteSheetLoad(paths[i]);
+    if(!base_floor_sheets_[i] ||
+       C2D_SpriteSheetCount(base_floor_sheets_[i])==0){
+     valid=false;break;
+    }
+   }
   }
   if(!valid){
-   if(base_floor_sheet_){
-    C2D_SpriteSheetFree(base_floor_sheet_);
-    base_floor_sheet_=nullptr;
+   for(auto& sheet:base_floor_sheets_){
+    if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}
    }
    for(auto& sheet:floor_sheets_){
     if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}
@@ -227,7 +235,11 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   }
   ground_loaded_=true;
  }
- if(!ground_loaded_ || !base_floor_sheet_) return false;
+ if(!ground_loaded_) return false;
+ // CurrentLevel 0, 1 and 2 select original ground objects 482, 687, 688.
+ // Levels beyond the traced source conditions retain the third original art.
+ const std::uint32_t theme=std::min<std::uint32_t>(source_level,2);
+ if(!base_floor_sheets_[theme]) return false;
  const float tile=static_cast<float>(ground_tile_pixels_);
  const float base_tile=stage1::kOriginalFloorBaseTileSize;
  // Source Map object 482 has only two authored ground strips. The original
@@ -240,7 +252,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
  for(int row=visible.first_row;row<visible.last_row;++row)
   for(int col=visible.first_column;col<visible.last_column;++col){
    C2D_Sprite sprite{};
-   C2D_SpriteFromSheet(&sprite,base_floor_sheet_,0);
+   C2D_SpriteFromSheet(&sprite,base_floor_sheets_[theme],0);
    if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f) return false;
    C2D_SpriteSetPos(&sprite,col*base_tile,row*base_tile);
    C2D_SpriteSetScale(&sprite,base_tile/sprite.params.pos.w,
