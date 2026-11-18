@@ -299,9 +299,10 @@ public:
                 selected_inventory_slot_ = -1;
             }
         }
-        if (input.pressed & KEY_R)
-            (void)ground_loot_.pickup_nearest(
-                inventory_, player_.state().x, player_.state().y, 36.0f);
+        if ((input.pressed & KEY_R) &&
+            ground_loot_.pickup_nearest(
+                inventory_, player_.state().x, player_.state().y, 36.0f))
+            stage2_audio_.play_item_pickup();
         minidayz::PlayerInput movement{};
         movement.move_x = static_cast<float>(input.circle.dx) / 156.0f;
         movement.move_y = -static_cast<float>(input.circle.dy) / 156.0f;
@@ -752,8 +753,22 @@ public:
             last_source_day_mode_ = day_night_.day_mode();
             source_temperature_initialized_ = true;
         }
+        const float old_x=player_.state().x, old_y=player_.state().y;
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
+        // Play the original material-specific WAV only after moving.
+        const float dx=player_.state().x-old_x;
+        const float dy=player_.state().y-old_y;
+        const float walked=std::hypot(dx,dy);
+        if (walked>0.001f && std::isfinite(walked)) {
+            footstep_distance_+=walked;
+            const float interval=movement.run ? 42.0f : 34.0f;
+            if (footstep_distance_>=interval) {
+                footstep_distance_=std::fmod(footstep_distance_,interval);
+                stage2_audio_.play_footstep(
+                    terrain_surface_at(player_.state().x,player_.state().y));
+            }
+        }
         player_.update_survival(dt, preview_rules_);
         // Exact original Player stats -> States five-second event
         // (UID 2665582317889917). This world preview has no original
@@ -1776,6 +1791,7 @@ private:
         // background texture swap. Preserve survivor condition and items.
         // The source bridge artwork remains the travel landmark on 3DS.
         ++world_level_;
+        footstep_distance_=0.0f;
         world_seed_ ^= (0x9e3779b9u + static_cast<std::uint32_t>(world_level_) * 0x85ebca6bu);
         if(world_seed_==0)world_seed_=0x6d696e69u;
         ground_loot_.clear();
@@ -1794,6 +1810,7 @@ private:
 
     void start_new_game() noexcept {
         world_seed_ = make_new_world_seed();
+        footstep_distance_=0.0f;
         world_level_ = 0;
         travel_generation_ = false;
         player_ = minidayz::PlayerSystem(make_initial_state());
@@ -1901,6 +1918,26 @@ private:
         return state;
     }
 
+    minidayz::terrain::FootstepSurface terrain_surface_at(
+        float x,float y) const noexcept {
+        const auto surface=terrain_collision_.surface_at(x,y);
+        if (surface!=minidayz::terrain::FootstepSurface::ground)
+            return surface;
+        const auto& grid=world_.grid();
+        const auto& bounds=world_.bounds();
+        if(grid.width()==0||grid.height()==0||
+           bounds.width<=0.0f||bounds.height<=0.0f||x<0.0f||y<0.0f||
+           x>=bounds.width||y>=bounds.height)
+            return surface;
+        const auto col=static_cast<int>(
+            x*static_cast<float>(grid.width())/bounds.width);
+        const auto row=static_cast<int>(
+            y*static_cast<float>(grid.height())/bounds.height);
+        if(minidayz::terrain::generated_road_cell(grid.at(col,row)))
+            return minidayz::terrain::FootstepSurface::road;
+        return surface;
+    }
+
     static bool blocked(void* context, float x, float y) noexcept {
         const auto* scene = static_cast<const WorldPreviewScene*>(context);
         if (!scene || !std::isfinite(x) || !std::isfinite(y) ||
@@ -1950,6 +1987,7 @@ private:
     std::uint8_t world_level_{};
     bool travel_generation_{};
     float save_elapsed_{};
+    float footstep_distance_{};
     bool world_ready_{};
     bool npc_ready_{};
     bool menu_active_{true};
