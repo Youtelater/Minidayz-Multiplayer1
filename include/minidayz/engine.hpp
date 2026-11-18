@@ -36,7 +36,7 @@ public:
                             std::uint8_t source_level=0) noexcept;
   bool draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth=0.4f) noexcept;
   bool draw_source_animation(std::uint16_t object,const char* animation_name,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f) noexcept;
- bool draw_menu_art(std::size_t index,float x,float y,float width,float height,float depth=0.7f) noexcept;
+ // Render any original assets/gfx PNG by its exact source filename.\n bool draw_original_image(const char* original_png,float x,float y,float width,float height,float depth=0.5f) noexcept;\n bool draw_menu_art(std::size_t index,float x,float y,float width,float height,float depth=0.7f) noexcept;
  bool draw_item_icon(std::uint16_t item_id,float center_x,float center_y,float max_width,float max_height) noexcept;
  void set_camera(float x,float y) noexcept { camera_x_=x; camera_y_=y; C2D_ViewReset(); C2D_ViewTranslate(-x,-y); }
  void reset_camera() noexcept { set_camera(0.0f,0.0f); }
