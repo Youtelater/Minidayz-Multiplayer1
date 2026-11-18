@@ -125,6 +125,12 @@ stage1-assets:
 	@python3 tools/stage1/validate_stage1.py
 	@python3 tools/stage1/build_sprite_catalog.py
 	@python3 tools/stage1/build_ground_floor.py
+	@python3 tools/stage1/build_environment_tilemaps.py
+	@test -s $(ROMFS)/gfx/original_map_details_layout.bin || { echo 'ERROR: original environment terrain layout missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_detail_208.t3x || { echo 'ERROR: original terrain texture object 208 missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_detail_211.t3x || { echo 'ERROR: original terrain texture object 211 missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_detail_418.t3x || { echo 'ERROR: original terrain texture object 418 missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_detail_230.t3x || { echo 'ERROR: original terrain texture object 230 missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_ground_layout.bin || { echo 'ERROR: original Map ground layout missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_ground_p000.t3x || { echo 'ERROR: original Map floor atlas missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_road_lvl1.t3x || { echo 'ERROR: source map road texture 1 missing'; exit 1; }
