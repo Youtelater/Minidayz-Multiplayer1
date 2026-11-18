@@ -215,6 +215,16 @@ void test_new_game_generates_visible_original_world() {
             if(o&&o->type==18)++spawned_sprites;
         }
         std::fprintf(stderr,"terrain generated: source-spawns=%zu placed=%zu top=%zu sprites=%zu visible=%zu\\n",world->source_location_spawn_count(),spawned_all,spawned_top,spawned_sprites,drawable_generated_sprites);
+        const auto* map_layout=minidayz::stage1::find_layout("Map");
+        const auto map_index=static_cast<std::uint16_t>(map_layout-minidayz::stage1::kLayoutTable);
+        std::size_t shown=0;
+        for(std::size_t i=0;i<world->placement_count()&&shown<40;++i){
+            const auto* p=world->placement(i);
+            if(!p||p->source_uid!=0)continue;
+            const auto* layer=minidayz::stage1::find_layer(map_index,p->layer);
+            std::fprintf(stderr,"spawn layer=%u name=%s object=%u x=%0.0f y=%0.0f\\n",p->layer,layer?layer->name:"missing",p->object,p->x,p->y);
+            ++shown;
+        }
         assert(world->source_location_spawn_count() > 20);
         assert(drawable_generated_sprites > 20);
     }
