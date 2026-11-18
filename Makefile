@@ -125,7 +125,8 @@ stage1-assets:
 	@python3 tools/stage1/validate_stage1.py
 	@python3 tools/stage1/build_sprite_catalog.py
 	@python3 tools/stage1/build_ground_floor.py
-	@test -s $(ROMFS)/gfx/original_map_ground_floor.t3x || { echo 'ERROR: original Map floor texture missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_ground_layout.bin || { echo 'ERROR: original Map ground layout missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_ground_p000.t3x || { echo 'ERROR: original Map floor atlas missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/main_menu_logo_sheet0.t3x || { echo 'ERROR: original menu logo missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/menu_btn_wood_sheet0.t3x || { echo 'ERROR: original menu buttons missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/tiledbgmenu_city_up.t3x || { echo 'ERROR: original menu background missing'; exit 1; }
