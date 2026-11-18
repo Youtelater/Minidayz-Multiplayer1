@@ -35,7 +35,7 @@ private:
         std::uint32_t sample_rate{};
         std::uint16_t channels{};
     };
-    static constexpr std::size_t kClipCount = 11;
+    static constexpr std::size_t kClipCount = 13;
     bool load_wav(const char* path, Clip& destination) noexcept;
     void play(std::size_t clip) noexcept;
     std::array<Clip,kClipCount> clips_{};
@@ -48,7 +48,7 @@ private:
     unsigned gear_drop_serial_{};
     unsigned pickup_serial_{};
     unsigned step_serial_{};
-    std::array<int,2> loaded_step_surfaces_{{-1,-1}};
+    std::array<int,4> loaded_step_surfaces_{{-1,-1,-1,-1}};
     int loaded_pickup_variant_{-1};
     int ambient_variant_{-1};
 };
