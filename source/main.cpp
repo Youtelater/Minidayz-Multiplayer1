@@ -1727,6 +1727,9 @@ public:
             draw_equipped_layer(equipment_.equipped(
                 minidayz::items::EquipmentSlot::head),false,0.41f);
             draw_equipped_layer(inventory_.equipped_backpack(),false,0.40f);
+            // Original satchels are separate wearable storage equipment,
+            // not part of the main backpack slot. Show both when equipped.
+            draw_equipped_layer(inventory_.equipped_satchel(),false,0.395f);
             draw_equipped_layer(equipment_.equipped(
                 minidayz::items::EquipmentSlot::hands),true,0.39f);
         }
