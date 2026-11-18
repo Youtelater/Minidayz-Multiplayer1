@@ -1431,9 +1431,13 @@ public:
         // The source Map uses Construct Tilemaps, not sprites. The native
         // floor must be drawn from the original ground_lvl1 tile sheet,
         // before all world objects, or the entire terrain looks blank.
+        // Source WorldGenerationProfile levels 4/5 use a 33-row map,
+        // with the second terrain half beginning at grid row 18.
+        const float source_second_half_y=world_.grid().height()==33
+            ? world_.bounds().height*18.0f/33.0f : 1.0e30f;
         if (!renderer.draw_original_ground_floor(
                 camera_x, camera_y, view_w, view_h,
-                 world_.generation_level())) {
+                world_.generation_level(),source_second_half_y)) {
             renderer.draw_solid_rect(camera_x, camera_y, view_w, view_h,
                                      C2D_Color32(80, 72, 62, 255));
             renderer.draw_text("ORIGINAL FLOOR TEXTURE FAILED TO LOAD",
