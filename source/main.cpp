@@ -132,8 +132,9 @@ public:
         if (menu_active_) {
             bool continue_game = has_saved_game_ && (input.pressed & KEY_A) != 0;
             bool new_game = (input.pressed & KEY_X) != 0;
+            const bool menu_tap = input.touching && !touch_down_;
             touch_down_ = input.touching;
-            if (input.touching) {
+            if (menu_tap) {
                 const int tx = input.touch.px;
                 const int ty = input.touch.py;
                 if (tx >= 18 && tx <= 302 && ty >= 78 && ty <= 132)
@@ -672,10 +673,12 @@ public:
         if (menu_active_) {
             renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
                                      C2D_Color32(20, 25, 23, 255));
-            renderer.draw_text("WORLD SAVE", 18.0f, 20.0f, 0.55f);
+            (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 320.0f, 240.0f, 0.95f);
+            renderer.draw_text("SELECT GAME", 18.0f, 20.0f, 0.48f);
             if (has_saved_game_) {
                 renderer.draw_solid_rect(18.0f, 78.0f, 284.0f, 54.0f,
                                          C2D_Color32(62, 92, 66, 255));
+                (void)renderer.draw_menu_art(1, 18.0f, 78.0f, 284.0f, 54.0f);
                 renderer.draw_text("CONTINUE", 92.0f, 96.0f, 0.55f);
             } else {
                 renderer.draw_solid_rect(18.0f, 78.0f, 284.0f, 54.0f,
@@ -684,6 +687,7 @@ public:
             }
             renderer.draw_solid_rect(18.0f, 145.0f, 284.0f, 57.0f,
                                      C2D_Color32(110, 75, 49, 255));
+            (void)renderer.draw_menu_art(1, 18.0f, 145.0f, 284.0f, 57.0f);
             renderer.draw_text("NEW GAME", 92.0f, 165.0f, 0.55f);
             if (!world_ready_)
                 renderer.draw_text("WORLD GENERATION FAILED - RETRY NEW GAME", 18.0f, 204.0f, 0.27f);
@@ -1156,11 +1160,11 @@ public:
             renderer.reset_camera();
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
                                      C2D_Color32(24, 34, 29, 255));
-            renderer.draw_solid_rect(30.0f, 42.0f, 340.0f, 3.0f,
-                                     C2D_Color32(132, 150, 116, 255));
-            renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
-            renderer.draw_text("SURVIVE THE WILDERNESS", 65.0f, 124.0f, 0.42f);
-            renderer.draw_text("SELECT CONTINUE OR START A NEW WORLD", 30.0f, 174.0f, 0.32f);
+            (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 400.0f, 240.0f, 0.95f);
+            if (!renderer.draw_menu_art(0, 42.0f, 36.0f, 316.0f, 112.0f))
+                renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
+            renderer.draw_text("3DS EDITION", 143.0f, 156.0f, 0.43f);
+            renderer.draw_text("SELECT NEW GAME OR CONTINUE BELOW", 50.0f, 206.0f, 0.32f);
             return;
         }
         const auto& p = player_.state();
