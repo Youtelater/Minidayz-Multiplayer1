@@ -17,7 +17,10 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "data/stage1/construct_project_parsed.json"
 DEST = ROOT / "data/stage1/original_terrain_paint_events.json"
-TERRAIN = (208, 211, 418, 230)
+# Four environment objects plus the seven original per-level ground objects.
+# The Construct runtime can paint BOTH sets with SetTile actions; excluding
+# the ground sheets silently hides the largest source-parity gap.
+TERRAIN = (208, 211, 418, 230, 482, 687, 688, 776, 980, 1138, 1139)
 # Original Construct Tilemap 'Set tile at' opcode, confirmed from root source.
 SET_TILE = 192
 
@@ -64,11 +67,19 @@ def main():
             if instance[1] in cell_sizes and cell_sizes[instance[1]] != size:
                 raise SystemExit(f"Conflicting source tile cell sizes for {instance[1]}")
             cell_sizes[instance[1]] = size
+    # Seven level sheets share Construct's 60px square ground cells.
+    # Some are created dynamically and have no authored tilemap instance.
     for object_id in TERRAIN:
         definition = source_objects[object_id]
         original = ROOT / "assets/gfx" / Path(definition[6][0]).name
-        size = cell_sizes[object_id]
+        size = cell_sizes.get(object_id)
+        if size is None and object_id in (482, 687, 688, 776, 980, 1138, 1139):
+            size = cell_sizes.get(482, 60)
+        if size is None or size <= 0:
+            raise SystemExit(f"Unknown source tile size for object {object_id}")
         with Image.open(original) as im:
+            if im.width % size or im.height % size > 1:
+                raise SystemExit(f"Source tile sheet dimensions changed for {object_id}")
             capacity[object_id] = (im.width // size) * (im.height // size)
     records = []
     counters = Counter()
