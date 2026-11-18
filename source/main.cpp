@@ -1539,6 +1539,25 @@ public:
                                      p.alive ? C2D_Color32(190, 126, 65, 255)
                                              : C2D_Color32(130, 45, 45, 255));
         }
+
+        // The original Map has separate night (46) and Rain (44) layers.
+        // They are runtime effects, not static map placements. Draw the
+        // actual Construct overlay art only in the corresponding source
+        // day/night and rain state, fitted to the 400x240 upper display.
+        if (!day_night_.day_mode()) {
+            (void)renderer.draw_source_sprite_fitted(
+                minidayz::stage1::kOriginalNightOverlayArt.object,
+                minidayz::stage1::kOriginalNightOverlayArt.animation,
+                minidayz::stage1::kOriginalNightOverlayArt.frame,
+                camera_x, camera_y, view_w, view_h, 0.16f);
+        }
+        if (rain_timer_.active()) {
+            (void)renderer.draw_source_sprite_fitted(
+                minidayz::stage1::kOriginalRainFadeArt.object,
+                minidayz::stage1::kOriginalRainFadeArt.animation,
+                minidayz::stage1::kOriginalRainFadeArt.frame,
+                camera_x, camera_y, view_w, view_h, 0.14f);
+        }
     }
 
 private:
