@@ -10,6 +10,7 @@ import re
 import struct
 import subprocess
 import tempfile
+from collections import Counter
 from pathlib import Path
 from PIL import Image
 
@@ -87,6 +88,12 @@ with Image.open(image) as source:
         raise SystemExit("Original ground layout contains no visible tiles")
     if tile_ids[-1] >= maximum_id:
         raise SystemExit("Original ground tile refers outside its source PNG")
+    # This authored Map ground sheet is a strip, not a complete world.
+    # Choose an existing source tile (the most frequent visible one) for
+    # the procedural-world backdrop; never invent replacement artwork.
+    frequency = Counter((v & TILE_MASK) for _, _, _, _, cells in instances
+                        for v in cells if v != RAW_EMPTY)
+    base_tile_id = frequency.most_common(1)[0][0]
     # 3DS GPU textures must fit 1024 pixels; keep paging deterministic.
     side = max(1, 1024 // tile_width)
     per_page = min(128, side * side)
@@ -174,6 +181,9 @@ if destination.stat().st_size < 32:
 HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 {\n" +
     f"inline constexpr std::uint16_t kOriginalFloorTileObject={OBJECT};\n" +
     f"inline constexpr std::uint16_t kOriginalFloorTileId={tile_ids[0]};\n" +
+    f"inline constexpr std::uint16_t kOriginalFloorBaseTileId={base_tile_id};\\n" +
+    f"inline constexpr std::uint32_t kOriginalFloorBasePage={mapping[base_tile_id][0]};\\n" +
+    f"inline constexpr std::uint32_t kOriginalFloorBaseFrame={mapping[base_tile_id][1]};\\n" +
     f"inline constexpr float kOriginalFloorTileSize={float(tile_width):.1f}f;\n" +
     f"inline constexpr float kOriginalFloorBaseTileSize={float(base_tile_pixels):.1f}f;" + chr(10) +
     f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\n" +
