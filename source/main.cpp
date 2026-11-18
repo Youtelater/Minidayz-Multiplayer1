@@ -3,6 +3,8 @@
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/terrain_collision.hpp"
+#include "minidayz/terrain_source_visibility.hpp"
+#include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/inventory.hpp"
@@ -28,6 +30,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <tuple>
 #include <sys/stat.h>
 
 namespace {
@@ -1509,12 +1512,32 @@ public:
                     (std::strstr(source_layer->name, "respawn") ||
                      std::strstr(source_layer->name, "_resp") ||
                      std::strstr(source_layer->name, "points"))) continue;
+                // Original UI player sprite belongs to runtime-controlled
+                // survivor rendering below, not a permanent source Map image.
+                if (placement->layer == 32 || placement->opacity <= 0.0f)
+                    continue;
                 const float px = placement->x;
                 const float py = placement->y;
-                if (px < camera_x - 96.0f || px > camera_x + view_w + 96.0f ||
-                    py < camera_y - 96.0f || py > camera_y + view_h + 96.0f)
-                    continue;
-                const float sx = placement->scale_x > 0.0f ? placement->scale_x : 1.0f;
+                const float sx = placement->scale_x != 0.0f
+                    ? placement->scale_x : 1.0f;
+                const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
+                    placement->object,0,0};
+                const auto* begin=minidayz::stage1::kSpriteFrames;
+                const auto* end=begin+minidayz::stage1::kSpriteFrameCount;
+                const auto* sprite=std::lower_bound(begin,end,key,
+                    [](const minidayz::stage1::SpriteFrameDef& item,
+                       const auto& wanted){
+                        return std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
+                            item.object,item.animation,item.frame}<wanted;
+                    });
+                if (sprite!=end && sprite->object==placement->object &&
+                    sprite->animation==0 && sprite->frame==0) {
+                    if (!minidayz::terrain::source_sprite_in_view(
+                        px,py,sprite->width,sprite->height,
+                        sprite->origin_x,sprite->origin_y,sx,sx,
+                        placement->angle*0.01745329251994329577f,
+                        camera_x,camera_y,view_w,view_h)) continue;
+                } // Keep unknown frame dimensions visible for diagnostics.
                 // Source Map layer 32 is player, with Buildings_bg (31)
                 // below it and Buildings/Trees (41-43) above it. Preserve
                 // those layers through Citro2D's depth ordering instead of
