@@ -16,7 +16,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 18u;
+inline constexpr std::uint32_t kSaveVersion = 19u;
 // Preserve the original Construct wait when a craft is interrupted by autosave.
 struct PendingCraftSnapshot {
     std::uint16_t recipe_index{0xffffu};
@@ -52,6 +52,8 @@ struct SavedGame {
     // v17 adds the original repeated Check_loot event timer (1480s).
     minidayz::items::SourceLootTimerSnapshot source_loot{};
     PendingCraftSnapshot pending_craft{};
+    // v19 persists the original CurrentLevel for multi-map terrain.
+    std::uint8_t world_level{};
 };
 
 
@@ -70,7 +72,8 @@ bool write_saved_game(std::uint32_t seed,
                       const items::SourceDayNightClock* source_time = nullptr,
                       const items::SourceRainTimer* source_rain = nullptr,
                       const items::SourceLootTimer* source_loot = nullptr,
-                      const PendingCraftSnapshot* pending_craft = nullptr) noexcept;
+                      const PendingCraftSnapshot* pending_craft = nullptr,
+                      std::uint8_t world_level = 0) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
