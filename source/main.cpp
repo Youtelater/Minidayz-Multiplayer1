@@ -1464,7 +1464,27 @@ public:
                 }
             }
 
-
+            // The Construct bridge-event source contains placed bridge
+            // elements that are NOT normal layout instances. Render only
+            // originally enabled elements at their exact source positions,
+            // using their real sprite frames (no debug rectangles).
+            for (std::size_t i = 0; i < world_.feature_count(); ++i) {
+                const auto* feature = world_.feature(i);
+                if (!feature ||
+                    feature->kind != minidayz::WorldFeatureKind::Bridge ||
+                    (feature->variant & 1u) == 0u) continue;
+                const auto* object =
+                    minidayz::stage1::find_object(feature->source_object);
+                if (!object || object->type != 18) continue;
+                const float x = feature->position.x;
+                const float y = feature->position.y;
+                if (x < camera_x - 128.0f || x > camera_x + view_w + 128.0f ||
+                    y < camera_y - 128.0f || y > camera_y + view_h + 128.0f)
+                    continue;
+                (void)renderer.draw_source_sprite(
+                    feature->source_object, 0, 0, x, y,
+                    1.0f, 1.0f, 0.58f);
+            }
         }
 
         for (std::size_t i = 0; i < tents_.tent_count(); ++i) {
