@@ -181,9 +181,9 @@ if destination.stat().st_size < 32:
 HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 {\n" +
     f"inline constexpr std::uint16_t kOriginalFloorTileObject={OBJECT};\n" +
     f"inline constexpr std::uint16_t kOriginalFloorTileId={tile_ids[0]};\n" +
-    f"inline constexpr std::uint16_t kOriginalFloorBaseTileId={base_tile_id};\\n" +
-    f"inline constexpr std::uint32_t kOriginalFloorBasePage={mapping[base_tile_id][0]};\\n" +
-    f"inline constexpr std::uint32_t kOriginalFloorBaseFrame={mapping[base_tile_id][1]};\\n" +
+    f"inline constexpr std::uint16_t kOriginalFloorBaseTileId={base_tile_id};\n" +
+    f"inline constexpr std::uint32_t kOriginalFloorBasePage={mapping[base_tile_id][0]};\n" +
+    f"inline constexpr std::uint32_t kOriginalFloorBaseFrame={mapping[base_tile_id][1]};\n" +
     f"inline constexpr float kOriginalFloorTileSize={float(tile_width):.1f}f;\n" +
     f"inline constexpr float kOriginalFloorBaseTileSize={float(base_tile_pixels):.1f}f;" + chr(10) +
     f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\n" +
