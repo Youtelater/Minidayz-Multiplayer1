@@ -62,6 +62,10 @@ def validate_atlas() -> None:
     print(f"Original Construct atlases OK: {len(sheets)} ROMFS .t3x files")
     # Ground tiles are Construct Tilemaps (type 16), not sprites, so the
     # regular source animation atlas cannot cover them.
+    for level in range(1, 8):
+        road = ATLAS / f"original_map_road_lvl{level}.t3x"
+        if not road.is_file() or road.stat().st_size <= 32:
+            raise SystemExit(f"Original source road texture missing: {road.name}")
     for variant in ("original_map_base_ground.t3x",
                     "original_map_base_ground_lvl2.t3x",
                     "original_map_base_ground_lvl3.t3x",
