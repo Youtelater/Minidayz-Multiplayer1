@@ -60,6 +60,14 @@ jobs:
             tests/boot_menu_tests.cpp -o /tmp/minidayz_boot_menu_tests
           /tmp/minidayz_boot_menu_tests
 
+      - name: Verify source terrain covers every generated player spawn
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/terrain_tiling_tests.cpp -o /tmp/minidayz_terrain_tiling_tests
+          /tmp/minidayz_terrain_tiling_tests
+
       - name: Compile 3DS Executable
         shell: bash
         run: |
