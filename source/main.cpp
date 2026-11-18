@@ -130,8 +130,9 @@ public:
             "romfs:/gfx/original_map_details_layout.bin");
         // Audio is optional. RomFS is already mounted by Engine::initialize;
         // DSP failure must never prevent inventory or crafting gameplay.
-        if (stage2_audio_.initialize() && rain_timer_.active())
-            stage2_audio_.start_rain_loop();
+        (void)stage2_audio_.initialize();
+        // World audio must not start over the boot menu. Its initial
+        // environment loops are enabled after generation finishes.
     }
 
     void on_exit() noexcept override {
@@ -161,6 +162,9 @@ public:
                 new_game_generation_ = false;
                 travel_generation_ = false;
                 menu_active_ = false;
+                stage2_audio_.set_environment_ambience(!day_night_.day_mode());
+                if (rain_timer_.active()) stage2_audio_.start_rain_loop();
+                else stage2_audio_.stop_rain_loop();
                 // Only overwrite the existing save after a new world succeeds.
                 has_saved_game_ = write_scene_save();
             }
@@ -673,6 +677,7 @@ public:
         // Original Construct Timer_ALL advances once per 1.5 seconds,
         // toggling the day/night source cold branch at its real boundary.
         (void)day_night_.update(std::max(0.0f, dt));
+        stage2_audio_.set_environment_ambience(!day_night_.day_mode());
         // Original Rain_speed=360s is armed in Start events 8520771380755414.
         // CurrentLevel=0 sets rains_level=2; single-player is never inRaid.
         // choose(1,2,3,4)>1 starts rain; a later timer tick stops it.
@@ -1791,6 +1796,8 @@ private:
         // background texture swap. Preserve survivor condition and items.
         // The source bridge artwork remains the travel landmark on 3DS.
         ++world_level_;
+        stage2_audio_.stop_environment_ambience();
+        stage2_audio_.stop_rain_loop();
         footstep_distance_=0.0f;
         world_seed_ ^= (0x9e3779b9u + static_cast<std::uint32_t>(world_level_) * 0x85ebca6bu);
         if(world_seed_==0)world_seed_=0x6d696e69u;
@@ -1810,6 +1817,8 @@ private:
 
     void start_new_game() noexcept {
         world_seed_ = make_new_world_seed();
+        stage2_audio_.stop_environment_ambience();
+        stage2_audio_.stop_rain_loop();
         footstep_distance_=0.0f;
         world_level_ = 0;
         travel_generation_ = false;
