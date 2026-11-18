@@ -108,7 +108,7 @@ require("tools/stage1/validate_stage1.py" in makefile and
 
 # Clearly identified equivalence gaps; these are warnings so a working 3DS
 # build is not misrepresented as a fully faithful game.
-require("rle_cells" in floor and "MDG2" in floor and "mapping[(object_id, raw & TILE_MASK)]" in floor,
+require("rle_cells" in floor and "MDG3" in floor and "mapping[(object_id, raw & TILE_MASK)]" in floor,
         "Original terrain exporter keeps all source RLE cells and tilemap object identities")
 require((ROOT / "romfs/gfx/original_map_ground_layout.bin").is_file(),
         "Original Map cell layout packed in RomFS")
