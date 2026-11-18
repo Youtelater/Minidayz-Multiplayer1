@@ -768,13 +768,19 @@ public:
         const float dy=player_.state().y-old_y;
         const float walked=std::hypot(dx,dy);
         if (walked>0.001f && std::isfinite(walked)) {
-            footstep_distance_+=walked;
-            const float interval=movement.run ? 42.0f : 34.0f;
-            if (footstep_distance_>=interval) {
-                footstep_distance_=std::fmod(footstep_distance_,interval);
+            // Game_events original AltMove footstep branches use the
+            // Construct Every 0.25 seconds condition, not a guessed
+            // number of movement pixels between samples.
+            constexpr float kSourceFootstepSeconds=0.25f;
+            footstep_elapsed_+=std::max(0.0f,dt);
+            if (footstep_elapsed_>=kSourceFootstepSeconds) {
+                footstep_elapsed_=std::fmod(
+                    footstep_elapsed_,kSourceFootstepSeconds);
                 stage2_audio_.play_footstep(
                     terrain_surface_at(player_.state().x,player_.state().y));
             }
+        } else {
+            footstep_elapsed_=0.0f;
         }
         player_.update_survival(dt, preview_rules_);
         // Exact original Player stats -> States five-second event
@@ -1804,7 +1810,7 @@ private:
         ++world_level_;
         stage2_audio_.stop_environment_ambience();
         stage2_audio_.stop_rain_loop();
-        footstep_distance_=0.0f;
+        footstep_elapsed_=0.0f;
         world_seed_ ^= (0x9e3779b9u + static_cast<std::uint32_t>(world_level_) * 0x85ebca6bu);
         if(world_seed_==0)world_seed_=0x6d696e69u;
         ground_loot_.clear();
@@ -1825,7 +1831,7 @@ private:
         world_seed_ = make_new_world_seed();
         stage2_audio_.stop_environment_ambience();
         stage2_audio_.stop_rain_loop();
-        footstep_distance_=0.0f;
+        footstep_elapsed_=0.0f;
         world_level_ = 0;
         travel_generation_ = false;
         player_ = minidayz::PlayerSystem(make_initial_state());
@@ -2006,7 +2012,7 @@ private:
     std::uint8_t world_level_{};
     bool travel_generation_{};
     float save_elapsed_{};
-    float footstep_distance_{};
+    float footstep_elapsed_{};
     bool world_ready_{};
     bool npc_ready_{};
     bool menu_active_{true};
