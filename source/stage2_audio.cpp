@@ -152,7 +152,7 @@ void Stage2Audio::play(std::size_t which) noexcept {
     wave={};
     wave.data_vaddr=clip.pcm;
     wave.nsamples=clip.frames;
-    wave.looping=(which==6 || which==10);
+    wave.looping=(which==6 || which==12);
     ndspChnWaveBufAdd(channel,&wave);
 }
 
@@ -191,8 +191,10 @@ void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
     case terrain::FootstepSurface::shallow_water: prefix = "swamp_step"; break;
     default: prefix = "hard_ground"; break;
     }
-    const unsigned variant=step_serial_++ & 1u;
+    const unsigned variant=step_serial_++ % 4u;
     const std::size_t voice=7u+variant;
+    const unsigned source_variant = surface==terrain::FootstepSurface::ground
+        ? variant%2u+1u : variant+1u;
     const auto surface_id=static_cast<int>(surface);
     if (loaded_step_surfaces_[variant]!=surface_id) {
         ndspChnWaveBufClear(static_cast<int>(voice));
@@ -203,7 +205,7 @@ void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
         loaded_step_surfaces_[variant]=-1;
         char path[80]{};
         std::snprintf(path,sizeof(path),"romfs:/wav/%s_%u.wav",
-                      prefix,variant+1u);
+                      prefix,source_variant);
         if (!load_wav(path,clips_[voice])) return;
         loaded_step_surfaces_[variant]=surface_id;
     }
@@ -215,7 +217,7 @@ void Stage2Audio::play_item_pickup() noexcept {
     const int variant=static_cast<int>(pickup_serial_++ & 1u);
     constexpr const char* paths[2]={"romfs:/wav/pick1.wav",
                                     "romfs:/wav/pick2.wav"};
-    constexpr std::size_t voice=9;
+    constexpr std::size_t voice=11;
     if (loaded_pickup_variant_!=variant) {
         ndspChnWaveBufClear(static_cast<int>(voice));
         ndspChnReset(static_cast<int>(voice));
@@ -247,18 +249,18 @@ void Stage2Audio::set_environment_ambience(bool night,bool winter) noexcept {
     // Do not hammer the SD/RomFS with a multi-megabyte WAV load every
     // frame if this optional ambience cannot fit in 3DS linear memory.
     ambient_variant_=wanted;
-    if (!load_wav(path,clips_[10])) return;
-    play(10);
+    if (!load_wav(path,clips_[12])) return;
+    play(12);
 }
 
 void Stage2Audio::stop_environment_ambience() noexcept {
     if (ndsp_ready_) {
-        ndspChnWaveBufClear(10);
-        ndspChnReset(10);
+        ndspChnWaveBufClear(12);
+        ndspChnReset(12);
     }
-    if (clips_[10].pcm) linearFree(clips_[10].pcm);
-    clips_[10]={};
-    waves_[10]={};
+    if (clips_[12].pcm) linearFree(clips_[12].pcm);
+    clips_[12]={};
+    waves_[12]={};
     ambient_variant_=-1;
 }
 
@@ -302,7 +304,7 @@ void Stage2Audio::shutdown() noexcept {
     gear_drop_serial_=0;
     pickup_serial_=0;
     step_serial_=0;
-    loaded_step_surfaces_={{-1,-1}};
+    loaded_step_surfaces_={{-1,-1,-1,-1}};
     loaded_pickup_variant_=-1;
     ambient_variant_=-1;
 }
