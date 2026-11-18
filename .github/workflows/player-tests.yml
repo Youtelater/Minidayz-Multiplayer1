@@ -311,6 +311,12 @@ jobs:
             tests/source_day_night_tests.cpp -o source_day_night_tests
           ./source_day_night_tests
 
+      - name: Test Original Rain Timer Event Guards
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_rain_event_tests.cpp -o source_rain_event_tests
+          ./source_rain_event_tests
+
       - name: Test Original Update_Stats Weather Phase Overrides
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
