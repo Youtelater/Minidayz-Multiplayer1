@@ -232,6 +232,21 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   ground_loaded_=true;
  }
  if(!ground_loaded_) return false;
+ // Traveling between source maps must not accumulate seven full ground
+ // sheets plus seven road sheets in the 3DS GPU texture pool. Keep only
+ // the active world theme (and the final world's second-half theme).
+ const auto primary_theme=terrain::active_ground_texture(source_level);
+ for(std::uint32_t i=0;i<7;++i){
+  if(i==primary_theme || (source_level==5 && i==5)) continue;
+  if(base_floor_sheets_[i]){
+   C2D_SpriteSheetFree(base_floor_sheets_[i]);
+   base_floor_sheets_[i]=nullptr;
+  }
+  if(road_sheets_[i]){
+   C2D_SpriteSheetFree(road_sheets_[i]);
+   road_sheets_[i]=nullptr;
+  }
+ }
  // Keep only the needed original ground theme resident. Loading all seven
  // terrain sheets at startup can exhaust original 3DS texture memory and
  // make every map fail to render, even when the current sheet is valid.
