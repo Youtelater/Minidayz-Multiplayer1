@@ -5,6 +5,7 @@
 #include "minidayz/terrain_level.hpp"
 #include "minidayz/terrain_roads.hpp"
 #include "minidayz/terrain_source_tile_flags.hpp"
+#include "minidayz/terrain_source_visibility.hpp"
 #include "minidayz/generated/water_shore_source.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
@@ -178,8 +179,13 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
   std::snprintf(sprite_cache_[slot].sheet,sizeof(sprite_cache_[slot].sheet),"%s",selected->sheet);
   sprite_cache_[slot].slot=slot;
  }
- const float draw_x=x-selected->origin_x*selected->width*sx;
- const float draw_y=y-selected->origin_y*selected->height*sy;
+ // Citro2D negative scales reverse texture UVs but keep geometry size
+ // positive. Mirror the Construct hotspot too, or flipped world objects
+ // appear displaced (and disagree with camera culling).
+ const float draw_x=terrain::source_sprite_top_left(
+     x,selected->width,selected->origin_x,sx);
+ const float draw_y=terrain::source_sprite_top_left(
+     y,selected->height,selected->origin_y,sy);
  return draw_sprite(slot,selected->image,draw_x,draw_y,
                      sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth,opacity);
 }
