@@ -64,6 +64,8 @@ public:
           world_level_(restored ? restored->world_level : 0),
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
+        player_.set_source_skin(
+            minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
         if (restored && !inventory_.restore_with_satchel(restored->inventory, restored->satchel))
             inventory_.clear();
         if (restored && !equipment_.restore_with_fraction(
@@ -1917,6 +1919,8 @@ private:
         world_level_ = 0;
         travel_generation_ = false;
         player_ = minidayz::PlayerSystem(make_initial_state());
+        player_.set_source_skin(
+            minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
         inventory_.clear();
         equipment_.clear();
         ground_loot_.clear();
@@ -1995,6 +1999,8 @@ private:
                 state.x=px;
                 state.y=py;
                 player_=minidayz::PlayerSystem(state);
+                player_.set_source_skin(
+                    minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
                 return true;
             }
         }
