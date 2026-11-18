@@ -8,6 +8,7 @@ int main() {
     static_assert(surface_for_detail_object(211)==FootstepSurface::forest);
     static_assert(surface_for_detail_object(418)==FootstepSurface::sand);
     static_assert(surface_for_detail_object(230)==FootstepSurface::ground);
+    static_assert(FootstepSurface::snow!=FootstepSurface::ground);
     static_assert(detail_blocks_player(208) && detail_blocks_player(211));
     static_assert(!detail_blocks_player(418) && !detail_blocks_player(230));
     static_assert(generated_road_cell(12) && generated_road_cell(13));
