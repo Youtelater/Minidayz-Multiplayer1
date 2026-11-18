@@ -115,35 +115,6 @@ void test_original_map_layout_and_descriptors() {
     }
     assert(found_bunker && found_bridge);
 
-    std::size_t source_loot_markers = 0;
-    for (std::size_t index = 0; index < world.placement_count(); ++index) {
-        const auto* placement = world.placement(index);
-        if (placement && placement->object == 218) {
-            ++source_loot_markers;
-            if (source_loot_markers <= 12)
-                std::printf("LOOT_MARKER_TEST index=%zu x=%.0f y=%.0f layer=%u uid=%llu\\n",
-                    index, placement->x, placement->y, placement->layer,
-                    static_cast<unsigned long long>(placement->source_uid));
-        }
-    }
-    std::printf("LOOT_MARKER_TEST total=%zu\\n", source_loot_markers);
-
-    for (const std::uint16_t object : {std::uint16_t(434), std::uint16_t(344),
-             std::uint16_t(441), std::uint16_t(246), std::uint16_t(514)}) {
-        std::size_t n = 0;
-        for (std::size_t i = 0; i < world.placement_count(); ++i) {
-            const auto* e = world.placement(i);
-            if (e && e->object == object && e->y >= 0.0f) {
-                if (n < 2) std::printf("LOOT_ANCHOR_TEST id=%u x=%.0f y=%.0f\\n",
-                    static_cast<unsigned>(object), e->x, e->y);
-                ++n;
-            }
-        }
-        std::printf("LOOT_ANCHOR_TEST id=%u count=%zu\\n",
-            static_cast<unsigned>(object), n);
-    }
-
-
     // Spawn-point object 216 is not the visible Zed. Native actors must use
     // the original skin/eyes pair created by Spawn_NPC.
     std::size_t source_zed_points = 0;
