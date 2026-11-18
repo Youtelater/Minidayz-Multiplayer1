@@ -49,6 +49,16 @@ int main() {
     saved.stashes[0].items[1].fractional_loss=255;
     assert(!restored.restore(saved));
     assert(restored.stash(0)->items[1].item_id==10);
+    // A crafted/corrupted v13+ save must not load intersecting stashes.
+    saved=stash.snapshot();
+    saved.count=2;
+    saved.stashes[1]=saved.stashes[0];
+    assert(!restored.restore(saved));
+    assert(restored.count()==1);
+    saved.stashes[1].x+=16.0f;
+    assert(restored.restore(saved));
+    assert(restored.count()==2);
+    assert(restored.stash(1)->x==116.0f);
     assert(stash.nearest(100,100,3)==0);
     assert(stash.nearest(200,200,3)==stash.count());
     assert(!stash.deploy_from_inventory_checked(
