@@ -141,6 +141,14 @@ public:
                 loading_world_ = false;
                 world_ready_ = true;
                 npc_ready_ = npcs_.initialize(world_);
+                if (new_game_generation_ && !place_new_player_on_generated_map()) {
+                    // Do not start a new run at a hard-coded, blocked map edge.
+                    loading_world_ = false;
+                    world_ready_ = false;
+                    generation_failed_ = true;
+                    return;
+                }
+                new_game_generation_ = false;
                 menu_active_ = false;
                 // Only overwrite the existing save after a new world succeeds.
                 (void)write_scene_save();
@@ -1524,7 +1532,53 @@ private:
         tap_was_selected_ = false;
         selected_inventory_slot_ = -1;
         save_elapsed_ = 0.0f;
+        new_game_generation_ = true;
         begin_world_generation();
+    }
+
+    // 3DS safety fallback until original player-spawn events are fully ported:
+    // choose a traversable position in the source-generated settlement grid,
+    // not the fixed 160,120 point near an empty corner of the large Map.
+    bool place_new_player_on_generated_map() noexcept {
+        const auto& grid = world_.grid();
+        if(grid.width()==0 || grid.height()==0) return false;
+        const float cw = world_.bounds().width / grid.width();
+        const float ch = world_.bounds().height / grid.height();
+        const std::size_t total = static_cast<std::size_t>(grid.width()) * grid.height();
+        const std::size_t first = world_seed_ % total;
+        constexpr float offsets[][2] = {
+            {0.0f,0.0f}, {180.0f,0.0f}, {-180.0f,0.0f},
+            {0.0f,180.0f}, {0.0f,-180.0f},
+            {280.0f,160.0f}, {-280.0f,160.0f},
+            {280.0f,-160.0f}, {-280.0f,-160.0f},
+            {400.0f,0.0f}, {-400.0f,0.0f}
+        };
+        for(std::size_t i=0;i<total;++i) {
+            const std::size_t index=(first+i)%total;
+            const int x=static_cast<int>(index%grid.width());
+            const int y=static_cast<int>(index/grid.width());
+            // Only select a cell containing a source-generated location.
+            if(grid.at(x,y)==0) continue;
+            const float center_x=(static_cast<float>(x)+0.5f)*cw;
+            const float center_y=(static_cast<float>(y)+0.5f)*ch;
+            for(const auto& offset:offsets) {
+                const float px=center_x+offset[0],py=center_y+offset[1];
+                if(px<16.0f || py<16.0f ||
+                   px>world_.bounds().width-16.0f ||
+                   py>world_.bounds().height-16.0f) continue;
+                if(blocked(this,px,py) ||
+                   blocked(this,px-6.0f,py-8.0f) ||
+                   blocked(this,px+6.0f,py-8.0f) ||
+                   blocked(this,px-6.0f,py+8.0f) ||
+                   blocked(this,px+6.0f,py+8.0f)) continue;
+                auto state=make_initial_state();
+                state.x=px;
+                state.y=py;
+                player_=minidayz::PlayerSystem(state);
+                return true;
+            }
+        }
+        return false;
     }
 
     void begin_world_generation() noexcept {
@@ -1587,6 +1641,7 @@ private:
     bool npc_ready_{};
     bool menu_active_{true};
     bool loading_world_{};
+    bool new_game_generation_{};
     bool generation_failed_{};
     bool has_saved_game_{};
     minidayz::PlayerSystem player_;
