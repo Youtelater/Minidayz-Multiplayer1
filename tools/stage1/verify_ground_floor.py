@@ -96,7 +96,7 @@ for level in range(3):
     atlas = ROOT / "romfs/gfx" / name
     assert atlas.is_file() and atlas.stat().st_size > 32, name
 header = (ROOT / "include/minidayz/generated/ground_floor_source.hpp").read_text()
-assert "kOriginalFloorBaseTileSize=" in header
+assert f"kOriginalFloorBaseTileSize={float(tile_pixels):.1f}f" in header
 print(f"Verified all THREE original ground-level images and {len(instances)} Map "
       f"source tilemap instances ({total} cells, {len(visible)} keyed tile frames, "
       f"{pages} atlas pages)")
