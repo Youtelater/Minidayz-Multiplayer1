@@ -28,6 +28,9 @@ public:
  bool draw_original_ground_floor(float camera_x,float camera_y,float view_width,float view_height,std::uint8_t source_level=0,float second_half_y=1.0e30f) noexcept;
  bool draw_original_environment_tilemaps(float camera_x,float camera_y,
                                            float view_width,float view_height) noexcept;
+ // Render source-derived SetTile scatter events for each generated Map cell.
+ bool draw_source_procedural_environment(const class WorldSystem& world,
+     float camera_x,float camera_y,float view_width,float view_height) noexcept;
  bool draw_source_road_grid(const WorldGrid& grid, const WorldBounds& bounds,
                             float camera_x,float camera_y,float view_width,float view_height,
                             std::uint8_t source_level=0) noexcept;
