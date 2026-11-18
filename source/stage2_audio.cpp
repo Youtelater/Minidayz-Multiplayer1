@@ -118,7 +118,9 @@ bool Stage2Audio::initialize() noexcept {
         "romfs:/wav/crafting.wav",
         "romfs:/wav/drop1.wav",
         "romfs:/wav/drop2.wav",
-        "romfs:/wav/zippero.wav"
+        "romfs:/wav/zippero.wav",
+        "romfs:/wav/geardrop1.wav",
+        "romfs:/wav/geardrop2.wav"
     };
     bool any = false;
     for (std::size_t i=0;i<kClipCount;++i)
@@ -160,6 +162,12 @@ void Stage2Audio::play_item_drop() noexcept {
     play(1u + (drop_serial_++ % 2u));
 }
 
+void Stage2Audio::play_equipment_drop() noexcept {
+    // Original Drop_outerwear/Drop_pants/Drop_vest/Drop_backpack use
+    // choose("geardrop1","geardrop2") in the Construct audio action.
+    play(4u + (gear_drop_serial_++ % 2u));
+}
+
 void Stage2Audio::play_backpack_zip() noexcept {
     // Source event 443039046724475 plays zippero for backpack activation.
     play(3);
@@ -178,5 +186,6 @@ void Stage2Audio::shutdown() noexcept {
     }
     wave_={};
     drop_serial_=0;
+    gear_drop_serial_=0;
 }
 }
