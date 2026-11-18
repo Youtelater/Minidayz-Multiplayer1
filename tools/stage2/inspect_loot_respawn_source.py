@@ -3,7 +3,7 @@
 import json,re,collections
 from pathlib import Path
 p=Path(__file__).resolve().parents[2]/"data/stage1/construct_project_parsed.json"
-j=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)","-",p.read_text(encoding="utf-8-sig")))
+j=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",p.read_text(encoding="utf-8-sig")))
 def walk(xs,anc=()):
     for e in xs if isinstance(xs,list) else []:
         if not isinstance(e,list) or len(e)<7 or e[0]!=0: continue
