@@ -18,6 +18,7 @@
 #include "minidayz/source_day_night.hpp"
 #include "minidayz/source_rain_timer.hpp"
 #include "minidayz/source_loot_timer.hpp"
+#include "minidayz/original_timed_loot.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -579,7 +580,39 @@ public:
         // An actual Global_respawn dispatch additionally requires original
         // Map layout, onBridge, marker and per-location event ancestry.
         // The native timer is persisted but never bypasses those guards.
-        (void)loot_timer_.advance(rain_dt);
+        if (loot_timer_.advance(rain_dt) && world_ready_) {
+            // Original Check_loot -> Global_respawn -> Trigger_spawn(UID)
+            // only targets source category 15 Map markers away from player.
+            // Do not invent markers when the original location loader has
+            // not produced any valid in-world marker instances.
+            const auto firing = loot_timer_.snapshot().firings;
+            std::mt19937 rng(world_seed_ ^ (0x6c6f6f74u + firing));
+            minidayz::items::OriginalTimedLootContext context{};
+            context.player_x = player_.state().x;
+            context.player_y = player_.state().y;
+            context.on_map_layout = true;
+            context.on_bridge = false; // Map preview cannot enter Bridge layout.
+            context.check_loot_timer_fired = true;
+            context.seed_pubg = 0; // Original normal single-player source branch.
+            for (std::size_t i = 0; i < world_.placement_count(); ++i) {
+                const auto* placement = world_.placement(i);
+                if (!placement || placement->object != 218 ||
+                    !world_.bounds().contains({placement->x, placement->y}))
+                    continue;
+                std::uint16_t category = 0;
+                if (!minidayz::items::source_authored_map_loot_marker(
+                        placement->source_uid, category))
+                    continue;
+                minidayz::items::OriginalTimedLootMarker marker{};
+                marker.x = placement->x;
+                marker.y = placement->y;
+                marker.category = category;
+                // The authored Map marker is exact source object 218, not
+                // source family 995; unknown generated markers are rejected.
+                (void)minidayz::items::source_timed_loot_respawn(
+                    ground_loot_, marker, context, rng(), rng());
+            }
+        }
         const bool was_raining=rain_timer_.active();
         (void)rain_timer_.update(rain_dt,2,false,rain_choice);
         if (was_raining != rain_timer_.active()) {
