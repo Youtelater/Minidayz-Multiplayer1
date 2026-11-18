@@ -1388,7 +1388,8 @@ public:
         // floor must be drawn from the original ground_lvl1 tile sheet,
         // before all world objects, or the entire terrain looks blank.
         if (!renderer.draw_original_ground_floor(
-                camera_x, camera_y, view_w, view_h)) {
+                camera_x, camera_y, view_w, view_h,
+                 world_.generation_level())) {
             renderer.draw_solid_rect(camera_x, camera_y, view_w, view_h,
                                      C2D_Color32(80, 72, 62, 255));
             renderer.draw_text("ORIGINAL FLOOR TEXTURE FAILED TO LOAD",
