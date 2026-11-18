@@ -5,6 +5,7 @@
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
+#include "minidayz/generated/player_skin_source.hpp"
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/inventory.hpp"
@@ -178,6 +179,16 @@ public:
             return;
         }
         if (menu_active_) {
+            // Original player skins have their own Construct sprite objects.
+            // L/R or touching the bottom-screen skin selector cycles the
+            // actual original texture, never a recolored default sprite.
+            if ((input.pressed & KEY_L) != 0)
+                selected_skin_ = (selected_skin_ +
+                    minidayz::stage1::kOriginalPlayerSkinCount - 1) %
+                    minidayz::stage1::kOriginalPlayerSkinCount;
+            if ((input.pressed & KEY_R) != 0)
+                selected_skin_ = (selected_skin_ + 1) %
+                    minidayz::stage1::kOriginalPlayerSkinCount;
             // The game always boots here, even when a saved run exists.
             // A Continue tap/press starts loading only after selection.
             auto action = minidayz::menu::button_action(
@@ -186,10 +197,17 @@ public:
             const bool menu_tap = input.touching && !touch_down_;
             touch_down_ = input.touching;
             if (menu_tap) {
-                const auto tapped = minidayz::menu::touch_action(
-                    input.touch.px, input.touch.py, has_saved_game_);
-                if (tapped != minidayz::menu::BootAction::none)
-                    action = tapped;
+                if (input.touch.py >= 184 && input.touch.py < 203) {
+                    selected_skin_ = (selected_skin_ +
+                        minidayz::stage1::kOriginalPlayerSkinCount +
+                        (input.touch.px < 160 ? -1 : 1)) %
+                        minidayz::stage1::kOriginalPlayerSkinCount;
+                } else {
+                    const auto tapped = minidayz::menu::touch_action(
+                        input.touch.px, input.touch.py, has_saved_game_);
+                    if (tapped != minidayz::menu::BootAction::none)
+                        action = tapped;
+                }
             }
             if (action == minidayz::menu::BootAction::new_game)
                 start_new_game();
@@ -858,6 +876,13 @@ public:
             (void)renderer.draw_menu_art(1, start.x(), start.y(),
                 start.width(), start.height());
             renderer.draw_text("NEW GAME", 92.0f, 165.0f, 0.55f);
+            char skin_label[64]{};
+            std::snprintf(skin_label,sizeof(skin_label),
+                "< SKIN %u/%u: %s >",
+                static_cast<unsigned>(selected_skin_+1),
+                static_cast<unsigned>(minidayz::stage1::kOriginalPlayerSkinCount),
+                minidayz::stage1::kOriginalPlayerSkins[selected_skin_].name);
+            renderer.draw_text(skin_label, 14.0f, 186.0f, 0.32f);
             if (generation_failed_)
                 renderer.draw_text("WORLD GENERATION FAILED - RETRY NEW GAME",
                                    18.0f, 204.0f, 0.27f);
@@ -1393,7 +1418,10 @@ public:
             if (!renderer.draw_menu_art(0, 42.0f, 36.0f, 316.0f, 112.0f))
                 renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
             renderer.draw_text("3DS EDITION", 143.0f, 156.0f, 0.43f);
-            renderer.draw_text("SELECT NEW GAME OR CONTINUE BELOW", 50.0f, 206.0f, 0.32f);
+            (void)renderer.draw_source_animation(
+                minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object,
+                "idle_down",0,200.0f,193.0f,1.1f,1.1f,0.35f);
+            renderer.draw_text("L/R: CHANGE PLAYER SKIN", 76.0f, 223.0f, 0.32f);
             return;
         }
         if (!player_.state().alive) {
@@ -1630,10 +1658,22 @@ public:
             }
         }
 
-        const bool sprite_drawn = p.alive &&
-            renderer.draw_source_sprite(minidayz::kSourcePlayerObject,
-                player_.source_animation_index(), player_.source_animation_frame(),
-                p.x, p.y, 0.55f, 0.55f);
+        const char* skin_direction="down";
+        switch(p.facing){
+        case minidayz::PlayerFacing::down: skin_direction="down"; break;
+        case minidayz::PlayerFacing::up: skin_direction="up"; break;
+        case minidayz::PlayerFacing::left: skin_direction="left"; break;
+        case minidayz::PlayerFacing::right: skin_direction="right"; break;
+        }
+        char skin_animation[24]{};
+        std::snprintf(skin_animation,sizeof(skin_animation),"%s_%s",
+            p.animation==minidayz::PlayerAnimation::idle?"idle":"run",
+            skin_direction);
+        const bool sprite_drawn=p.alive &&
+            renderer.draw_source_animation(
+                minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object,
+                skin_animation,player_.source_animation_frame(),
+                p.x,p.y,0.55f,0.55f);
         if (p.alive) {
             const char* direction = "down";
             switch (p.facing) {
@@ -2066,6 +2106,7 @@ private:
     bool generation_failed_{};
     bool has_saved_game_{};
     minidayz::PlayerSystem player_;
+    std::size_t selected_skin_{}; // Default original skin 679, first in generated catalog.
     minidayz::items::InventorySystem inventory_{};
     minidayz::items::EquipmentSystem equipment_{};
     minidayz::items::GroundLootSystem ground_loot_{};
