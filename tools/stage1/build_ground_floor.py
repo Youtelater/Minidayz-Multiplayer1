@@ -98,11 +98,17 @@ for object_id, filename in SOURCE_GROUND.items():
         images[object_id] = im.copy()
 
 sheet_columns = {key: im.width // tile_width for key, im in images.items()}
-tile_keys = sorted({(object_id, (raw & TILE_MASK))
-                    for _, _, _, _, cells, object_id in instances
-                    for raw in cells if raw != RAW_EMPTY})
+# Runtime Construct tile-paint actions can select tiles absent from the
+# narrow pre-authored Map strips. Export EVERY original source tile ID for
+# all seven level themes, so those events can use exact artwork later.
+# Keep (object ID, tile ID) distinct: identical numeric IDs across level
+# sheets are different pixels and must never share an atlas reference.
+tile_keys = sorted((object_id, tile_id)
+                   for object_id, im in images.items()
+                   for tile_id in range((im.width // tile_width) *
+                                        (im.height // tile_width)))
 if not tile_keys:
-    raise SystemExit("Original Map contains no visible ground tiles")
+    raise SystemExit("Original Map contains no ground tile art")
 for object_id, tile_id in tile_keys:
     im = images[object_id]
     count = (im.width // tile_width) * (im.height // tile_width)
@@ -252,6 +258,6 @@ HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 
     f"inline constexpr float kOriginalFloorBaseTileSize={float(base_tile_pixels):.1f}f;" + chr(10) +
     f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\n" +
     "}\n", encoding="utf-8")
-print(f"Original Map: {len(instances)} authored tilemap strips; {len(tile_keys)} source tiles across three ground sheets; "
+print(f"Original Map: {len(instances)} authored tilemap strips; {len(tile_keys)} original source tiles across all seven ground sheets; "
       f"{page_count} authored atlases plus {len(SOURCE_GROUND)} original map-level ground bases; "
       f"packed layout {destination.stat().st_size} bytes")
