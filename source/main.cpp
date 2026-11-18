@@ -156,10 +156,13 @@ public:
         // L drops the selected stack at the player's feet; R picks up the
         // nearest ground stack. Ground transfers are atomic and persisted.
         if ((input.pressed & KEY_L) && selected_inventory_slot_ >= 0) {
+            const auto* drop_item = inventory_.slot(
+                static_cast<std::size_t>(selected_inventory_slot_));
+            const std::uint16_t item_id = drop_item ? drop_item->item_id : 0;
             if (ground_loot_.drop_from_inventory(
                     inventory_, static_cast<std::size_t>(selected_inventory_slot_),
                     0, player_.state().x, player_.state().y)) {
-                stage2_audio_.play_item_drop();
+                play_original_drop_audio(item_id);
                 selected_inventory_slot_ = -1;
             }
         }
@@ -332,10 +335,11 @@ public:
                                 inventory_, selected, player_, preview_rules_,
                                 action == 1, perks_.item_use_flags(), &item_use_runtime_);
                     } else if (action == 2) {
+                        const std::uint16_t item_id = item->item_id;
                         if (ground_loot_.drop_from_inventory(
                                 inventory_, selected, 0, player_.state().x,
                                 player_.state().y))
-                            stage2_audio_.play_item_drop();
+                            play_original_drop_audio(item_id);
                     } else if (action == 4) {
                         // Half-stack split on the 3DS lower touchscreen.
                         for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
@@ -1167,6 +1171,23 @@ public:
     }
 
 private:
+    void play_original_drop_audio(std::uint16_t item_id) noexcept {
+        if (minidayz::items::is_backpack_item(item_id)) {
+            stage2_audio_.play_equipment_drop();
+            return;
+        }
+        minidayz::items::EquipmentSlot source_slot{};
+        if (minidayz::items::EquipmentSystem::source_slot_for_item(
+                item_id, source_slot) &&
+            (source_slot == minidayz::items::EquipmentSlot::outerwear ||
+             source_slot == minidayz::items::EquipmentSlot::vest ||
+             source_slot == minidayz::items::EquipmentSlot::pants)) {
+            stage2_audio_.play_equipment_drop();
+            return;
+        }
+        stage2_audio_.play_item_drop();
+    }
+
     struct StorageTarget {
         std::size_t index{};
         bool stash{};
