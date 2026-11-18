@@ -574,7 +574,11 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
                 if (!matched) continue;
             }
             const auto& locations=runtime.location_array();
-            if (locations.height()<7 || locations.width()>256)
+            // Construct's original location templates legitimately resize
+            // Array 525 to 5, 6, 7 or 8 rows. The element's X/Y are in
+            // rows 2/3; optional row 6 is an out-of-range zero on short
+            // arrays, exactly like Construct Array.at(x,6).
+            if (locations.height()<4 || locations.width()>256)
                 return false;
             for (std::size_t entry=0;entry<locations.width();++entry) {
                 const double raw_type=locations.at(static_cast<int>(entry),0).as_number();
