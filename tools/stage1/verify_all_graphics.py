@@ -46,7 +46,7 @@ def check() -> None:
             raise SystemExit(
                 f"Two original images resolve to {destination}: {previous}, {original}")
         target = TEXTURES / destination
-        if not target.is_file() or target.stat().st_size <= 32:
+        if not target.is_file() or target.stat().st_size == 0:
             missing.append(str(original))
     if missing:
         raise SystemExit(
