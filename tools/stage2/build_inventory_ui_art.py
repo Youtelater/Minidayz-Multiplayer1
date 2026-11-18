@@ -16,6 +16,8 @@ names={
     "SlotBackground":"gui_slot_bg-sheet0.png",
     "DeathScreen":"dead_screen-sheet0.png",
     "RestartButton":"btn_restart-sheet0.png",
+    "NightOverlay":"night_overlay-sheet0.png",
+    "RainFade":"rain_fade-sheet0.png",
 }
 found={}
 for i,obj in enumerate(objects):
@@ -27,13 +29,13 @@ for i,obj in enumerate(objects):
             for name,source in names.items():
                 if Path(fr[0]).name==source:
                     found.setdefault(name,(i,ai,fi))
-missing=set(names)-set(found)-{"DeathScreen","RestartButton"}
+missing=set(names)-set(found)-{"DeathScreen","RestartButton","NightOverlay","RainFade"}
 if missing:raise SystemExit(f"Original inventory art not in original Construct frames: {missing}")
 out=root/"include/minidayz/generated/inventory_ui_art.hpp"
 out.parent.mkdir(parents=True,exist_ok=True)
 lines=["#pragma once","#include <cstdint>","namespace minidayz::stage1 {",
        "struct OriginalUiArt {std::uint16_t object,animation;std::uint32_t frame;};"]
-for optional in ("DeathScreen","RestartButton"):
+for optional in ("DeathScreen","RestartButton","NightOverlay","RainFade"):
     found.setdefault(optional,(65535,0,0))
 for name,(object_id,animation,frame) in found.items():
     lines.append(f"inline constexpr OriginalUiArt kOriginal{name}Art{{{object_id},{animation},{frame}}};")
