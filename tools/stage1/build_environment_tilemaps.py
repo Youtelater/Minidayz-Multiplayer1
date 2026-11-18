@@ -90,7 +90,10 @@ with tempfile.TemporaryDirectory(prefix="mdz_source_terrain_") as scratch:
         tile_size=tile_sizes[object_id]
         with Image.open(GFX/filename) as im:
             art=im.convert("RGBA")
-            if art.width%tile_size or art.height%tile_size:
+            # Construct's water and sand sheets are 180x301 PNGs: the
+            # extra bottommost pixel is transparent export padding, not
+            # another tile row. Keep their exact 60x60 source tile crops.
+            if art.width%tile_size or art.height%tile_size>1:
                 raise SystemExit(f"Bad terrain sheet dimensions: {filename}")
             columns=art.width//tile_size
             count=columns*(art.height//tile_size)
