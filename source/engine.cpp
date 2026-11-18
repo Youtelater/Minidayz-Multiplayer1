@@ -36,6 +36,7 @@ void Renderer::shutdown() noexcept {
  for(auto& sheet:detail_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  detail_maps_.clear(); detail_load_attempted_=false; detail_loaded_=false;
  ground_maps_.clear();ground_load_attempted_=false;ground_loaded_=false;
+ ground_active_level_=255;
  for(auto& sheet:menu_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  if(debug_buffer_) C2D_TextBufDelete(debug_buffer_);
  if(debug_font_) C2D_FontFree(debug_font_);
@@ -226,6 +227,14 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   ground_loaded_=true;
  }
  if(!ground_loaded_) return false;
+ if(ground_active_level_!=source_level){
+  // Authored ground atlases are shared source data, but no old-world page
+  // should remain resident after a transition on memory-limited hardware.
+  for(auto& sheet:floor_sheets_){
+   if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}
+  }
+  ground_active_level_=source_level;
+ }
  // Traveling between source maps must not accumulate seven full ground
  // sheets plus seven road sheets in the 3DS GPU texture pool. Keep only
  // the active world theme (and the final world's second-half theme).
