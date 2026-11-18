@@ -367,15 +367,9 @@ bool Renderer::draw_original_environment_tilemaps(
    detail_maps_.push_back(std::move(map));
   }
   std::fclose(file);
-  for(std::size_t i=0;i<4&&valid;++i){
-   char path[80]{};
-   std::snprintf(path,sizeof(path),
-                 "romfs:/gfx/original_map_detail_%u.t3x",
-                 static_cast<unsigned>(kOriginalObjects[i]));
-   detail_sheets_[i]=C2D_SpriteSheetLoad(path);
-   if(!detail_sheets_[i]||C2D_SpriteSheetCount(detail_sheets_[i])==0)
-    valid=false;
-  }
+  // Environment atlas sheets are loaded only when nonempty source cells
+  // enter the viewport. Four eager RGBA atlases can exhaust the original
+  // 3DS GPU texture pool before trees, items, and ground render.
   if(!valid){
    for(auto& sheet:detail_sheets_){
     if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}
@@ -394,7 +388,7 @@ bool Renderer::draw_original_environment_tilemaps(
   std::size_t slot=4;
   for(std::size_t k=0;k<4;++k)
    if(kOriginalObjects[k]==map.object_id){slot=k;break;}
-  if(slot>=4||!detail_sheets_[slot])continue;
+  if(slot>=4)continue;
   const float tile=static_cast<float>(map.tile_size);
   const int x0=std::max(0,static_cast<int>(
       std::floor((camera_x-map.x)/tile))-1);
@@ -409,8 +403,18 @@ bool Renderer::draw_original_environment_tilemaps(
   for(int row=y0;row<y1;++row)for(int col=x0;col<x1;++col){
    const auto frame=map.cells[static_cast<std::size_t>(row)*
                               map.columns+static_cast<std::size_t>(col)];
-   if(frame==0xffffffffu||frame>=C2D_SpriteSheetCount(detail_sheets_[slot]))
-    continue;
+   if(frame==0xffffffffu)continue;
+   if(!detail_sheets_[slot]){
+    char path[80]{};
+    std::snprintf(path,sizeof(path),
+                  "romfs:/gfx/original_map_detail_%u.t3x",
+                  static_cast<unsigned>(kOriginalObjects[slot]));
+    auto sheet=C2D_SpriteSheetLoad(path);
+    if(!sheet) return false;
+    if(C2D_SpriteSheetCount(sheet)==0){C2D_SpriteSheetFree(sheet);return false;}
+    detail_sheets_[slot]=sheet;
+   }
+   if(frame>=C2D_SpriteSheetCount(detail_sheets_[slot]))return false;
    C2D_Sprite sprite{};
    C2D_SpriteFromSheet(&sprite,detail_sheets_[slot],frame);
    if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)continue;
