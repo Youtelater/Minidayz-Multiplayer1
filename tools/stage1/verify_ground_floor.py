@@ -70,5 +70,25 @@ with path.open("rb") as file:
 for page in range(page_count):
     atlas = ROOT / "romfs/gfx" / f"original_map_ground_p{page:03}.t3x"
     assert atlas.is_file() and atlas.stat().st_size > 32
-print(f"Verified original ground: {len(instances)} source instances, "
+
+# Original source-authored Map strips do not cover the entire procedural
+# world. Require an actual source grass atlas for the full playable field;
+# a packed border map by itself can pass the source RLE test while rendering
+# a black terrain background on a real Nintendo 3DS.
+source_art = ROOT / "assets/gfx/ground_lvl1_tilemap.png"
+base_texture = ROOT / "romfs/gfx/original_map_base_ground.t3x"
+assert base_texture.is_file() and base_texture.stat().st_size > 32, (
+    "Original ground base not packaged; generated worlds can render black")
+with Image.open(source_art) as original:
+    original = original.convert("RGBA")
+    assert original.width == original.height and original.width % 2 == 0
+    half = original.width // 2
+    base_art = original.crop((half, half, original.width, original.height))
+    assert base_art.getbbox() is not None, "Original grass source is transparent"
+    assert len(base_art.getcolors(maxcolors=50000) or []) > 8, (
+        "Original grass atlas source has no textured grass details")
+floor_source = (ROOT / "include/minidayz/generated/ground_floor_source.hpp").read_text()
+assert f"kOriginalFloorBaseTileSize={float(half):.1f}f" in floor_source
+assert "kOriginalFloorBaseTileId=" in floor_source
+print(f"Verified original grass backdrop and source Map: {len(instances)} source instances, "
       f"{total} exact cells, {len(visible_ids)} tile images, {page_count} atlases")
