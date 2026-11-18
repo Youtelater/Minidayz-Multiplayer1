@@ -1481,15 +1481,18 @@ public:
                 }
             }
 
-            // The Construct bridge-event source contains placed bridge
-            // elements that are NOT normal layout instances. Render only
-            // originally enabled elements at their exact source positions,
-            // using their real sprite frames (no debug rectangles).
+            // Source bridge and bunker spawn events create terrain features
+            // that are NOT pre-placed Map instances. Draw their native
+            // Construct sprites at the extracted world coordinates.
             for (std::size_t i = 0; i < world_.feature_count(); ++i) {
                 const auto* feature = world_.feature(i);
-                if (!feature ||
-                    feature->kind != minidayz::WorldFeatureKind::Bridge ||
-                    (feature->variant & 1u) == 0u) continue;
+                if (!feature) continue;
+                const bool bridge = feature->kind ==
+                    minidayz::WorldFeatureKind::Bridge &&
+                    (feature->variant & 1u) != 0u;
+                const bool bunker = feature->kind ==
+                    minidayz::WorldFeatureKind::Bunker;
+                if (!bridge && !bunker) continue;
                 const auto* object =
                     minidayz::stage1::find_object(feature->source_object);
                 if (!object || object->type != 18) continue;
