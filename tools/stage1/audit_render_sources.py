@@ -2,7 +2,12 @@
 """Inspect exact original ground tilemaps and inventory sprite frames."""
 import json,re
 from pathlib import Path
-from PIL import Image
+import struct
+
+def dimensions(p):
+    data=p.read_bytes()[:24]
+    if data[:8]!=b'\x89PNG\r\n\x1a\n': raise ValueError(p)
+    return struct.unpack('>II',data[16:24])
 root=Path(__file__).resolve().parents[2]
 p=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",(root/"data/stage1/construct_project_parsed.json").read_text(encoding="utf-8-sig")))["project"]
 words=("ground_lvl1_tilemap","ground_lvl2_tilemap","ground_enviroment_tilemap",
@@ -19,12 +24,11 @@ for i,obj in enumerate(p[3]):
                 if isinstance(fr,list):
                     print("    FRAME",str(fr[:10])[:260])
 for path in sorted((root/"assets/gfx").glob("ground_*tilemap.png")):
-    with Image.open(path) as image:
-        print("GROUND_IMAGE",path.name,"SIZE",image.size,"MODE",image.mode)
+    print("GROUND_IMAGE",path.name,"SIZE",dimensions(path))
 for path in sorted((root/"assets/gfx").glob("gui_inventory*png"))[:20]:
-    with Image.open(path) as image:print("UI_IMAGE",path.name,"SIZE",image.size)
+    print("UI_IMAGE",path.name,"SIZE",dimensions(path))
 for path in sorted((root/"assets/gfx").glob("gui_slot*png"))[:20]:
-    with Image.open(path) as image:print("UI_IMAGE",path.name,"SIZE",image.size)
+    print("UI_IMAGE",path.name,"SIZE",dimensions(path))
 for l in p[5]:
     if l[0]!="Map":continue
     for y,layer in enumerate(l[6]):
