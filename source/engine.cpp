@@ -496,9 +496,15 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
      C2D_SpriteFromSheet(&sprite,road_sheets_[theme],0);
      if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)
       return false;
+     // A source grid cell is not necessarily a multiple of its 60px
+     // road tile. Trim the final tile instead of painting beyond the
+     // original corridor, which made road edges bleed into water/forest.
+     const float clipped_w=std::min(tile,band.width-x*tile);
+     const float clipped_h=std::min(tile,band.height-y*tile);
+     if(clipped_w<=0.0f||clipped_h<=0.0f)continue;
      C2D_SpriteSetPos(&sprite,band.x+x*tile,band.y+y*tile);
-     C2D_SpriteSetScale(&sprite,tile/sprite.params.pos.w,
-                              tile/sprite.params.pos.h);
+     C2D_SpriteSetScale(&sprite,clipped_w/sprite.params.pos.w,
+                              clipped_h/sprite.params.pos.h);
      C2D_SpriteSetDepth(&sprite,0.96f);
      if(!C2D_DrawSprite(&sprite))return false;
     }
