@@ -320,7 +320,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
    C2D_SpriteSetScale(&sprite,tile/sprite.params.pos.w,
                              tile/sprite.params.pos.h);
    C2D_SpriteSetDepth(&sprite,0.92f);
-   C2D_DrawSprite(&sprite);
+   if(!C2D_DrawSprite(&sprite))return false;
   }
  }
  return true;
@@ -422,7 +422,7 @@ bool Renderer::draw_original_environment_tilemaps(
    C2D_SpriteSetScale(&sprite,tile/sprite.params.pos.w,
                              tile/sprite.params.pos.h);
    C2D_SpriteSetDepth(&sprite,depth);
-   (void)C2D_DrawSprite(&sprite);
+   if(!C2D_DrawSprite(&sprite))return false;
   }
  }
  return true;
