@@ -10,6 +10,7 @@ enum class FootstepSurface : std::uint8_t {
     road,
     forest,
     sand,
+    snow,
     shallow_water
 };
 
