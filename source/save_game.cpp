@@ -202,7 +202,8 @@ struct SavedGameV17 {
 bool valid_pending_craft(const PendingCraftSnapshot& craft) noexcept {
     if (craft.recipe_index == 0xffffu)
         return craft.seconds_remaining == 0.0f;
-    const auto* recipe = minidayz::items::source_craft_recipe(craft.recipe_index);
+    const auto* recipe = craft.recipe_index < minidayz::items::kSourceCraftRecipeCount
+        ? &minidayz::items::kSourceCraftRecipes[craft.recipe_index] : nullptr;
     return recipe && recipe->delay_seconds > 0.0f &&
         std::isfinite(craft.seconds_remaining) &&
         craft.seconds_remaining > 0.0f &&
