@@ -4,6 +4,7 @@
 #include "minidayz/terrain_tiling.hpp"
 #include "minidayz/terrain_level.hpp"
 #include "minidayz/terrain_roads.hpp"
+#include "minidayz/generated/water_shore_source.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
 
@@ -410,8 +411,28 @@ bool Renderer::draw_original_environment_tilemaps(
   if(x1<=x0||y1<=y0)continue;
   const float depth=std::clamp(0.90f-0.0125f*map.layer,0.55f,0.95f);
   for(int row=y0;row<y1;++row)for(int col=x0;col<x1;++col){
-   const auto frame=map.cells[static_cast<std::size_t>(row)*
-                              map.columns+static_cast<std::size_t>(col)];
+   auto frame=map.cells[static_cast<std::size_t>(row)*
+                         map.columns+static_cast<std::size_t>(col)];
+   if(map.object_id==208 && frame==0xffffffffu){
+    // The original water Tilemap has SetTile shoreline rules based on
+    // Compare tile at x +/- 1 and y +/- 1 against source water frame 4.
+    // Only fill currently EMPTY source cells; never overwrite the exact
+    // RLE-authored water, beach or shoreline frames.
+    for(const auto& rule:stage1::kWaterShoreRules){
+     bool match=true;
+     for(std::uint16_t i=0;i<rule.count;++i){
+      const auto& check=stage1::kWaterShoreChecks[rule.first+i];
+      const int nx=col+check.dx,ny=row+check.dy;
+      const bool water=nx>=0&&ny>=0&&
+          nx<static_cast<int>(map.columns)&&
+          ny<static_cast<int>(map.rows)&&
+          map.cells[static_cast<std::size_t>(ny)*map.columns+
+                    static_cast<std::size_t>(nx)]==4u;
+      if(water!=check.requires_water){match=false;break;}
+     }
+     if(match){frame=rule.frame;break;}
+    }
+   }
    if(frame==0xffffffffu)continue;
    if(!detail_sheets_[slot]){
     char path[80]{};
