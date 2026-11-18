@@ -128,6 +128,8 @@ stage1-assets:
 	@test -s $(ROMFS)/gfx/original_map_ground_layout.bin || { echo 'ERROR: original Map ground layout missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_ground_p000.t3x || { echo 'ERROR: original Map floor atlas missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_base_ground.t3x || { echo 'ERROR: original source grass background missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl2.t3x || { echo 'ERROR: original level 2 ground texture missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl3.t3x || { echo 'ERROR: original level 3 ground texture missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/main_menu_logo_sheet0.t3x || { echo 'ERROR: original menu logo missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/menu_btn_wood_sheet0.t3x || { echo 'ERROR: original menu buttons missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/tiledbgmenu_city_up.t3x || { echo 'ERROR: original menu background missing'; exit 1; }
