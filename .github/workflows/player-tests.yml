@@ -317,6 +317,12 @@ jobs:
             tests/source_day_night_tests.cpp -o source_day_night_tests
           ./source_day_night_tests
 
+      - name: Test Original Recurring 360s Rain Weather Timer
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_rain_timer_tests.cpp -o source_rain_timer_tests
+          ./source_rain_timer_tests
+
       - name: Test Original Rain Timer Event Guards
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
