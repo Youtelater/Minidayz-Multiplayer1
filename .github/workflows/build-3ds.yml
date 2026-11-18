@@ -63,6 +63,12 @@ jobs:
           make clean
           make
 
+      - name: Audit original MiniDAYZ code and 3DS port parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/audit_original_parity.py
+
       - name: Verify actual Stage 2 sound files and original texture atlases
         shell: bash
         run: |
