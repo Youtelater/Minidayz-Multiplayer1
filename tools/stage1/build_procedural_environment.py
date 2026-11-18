@@ -27,6 +27,15 @@ def events(nodes,parents=()):
 def coords(node):
     try:
         expression=node[1]
+        # The original forest-interior branch paints 20 cells at
+        # 10 + floor(random(13)), in both axes. Keep its offset instead
+        # of discarding that SetTile action as unsupported source art.
+        if (expression[0]==4 and len(expression)==3 and
+            expression[1][0]==0 and isinstance(expression[1][1],int)):
+            nested=coords([0,expression[2]])
+            if nested is not None:
+                return (expression[1][1]+nested[0],
+                        expression[1][1]+nested[1])
         if expression[0]!=19 or expression[1]!=80:
             return None
         random=expression[2][0]
