@@ -63,6 +63,12 @@ jobs:
           make clean
           make
 
+      - name: Compare generated 3DS ground map with every original source tile
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/verify_ground_floor.py
+
       - name: Audit original MiniDAYZ code and 3DS port parity
         shell: bash
         run: |
@@ -78,6 +84,18 @@ jobs:
       # Compile the native Stage 2 inventory/crafting runtime against the same
       # source-generated headers that the .3dsx just used. Keep these tests
       # outside the 3DS target so they can run on the CI host.
+      - name: Verify original world-generation quotas and NPC spawn mapping
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \\
+            source/world.cpp source/stage1_data_access.cpp \\
+            source/construct_array.cpp source/construct_expression.cpp \\
+            source/construct_event_interpreter.cpp source/location_event_runtime.cpp \\
+            source/npc_system.cpp tests/world_system_tests.cpp \\
+            -o /tmp/minidayz_world_tests
+          /tmp/minidayz_world_tests
+
       - name: Test Stage 2 backpack, satchel, and crafting transactions
         shell: bash
         run: |
