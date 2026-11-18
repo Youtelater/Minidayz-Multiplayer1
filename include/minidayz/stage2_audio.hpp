@@ -46,6 +46,8 @@ private:
     unsigned gear_drop_serial_{};
     unsigned pickup_serial_{};
     unsigned step_serial_{};
+    std::array<int,2> loaded_step_surfaces_{{-1,-1}};
+    int loaded_pickup_variant_{-1};
 };
 
 } // namespace minidayz
