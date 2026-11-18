@@ -83,6 +83,23 @@ def main() -> int:
                 f"Original sprite atlas name collision: {source_path} and "
                 f"{previous} both map to {stem}")
     OUT.mkdir(parents=True, exist_ok=True)
+    # Atlas IDs changed for lossy Unicode filename normalization. Evict
+    # only stale frame-atlas outputs owned by this generator (identified
+    # by their .sha256 stamp), never original preconverted PNG textures.
+    expected_atlases = {
+        f"{ident(source_path)}_p{page:03d}"
+        for source_path, frames in sheets.items()
+        for page in range((len(frames) + MAX_FRAMES_PER_ATLAS - 1)
+                          // MAX_FRAMES_PER_ATLAS)
+    }
+    for stamp in OUT.glob("*_p???.sha256"):
+        atlas_stem = stamp.name[:-len(".sha256")]
+        if atlas_stem in expected_atlases:
+            continue
+        old_texture = OUT / (atlas_stem + ".t3x")
+        if old_texture.is_file():
+            old_texture.unlink()
+        stamp.unlink()
     HEADER.parent.mkdir(parents=True, exist_ok=True)
     header = [
         "#pragma once", "#include <cstdint>", "#include <cstddef>",
