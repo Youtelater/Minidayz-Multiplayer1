@@ -127,6 +127,7 @@ stage1-assets:
 	@python3 tools/stage1/build_ground_floor.py
 	@python3 tools/stage1/build_environment_tilemaps.py
 	@python3 tools/stage1/build_procedural_environment.py
+	@python3 tools/stage1/build_water_shoreline.py
 	@test -s $(ROMFS)/gfx/original_map_details_layout.bin || { echo 'ERROR: original environment terrain layout missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_detail_208.t3x || { echo 'ERROR: original terrain texture object 208 missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_detail_211.t3x || { echo 'ERROR: original terrain texture object 211 missing'; exit 1; }
