@@ -172,7 +172,7 @@ int main() {
     assert(!source_solid_sprite_contains(
         100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,0.0f,119.0f,100.0f));
     assert(source_solid_sprite_contains(
-        100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,90.0f,95.0f,105.0f));
+        100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,90.0f,85.0f,105.0f));
     assert(!source_solid_sprite_contains(
         100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,90.0f,105.0f,105.0f));
 
