@@ -14,6 +14,17 @@ int main() {
     static_assert(minidayz::terrain::ground_texture_at(5,11000.0f,11000.0f)==5);
     static_assert(minidayz::terrain::ground_texture_at(5,15000.0f,11000.0f)==5);
     static_assert(minidayz::terrain::ground_texture_at(4,15000.0f,11000.0f)==4);
+    // All six source worlds and both halves of the last world must resolve
+    // to existing, distinct original PNG/road texture themes. The seam is
+    // exact: the upper row belongs to level-seven art, lower to level-six.
+    for (std::uint8_t level=0;level<5;++level) {
+        assert(minidayz::terrain::ground_texture_at(level,0.0f,11000.0f)==level);
+        assert(minidayz::terrain::ground_texture_at(level,20000.0f,11000.0f)==level);
+    }
+    assert(minidayz::terrain::ground_texture_at(5,10999.0f,11000.0f)==6);
+    assert(minidayz::terrain::ground_texture_at(5,11000.0f,11000.0f)==5);
+    assert(minidayz::terrain::ground_texture_at(5,11001.0f,11000.0f)==5);
+    assert(minidayz::terrain::kGroundObjectByTexture[6]==1139);
     // Object 1138 has its own original sheet for the later world.
     static_assert(minidayz::terrain::kGroundObjectByTexture[5] == 1138);
     for (unsigned i = 0; i <= 5; ++i) {
