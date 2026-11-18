@@ -12,7 +12,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
-data = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-",
+data = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-",
     (ROOT / "data/stage1/construct_project_parsed.json").read_text(
         encoding="utf-8-sig")))["project"]
 source_objects = {
@@ -49,7 +49,7 @@ for inst in instances:
     cols, rows, rle = int(t[13][0]), int(t[13][1]), t[13][2]
     cells = []
     for part in str(rle).split(","):
-        match = re.fullmatch(r"(\\d+)x(-?\\d+)|(-?\\d+)", part)
+        match = re.fullmatch(r"(\d+)x(-?\d+)|(-?\d+)", part)
         assert match is not None, part
         n = int(match[1] or 1)
         v = int(match[2] if match[2] is not None else match[3])
