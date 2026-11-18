@@ -58,12 +58,33 @@ def runtime_audio_references():
     return direct, dynamic
 
 
+def check_player_item_sprites():
+    sprite_header = ROOT / "include/minidayz/generated/sprite_catalog.hpp"
+    item_header = ROOT / "include/minidayz/generated/item_sprite_catalog.hpp"
+    if not sprite_header.is_file() or not item_header.is_file():
+        raise SystemExit("Missing generated original player or item sprite catalog")
+    sprite_text = sprite_header.read_text(encoding="utf-8")
+    item_text = item_header.read_text(encoding="utf-8")
+    frame_objects = {int(m.group(1)) for m in re.finditer(r"\\{(\\d+),\\d+,\\d+,\\d+,", sprite_text)}
+    item_rows = [(int(m.group(1)), int(m.group(2)))
+                 for m in re.finditer(r"\\{(\\d+),\\s*(\\d+)\\},", item_text)]
+    if 679 not in frame_objects:
+        raise SystemExit("Original player skin object 679 has no generated 3DS sprite frame")
+    if not item_rows:
+        raise SystemExit("No source item PNG sprites mapped to 3DS")
+    missing = sorted((item, obj) for item, obj in item_rows if obj not in frame_objects)
+    if missing:
+        raise SystemExit(f"Item sprites missing generated frames: {missing[:20]}")
+    return len(item_rows)
+
+
 def main():
     gfx = ROOT / "assets/gfx"
     wav = ROOT / "romfs/wav"
     generated = ROOT / "romfs/gfx"
     if not gfx.is_dir() or not wav.is_dir():
         raise SystemExit("Expected original assets/gfx and romfs/wav")
+    mapped_item_sprites = check_player_item_sprites()
     refs = original_image_references()
     direct, dynamic = runtime_audio_references()
     images = sorted(p.relative_to(gfx).as_posix() for p in gfx.rglob("*")
@@ -85,6 +106,8 @@ def main():
     result = {
         "note": "Source-referenced or packaged is NOT proof of being rendered/played in gameplay.",
         "graphics": {
+            "player_source_sprite_validated": True,
+            "mapped_item_source_sprites": mapped_item_sprites,
             "original_png_count": len(images),
             "source_referenced_count": sum(x["source_referenced"] for x in image_records),
             "generated_t3x_count": len(list(generated.rglob("*.t3x"))),
