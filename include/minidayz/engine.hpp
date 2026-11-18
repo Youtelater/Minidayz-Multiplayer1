@@ -26,6 +26,8 @@ public:
  // Draw the original Construct sprite frame to an exact 3DS rectangle.
  // Keeps source artwork and texture scaling; only the destination changes.
  bool draw_original_ground_floor(float camera_x,float camera_y,float view_width,float view_height,std::uint8_t source_level=0) noexcept;
+ bool draw_original_environment_tilemaps(float camera_x,float camera_y,
+                                           float view_width,float view_height) noexcept;
  bool draw_source_road_grid(const WorldGrid& grid, const WorldBounds& bounds,
                             float camera_x,float camera_y,float view_width,float view_height,
                             std::uint8_t source_level=0) noexcept;
@@ -36,8 +38,16 @@ public:
  void set_camera(float x,float y) noexcept { camera_x_=x; camera_y_=y; C2D_ViewReset(); C2D_ViewTranslate(-x,-y); }
  void reset_camera() noexcept { set_camera(0.0f,0.0f); }
 private:
- C3D_RenderTarget* top_{}; C3D_RenderTarget* bottom_{}; C2D_SpriteSheet floor_sheets_[8]{}; C2D_SpriteSheet base_floor_sheets_[7]{}; C2D_SpriteSheet road_sheets_[7]{}; C2D_SpriteSheet menu_sheets_[3]{};
+ C3D_RenderTarget* top_{}; C3D_RenderTarget* bottom_{}; C2D_SpriteSheet floor_sheets_[8]{}; C2D_SpriteSheet base_floor_sheets_[7]{}; C2D_SpriteSheet road_sheets_[7]{}; C2D_SpriteSheet detail_sheets_[4]{}; C2D_SpriteSheet menu_sheets_[3]{};
   struct GroundMap {float x{},y{};std::uint32_t columns{},rows{},object_id{};std::vector<std::uint32_t> cells;};
+  struct DetailMap {
+    float x{},y{};
+    std::uint32_t tile_size{},columns{},rows{};
+    std::uint16_t object_id{},layer{};
+    std::vector<std::uint32_t> cells{};
+  };
+  std::vector<DetailMap> detail_maps_{};
+  bool detail_load_attempted_{}; bool detail_loaded_{};
   std::vector<GroundMap> ground_maps_{};std::uint32_t ground_tile_pixels_{};std::uint32_t ground_pages_{};
   bool ground_load_attempted_{};bool ground_loaded_{}; C2D_SpriteSheet sheets_[kMaxSheets]{};
  struct SpriteCacheEntry { char sheet[128]{}; std::size_t slot{}; };
