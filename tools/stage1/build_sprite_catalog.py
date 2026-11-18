@@ -20,8 +20,15 @@ HEADER = ROOT / "include/minidayz/generated/sprite_catalog.hpp"
 MAX_FRAMES_PER_ATLAS = 16
 
 def ident(path: str) -> str:
-    stem = Path(path).stem.replace("-", "_").replace(".", "_")
-    return re.sub(r"[^A-Za-z0-9_]", "_", stem)
+    # Tex3DS output stems must be ASCII, but different Unicode source names
+    # can collapse to the SAME sequence of underscores (e.g. multiple
+    # original Cyrillic animation sheets). Keep a stable digest whenever
+    # normalization would lose information, preventing silent overwrites.
+    stem = Path(path.replace("\\\\", "/")).stem
+    safe = re.sub(r"[^A-Za-z0-9_]", "_", stem)
+    if safe != stem:
+        safe += "_" + hashlib.sha256(stem.encode("utf-8")).hexdigest()[:10]
+    return safe
 
 def cf(v) -> str:
     value = f"{float(v):.9g}"
@@ -66,6 +73,15 @@ def main() -> int:
                                 float(fr[7]) if len(fr)>7 else 0.5,
                                 float(fr[8]) if len(fr)>8 else 0.5,
                                 key[2] / packed_w, key[3] / packed_h))
+    # Never overwrite one original Construct image atlas with another.
+    atlas_owners: dict[str, str] = {}
+    for source_path in sheets:
+        stem = ident(source_path)
+        previous = atlas_owners.setdefault(stem, source_path)
+        if previous != source_path:
+            raise SystemExit(
+                f"Original sprite atlas name collision: {source_path} and "
+                f"{previous} both map to {stem}")
     OUT.mkdir(parents=True, exist_ok=True)
     HEADER.parent.mkdir(parents=True, exist_ok=True)
     header = [
