@@ -71,6 +71,12 @@ jobs:
           make clean
           make
 
+      - name: Verify original Construct boot menu assets and startup state
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/verify_original_boot_menu.py
+
       - name: Compare generated 3DS ground map with every original source tile
         shell: bash
         run: |
