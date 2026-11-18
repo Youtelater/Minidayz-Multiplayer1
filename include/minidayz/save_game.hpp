@@ -8,6 +8,7 @@
 #include "minidayz/stash_storage.hpp"
 #include "minidayz/source_day_night.hpp"
 #include "minidayz/source_rain_timer.hpp"
+#include "minidayz/source_loot_timer.hpp"
 #include "minidayz/item_use_runtime.hpp"
 #include "minidayz/perks.hpp"
 #include <cstdint>
@@ -15,7 +16,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 16u;
+inline constexpr std::uint32_t kSaveVersion = 17u;
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
@@ -43,6 +44,8 @@ struct SavedGame {
     minidayz::items::SourceDayNightSnapshot source_time{};
     // v16 persists the original 360-second Rain timer and active phase.
     minidayz::items::SourceRainTimerSnapshot source_rain{};
+    // v17 adds the original repeated Check_loot event timer (1480s).
+    minidayz::items::SourceLootTimerSnapshot source_loot{};
 };
 
 
@@ -59,7 +62,8 @@ bool write_saved_game(std::uint32_t seed,
                       const items::SourcePerkSystem* perks = nullptr,
                       const items::StashStorageSystem* stashes = nullptr,
                       const items::SourceDayNightClock* source_time = nullptr,
-                      const items::SourceRainTimer* source_rain = nullptr) noexcept;
+                      const items::SourceRainTimer* source_rain = nullptr,
+                      const items::SourceLootTimer* source_loot = nullptr) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
@@ -73,5 +77,6 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                                const items::SourcePerkSystem* perks = nullptr,
                       const items::StashStorageSystem* stashes = nullptr,
                       const items::SourceDayNightClock* source_time = nullptr,
-                      const items::SourceRainTimer* source_rain = nullptr) noexcept;
+                      const items::SourceRainTimer* source_rain = nullptr,
+                      const items::SourceLootTimer* source_loot = nullptr) noexcept;
 } // namespace minidayz::persistence
