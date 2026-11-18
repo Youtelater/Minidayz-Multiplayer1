@@ -1,6 +1,7 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/generated/ground_floor_source.hpp"
+#include "minidayz/terrain_tiling.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
 
 #include <algorithm>
@@ -27,6 +28,7 @@ bool Renderer::initialize() noexcept {
 void Renderer::shutdown() noexcept {
  unload_all();
  for(auto& sheet:floor_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
+ if(base_floor_sheet_){C2D_SpriteSheetFree(base_floor_sheet_);base_floor_sheet_=nullptr;}
  ground_maps_.clear();ground_load_attempted_=false;ground_loaded_=false;
  for(auto& sheet:menu_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  if(debug_buffer_) C2D_TextBufDelete(debug_buffer_);
@@ -207,7 +209,16 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
     }
    }
   }
+  if(valid){
+   base_floor_sheet_=C2D_SpriteSheetLoad("romfs:/gfx/original_map_base_ground.t3x");
+   if(!base_floor_sheet_ || C2D_SpriteSheetCount(base_floor_sheet_)==0)
+    valid=false;
+  }
   if(!valid){
+   if(base_floor_sheet_){
+    C2D_SpriteSheetFree(base_floor_sheet_);
+    base_floor_sheet_=nullptr;
+   }
    for(auto& sheet:floor_sheets_){
     if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}
    }
@@ -216,8 +227,27 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   }
   ground_loaded_=true;
  }
- if(!ground_loaded_) return false;
+ if(!ground_loaded_ || !base_floor_sheet_) return false;
  const float tile=static_cast<float>(ground_tile_pixels_);
+ // Source Map object 482 has only two authored ground strips. The original
+ // game's Construct events dynamically populate the rest of each new map.
+ // Tile the ORIGINAL grass image beneath those authored strips rather than
+ // showing a black GPU-clear color at virtually every new spawn.
+ TerrainTileWindow visible{};
+ if(!calculate_terrain_tile_window(camera_x,camera_y,width,height,tile,
+                                   visible)) return false;
+ for(int row=visible.first_row;row<visible.last_row;++row)
+  for(int col=visible.first_column;col<visible.last_column;++col){
+   C2D_Sprite sprite{};
+   C2D_SpriteFromSheet(&sprite,base_floor_sheet_,0);
+   if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f) return false;
+   C2D_SpriteSetPos(&sprite,col*tile,row*tile);
+   C2D_SpriteSetScale(&sprite,tile/sprite.params.pos.w,
+                            tile/sprite.params.pos.h);
+   C2D_SpriteSetDepth(&sprite,0.98f);
+   if(!C2D_DrawSprite(&sprite)) return false;
+  }
+ // Preserve the exact source RLE cells at their original Map positions.
  for(const GroundMap& map:ground_maps_){
   const int x0=std::max(0,static_cast<int>(std::floor((camera_x-map.x)/tile)));
   const int y0=std::max(0,static_cast<int>(std::floor((camera_y-map.y)/tile)));
