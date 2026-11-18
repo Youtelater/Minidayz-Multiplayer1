@@ -7,6 +7,7 @@
 #include "minidayz/generated/water_shore_source.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
+#include "minidayz/generated/original_image_catalog.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -151,6 +152,49 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  return draw_sprite(slot,selected->image,draw_x,draw_y,
                      sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth);
 }
+bool Renderer::draw_original_image(const char* original_png,float x,float y,
+                                   float width,float height,float depth) noexcept {
+ // Every canonical assets/gfx PNG is indexed once by its original filename.
+ // This handles artwork not represented by a Construct animation record.
+ if(!original_png||!original_png[0]||!(width>0.0f&&height>0.0f))
+  return false;
+ const auto* begin=stage1::kOriginalImages;
+ const auto* end=begin+stage1::kOriginalImageCount;
+ const auto* selected=std::lower_bound(begin,end,original_png,
+    [](const stage1::OriginalImageAsset& asset,const char* name){
+     return std::strcmp(asset.png,name)<0;
+    });
+ if(selected==end||std::strcmp(selected->png,original_png)!=0)return false;
+ std::size_t slot=kMaxSheets;
+ for(std::size_t i=0;i<kMaxSheets;++i){
+  if(sheets_[i]&&sprite_cache_[i].sheet[0]&&
+     std::strcmp(sprite_cache_[i].sheet,selected->texture)==0){
+   slot=i;break;
+  }
+ }
+ if(slot==kMaxSheets){
+  slot=next_sprite_cache_++%kMaxSheets;
+  unload_sheet(slot);
+  char path[192]{};
+  const auto length=std::snprintf(path,sizeof(path),"romfs:/gfx/%s",
+                                   selected->texture);
+  if(length<=0||static_cast<std::size_t>(length)>=sizeof(path)||
+     !load_sheet(slot,path))return false;
+  std::snprintf(sprite_cache_[slot].sheet,
+                sizeof(sprite_cache_[slot].sheet),"%s",selected->texture);
+  sprite_cache_[slot].slot=slot;
+ }
+ if(C2D_SpriteSheetCount(sheets_[slot])==0)return false;
+ C2D_Sprite sprite{};
+ C2D_SpriteFromSheet(&sprite,sheets_[slot],0);
+ if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)return false;
+ C2D_SpriteSetPos(&sprite,x,y);
+ C2D_SpriteSetScale(&sprite,width/sprite.params.pos.w,
+                            height/sprite.params.pos.h);
+ C2D_SpriteSetDepth(&sprite,depth);
+ return C2D_DrawSprite(&sprite);
+}
+
 bool Renderer::draw_menu_art(std::size_t index,float x,float y,float width,float height,float depth) noexcept {
  // Original assets/gfx menu sprites, already converted into romfs/gfx.
  static constexpr const char* paths[]={
