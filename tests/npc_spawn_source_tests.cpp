@@ -91,5 +91,18 @@ int main() {
     assert(std::fabs(random_skin->x - 500.0f) <= 25.0f);
     assert(std::fabs(random_skin->y - 600.0f) <= 25.0f);
 
+    // Source NPCs retain their authored spawn while distant on the 3DS.
+    // Once the player comes into range, the same actor updates normally.
+    minidayz::NpcSystem scheduled;
+    assert(scheduled.spawn_at(3000.0f, 3000.0f, 0.0f, 1, 0x1234u));
+    const auto distant_before = *scheduled.actor(0);
+    scheduled.update(0.05f, 100.0f, 100.0f);
+    const auto* dormant = scheduled.actor(0);
+    assert(dormant && dormant->x == distant_before.x);
+    assert(dormant->y == distant_before.y);
+    assert(dormant->random_state == distant_before.random_state);
+    scheduled.update(0.05f, 3020.0f, 3000.0f);
+    const auto* active = scheduled.actor(0);
+    assert(active && active->x > distant_before.x);
     return 0;
 }
