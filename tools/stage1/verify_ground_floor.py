@@ -121,7 +121,7 @@ with path.open("rb") as stream:
                 wanted = 0xffffffff
             else:
                 page, frame = mapping[(object_id, original & 0x1fffffff)]
-                wanted = (page << 16) | frame
+                wanted = (original & 0xe0000000) | (page << 16) | frame
             assert result == wanted, (object_id, original, result, wanted)
         total += len(cells)
     assert stream.read(1) == b""
