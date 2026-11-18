@@ -12,7 +12,7 @@
 | Startup menu | Uses original `main_menu_logo`, `menu_btn_wood`, `tiledbgmenu_city_up` images; reflows to both native screen sizes. | Adapted UI, not the exact mobile menu flow. Verify hitboxes, visual crop, and readability on hardware. |
 | New Game | Calls `begin_source_generation`; advances across frames; exits loading only after `generation_complete` and NPC initialization. | Five implemented stages wired; confirm execution, error recovery, and load/save behavior on 3DS. |
 | World grid and POIs | `source_world_profile` quota tests exist; grid, map markers, location template runtime, bunkers, bridges implemented. | Original-derived pipeline, not certified event-for-event identical. Existing `tests/world_system_tests.cpp` should execute in CI. |
-| Terrain | The renderer exports all original Map ground objects (482, 687, 688), keeps their separate tile identifiers, and packages level 1/2/3 terrain textures; procedural painting and source tile flips still need implementation. | Authored tile placement code committed; build/emulator verification and tile flip handling remain outstanding. |
+| Terrain | Seven original ground tilemap sheets (482/687/688/776/980/1138/1139), source-level road corridors, source water/sand/forest/environment RLE tilemaps, authored tile collisions, and later-map second-half ground variation are integrated. | **Incomplete:** the 398 original dynamic Tilemap SetTile actions and other Construct environment painting events are not all replayed; native hardware/emulator visual proof is still outstanding. |
 | Player spawn | New games now search source-generated map location cells and check collision at candidate coordinates; 160,120 remains the initial pre-generation state. | Improved safety, not original-equivalent: exact source player spawn rules remain to be traced. |
 | Movement and collisions | `WorldPreviewScene` explicitly sets 72/108 speeds and 5×7 half-size collision box as preview tuning. | **Known non-parity:** replace only after tracing the source events. |
 | Inventory and equipment | Original inventory art lookups and source item catalogs exist; native lower-screen touch layout differs from phone layout. | Data mappings present; UI shape, scaling, item effects, capacity and drag/drop require behavior+visual tests. |
@@ -20,14 +20,14 @@
 | NPCs | Native spawn actors map original skin/eyes sources, and NPCs initialize after world generation. | Spawn mapping covered in tests; full original AI, attacks, pursuit, death and respawn need behavior comparison. |
 | Combat | Native game scene still centers on the preview world and Stage 2 controls. | **Incomplete parity:** do not claim full original firearms/melee/grenades. |
 | Navigation and multi-layout | Scene comments explicitly state the preview cannot enter the Bridge layout. | **Known gap:** original multi-layout transitions and traversal unported. |
-| Audio | Some original WAV resources used by Stage 2 are validated for 3DS PCM playback. | Presence/format check only, not original event-to-sound coverage. |
+| Audio | Original RomFS WAV files play through NDSP for crafting, inventory, drops, pickups, original terrain-specific footsteps, rain, and day/night and snow ambience. WAV asset and event wiring checks run in CI. | **Partial:** original combat, wildlife, vehicle, bunker and other unported Construct audio events are not yet fully wired; two very large music tracks require streaming rather than whole-file allocation. |
 | Saves | New world is saved after successful generation; loading reconstructs world from saved seed. | Round-trip and interruption/failure tests required; don't replace an old save until generation succeeds. |
 | Performance and hardware | Top=world and bottom=touch UI; source atlas loaded from RomFS. | Real 3DS GPU memory, draw order, screen scaling, crash behavior and load duration remain unverified. |
 
 ## Hard requirements before declaring 100% source equivalence
 
 1. Derive every remaining gameplay rule from **root original** Construct event sheets, preserving exact conditions, values, random choices, and ordering. Avoid invented rules.
-2. Reconstruct original world tilemap placement, ground details and spawn selection instead of repeating one floor tile and spawning at a fixed coordinate.
+2. Reproduce the remaining original runtime Tilemap SetTile painting rules, environment decoration passes, level-specific terrain collisions and original source player spawns. The current source-art fallback prevents black terrain but does not replace full procedural painting.
 3. Run original-vs-native behavior comparisons across seeded world creation, item/equipment/crafting transactions, survival ticks, NPC AI, combat, audio triggers and persistence.
 4. Render and interactively test both 3DS screens: 400×240 upper-world image, 320×240 lower touch inventory. Remove redundant phone input UI only while preserving gameplay actions on physical controls.
 5. Run the 3DS GitHub Actions build, host unit tests, and an actual 3DS/Citra-compatible emulator test. This review alone does not prove any of those succeeded.
