@@ -26,4 +26,28 @@ for sheet in sheets:
             name=json.dumps(a[5],separators=(",",":"))[:120]
             if any(w in name for w in ("Global_respawn","Trigger_spawn")):
                 print("CALL",sheet[0],"uid",e[4],"name",name,"anc",[(n[4],str(n[5])[:220]) for n in anc[-6:]],"conditions",json.dumps(e[5])[:1400])
+# Compact raw original function trees and source marker payloads.
+for sheet in sheets:
+    if not isinstance(sheet,list) or len(sheet)<2: continue
+    for e,anc in walk(sheet[1]):
+        if e[4] not in (388188595587361,7952760861768009):continue
+        entries=list(walk([e]))
+        print("FUNCTION_TREE",e[4],"NODE_COUNT",len(entries))
+        for node,parents in entries:
+            cs=json.dumps(node[5],separators=(",",":"))
+            ac=json.dumps(node[6],separators=(",",":"))
+            depth=len(parents)
+            if depth<=2 or '"Trigger_spawn"' in ac or '"Spawn_drop"' in ac or '"Global_respawn"' in ac or (node[5] and any(q[0]==218 for q in node[5] if isinstance(q,list))):
+                print("FN_NODE",e[4],"depth",depth,"uid",node[4],"conditions",cs[:1400],"actions",ac[:1800])
+for layout in j["project"][5]:
+    if not isinstance(layout,list) or len(layout)<7:continue
+    if layout[0]!="Map":continue
+    count=0
+    for layer in layout[6]:
+        if not isinstance(layer,list) or len(layer)<15:continue
+        for inst in layer[14] if isinstance(layer[14],list) else []:
+            if isinstance(inst,list) and len(inst)>2 and inst[1]==218:
+                if count<8:print("SOURCE_MARKER_INSTANCE","layer",layer[0],"record",json.dumps(inst,separators=(",",":"))[:1600])
+                count+=1
+    print("SOURCE_MARKER_INSTANCE_COUNT",count)
 print("DIAGNOSTIC_END")
