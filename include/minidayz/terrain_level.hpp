@@ -16,6 +16,16 @@ constexpr std::uint8_t active_ground_texture(std::uint8_t level) noexcept {
     return level <= 4 ? level : 6;
 }
 
+// The last original 33-row world has a separate, source-authored
+// second-half terrain image. Its WorldGenerationProfile starts the lower
+// half at grid row 18; use that world-space boundary when drawing.
+constexpr std::uint8_t ground_texture_at(std::uint8_t level,
+                                         float world_y,
+                                         float second_half_y) noexcept {
+    return level==5 && world_y>=second_half_y ? 5
+                                             : active_ground_texture(level);
+}
+
 constexpr std::uint32_t active_ground_object(std::uint8_t level) noexcept {
     return kGroundObjectByTexture[active_ground_texture(level)];
 }
