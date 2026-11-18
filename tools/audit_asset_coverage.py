@@ -65,9 +65,9 @@ def check_player_item_sprites():
         raise SystemExit("Missing generated original player or item sprite catalog")
     sprite_text = sprite_header.read_text(encoding="utf-8")
     item_text = item_header.read_text(encoding="utf-8")
-    frame_objects = {int(m.group(1)) for m in re.finditer(r"\\{(\\d+),\\d+,\\d+,\\d+,", sprite_text)}
+    frame_objects = {int(m.group(1)) for m in re.finditer(r"\{(\d+),\d+,\d+,\d+,", sprite_text)}
     item_rows = [(int(m.group(1)), int(m.group(2)))
-                 for m in re.finditer(r"\\{(\\d+),\\s*(\\d+)\\},", item_text)]
+                 for m in re.finditer(r"\{(\d+),\s*(\d+)\},", item_text)]
     if 679 not in frame_objects:
         raise SystemExit("Original player skin object 679 has no generated 3DS sprite frame")
     if not item_rows:
