@@ -900,17 +900,18 @@ public:
                       static_cast<double>(stats.bleeding),
                       static_cast<double>(stats.infection));
         renderer.draw_text(survival_labels, 163.0f, 25.0f, 0.14f);
-        // Original Regular difficulty sets Day_cold=7. This displays the
-        // exact source clothing-warmth expression without fabricating
-        // weather cadence or cold-damage rates.
-        const auto& weather = minidayz::items::source_weather_cold(
-            minidayz::SurvivalDifficulty::regular);
+        // Show the ACTIVE original-source exposure, not the day-only
+        // expression during rain or nighttime. Original cold branches apply
+        // different rules to clothing warmth; the already-computed
+        // source_weather_exposure_ preserves those source conditions.
+        const char* weather_phase = rain_timer_.active()
+            ? "RAIN" : day_night_.day_mode() ? "DAY" : "NIGHT";
         char cold_status[64]{};
         std::snprintf(cold_status, sizeof(cold_status),
-            "DAY COLD %.0f - WARMTH %.0f = %.0f",
-            static_cast<double>(weather.day),
-            static_cast<double>(equipment_.temperature_offset()),
-            static_cast<double>(equipment_.day_cooling(weather.day)));
+            "%s  EXPOSURE %.1f  WARMTH %.1f",
+            weather_phase,
+            static_cast<double>(source_weather_exposure_),
+            static_cast<double>(equipment_.temperature_offset()));
         renderer.draw_text(cold_status, 10.0f, 33.0f, 0.15f);
         if (item_use_runtime_.busy()) {
             char treatment[48]{};
