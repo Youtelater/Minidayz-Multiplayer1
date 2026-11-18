@@ -176,7 +176,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   char magic[4]{};
   std::uint32_t size=0,pages=0,count=0;
   bool valid=std::fread(magic,1,4,file)==4 &&
-             std::memcmp(magic,"MDG2",4)==0 &&
+             std::memcmp(magic,"MDG3",4)==0 &&
              read_u32(size)&&read_u32(pages)&&read_u32(count) &&
              size>0&&size<=256&&pages>0&&pages<=8&&count>0&&count<=32;
   if(valid){
@@ -185,8 +185,12 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
     GroundMap map{};
     valid=std::fread(&map.x,sizeof(float),1,file)==1 &&
           std::fread(&map.y,sizeof(float),1,file)==1 &&
-          read_u32(map.columns)&&read_u32(map.rows);
+          read_u32(map.columns)&&read_u32(map.rows)&&read_u32(map.object_id);
     if(!valid||!std::isfinite(map.x)||!std::isfinite(map.y)||
+       (map.object_id!=482 && map.object_id!=687 &&
+        map.object_id!=688 && map.object_id!=776 &&
+        map.object_id!=980 && map.object_id!=1138 &&
+        map.object_id!=1139)||
        map.columns==0||map.rows==0||
        map.columns>4096||map.rows>4096||
        static_cast<std::uint64_t>(map.columns)*map.rows>2000000u){
@@ -210,12 +214,16 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
    }
   }
   if(valid){
-   const char* const paths[3]={
+   const char* const paths[7]={
     "romfs:/gfx/original_map_base_ground.t3x",
     "romfs:/gfx/original_map_base_ground_lvl2.t3x",
-    "romfs:/gfx/original_map_base_ground_lvl3.t3x"
+    "romfs:/gfx/original_map_base_ground_lvl3.t3x",
+    "romfs:/gfx/original_map_base_ground_lvl4.t3x",
+    "romfs:/gfx/original_map_base_ground_lvl5.t3x",
+    "romfs:/gfx/original_map_base_ground_lvl6.t3x",
+    "romfs:/gfx/original_map_base_ground_lvl7.t3x"
    };
-   for(int i=0;i<3;++i){
+   for(int i=0;i<7;++i){
     base_floor_sheets_[i]=C2D_SpriteSheetLoad(paths[i]);
     if(!base_floor_sheets_[i] ||
        C2D_SpriteSheetCount(base_floor_sheets_[i])==0){
@@ -236,9 +244,9 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   ground_loaded_=true;
  }
  if(!ground_loaded_) return false;
- // CurrentLevel 0, 1 and 2 select original ground objects 482, 687, 688.
- // Levels beyond the traced source conditions retain the third original art.
- const std::uint32_t theme=std::min<std::uint32_t>(source_level,2);
+ // Each source map level has its own original terrain image.
+ const std::uint32_t theme=std::min<std::uint32_t>(source_level,6);
+ constexpr std::uint32_t kGroundObjects[7]={482,687,688,776,980,1138,1139};
  if(!base_floor_sheets_[theme]) return false;
  const float tile=static_cast<float>(ground_tile_pixels_);
  const float base_tile=stage1::kOriginalFloorBaseTileSize;
@@ -262,6 +270,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   }
  // Preserve the exact source RLE cells at their original Map positions.
  for(const GroundMap& map:ground_maps_){
+  if(map.object_id!=kGroundObjects[theme]) continue;
   const int x0=std::max(0,static_cast<int>(std::floor((camera_x-map.x)/tile)));
   const int y0=std::max(0,static_cast<int>(std::floor((camera_y-map.y)/tile)));
   const int x1=std::min(static_cast<int>(map.columns),
