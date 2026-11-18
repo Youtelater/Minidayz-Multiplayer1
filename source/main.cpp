@@ -31,6 +31,9 @@
 #include <sys/stat.h>
 
 namespace {
+// Original Start events initialize rains_level=2 for the normal source map.
+// Rain event 609331584746158 chooses blizzard.wav specifically for value 2.
+constexpr std::uint8_t kSourceDefaultRainsLevel=2;
 using minidayz::persistence::SavedGame;
 using minidayz::persistence::load_saved_game;
 using minidayz::persistence::write_saved_game;
@@ -164,7 +167,7 @@ public:
                 menu_active_ = false;
                 stage2_audio_.set_environment_ambience(
                     !day_night_.day_mode(),world_level_==4);
-                if (rain_timer_.active()) stage2_audio_.start_rain_loop();
+                if (rain_timer_.active()) stage2_audio_.start_rain_loop(kSourceDefaultRainsLevel==2);
                 else stage2_audio_.stop_rain_loop();
                 // Only overwrite the existing save after a new world succeeds.
                 has_saved_game_ = write_scene_save();
@@ -730,10 +733,10 @@ public:
             }
         }
         const bool was_raining=rain_timer_.active();
-        (void)rain_timer_.update(rain_dt,2,false,rain_choice);
+        (void)rain_timer_.update(rain_dt,kSourceDefaultRainsLevel,false,rain_choice);
         if (was_raining != rain_timer_.active()) {
             source_temperature_initialized_=false;
-            if (rain_timer_.active()) stage2_audio_.start_rain_loop();
+            if (rain_timer_.active()) stage2_audio_.start_rain_loop(kSourceDefaultRainsLevel==2);
             else stage2_audio_.stop_rain_loop();
         }
         const float current_source_warmth = equipment_.temperature_offset();
