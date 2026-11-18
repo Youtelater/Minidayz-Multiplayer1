@@ -131,6 +131,17 @@ bool StashStorageSystem::restore(const StashStorageSnapshot& saved) noexcept {
         }
         if(!std::isfinite(stash.x)||!std::isfinite(stash.y)||
             stash.condition>100)return false;
+        // Deployment rejects intersecting stash footprints. A corrupted
+        // save must not bypass that invariant when restoring the scene.
+        // The 8-pixel clearance is the same native deployment default,
+        // not a claim about a special original Construct placement radius.
+        for(std::size_t previous=0;previous<i;++previous) {
+            const double dx=static_cast<double>(stash.x) -
+                saved.stashes[previous].x;
+            const double dy=static_cast<double>(stash.y) -
+                saved.stashes[previous].y;
+            if(dx*dx+dy*dy<16.0*16.0)return false;
+        }
         for(const auto& item:stash.items) {
             if((item.item_id==0)!=(item.count==0))return false;
             if(item.empty()) {
