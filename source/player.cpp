@@ -236,21 +236,37 @@ PlayerMoveResult PlayerSystem::update_movement(
                is_blocked(collision_context, x + half_w, y + half_h);
     };
 
-    // Resolve each axis independently so the player can slide along walls.
-    const float next_x = state_.x + wanted_x;
-    if (!blocked(next_x, state_.y)) {
-        state_.x = next_x;
-        result.dx = wanted_x;
-    } else {
-        result.blocked_x = true;
-    }
-
-    const float next_y = state_.y + wanted_y;
-    if (!blocked(state_.x, next_y)) {
-        state_.y = next_y;
-        result.dy = wanted_y;
-    } else {
-        result.blocked_y = true;
+    // Sub-step collision probes: checking only the endpoint can tunnel
+    // through a 30px water/forest tile or narrow building at high speed.
+    // Keep X and Y independent to preserve the original wall-slide feel.
+    // Four-pixel maximum displacement also catches narrow doorway corners.
+    constexpr float kMaximumCollisionStep=4.0f;
+    const int steps=std::max(1,static_cast<int>(std::ceil(
+        std::max(std::fabs(wanted_x),std::fabs(wanted_y))/
+        kMaximumCollisionStep)));
+    const float step_x=wanted_x/steps,step_y=wanted_y/steps;
+    bool x_blocked=false,y_blocked=false;
+    for(int step=0;step<steps;++step) {
+        if(!x_blocked && step_x!=0.0f) {
+            const float next=state_.x+step_x;
+            if(blocked(next,state_.y)) {
+                result.blocked_x=true;
+                x_blocked=true;
+            } else {
+                state_.x=next;
+                result.dx+=step_x;
+            }
+        }
+        if(!y_blocked && step_y!=0.0f) {
+            const float next=state_.y+step_y;
+            if(blocked(state_.x,next)) {
+                result.blocked_y=true;
+                y_blocked=true;
+            } else {
+                state_.y=next;
+                result.dy+=step_y;
+            }
+        }
     }
 
     if (result.dx == 0.0f && result.dy == 0.0f) {
