@@ -342,7 +342,7 @@ public:
             details_open_ = !details_open_;
         }
         if (!crafting_open_ && !storage_open_ && !perks_open_ && touch_pressed &&
-            input.touch.py >= 81 && input.touch.py < 92) {
+            input.touch.py >= 114 && input.touch.py < 127) {
             const int action = input.touch.px / 64;
             if (action == 3) {
                 (void)ground_loot_.pickup_nearest(
@@ -774,50 +774,74 @@ public:
                 static_cast<double>(item_use_runtime_.remaining()));
             renderer.draw_text(treatment, 170.0f, 33.0f, 0.18f);
         }
-        // Original equipment categories: helmet, outerwear, vest, pants,
-        // held weapon, plus the separate backpack slot.
-        static constexpr const char* equipment_labels[] = {"HELM","COAT","VEST","PANTS","HAND","PACK","SATCH"};
-        for (std::size_t i = 0; i < 7; ++i) {
-            const float x = 5.0f + static_cast<float>(i) * 45.0f;
-            const auto& frame = i == 1 ? minidayz::stage1::kOriginalEquipmentCoatArt
-                : i == 2 ? minidayz::stage1::kOriginalEquipmentVestArt
-                : i == 5 ? minidayz::stage1::kOriginalEquipmentBackpackArt
-                : i == 6 ? minidayz::stage1::kOriginalEquipmentSatchelArt
-                : minidayz::stage1::kOriginalInventoryCardArt;
-            if (!ui_art(frame, x, 38.0f, 43.0f, 43.0f))
-                renderer.draw_solid_rect(x, 38.0f, 43.0f, 43.0f,
-                    C2D_Color32(125, 111, 84, 255));
-            const auto item_id = i == 5 ? inventory_.equipped_backpack()
-                : i == 6 ? inventory_.equipped_satchel()
-                : equipment_.equipped(static_cast<minidayz::items::EquipmentSlot>(i));
-            const auto condition = i == 5 ? inventory_.equipped_backpack_condition()
-                : i == 6 ? inventory_.equipped_satchel_condition()
-                : equipment_.snapshot().conditions[i];
-            if (item_id != 0) {
-                (void)renderer.draw_item_icon(item_id, x + 21.5f, 55.0f, 30.0f, 25.0f);
-                const auto fraction = i < 5
-                    ? equipment_.fraction_snapshot().fractional_loss[i] : 0u;
-                const float exact_condition =
-                    static_cast<float>(condition) -
-                    static_cast<float>(fraction) / 100.0f;
-                if (exact_condition > 0.0f && exact_condition < 100.0f) {
-                    renderer.draw_solid_rect(x + 5.0f, 77.0f, 40.0f, 2.0f,
-                                             C2D_Color32(30, 30, 30, 255));
-                    renderer.draw_solid_rect(x + 5.0f, 77.0f,
-                        40.0f * exact_condition / 100.0f, 2.0f,
-                        C2D_Color32(190, 170, 85, 255));
+        // Original MiniDAYZ parchment equipment cards, reflowed for
+        // the 3DS bottom touchscreen. Each card preserves the source
+        // image proportions and shows its original item sprite/condition.
+        if (!storage_open_ && !crafting_open_ && !perks_open_ && !details_open_) {
+            static constexpr const char* equipment_labels[] = {
+                "HELM", "COAT", "VEST", "PANTS", "HAND", "PACK", "SATCH"
+            };
+            for (std::size_t i = 0; i < 7; ++i) {
+                const float x = 6.0f + static_cast<float>(i % 4) * 77.0f;
+                const float y = 40.0f + static_cast<float>(i / 4) * 38.0f;
+                const auto& frame =
+                    i == 1 ? minidayz::stage1::kOriginalEquipmentCoatArt
+                    : i == 2 ? minidayz::stage1::kOriginalEquipmentVestArt
+                    : i == 5 ? minidayz::stage1::kOriginalEquipmentBackpackArt
+                    : i == 6 ? minidayz::stage1::kOriginalEquipmentSatchelArt
+                    : minidayz::stage1::kOriginalInventoryCardArt;
+                if (!ui_art(frame, x, y, 76.0f, 36.0f))
+                    renderer.draw_solid_rect(x, y, 76.0f, 36.0f,
+                                             C2D_Color32(125, 111, 84, 255));
+                const auto item_id =
+                    i == 5 ? inventory_.equipped_backpack()
+                    : i == 6 ? inventory_.equipped_satchel()
+                    : equipment_.equipped(static_cast<minidayz::items::EquipmentSlot>(i));
+                const auto condition =
+                    i == 5 ? inventory_.equipped_backpack_condition()
+                    : i == 6 ? inventory_.equipped_satchel_condition()
+                    : equipment_.snapshot().conditions[i];
+                if (item_id != 0) {
+                    (void)renderer.draw_item_icon(item_id, x + 17.0f,
+                                                  y + 18.0f, 29.0f, 29.0f);
+                    const auto fraction = i < 5
+                        ? equipment_.fraction_snapshot().fractional_loss[i] : 0u;
+                    const float exact_condition =
+                        static_cast<float>(condition) -
+                        static_cast<float>(fraction) / 100.0f;
+                    const char* source_name = minidayz::items::source_item_name(item_id);
+                    if (source_name && *source_name) {
+                        char short_name[15]{};
+                        std::snprintf(short_name, sizeof(short_name),
+                                      "%.13s", source_name);
+                        renderer.draw_text(short_name, x + 34.0f, y + 8.0f, 0.17f);
+                    } else {
+                        renderer.draw_text(equipment_labels[i],
+                                           x + 34.0f, y + 8.0f, 0.19f);
+                    }
+                    char durability[16]{};
+                    std::snprintf(durability, sizeof(durability), "%.0f%%",
+                                  static_cast<double>(exact_condition));
+                    renderer.draw_text(durability, x + 34.0f, y + 21.0f, 0.22f);
+                    renderer.draw_solid_rect(x + 34.0f, y + 32.0f,
+                                             38.0f, 2.0f,
+                                             C2D_Color32(44, 40, 30, 255));
+                    renderer.draw_solid_rect(x + 34.0f, y + 32.0f,
+                        38.0f * std::clamp(exact_condition / 100.0f, 0.0f, 1.0f),
+                        2.0f, C2D_Color32(177, 146, 79, 255));
+                } else {
+                    renderer.draw_text(equipment_labels[i],
+                                       x + 29.0f, y + 14.0f, 0.30f);
                 }
-            } else {
-                renderer.draw_text(equipment_labels[i], x + 3.0f, 53.0f, 0.18f);
             }
-        }
-        if (!storage_open_ && !crafting_open_) {
-            static constexpr const char* actions[] = {"USE", "ALT", "DROP", "PICK", "SPLIT"};
+            static constexpr const char* actions[] = {
+                "USE", "ALT", "DROP", "PICK", "SPLIT"
+            };
             for (int i = 0; i < 5; ++i) {
                 const float x = static_cast<float>(i * 64);
-                renderer.draw_solid_rect(x + 1.0f, 81.0f, 62.0f, 11.0f,
-                                         C2D_Color32(65, 78, 66, 255));
-                renderer.draw_text(actions[i], x + 13.0f, 83.0f, 0.21f);
+                renderer.draw_solid_rect(x + 1.0f, 115.0f, 62.0f, 11.0f,
+                                         C2D_Color32(90, 76, 55, 255));
+                renderer.draw_text(actions[i], x + 13.0f, 117.0f, 0.27f);
             }
         }
         if (perks_open_) {
@@ -1061,30 +1085,30 @@ public:
             renderer.draw_text("CRAFT", 132.0f, 226.0f, 0.29f);
             return;
         }
-        // 5 x 3 backpack page, sized for the 320 x 240 touch screen.
+        // 5 x 3 source-sprite backpack cells on the 3DS touch screen.
         const int page_start = static_cast<int>(inventory_page_ * kInventoryPageSize);
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 5; ++col) {
                 const int index = page_start + row * 5 + col;
                 const float x = 10.0f + col * 60.0f;
-                const float y = 92.0f + row * 43.0f;
+                const float y = 130.0f + row * 31.0f;
                 const bool selected = index == selected_inventory_slot_;
                 const bool restricted = index >= 0 &&
                     inventory_.is_exclusive_satchel_slot(
                         static_cast<std::size_t>(index));
                 if (!ui_art(minidayz::stage1::kOriginalSlotBackgroundArt,
-                            x, y, 56.0f, 39.0f))
-                    renderer.draw_solid_rect(x, y, 56.0f, 39.0f,
+                            x, y, 56.0f, 29.0f))
+                    renderer.draw_solid_rect(x, y, 56.0f, 29.0f,
                         C2D_Color32(129, 115, 91, 255));
                 if (selected) {
                     const u32 accent = C2D_Color32(224, 187, 87, 255);
                     renderer.draw_solid_rect(x, y, 56.0f, 2.0f, accent);
-                    renderer.draw_solid_rect(x, y + 37.0f, 56.0f, 2.0f, accent);
-                    renderer.draw_solid_rect(x, y, 2.0f, 39.0f, accent);
-                    renderer.draw_solid_rect(x + 54.0f, y, 2.0f, 39.0f, accent);
+                    renderer.draw_solid_rect(x, y + 27.0f, 56.0f, 2.0f, accent);
+                    renderer.draw_solid_rect(x, y, 2.0f, 29.0f, accent);
+                    renderer.draw_solid_rect(x + 54.0f, y, 2.0f, 29.0f, accent);
                 }
                 if (restricted) {
-                    renderer.draw_solid_rect(x, y + 33.0f, 56.0f, 6.0f,
+                    renderer.draw_solid_rect(x, y + 23.0f, 56.0f, 6.0f,
                         C2D_Color32(86, 112, 103, 190));
                 }
                 if (restricted) {
@@ -1092,22 +1116,22 @@ public:
                     const char* label =
                         (satchel_id == 459 || satchel_id == 753)
                             ? "ARMY" : "MED";
-                    renderer.draw_text(label, x + 4.0f, y + 3.0f, 0.17f);
+                    renderer.draw_text(label, x + 4.0f, y + 2.0f, 0.19f);
                 }
                 const auto* item = inventory_.slot(static_cast<std::size_t>(index));
                 if (item && !item->empty()) {
                     // Use the exact item ID -> Construct object mapping from
                     // the original game's MDZItemTable.
                     (void)renderer.draw_item_icon(item->item_id,
-                        x + 28.0f, y + 16.0f, 34.0f, 25.0f);
+                        x + 28.0f, y + 12.0f, 29.0f, 19.0f);
                     char quantity[8]{};
                     std::snprintf(quantity, sizeof(quantity), "x%u",
                                   static_cast<unsigned>(item->count));
-                    renderer.draw_text(quantity, x + 4.0f, y + 27.0f, 0.20f);
+                    renderer.draw_text(quantity, x + 3.0f, y + 20.0f, 0.21f);
                     if (item->condition > 0 && item->condition < 100) {
-                        renderer.draw_solid_rect(x + 6.0f, y + 35.0f, 44.0f, 2.0f,
+                        renderer.draw_solid_rect(x + 6.0f, y + 26.0f, 44.0f, 2.0f,
                                                  C2D_Color32(30, 30, 30, 255));
-                        renderer.draw_solid_rect(x + 6.0f, y + 35.0f,
+                        renderer.draw_solid_rect(x + 6.0f, y + 26.0f,
                             44.0f * static_cast<float>(item->condition) / 100.0f, 2.0f,
                             C2D_Color32(190, 170, 85, 255));
                     }
@@ -1358,9 +1382,14 @@ private:
     static constexpr std::size_t kCraftPageSize = 3;
 
     static int equipment_slot_at(int x, int y) noexcept {
-        if (y < 38 || y >= 81 || x < 5 || x >= 320) return -1;
-        const int index = (x - 5) / 45;
-        return index >= 0 && index < 7 ? index : -1;
+        // Original parchment cards reflow to four 76x36 cards per row
+        // on the 320x240 touchscreen, instead of seven 43px blank boxes.
+        if (y < 40 || y >= 114 || x < 6 || x >= 314) return -1;
+        const int row = (y - 40) / 38;
+        const int col = (x - 6) / 77;
+        const int index = row * 4 + col;
+        return row >= 0 && row < 2 && col >= 0 && col < 4 &&
+               index < 7 ? index : -1;
     }
 
     std::size_t first_available_inventory_slot(std::uint16_t item_id,
@@ -1399,9 +1428,9 @@ private:
     }
 
     static int inventory_slot_at(int x, int y, std::size_t page) noexcept {
-        if (x < 10 || x >= 310 || y < 92 || y >= 221) return -1;
+        if (x < 10 || x >= 310 || y < 130 || y >= 223) return -1;
         const int col = (x - 10) / 60;
-        const int row = (y - 92) / 43;
+        const int row = (y - 130) / 31;
         return col >= 0 && col < 5 && row >= 0 && row < 3
             ? static_cast<int>(page * kInventoryPageSize) + row * 5 + col
             : -1;
