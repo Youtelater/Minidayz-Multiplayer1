@@ -181,6 +181,20 @@ void test_new_game_generates_visible_original_world() {
     }
     assert(changed_cells > 0);
     for (const auto* world : {&first, &second}) {
+        // Original empty POI cells still become wilderness/forest/small
+        // location markers. Every marker must select an actual extracted
+        // generate_location branch; an empty-cell skip leaves barren maps.
+        std::size_t wilderness_markers = 0;
+        for (std::size_t i = 0; i < world->map_marker_count(); ++i) {
+            const auto* marker = world->map_marker(i);
+            assert(marker != nullptr);
+            if (marker->source_code != 0) continue;
+            ++wilderness_markers;
+            assert(marker->marker_type != 0);
+            assert(minidayz::find_source_location_template(
+                marker->marker_type) != nullptr);
+        }
+        assert(wilderness_markers > 0);
         std::size_t drawable_generated_sprites = 0;
         for (std::size_t i = 0; i < world->placement_count(); ++i) {
             const auto* placement = world->placement(i);
@@ -191,8 +205,8 @@ void test_new_game_generates_visible_original_world() {
                 world->bounds().contains({placement->x, placement->y}))
                 ++drawable_generated_sprites;
         }
-        assert(world->source_location_spawn_count() > 0);
-        assert(drawable_generated_sprites > 0);
+        assert(world->source_location_spawn_count() > 20);
+        assert(drawable_generated_sprites > 20);
     }
 }
 
