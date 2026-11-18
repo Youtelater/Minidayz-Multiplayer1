@@ -87,12 +87,22 @@ for node,parents in walk([trigger]):
     for e in path:
         for c in e[5]:
             pair=c[:2]
-            if pair not in ([189,40],[-1,46],[218,92],[218,71],[-1,70]):
+            if pair not in ([189,40],[-1,46],[-1,51],[218,92],[218,71],[218,108],[-1,70]):
                 raise SystemExit(f"Unported category-15 loot condition {pair}: {c}")
             if pair==[-1,46] and not checked(c,-1,46,[[11,"SEED_pubg"],[8,0],[7,[0,1]]]):
                 raise SystemExit(f"Unexpected category-15 source global guard {c}")
+            if pair==[218,108] and not (c[5] is True and c[9]==[[4,995]]):
+                raise SystemExit(f"Unsupported original non-family marker selection {c}")
+            if pair==[-1,51] and not checked(c,-1,51,[[7,[19,82,[[0,1],[0,2],[0,3],[0,4],[0,5]]]],[8,1],[7,[0,1]]]):
+                raise SystemExit(f"Unexpected category-15 random eligibility {c}")
             if pair==[218,71] and not checked(c,218,71,[[10,0],[8,0],[7,[0,15]]]):
                 raise SystemExit(f"Unexpected category-15 source marker guard {c}")
+    # Original SEED_pubg=0 branch excludes family 995 and skips 1/5
+    # of marker drops; PUBGlike branch has no such condition.
+    random_guard = any(condition[:2]==[-1,51] for e in path for condition in e[5])
+    family_guard = any(condition[:2]==[218,108] for e in path for condition in e[5])
+    if (seed == 0) != random_guard or (seed == 0) != family_guard:
+        raise SystemExit("Original timed loot eligibility shape changed")
     for action in calls:
         params=action[5]
         if not isinstance(params,list) or len(params)!=2 or not isinstance(params[1],list) or params[1][0]!=13 or len(params[1])!=7:
