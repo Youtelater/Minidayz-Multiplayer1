@@ -60,6 +60,19 @@ jobs:
             tests/boot_menu_tests.cpp -o /tmp/minidayz_boot_menu_tests
           /tmp/minidayz_boot_menu_tests
 
+      - name: Verify source terrain surfaces used by original footsteps
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude tests/terrain_surface_tests.cpp -o /tmp/minidayz_terrain_surfaces
+          /tmp/minidayz_terrain_surfaces
+
+      - name: Verify original WAV files connected to terrain and ambience
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage2/verify_terrain_audio.py
+
       - name: Verify original water and forest tile collision
         shell: bash
         run: |
