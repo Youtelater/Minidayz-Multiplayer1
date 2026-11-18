@@ -129,6 +129,14 @@ jobs:
           make clean
           make
 
+      - name: Verify original wearable and held-weapon character poses
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/player_equipment_visual_tests.cpp -o /tmp/minidayz_wear_visual
+          /tmp/minidayz_wear_visual
+
       - name: Verify original procedural ground environment SetTile mappings
         shell: bash
         run: |
