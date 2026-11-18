@@ -133,6 +133,12 @@ for level in range(7):
             f"original_map_base_ground_lvl{level + 1}.t3x")
     atlas = ROOT / "romfs/gfx" / name
     assert atlas.is_file() and atlas.stat().st_size > 32, name
+    # The map Array paints roads from the matching original level theme.
+    # Missing road atlases used to leave roads invisible while terrain
+    # passed all other build checks.
+    road_name = f"original_map_road_lvl{level + 1}.t3x"
+    road_atlas = ROOT / "romfs/gfx" / road_name
+    assert road_atlas.is_file() and road_atlas.stat().st_size > 32, road_name
 header = (ROOT / "include/minidayz/generated/ground_floor_source.hpp").read_text()
 assert f"kOriginalFloorBaseTileSize={float(tile_pixels):.1f}f" in header
 print(f"Verified all SEVEN original ground-level images and {len(instances)} Map "
