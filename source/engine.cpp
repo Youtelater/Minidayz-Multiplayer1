@@ -1,8 +1,10 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
+#include "minidayz/generated/ground_floor_source.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <tuple>
@@ -23,6 +25,7 @@ bool Renderer::initialize() noexcept {
 }
 void Renderer::shutdown() noexcept {
  unload_all();
+ if(floor_sheet_){C2D_SpriteSheetFree(floor_sheet_);floor_sheet_=nullptr;}
  if(debug_buffer_) C2D_TextBufDelete(debug_buffer_);
  if(debug_font_) C2D_FontFree(debug_font_);
  debug_buffer_=nullptr; debug_font_=nullptr; debug_ready_=false;
@@ -134,6 +137,30 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  const float draw_y=y-selected->origin_y*selected->height*sy;
  return draw_sprite(slot,selected->image,draw_x,draw_y,
                      sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth);
+}
+bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float width,float height) noexcept {
+ // Tilemap objects (Construct type 16) are NOT included in the normal
+ // Sprite animation atlas. Use the exact original ground_lvl1 tile cropped
+ // from the source Map tilemap instead of rendering a flat colour.
+ if(width<=0.0f||height<=0.0f) return false;
+ if(!floor_sheet_)
+    floor_sheet_=C2D_SpriteSheetLoad("romfs:/gfx/original_map_ground_floor.t3x");
+ if(!floor_sheet_||C2D_SpriteSheetCount(floor_sheet_)==0) return false;
+ constexpr float size=stage1::kOriginalFloorTileSize;
+ const int first_x=static_cast<int>(std::floor(camera_x/size));
+ const int first_y=static_cast<int>(std::floor(camera_y/size));
+ const int last_x=static_cast<int>(std::floor((camera_x+width)/size))+1;
+ const int last_y=static_cast<int>(std::floor((camera_y+height)/size))+1;
+ for(int y=first_y;y<=last_y;++y) {
+  for(int x=first_x;x<=last_x;++x) {
+   C2D_Sprite sprite{};
+   C2D_SpriteFromSheet(&sprite,floor_sheet_,0);
+   C2D_SpriteSetPos(&sprite,x*size,y*size);
+   C2D_SpriteSetDepth(&sprite,0.92f);
+   if(!C2D_DrawSprite(&sprite)) return false;
+  }
+ }
+ return true;
 }
 bool Renderer::draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth) noexcept {
  if(width<=0.0f||height<=0.0f) return false;
