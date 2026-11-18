@@ -131,19 +131,26 @@ with Image.open(image) as source:
 BASE_GROUND = ROMFS / "original_map_base_ground.t3x"
 with Image.open(image) as source:
     source = source.convert("RGBA")
-    if source.width < tile_width * 2 or source.height < tile_width * 2:
-        raise SystemExit("Original source ground art lacks its grass base tile")
+    # The PNG is a 2-by-2 art sheet of full grass/road/shore textures.
+    # Its Construct tilemap metadata can use a different *map cell* size.
+    # Cropping only a map cell would take a tiny fragment, even a one-pixel
+    # transparent fragment, and leave the 3DS terrain effectively black.
+    if source.width % 2 or source.height % 2:
+        raise SystemExit("Original 2x2 source terrain artwork dimensions changed")
+    base_tile_pixels = min(source.width // 2, source.height // 2)
+    if base_tile_pixels < 8:
+        raise SystemExit("Original source grass base has invalid dimensions")
     with tempfile.TemporaryDirectory(prefix="mdz_original_base_floor_") as tmp:
         work = Path(tmp)
-        source.crop((source.width - tile_width,
-                     source.height - tile_width,
+        source.crop((source.width - base_tile_pixels,
+                     source.height - base_tile_pixels,
                      source.width, source.height)).save(work / "base.png")
         (work / "base.t3s").write_text(
             "--atlas -f rgba -z auto" + chr(10) + "base.png" + chr(10), encoding="utf-8")
         subprocess.run(["tex3ds", "-i", str(work / "base.t3s"),
                         "-o", str(BASE_GROUND)], cwd=work, check=True)
 if not BASE_GROUND.is_file() or BASE_GROUND.stat().st_size < 32:
-    raise SystemExit("Original source base ground atlas not generated")
+    raise SystemExit(f"Original source base ground atlas not generated: tile={base_tile_pixels}, size={BASE_GROUND.stat().st_size if BASE_GROUND.is_file() else -1}")
 
 # Format: magic (4), tile width (u32), atlas pages (u32), instance count (u32);
 # each instance: x,y (float), width,height (u32), then width*height
@@ -168,6 +175,7 @@ HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 
     f"inline constexpr std::uint16_t kOriginalFloorTileObject={OBJECT};\n" +
     f"inline constexpr std::uint16_t kOriginalFloorTileId={tile_ids[0]};\n" +
     f"inline constexpr float kOriginalFloorTileSize={float(tile_width):.1f}f;\n" +
+    f"inline constexpr float kOriginalFloorBaseTileSize={float(base_tile_pixels):.1f}f;\\n" +
     f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\n" +
     "}\n", encoding="utf-8")
 print(f"Original Map: {len(instances)} authored tilemap strips; {len(tile_ids)} source tiles; "
