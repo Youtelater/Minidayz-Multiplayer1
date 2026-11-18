@@ -1459,13 +1459,19 @@ public:
             // WorldGrid codes 12/13/14 are the original procedural road
             // network. They must be drawn before buildings and trees, or
             // even a correctly loaded ground sheet shows an empty wilderness.
-            (void)renderer.draw_source_road_grid(world_.grid(),world_.bounds(),
-                    camera_x,camera_y,view_w,view_h,world_.generation_level());
+            if (!renderer.draw_source_road_grid(world_.grid(),world_.bounds(),
+                    camera_x,camera_y,view_w,view_h,world_.generation_level())) {
+                renderer.draw_text("ORIGINAL ROAD TILES FAILED TO LOAD",
+                                   camera_x+12.0f,camera_y+26.0f,0.30f);
+            }
             // Tilemap objects are not sprite objects. Without their exact
             // original RLE cells, beaches/water/forests appear empty even
             // if all PNG files are successfully converted to 3DS textures.
-            (void)renderer.draw_original_environment_tilemaps(
-                    camera_x,camera_y,view_w,view_h);
+            if (!renderer.draw_original_environment_tilemaps(
+                    camera_x,camera_y,view_w,view_h)) {
+                renderer.draw_text("ORIGINAL ENVIRONMENT TILES FAILED TO LOAD",
+                                   camera_x+12.0f,camera_y+40.0f,0.30f);
+            }
             // Render the actual source Map layout in world coordinates.
             // Cull placements outside the camera rectangle to keep 3DS draw
             // cost bounded instead of drawing the entire 36k x 20k layout.
