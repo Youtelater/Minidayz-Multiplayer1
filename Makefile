@@ -128,6 +128,12 @@ stage1-assets:
 	@test -s $(ROMFS)/gfx/original_map_ground_layout.bin || { echo 'ERROR: original Map ground layout missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_ground_p000.t3x || { echo 'ERROR: original Map floor atlas missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_base_ground.t3x || { echo 'ERROR: original source grass background missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl2.t3x || { echo 'ERROR: original level 2 terrain missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl3.t3x || { echo 'ERROR: original level 3 terrain missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl4.t3x || { echo 'ERROR: original level 4 terrain missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl5.t3x || { echo 'ERROR: original level 5 terrain missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl6.t3x || { echo 'ERROR: original level 6 terrain missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl7.t3x || { echo 'ERROR: original level 7 terrain missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl2.t3x || { echo 'ERROR: original level 2 ground texture missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl3.t3x || { echo 'ERROR: original level 3 ground texture missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/main_menu_logo_sheet0.t3x || { echo 'ERROR: original menu logo missing'; exit 1; }
