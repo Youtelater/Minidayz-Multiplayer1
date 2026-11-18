@@ -4,10 +4,17 @@
 
 namespace minidayz::terrain {
 
-// Conservative source-sprite culling: Construct places sprites at a hotspot,
-// which may be hundreds of pixels outside the 400x240 top-screen viewport.
-// A fixed 96px origin margin discards large original houses, forests, and
-// bridges while their art is still plainly visible.
+// Citro2D negative scales flip UVs but do NOT move the geometry. Keep the
+// original Construct hotspot in the same world position when mirrored.
+inline float source_sprite_top_left(float hotspot,float size,
+                                    float origin,float scale) noexcept {
+    const float pixel_extent=std::fabs(scale)*size;
+    return hotspot-(scale<0.0f ? 1.0f-origin : origin)*pixel_extent;
+}
+
+// Camera test uses the same top-left and rotation semantics as Citro2D.
+// Construct world sprites are sometimes far larger than 96px, so culling
+// their hotspot alone incorrectly hides visible forests and buildings.
 inline bool source_sprite_in_view(
     float hotspot_x, float hotspot_y, float frame_width, float frame_height,
     float origin_x, float origin_y, float scale_x, float scale_y,
@@ -18,25 +25,29 @@ inline bool source_sprite_in_view(
         return false;
     if (!std::isfinite(hotspot_x) || !std::isfinite(hotspot_y) ||
         !std::isfinite(scale_x) || !std::isfinite(scale_y) ||
-        !std::isfinite(angle_radians)) return false;
-    // Rotation about the source hotspot is safely enclosed by the maximum
-    // radius to any of the original image's four transformed corners.
-    const float x0=-origin_x*frame_width*scale_x;
-    const float x1=(1.0f-origin_x)*frame_width*scale_x;
-    const float y0=-origin_y*frame_height*scale_y;
-    const float y1=(1.0f-origin_y)*frame_height*scale_y;
-    const float l=std::min(x0,x1),r=std::max(x0,x1);
-    const float t=std::min(y0,y1),b=std::max(y0,y1);
-    if (angle_radians != 0.0f) {
-        const float radius=std::hypot(std::max(std::fabs(l),std::fabs(r)),
-                                      std::max(std::fabs(t),std::fabs(b)));
-        return hotspot_x+radius>camera_x &&
-               hotspot_x-radius<camera_x+view_width &&
-               hotspot_y+radius>camera_y &&
-               hotspot_y-radius<camera_y+view_height;
+        !std::isfinite(angle_radians) ||
+        !std::isfinite(origin_x) || !std::isfinite(origin_y)) return false;
+
+    const float x=source_sprite_top_left(hotspot_x,frame_width,origin_x,scale_x);
+    const float y=source_sprite_top_left(hotspot_y,frame_height,origin_y,scale_y);
+    const float w=std::fabs(scale_x)*frame_width;
+    const float h=std::fabs(scale_y)*frame_height;
+    if (angle_radians == 0.0f) {
+        return x+w>camera_x && x<camera_x+view_width &&
+               y+h>camera_y && y<camera_y+view_height;
     }
-    return hotspot_x+r>camera_x && hotspot_x+l<camera_x+view_width &&
-           hotspot_y+b>camera_y && hotspot_y+t<camera_y+view_height;
+    // Citro2D rotates the quad about its draw origin by default, not about
+    // the sprite's hotspot: include every rotated corner in the test.
+    const float sn=std::sin(angle_radians),cs=std::cos(angle_radians);
+    const float x1=x+w*cs, y1=y+w*sn;
+    const float x2=x-h*sn, y2=y+h*cs;
+    const float x3=x+w*cs-h*sn, y3=y+w*sn+h*cs;
+    const float left=std::min(std::min(x,x1),std::min(x2,x3));
+    const float right=std::max(std::max(x,x1),std::max(x2,x3));
+    const float top=std::min(std::min(y,y1),std::min(y2,y3));
+    const float bottom=std::max(std::max(y,y1),std::max(y2,y3));
+    return right>camera_x && left<camera_x+view_width &&
+           bottom>camera_y && top<camera_y+view_height;
 }
 
 } // namespace minidayz::terrain
