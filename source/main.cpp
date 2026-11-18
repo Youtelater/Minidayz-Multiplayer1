@@ -1146,8 +1146,16 @@ public:
         const float camera_y = std::clamp(p.y - view_h * 0.5f, 0.0f,
             std::max(0.0f, world_.bounds().height - view_h));
         renderer.set_camera(camera_x, camera_y);
-        renderer.draw_solid_rect(camera_x, camera_y, view_w, view_h,
-                                 C2D_Color32(35, 49, 42, 255));
+        // The source Map uses Construct Tilemaps, not sprites. The native
+        // floor must be drawn from the original ground_lvl1 tile sheet,
+        // before all world objects, or the entire terrain looks blank.
+        if (!renderer.draw_original_ground_floor(
+                camera_x, camera_y, view_w, view_h)) {
+            renderer.draw_solid_rect(camera_x, camera_y, view_w, view_h,
+                                     C2D_Color32(80, 72, 62, 255));
+            renderer.draw_text("ORIGINAL FLOOR TEXTURE FAILED TO LOAD",
+                               camera_x + 12.0f, camera_y + 12.0f, 0.30f);
+        }
 
         if (world_ready_) {
             // Render the actual source Map layout in world coordinates.
