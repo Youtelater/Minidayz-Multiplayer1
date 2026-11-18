@@ -56,6 +56,21 @@ def main():
         else:
             unsupported.append((item_id,name))
     rows.sort()
+    # All of these families are present in the supplied original MDZItemTable.
+    # Catch an accidentally dropped equipment sprite group at build time.
+    families={
+        "weapons":(151,246),
+        "helmets":(250,277),
+        "pants":(300,307),
+        "jackets":(350,368),
+        "vests":(400,415),
+        "backpacks":(450,462),
+    }
+    for label,(start,end) in families.items():
+        count=sum(start<=item<=end for item,_,_ in rows)
+        print(f"Original source {label} overlays: {count}")
+        if count==0:
+            raise SystemExit(f"Missing all original {label} directional artwork")
     lines=["#pragma once","#include <cstddef>","#include <cstdint>",
            "namespace minidayz::stage1 {",
            "struct OriginalWearableVisual { std::uint16_t item,object,animations; };",
