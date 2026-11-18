@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <utility>
 #include <tuple>
 
 namespace minidayz {
@@ -25,7 +26,8 @@ bool Renderer::initialize() noexcept {
 }
 void Renderer::shutdown() noexcept {
  unload_all();
- if(floor_sheet_){C2D_SpriteSheetFree(floor_sheet_);floor_sheet_=nullptr;}
+ for(auto& sheet:floor_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
+ ground_maps_.clear();ground_load_attempted_=false;ground_loaded_=false;
  for(auto& sheet:menu_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  if(debug_buffer_) C2D_TextBufDelete(debug_buffer_);
  if(debug_font_) C2D_FontFree(debug_font_);
@@ -159,25 +161,84 @@ bool Renderer::draw_menu_art(std::size_t index,float x,float y,float width,float
  return C2D_DrawSprite(&sprite);
 }
 bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float width,float height) noexcept {
- // Tilemap objects (Construct type 16) are NOT included in the normal
- // Sprite animation atlas. Use the exact original ground_lvl1 tile cropped
- // from the source Map tilemap instead of rendering a flat colour.
+ // Exact original Construct Map ground tile placements, generated from the
+ // root data.deobfuscated.js into a compact 3DS RomFS tilemap.
  if(width<=0.0f||height<=0.0f) return false;
- if(!floor_sheet_)
-    floor_sheet_=C2D_SpriteSheetLoad("romfs:/gfx/original_map_ground_floor.t3x");
- if(!floor_sheet_||C2D_SpriteSheetCount(floor_sheet_)==0) return false;
- constexpr float size=stage1::kOriginalFloorTileSize;
- const int first_x=static_cast<int>(std::floor(camera_x/size));
- const int first_y=static_cast<int>(std::floor(camera_y/size));
- const int last_x=static_cast<int>(std::floor((camera_x+width)/size))+1;
- const int last_y=static_cast<int>(std::floor((camera_y+height)/size))+1;
- for(int y=first_y;y<=last_y;++y) {
-  for(int x=first_x;x<=last_x;++x) {
+ if(!ground_load_attempted_){
+  ground_load_attempted_=true;
+  std::FILE* file=std::fopen("romfs:/gfx/original_map_ground_layout.bin","rb");
+  if(!file) return false;
+  auto read_u32=[&](std::uint32_t& value) -> bool {
+   return std::fread(&value,sizeof(value),1,file)==1;
+  };
+  char magic[4]{};
+  std::uint32_t size=0,pages=0,count=0;
+  bool valid=std::fread(magic,1,4,file)==4 &&
+             std::memcmp(magic,"MDG2",4)==0 &&
+             read_u32(size)&&read_u32(pages)&&read_u32(count) &&
+             size>0&&size<=256&&pages>0&&pages<=8&&count>0&&count<=32;
+  if(valid){
+   ground_tile_pixels_=size;ground_pages_=pages;
+   for(std::uint32_t i=0;i<count&&valid;++i){
+    GroundMap map{};
+    valid=std::fread(&map.x,sizeof(float),1,file)==1 &&
+          std::fread(&map.y,sizeof(float),1,file)==1 &&
+          read_u32(map.columns)&&read_u32(map.rows);
+    if(!valid||!std::isfinite(map.x)||!std::isfinite(map.y)||
+       map.columns==0||map.rows==0||
+       map.columns>4096||map.rows>4096||
+       static_cast<std::uint64_t>(map.columns)*map.rows>2000000u){
+     valid=false;break;
+    }
+    map.cells.resize(static_cast<std::size_t>(map.columns)*map.rows);
+    valid=std::fread(map.cells.data(),sizeof(std::uint32_t),
+                     map.cells.size(),file)==map.cells.size();
+    if(valid) ground_maps_.push_back(std::move(map));
+   }
+  }
+  std::fclose(file);
+  if(valid){
+   for(std::uint32_t page=0;page<ground_pages_;++page){
+    char path[80]{};
+    std::snprintf(path,sizeof(path),"romfs:/gfx/original_map_ground_p%03u.t3x",page);
+    floor_sheets_[page]=C2D_SpriteSheetLoad(path);
+    if(!floor_sheets_[page]||C2D_SpriteSheetCount(floor_sheets_[page])==0){
+     valid=false;break;
+    }
+   }
+  }
+  if(!valid){
+   for(auto& sheet:floor_sheets_){
+    if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}
+   }
+   ground_maps_.clear();
+   return false;
+  }
+  ground_loaded_=true;
+ }
+ if(!ground_loaded_) return false;
+ const float tile=static_cast<float>(ground_tile_pixels_);
+ for(const GroundMap& map:ground_maps_){
+  const int x0=std::max(0,static_cast<int>(std::floor((camera_x-map.x)/tile)));
+  const int y0=std::max(0,static_cast<int>(std::floor((camera_y-map.y)/tile)));
+  const int x1=std::min(static_cast<int>(map.columns),
+              static_cast<int>(std::ceil((camera_x+width-map.x)/tile))+1);
+  const int y1=std::min(static_cast<int>(map.rows),
+              static_cast<int>(std::ceil((camera_y+height-map.y)/tile))+1);
+  for(int row=y0;row<y1;++row) for(int col=x0;col<x1;++col){
+   const std::uint32_t descriptor=map.cells[
+     static_cast<std::size_t>(row)*map.columns+static_cast<std::size_t>(col)];
+   if(descriptor==0xffffffffu) continue;
+   const std::uint32_t page=descriptor>>16,frame=descriptor&0xffffu;
+   if(page>=ground_pages_||!floor_sheets_[page]||
+      frame>=C2D_SpriteSheetCount(floor_sheets_[page])) continue;
    C2D_Sprite sprite{};
-   C2D_SpriteFromSheet(&sprite,floor_sheet_,0);
-   C2D_SpriteSetPos(&sprite,x*size,y*size);
+   C2D_SpriteFromSheet(&sprite,floor_sheets_[page],frame);
+   C2D_SpriteSetPos(&sprite,map.x+col*tile,map.y+row*tile);
+   C2D_SpriteSetScale(&sprite,tile/sprite.params.pos.w,
+                             tile/sprite.params.pos.h);
    C2D_SpriteSetDepth(&sprite,0.92f);
-   if(!C2D_DrawSprite(&sprite)) return false;
+   C2D_DrawSprite(&sprite);
   }
  }
  return true;
