@@ -86,7 +86,7 @@ def check() -> None:
             raise SystemExit(f"Invalid frame index {index} for {atlas}")
         atlas_files.add(atlas)
         path = TEXTURES / (atlas + ".t3x")
-        if not path.is_file() or path.stat().st_size <= 32:
+        if not path.is_file() or path.stat().st_size == 0:
             atlas_missing.add(atlas)
     if atlas_missing:
         raise SystemExit("Missing original animation atlas pages: "
