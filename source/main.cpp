@@ -1670,13 +1670,32 @@ public:
         case minidayz::PlayerFacing::left: skin_direction="left"; break;
         case minidayz::PlayerFacing::right: skin_direction="right"; break;
         }
-        char skin_animation[24]{};
+        char skin_animation[32]{};
         std::snprintf(skin_animation,sizeof(skin_animation),"%s_%s",
             p.animation==minidayz::PlayerAnimation::idle?"idle":"run",
             skin_direction);
-        const bool sprite_drawn=p.alive &&
-            renderer.draw_source_animation(
-                minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object,
+        const auto source_skin_object=
+            minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object;
+        // An armed survivor uses the ORIGINAL player's held-weapon stance
+        // when available, not an ordinary empty-hands idle pose. This works
+        // for all 20 skins and chooses only authentic Construct animations.
+        const auto* held_visual=minidayz::stage1::original_equipment_visual(
+            equipment_.equipped(minidayz::items::EquipmentSlot::hands));
+        const auto* weapon_pose=minidayz::stage1::original_equipment_pose(
+            held_visual,p.animation!=minidayz::PlayerAnimation::idle,true);
+        bool sprite_drawn=false;
+        if(p.alive && weapon_pose &&
+            std::strcmp(weapon_pose,"idle")!=0 &&
+            std::strcmp(weapon_pose,"run")!=0) {
+            char armed_animation[32]{};
+            std::snprintf(armed_animation,sizeof(armed_animation),"%s_%s",
+                          weapon_pose,skin_direction);
+            sprite_drawn=renderer.draw_source_animation(source_skin_object,
+                armed_animation,player_.source_animation_frame(),
+                p.x,p.y,0.55f,0.55f);
+        }
+        if(p.alive && !sprite_drawn)
+            sprite_drawn=renderer.draw_source_animation(source_skin_object,
                 skin_animation,player_.source_animation_frame(),
                 p.x,p.y,0.55f,0.55f);
         if (p.alive) {
