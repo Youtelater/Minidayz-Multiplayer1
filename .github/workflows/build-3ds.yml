@@ -60,6 +60,13 @@ jobs:
             tests/boot_menu_tests.cpp -o /tmp/minidayz_boot_menu_tests
           /tmp/minidayz_boot_menu_tests
 
+      - name: Verify original map-specific ground image selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude tests/terrain_level_tests.cpp -o /tmp/minidayz_terrain_levels
+          /tmp/minidayz_terrain_levels
+
       - name: Verify source terrain covers every generated player spawn
         shell: bash
         run: |
