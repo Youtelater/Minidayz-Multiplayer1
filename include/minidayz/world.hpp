@@ -144,6 +144,7 @@ public:
     const WorldGrid& grid() const noexcept { return grid_; }
     const WorldMapMarker* map_marker(std::size_t index) const noexcept;
     std::size_t map_marker_count() const noexcept { return map_markers_.size(); }
+    std::uint8_t generation_level() const noexcept { return generation_level_; }
 
     const WorldBounds& bounds() const noexcept { return bounds_; }
     std::uint32_t seed() const noexcept { return seed_; }
