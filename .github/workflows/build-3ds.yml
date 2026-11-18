@@ -117,8 +117,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \\
-            tests/terrain_scatter_tests.cpp -o /tmp/minidayz_terrain_scatter_tests
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude tests/terrain_scatter_tests.cpp -o /tmp/minidayz_terrain_scatter_tests
           /tmp/minidayz_terrain_scatter_tests
 
       - name: Verify original Construct boot menu assets and startup state
