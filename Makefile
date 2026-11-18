@@ -127,6 +127,13 @@ stage1-assets:
 	@python3 tools/stage1/build_ground_floor.py
 	@test -s $(ROMFS)/gfx/original_map_ground_layout.bin || { echo 'ERROR: original Map ground layout missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_ground_p000.t3x || { echo 'ERROR: original Map floor atlas missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_road_lvl1.t3x || { echo 'ERROR: source map road texture 1 missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_road_lvl2.t3x || { echo 'ERROR: source map road texture 2 missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_road_lvl3.t3x || { echo 'ERROR: source map road texture 3 missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_road_lvl4.t3x || { echo 'ERROR: source map road texture 4 missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_road_lvl5.t3x || { echo 'ERROR: source map road texture 5 missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_road_lvl6.t3x || { echo 'ERROR: source map road texture 6 missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/original_map_road_lvl7.t3x || { echo 'ERROR: source map road texture 7 missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_base_ground.t3x || { echo 'ERROR: original source grass background missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl2.t3x || { echo 'ERROR: original level 2 terrain missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl3.t3x || { echo 'ERROR: original level 3 terrain missing'; exit 1; }
