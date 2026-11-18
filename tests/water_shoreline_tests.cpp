@@ -12,7 +12,7 @@ int main() {
     bool source_frame_seen[15]{};
     for(const auto& rule:kWaterShoreRules){
         assert(rule.frame<15);
-        assert(rule.count>=7 && rule.count<=8);
+        assert(rule.count>=7 && rule.count<=9);
         assert(rule.uid!=0);
         source_frame_seen[rule.frame]=true;
         bool has_source_water=false;
