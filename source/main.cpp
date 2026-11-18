@@ -1521,7 +1521,7 @@ public:
                 const float sx = placement->scale_x != 0.0f
                     ? placement->scale_x : 1.0f;
                 const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
-                    placement->object,0,0};
+                    placement->object,0,placement->source_frame};
                 const auto* begin=minidayz::stage1::kSpriteFrames;
                 const auto* end=begin+minidayz::stage1::kSpriteFrameCount;
                 const auto* sprite=std::lower_bound(begin,end,key,
@@ -1531,7 +1531,7 @@ public:
                             item.object,item.animation,item.frame}<wanted;
                     });
                 if (sprite!=end && sprite->object==placement->object &&
-                    sprite->animation==0 && sprite->frame==0) {
+                    sprite->animation==0 && sprite->frame==placement->source_frame) {
                     if (!minidayz::terrain::source_sprite_in_view(
                         px,py,sprite->width,sprite->height,
                         sprite->origin_x,sprite->origin_y,sx,sx,
@@ -1545,7 +1545,7 @@ public:
                 const float layer_depth = std::clamp(
                     0.90f - 0.0125f * static_cast<float>(placement->layer),
                     0.10f, 0.90f);
-                if (!renderer.draw_source_sprite(placement->object, 0, 0,
+                if (!renderer.draw_source_sprite(placement->object, 0, placement->source_frame,
                         px, py, sx, sx, layer_depth,
                         placement->angle * 0.01745329251994329577f,
                         placement->opacity)) {
