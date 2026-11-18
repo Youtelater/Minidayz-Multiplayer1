@@ -20,6 +20,10 @@ source_objects = {
     482: "ground_lvl1_tilemap.png",
     687: "ground_lvl2_tilemap.png",
     688: "ground_lvl3_tilemap.png",
+    776: "ground_lvl4_tilemap.png",
+    980: "ground_lvl5_tilemap.png",
+    1138: "ground_lvl6_tilemap.png",
+    1139: "ground_lvl7_tilemap.png",
 }
 layout = next(x for x in data[5] if x[0] == "Map")
 source_tiles = {}
@@ -35,7 +39,7 @@ instances = [inst for layer in layout[6]
     for inst in (layer[14] if len(layer) > 14 and isinstance(layer[14], list) else [])
     if isinstance(inst, list) and len(inst) >= 6 and inst[1] in source_objects]
 assert len(instances) >= 4
-assert {inst[1] for inst in instances} == set(source_objects)
+assert {inst[1] for inst in instances} == {482, 687, 688, 776}
 tile_pixels = int(instances[0][5][1])
 visible = set()
 expected = []
@@ -65,8 +69,19 @@ for object_id, filename in source_objects.items():
     population = Counter((v & 0x1fffffff)
         for x, y, cols, rows, obj, cells in expected
         if obj == object_id for v in cells if v != -1)
-    assert population, object_id
-    selected = population.most_common(1)[0][0]
+    if population:
+        selected = population.most_common(1)[0][0]
+    else:
+        # Later maps are created dynamically; they have no preplaced strip.
+        with Image.open(ROOT / "assets/gfx" / filename) as im:
+            original = im.convert("RGBA")
+            columns = original.width // tile_pixels
+            selected = next((i for i in range(columns * (original.height // tile_pixels))
+                if original.crop(((i % columns) * tile_pixels,
+                                  (i // columns) * tile_pixels,
+                                  ((i % columns) + 1) * tile_pixels,
+                                  ((i // columns) + 1) * tile_pixels)).getbbox()), None)
+            assert selected is not None, object_id
     with Image.open(ROOT / "assets/gfx" / filename) as image_source:
         source = image_source.convert("RGBA")
         columns = source.width // tile_pixels
@@ -82,11 +97,12 @@ path = ROOT / "romfs/gfx/original_map_ground_layout.bin"
 with path.open("rb") as stream:
     header = stream.read(16)
     magic, tw, pages, count = struct.unpack("<4sIII", header)
-    assert magic == b"MDG2" and tw == tile_pixels and count == len(expected)
+    assert magic == b"MDG3" and tw == tile_pixels and count == len(expected)
     assert pages == (len(visible) + per_page - 1) // per_page
     total = 0
     for x, y, cols, rows, object_id, cells in expected:
-        sx, sy, w, h = struct.unpack("<ffII", stream.read(16))
+        sx, sy, w, h, stored_object = struct.unpack("<ffIII", stream.read(20))
+        assert stored_object == object_id, (stored_object, object_id)
         assert abs(sx - x) < 0.01 and abs(sy - y) < 0.01
         assert (w, h) == (cols, rows)
         raw = stream.read(4 * cols * rows)
@@ -104,13 +120,13 @@ with path.open("rb") as stream:
 for page in range(pages):
     atlas = ROOT / "romfs/gfx" / f"original_map_ground_p{page:03}.t3x"
     assert atlas.is_file() and atlas.stat().st_size > 32
-for level in range(3):
+for level in range(7):
     name = ("original_map_base_ground.t3x" if level == 0 else
             f"original_map_base_ground_lvl{level + 1}.t3x")
     atlas = ROOT / "romfs/gfx" / name
     assert atlas.is_file() and atlas.stat().st_size > 32, name
 header = (ROOT / "include/minidayz/generated/ground_floor_source.hpp").read_text()
 assert f"kOriginalFloorBaseTileSize={float(tile_pixels):.1f}f" in header
-print(f"Verified all THREE original ground-level images and {len(instances)} Map "
+print(f"Verified all SEVEN original ground-level images and {len(instances)} Map "
       f"source tilemap instances ({total} cells, {len(visible)} keyed tile frames, "
       f"{pages} atlas pages)")
