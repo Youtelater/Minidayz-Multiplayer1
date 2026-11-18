@@ -99,6 +99,12 @@ jobs:
           set -euo pipefail
           python3 tools/stage1/verify_original_boot_menu.py
 
+      - name: Verify all original water forest beach and environment tiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/verify_environment_tilemaps.py
+
       - name: Compare generated 3DS ground map with every original source tile
         shell: bash
         run: |
