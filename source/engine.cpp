@@ -4,6 +4,7 @@
 #include "minidayz/terrain_tiling.hpp"
 #include "minidayz/terrain_level.hpp"
 #include "minidayz/terrain_roads.hpp"
+#include "minidayz/terrain_source_tile_flags.hpp"
 #include "minidayz/generated/water_shore_source.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
@@ -17,6 +18,31 @@
 #include <tuple>
 
 namespace minidayz {
+namespace {
+// Draw a source Tilemap cell using its exact Construct 2 flip flags.
+// Citro2D UV flips are controlled through negative sprite scales, and the
+// diagonal transform is a centered 90-degree rotation plus a UV flip.
+// Centering before scaling preserves tile bounds for every combination.
+bool draw_original_tile(C2D_SpriteSheet sheet,std::uint32_t descriptor,
+                        float x,float y,float size,float depth) noexcept {
+ if(!sheet||descriptor==terrain::kTileEmpty||size<=0.0f)return false;
+ const auto frame=terrain::source_tile_frame(descriptor);
+ if(frame>=C2D_SpriteSheetCount(sheet))return false;
+ C2D_Sprite sprite{};
+ C2D_SpriteFromSheet(&sprite,sheet,frame);
+ if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)return false;
+ const auto transform=terrain::source_tile_transform(descriptor);
+ C2D_SpriteSetCenter(&sprite,0.5f,0.5f);
+ C2D_SpriteSetScale(&sprite,
+   transform.scale_x*size/sprite.params.pos.w,
+   transform.scale_y*size/sprite.params.pos.h);
+ C2D_SpriteSetPos(&sprite,x+size*0.5f,y+size*0.5f);
+ C2D_SpriteSetRotation(&sprite,transform.angle_radians);
+ C2D_SpriteSetDepth(&sprite,depth);
+ return C2D_DrawSprite(&sprite);
+}
+} // namespace
+
 bool Renderer::initialize() noexcept {
  if(!C3D_Init(C3D_DEFAULT_CMDBUF_SIZE)) return false;
  if(!C2D_Init(C2D_DEFAULT_MAX_OBJECTS)){ C3D_Fini(); return false; }
@@ -358,7 +384,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
    const std::uint32_t descriptor=map.cells[
      static_cast<std::size_t>(row)*map.columns+static_cast<std::size_t>(col)];
    if(descriptor==0xffffffffu) continue;
-   const std::uint32_t page=descriptor>>16,frame=descriptor&0xffffu;
+   const std::uint32_t page=terrain::source_tile_page(descriptor);
    if(page>=ground_pages_||page>=8u) continue;
    if(!floor_sheets_[page]){
     char path[80]{};
@@ -367,14 +393,9 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
     floor_sheets_[page]=C2D_SpriteSheetLoad(path);
     if(!floor_sheets_[page]) return false;
    }
-   if(frame>=C2D_SpriteSheetCount(floor_sheets_[page])) continue;
-   C2D_Sprite sprite{};
-   C2D_SpriteFromSheet(&sprite,floor_sheets_[page],frame);
-   C2D_SpriteSetPos(&sprite,map.x+col*tile,map.y+row*tile);
-   C2D_SpriteSetScale(&sprite,tile/sprite.params.pos.w,
-                             tile/sprite.params.pos.h);
-   C2D_SpriteSetDepth(&sprite,0.92f);
-   if(!C2D_DrawSprite(&sprite))return false;
+   if(!draw_original_tile(floor_sheets_[page],descriptor,
+                           map.x+col*tile,map.y+row*tile,
+                           tile,0.92f))return false;
   }
  }
  return true;
@@ -479,7 +500,10 @@ bool Renderer::draw_original_environment_tilemaps(
           nx<static_cast<int>(map.columns)&&
           ny<static_cast<int>(map.rows)&&
           map.cells[static_cast<std::size_t>(ny)*map.columns+
-                    static_cast<std::size_t>(nx)]==4u;
+                    static_cast<std::size_t>(nx)]!=terrain::kTileEmpty &&
+          terrain::source_tile_frame(map.cells[
+              static_cast<std::size_t>(ny)*map.columns+
+              static_cast<std::size_t>(nx)])==4u;
       if(water!=check.requires_water){match=false;break;}
      }
      if(match){frame=rule.frame;break;}
@@ -496,15 +520,9 @@ bool Renderer::draw_original_environment_tilemaps(
     if(C2D_SpriteSheetCount(sheet)==0){C2D_SpriteSheetFree(sheet);return false;}
     detail_sheets_[slot]=sheet;
    }
-   if(frame>=C2D_SpriteSheetCount(detail_sheets_[slot]))return false;
-   C2D_Sprite sprite{};
-   C2D_SpriteFromSheet(&sprite,detail_sheets_[slot],frame);
-   if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)continue;
-   C2D_SpriteSetPos(&sprite,map.x+col*tile,map.y+row*tile);
-   C2D_SpriteSetScale(&sprite,tile/sprite.params.pos.w,
-                             tile/sprite.params.pos.h);
-   C2D_SpriteSetDepth(&sprite,depth);
-   if(!C2D_DrawSprite(&sprite))return false;
+   if(!draw_original_tile(detail_sheets_[slot],frame,
+                           map.x+col*tile,map.y+row*tile,
+                           tile,depth))return false;
   }
  }
  return true;
