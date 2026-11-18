@@ -122,6 +122,25 @@ struct PreviousSaveV15 {
     SourceDayNightSnapshot source_time{};
 };
 
+// Source version 16 predates Check_loot timer persistence.
+struct PreviousSaveV16 {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{16};
+    std::uint32_t seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+    SourcePerkSnapshot perks{};
+    SatchelSnapshot satchel{};
+    EquipmentFractionSnapshot equipment_fraction{};
+    StashStorageSnapshot stashes{};
+    SourceDayNightSnapshot source_time{};
+    SourceRainTimerSnapshot source_rain{};
+};
+
 struct LegacyPerkSnapshotV8ForTest {
     std::uint32_t experience_points{};
     std::uint32_t perk_cost{100};
@@ -616,6 +635,44 @@ int main() {
         assert(resumed_rain.update(1.0f,2,false,1));
     assert(!resumed_rain.active());
     assert(resumed_rain.snapshot().timer_firings==2);
+
+    // v16 Rain and Clock state migrate into the v17 Check_loot schedule.
+    PreviousSaveV16 old16{};
+    old16.seed=1602;
+    old16.player=warm_player;
+    old16.inventory=fractional_inventory.snapshot();
+    old16.equipment=equipment.snapshot();
+    old16.ground_loot=fractional_ground.snapshot();
+    old16.tents=tents.snapshot();
+    old16.source_time=source_clock.snapshot();
+    old16.source_rain=source_rain.snapshot();
+    {
+        auto* file=std::fopen(kFile,"wb");
+        assert(file && std::fwrite(&old16,sizeof(old16),1,file)==1);
+        assert(std::fclose(file)==0);
+    }
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==16u && restored.seed==1602);
+    assert(restored.source_rain.rain.active);
+    assert(restored.source_loot.firings==0);
+
+    SourceLootTimer loot_clock;
+    for(unsigned i=0;i<1480;++i)
+        (void)loot_clock.advance(1.0f);
+    for(unsigned i=0;i<280;++i)
+        (void)loot_clock.advance(1.0f);
+    assert(write_saved_game_to_paths(1701,warm_player,fractional_inventory,
+        equipment,fractional_ground,tents,kFile,kTemp,
+        nullptr,nullptr,nullptr,&source_clock,&source_rain,&loot_clock));
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==kSaveVersion && restored.seed==1701);
+    assert(restored.source_loot.firings==1);
+    assert(restored.source_loot.elapsed_seconds==280.0f);
+    SourceLootTimer loot_resumed;
+    assert(loot_resumed.restore(restored.source_loot));
+    for(unsigned i=0;i<1200;++i)
+        (void)loot_resumed.advance(1.0f);
+    assert(loot_resumed.snapshot().firings==2);
 
     // v13 retains the six-source-slot Supplies Stash and its exact
     // subpercent item wear independently of permanent Civilian Tent storage.
