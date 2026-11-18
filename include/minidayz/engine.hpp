@@ -49,7 +49,7 @@ private:
   std::vector<DetailMap> detail_maps_{};
   bool detail_load_attempted_{}; bool detail_loaded_{};
   std::vector<GroundMap> ground_maps_{};std::uint32_t ground_tile_pixels_{};std::uint32_t ground_pages_{};
-  bool ground_load_attempted_{};bool ground_loaded_{}; C2D_SpriteSheet sheets_[kMaxSheets]{};
+  bool ground_load_attempted_{};bool ground_loaded_{}; std::uint8_t ground_active_level_{255}; C2D_SpriteSheet sheets_[kMaxSheets]{};
  struct SpriteCacheEntry { char sheet[128]{}; std::size_t slot{}; };
  SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{};
  C2D_Font debug_font_{}; C2D_TextBuf debug_buffer_{}; C2D_Text debug_text_{};
