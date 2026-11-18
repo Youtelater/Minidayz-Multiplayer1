@@ -3,6 +3,7 @@
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/terrain_collision.hpp"
+#include "minidayz/terrain_source_collision.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/generated/player_skin_source.hpp"
@@ -2082,12 +2083,13 @@ private:
             const bool barrier = std::strcmp(layer->name, "Obstacles") == 0 ||
                                  std::strcmp(layer->name, "Water") == 0;
             if (!building && !barrier) continue;
-            const float left = placement->x -
-                               placement->width * placement->origin_x;
-            const float top = placement->y -
-                              placement->height * placement->origin_y;
-            if (x >= left && x <= left + placement->width &&
-                y >= top && y <= top + placement->height)
+            // Match rotated original house and barrier sprite bounds;
+            // a static axis-aligned box blocks empty corners and doorways.
+            if (minidayz::terrain::source_solid_sprite_contains(
+                    placement->x,placement->y,
+                    placement->width,placement->height,
+                    placement->origin_x,placement->origin_y,
+                    placement->angle,x,y))
                 return true;
         }
         return false;
