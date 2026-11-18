@@ -64,7 +64,11 @@ def validate_atlas() -> None:
     # regular source animation atlas cannot cover them.
     for variant in ("original_map_base_ground.t3x",
                     "original_map_base_ground_lvl2.t3x",
-                    "original_map_base_ground_lvl3.t3x"):
+                    "original_map_base_ground_lvl3.t3x",
+                    "original_map_base_ground_lvl4.t3x",
+                    "original_map_base_ground_lvl5.t3x",
+                    "original_map_base_ground_lvl6.t3x",
+                    "original_map_base_ground_lvl7.t3x"):
         atlas = ATLAS / variant
         if not atlas.is_file() or atlas.stat().st_size <= 32:
             raise SystemExit("Original map-specific terrain not packaged: " + variant)
@@ -73,7 +77,7 @@ def validate_atlas() -> None:
         raise SystemExit("Original-source grass background missing: gameplay would show black terrain")
     floor = ATLAS / "original_map_ground_p000.t3x"
     floor_layout = ATLAS / "original_map_ground_layout.bin"
-    if not floor_layout.is_file() or floor_layout.read_bytes()[:4] != b"MDG2":
+    if not floor_layout.is_file() or floor_layout.read_bytes()[:4] != b"MDG3":
         raise SystemExit("Original Construct Map ground tile placement data missing")
     floor_header = ROOT / "include/minidayz/generated/ground_floor_source.hpp"
     ui_header = ROOT / "include/minidayz/generated/inventory_ui_art.hpp"
