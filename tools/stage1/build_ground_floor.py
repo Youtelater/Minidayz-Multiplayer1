@@ -139,7 +139,7 @@ with Image.open(image) as source:
                      source.height - tile_width,
                      source.width, source.height)).save(work / "base.png")
         (work / "base.t3s").write_text(
-            "--atlas -f rgba -z auto\\nbase.png\\n", encoding="utf-8")
+            "--atlas -f rgba -z auto" + chr(10) + "base.png" + chr(10), encoding="utf-8")
         subprocess.run(["tex3ds", "-i", str(work / "base.t3s"),
                         "-o", str(BASE_GROUND)], cwd=work, check=True)
 if not BASE_GROUND.is_file() or BASE_GROUND.stat().st_size < 32:
