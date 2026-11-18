@@ -122,6 +122,13 @@ void NpcSystem::update(float delta_seconds, float player_x, float player_y,
         if (!actor.alive) continue;
         const float dx = player_x - actor.x;
         const float dy = player_y - actor.y;
+        // Nintendo 3DS: a generated Map can hold hundreds of source zeds.
+        // Don't spend CPU on off-camera actor collision checks. Dormant
+        // actors keep their source spawn and resume AI when approached.
+        // This is a native scheduling optimization, not a new zed rule.
+        constexpr float kActiveWorldRadius = 1200.0f;
+        if (std::fabs(dx) > kActiveWorldRadius ||
+            std::fabs(dy) > kActiveWorldRadius) continue;
         const float distance_sq = dx * dx + dy * dy;
         float vx = 0.0f, vy = 0.0f;
         if (distance_sq > 1.0f && distance_sq < kNoticeRadius * kNoticeRadius) {
