@@ -232,8 +232,8 @@ BASE_GROUND = ROMFS / "original_map_base_ground.t3x"
 # Format: magic (4), tile width (u32), atlas pages (u32), instance count (u32);
 # each instance: x,y (float), width,height (u32), then width*height
 # unsigned 32-bit tile descriptors: 0xffffffff empty; otherwise packed
-# (page<<16 | sprite index). Original high-bit tile flags are preserved in
-# the upper flags byte of descriptor for future transform support.
+# (source flip bits | page<<16 | sprite index). Original horizontal,
+# vertical and diagonal tile transformations remain available at runtime.
 destination = ROMFS / "original_map_ground_layout.bin"
 with destination.open("wb") as out:
     out.write(struct.pack("<4sIII", b"MDG3", tile_width, page_count, len(instances)))
@@ -244,7 +244,7 @@ with destination.open("wb") as out:
                 descriptor = 0xffffffff
             else:
                 page, frame = mapping[(object_id, raw & TILE_MASK)]
-                descriptor = (page << 16) | frame
+                descriptor = (raw & 0xe0000000) | (page << 16) | frame
             out.write(struct.pack("<I", descriptor))
 if destination.stat().st_size < 32:
     raise SystemExit("Original ground tilemap binary empty")
