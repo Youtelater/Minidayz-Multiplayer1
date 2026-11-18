@@ -164,6 +164,37 @@ void test_seed_reproducibility() {
     }
 }
 
+// New Game must not reuse an old, static Map. Confirm that two different
+// seeds change the original-generated grid AND populate the display layers
+// with original Construct sprites that the 3DS world renderer can draw.
+void test_new_game_generates_visible_original_world() {
+    minidayz::WorldSystem first, second;
+    assert(first.generate_from_source(0x10203040u, "Map", 0));
+    assert(second.generate_from_source(0x55667788u, "Map", 0));
+    std::size_t changed_cells = 0;
+    for (int row = 0; row < first.grid().height(); ++row) {
+        for (int col = 0; col < first.grid().width(); ++col) {
+            if (first.grid().at(col, row) != second.grid().at(col, row))
+                ++changed_cells;
+        }
+    }
+    assert(changed_cells > 0);
+    for (const auto* world : {&first, &second}) {
+        std::size_t drawable_generated_sprites = 0;
+        for (std::size_t i = 0; i < world->placement_count(); ++i) {
+            const auto* placement = world->placement(i);
+            if (!placement || placement->source_uid != 0 ||
+                placement->layer >= 44) continue;
+            const auto* object = minidayz::stage1::find_object(placement->object);
+            if (object && object->type == 18 &&
+                world->bounds().contains({placement->x, placement->y}))
+                ++drawable_generated_sprites;
+        }
+        assert(world->source_location_spawn_count() > 0);
+        assert(drawable_generated_sprites > 0);
+    }
+}
+
 void test_every_source_level_quota() {
     for (std::uint8_t level = 0; level <= 5; ++level) {
         minidayz::WorldGenerationProfile profile{};
@@ -221,6 +252,7 @@ int main() {
     test_source_profiles();
     test_original_map_layout_and_descriptors();
     test_seed_reproducibility();
+    test_new_game_generates_visible_original_world();
     test_level_four_split_grid();
     test_every_source_level_quota();
     std::puts("World source regression tests passed.");
