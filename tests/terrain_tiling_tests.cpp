@@ -1,6 +1,7 @@
 #include "minidayz/terrain_tiling.hpp"
 #include <cassert>
 #include <cmath>
+#include <initializer_list>
 #include <limits>
 
 using minidayz::TerrainTileWindow;
