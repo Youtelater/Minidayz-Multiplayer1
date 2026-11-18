@@ -532,11 +532,19 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
 
     const double cell_width = bounds_.width / static_cast<double>(grid_.width());
     const double cell_height = bounds_.height / static_cast<double>(grid_.height());
+    // Construct generates a terrain/location marker for EVERY source Array
+    // cell, including cells whose raw POI/road code is zero. Those empty
+    // cells are assigned one of the original wilderness marker types by
+    // build_map_markers(). Routing only raw nonzero codes loses virtually
+    // all grassland, forest, and other procedurally placed world objects.
+    if (map_markers_.size() !=
+        static_cast<std::size_t>(grid_.width()) * grid_.height()) return false;
     std::size_t added = 0;
     for (int y = 0; y < grid_.height(); ++y) {
         for (int x = 0; x < grid_.width(); ++x) {
-            const std::uint16_t code = grid_.at(x, y);
-            if (code == 0) continue;
+            const auto& marker = map_markers_[
+                static_cast<std::size_t>(y) * grid_.width() + x];
+            const std::uint16_t code = marker.marker_type;
             const WorldPoint hotspot{
                 static_cast<float>((static_cast<double>(x) + 0.5) * cell_width),
                 static_cast<float>((static_cast<double>(y) + 0.5) * cell_height)
