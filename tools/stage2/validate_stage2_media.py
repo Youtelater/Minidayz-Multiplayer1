@@ -15,7 +15,8 @@ ROOT = Path(__file__).resolve().parents[2]
 WAV = ROOT / "romfs/wav"
 ATLAS = ROOT / "romfs/gfx"
 SPRITES = ROOT / "include/minidayz/generated/sprite_catalog.hpp"
-REQUIRED_SOUNDS = ("crafting.wav", "drop1.wav", "drop2.wav", "zippero.wav")
+REQUIRED_SOUNDS = ("crafting.wav", "drop1.wav", "drop2.wav", "zippero.wav",
+                   "geardrop1.wav", "geardrop2.wav")
 MAX_CLIP_BYTES = 4 * 1024 * 1024
 
 
