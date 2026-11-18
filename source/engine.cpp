@@ -470,9 +470,6 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
                                      cell_w,cell_h,road_width);
    if(!terrain::intersects_view(band,camera_x,camera_y,
                                 view_width,view_height))continue;
-   const auto theme=terrain::ground_texture_at(source_level,
-       band.y+band.height*0.5f,second_half_y);
-   if(!ensure_road_sheet(theme)) return false;
    // Repeat native 60px Construct stone tiles instead of stretching
    // one source tile across a 2300px world cell. Limit draw calls to
    // the pieces visible in the 400x240 native top-screen camera.
@@ -487,6 +484,10 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
        static_cast<int>(std::ceil((camera_y+view_height-band.y)/tile)));
    for(int y=first_y;y<last_y;++y)
     for(int x=first_x;x<last_x;++x){
+     const float world_tile_y=band.y+(static_cast<float>(y)+0.5f)*tile;
+     const auto theme=terrain::ground_texture_at(
+         source_level,world_tile_y,second_half_y);
+     if(!ensure_road_sheet(theme)) return false;
      C2D_Sprite sprite{};
      C2D_SpriteFromSheet(&sprite,road_sheets_[theme],0);
      if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)
