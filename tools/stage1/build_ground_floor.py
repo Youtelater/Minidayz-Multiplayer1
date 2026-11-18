@@ -175,7 +175,7 @@ HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 
     f"inline constexpr std::uint16_t kOriginalFloorTileObject={OBJECT};\n" +
     f"inline constexpr std::uint16_t kOriginalFloorTileId={tile_ids[0]};\n" +
     f"inline constexpr float kOriginalFloorTileSize={float(tile_width):.1f}f;\n" +
-    f"inline constexpr float kOriginalFloorBaseTileSize={float(base_tile_pixels):.1f}f;\\n" +
+    f"inline constexpr float kOriginalFloorBaseTileSize={float(base_tile_pixels):.1f}f;" + chr(10) +
     f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\n" +
     "}\n", encoding="utf-8")
 print(f"Original Map: {len(instances)} authored tilemap strips; {len(tile_ids)} source tiles; "
