@@ -152,7 +152,7 @@ void Stage2Audio::play(std::size_t which) noexcept {
     wave={};
     wave.data_vaddr=clip.pcm;
     wave.nsamples=clip.frames;
-    wave.looping=(which==6);
+    wave.looping=(which==6 || which==10);
     ndspChnWaveBufAdd(channel,&wave);
 }
 
@@ -228,6 +228,31 @@ void Stage2Audio::play_item_pickup() noexcept {
     play(voice);
 }
 
+void Stage2Audio::set_environment_ambience(bool night) noexcept {
+    if (!ndsp_ready_) return;
+    const int wanted=night ? 1 : 0;
+    if (ambient_variant_==wanted) return;
+    stop_environment_ambience();
+    // Original Construct audio resources: ambient / night_loop.
+    // Load only one loop on demand to protect original 3DS linear memory.
+    const char* path=night ? "romfs:/wav/night_loop.wav"
+                           : "romfs:/wav/ambient.wav";
+    if (!load_wav(path,clips_[10])) return;
+    ambient_variant_=wanted;
+    play(10);
+}
+
+void Stage2Audio::stop_environment_ambience() noexcept {
+    if (ndsp_ready_) {
+        ndspChnWaveBufClear(10);
+        ndspChnReset(10);
+    }
+    if (clips_[10].pcm) linearFree(clips_[10].pcm);
+    clips_[10]={};
+    waves_[10]={};
+    ambient_variant_=-1;
+}
+
 void Stage2Audio::start_rain_loop() noexcept {
     if (!ndsp_ready_) return;
     if (!clips_[6].pcm &&
@@ -270,5 +295,6 @@ void Stage2Audio::shutdown() noexcept {
     step_serial_=0;
     loaded_step_surfaces_={{-1,-1}};
     loaded_pickup_variant_=-1;
+    ambient_variant_=-1;
 }
 }
