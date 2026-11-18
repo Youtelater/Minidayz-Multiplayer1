@@ -81,7 +81,11 @@ void test_original_map_layout_and_descriptors() {
     // counts are derived from their conditions/actions rather than the legacy
     // pre-expanded System Create shortcut table.
     assert(world.source_location_spawn_count() > 0);
-    assert(world.placement_count() == 1250 + world.source_location_spawn_count());
+    // Original Array 525 create_map_element world-art placements are now
+    // instantiated as well as the authored Map and System Create spawns.
+    // The old equality incorrectly assumed only invisible respawn triggers
+    // could be generated; verify that extra original world images exist.
+    assert(world.placement_count() > 1250 + world.source_location_spawn_count());
     // Includes the 103 authored Map-layout buildings plus buildings instantiated by generated POIs.
     assert(world.feature_count(minidayz::WorldFeatureKind::Building) > 103);
     assert(world.feature_count(minidayz::WorldFeatureKind::SpawnPoint) > 0);
