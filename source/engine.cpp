@@ -314,7 +314,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
      static_cast<std::size_t>(row)*map.columns+static_cast<std::size_t>(col)];
    if(descriptor==0xffffffffu) continue;
    const std::uint32_t page=descriptor>>16,frame=descriptor&0xffffu;
-   if(page>=ground_pages_||page>=floor_sheets_.size()) continue;
+   if(page>=ground_pages_||page>=8u) continue;
    if(!floor_sheets_[page]){
     char path[80]{};
     std::snprintf(path,sizeof(path),
