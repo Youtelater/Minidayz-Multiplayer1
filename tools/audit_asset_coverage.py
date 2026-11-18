@@ -46,7 +46,7 @@ def runtime_audio_references():
     sources += list((ROOT / "include").rglob("*.hpp"))
     texts = [p.read_text(encoding="utf-8", errors="replace") for p in sources]
     direct = {name.casefold() for text in texts
-              for name in re.findall(r'romfs:/wav/([^"\s]+\.wav)', text)}
+              for name in re.findall(r'romfs:/wav/([^"\s]+\.wav)', text) if "%" not in name}
     # Source creates footstep names at runtime from a format string. These
     # are reachable, but their playback depends on actual terrain movement.
     dynamic = set()
