@@ -3,6 +3,8 @@
 #include "minidayz/generated/ground_floor_source.hpp"
 #include "minidayz/terrain_tiling.hpp"
 #include "minidayz/terrain_level.hpp"
+#include "minidayz/terrain_roads.hpp"
+#include "minidayz/world.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
 
 #include <algorithm>
@@ -30,6 +32,7 @@ void Renderer::shutdown() noexcept {
  unload_all();
  for(auto& sheet:floor_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  for(auto& sheet:base_floor_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
+ for(auto& sheet:road_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  ground_maps_.clear();ground_load_attempted_=false;ground_loaded_=false;
  for(auto& sheet:menu_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  if(debug_buffer_) C2D_TextBufDelete(debug_buffer_);
@@ -292,6 +295,65 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
                              tile/sprite.params.pos.h);
    C2D_SpriteSetDepth(&sprite,0.92f);
    C2D_DrawSprite(&sprite);
+  }
+ }
+ return true;
+}
+bool Renderer::draw_source_road_grid(const WorldGrid& grid,
+                                    const WorldBounds& bounds,
+                                    float camera_x,float camera_y,
+                                    float view_width,float view_height,
+                                    std::uint8_t source_level) noexcept {
+ if(grid.width()==0||grid.height()==0||!ground_loaded_) return false;
+ if(!(bounds.width>0.0f && bounds.height>0.0f)) return false;
+ const std::uint32_t theme=terrain::active_ground_texture(source_level);
+ if(!road_sheets_[theme]){
+  char name[80]{};
+  std::snprintf(name,sizeof(name),"romfs:/gfx/original_map_road_lvl%u.t3x",
+                static_cast<unsigned>(theme+1));
+  road_sheets_[theme]=C2D_SpriteSheetLoad(name);
+ }
+ if(!road_sheets_[theme] || C2D_SpriteSheetCount(road_sheets_[theme])==0)
+  return false;
+ const float cell_w=bounds.width/grid.width();
+ const float cell_h=bounds.height/grid.height();
+ const float road_width=stage1::kOriginalFloorTileSize;
+ if(!(cell_w>0.0f&&cell_h>0.0f&&road_width>0.0f))return false;
+ const int left=std::max(0,static_cast<int>(
+       std::floor((camera_x-road_width)/cell_w))-1);
+ const int right=std::min(static_cast<int>(grid.width()),
+       static_cast<int>(std::ceil((camera_x+view_width+road_width)/cell_w))+1);
+ const int top=std::max(0,static_cast<int>(
+       std::floor((camera_y-road_width)/cell_h))-1);
+ const int bottom=std::min(static_cast<int>(grid.height()),
+       static_cast<int>(std::ceil((camera_y+view_height+road_width)/cell_h))+1);
+ // C2D sprite depth .96 sits behind source map placements and authored
+ // tilemaps (.92), but in front of the original ground tile (.98).
+ // Render only clipped, camera-visible source Array road corridor pieces.
+ for(int row=top;row<bottom;++row)for(int col=left;col<right;++col){
+  const std::uint16_t code=grid.at(col,row);
+  if(!terrain::horizontal_road(code)&&!terrain::vertical_road(code))
+   continue;
+  for(int direction=0;direction<2;++direction){
+   const auto band=terrain::road_band(code,direction!=0,col,row,
+                                     cell_w,cell_h,road_width);
+   if(!terrain::intersects_view(band,camera_x,camera_y,
+                                view_width,view_height))continue;
+   const float x0=std::max(band.x,camera_x);
+   const float x1=std::min(band.x+band.width,camera_x+view_width);
+   const float y0=std::max(band.y,camera_y);
+   const float y1=std::min(band.y+band.height,camera_y+view_height);
+   // Quad clip by scaling a source-authored road texture to one
+   // source cell. Grid codes and source art both come from Construct.
+   C2D_Sprite sprite{};
+   C2D_SpriteFromSheet(&sprite,road_sheets_[theme],0);
+   if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)
+    return false;
+   C2D_SpriteSetPos(&sprite,x0,y0);
+   C2D_SpriteSetScale(&sprite,(x1-x0)/sprite.params.pos.w,
+                            (y1-y0)/sprite.params.pos.h);
+   C2D_SpriteSetDepth(&sprite,0.96f);
+   if(!C2D_DrawSprite(&sprite))return false;
   }
  }
  return true;
