@@ -52,14 +52,24 @@ def main():
         SOURCE.read_text(encoding="utf-8-sig")))["project"]
     source_objects = data[3]
     capacity = {}
+    map_layout = next(x for x in data[5] if x[0] == "Map")
+    cell_sizes = {}
+    for layer in map_layout[6]:
+        for instance in layer[14] if len(layer) > 14 and isinstance(layer[14], list) else []:
+            if not isinstance(instance, list) or len(instance) < 6 or instance[1] not in TERRAIN:
+                continue
+            size = int(instance[5][1])
+            if size <= 0 or size != int(instance[5][2]):
+                raise SystemExit(f"Invalid source terrain cell size for {instance[1]}")
+            if instance[1] in cell_sizes and cell_sizes[instance[1]] != size:
+                raise SystemExit(f"Conflicting source tile cell sizes for {instance[1]}")
+            cell_sizes[instance[1]] = size
     for object_id in TERRAIN:
         definition = source_objects[object_id]
         original = ROOT / "assets/gfx" / Path(definition[6][0]).name
+        size = cell_sizes[object_id]
         with Image.open(original) as im:
-            # Tilemap sheet metadata is source-authored and all original
-            # terrain tile cells in these sheets use 60px square tiles.
-            columns, rows = im.width // 60, im.height // 60
-            capacity[object_id] = columns * rows
+            capacity[object_id] = (im.width // size) * (im.height // size)
     records = []
     counters = Counter()
     for sheet in data[6]:
