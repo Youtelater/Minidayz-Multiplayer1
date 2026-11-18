@@ -2,6 +2,7 @@
 #include "minidayz/boot_menu.hpp"
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/terrain_collision.hpp"
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/inventory.hpp"
@@ -119,6 +120,12 @@ public:
     }
 
     void on_enter() noexcept override {
+        // The source tilemap_water and tilemap_forest sprites carry Solid
+        // behavior. Load the exact Map RLE occupancy once from the RomFS
+        // so the player collides with visible tiles, not huge empty tilemap
+        // bounding boxes. Failure leaves basic sprite collision enabled.
+        (void)terrain_collision_.load(
+            "romfs:/gfx/original_map_details_layout.bin");
         // Audio is optional. RomFS is already mounted by Engine::initialize;
         // DSP failure must never prevent inventory or crafting gameplay.
         if (stage2_audio_.initialize() && rain_timer_.active())
@@ -1825,8 +1832,15 @@ private:
             map_layout - minidayz::stage1::kLayoutTable);
         // Original Construct instance positions are relative to their
         // sprite origins, not always their upper-left corners.
+        if (scene->terrain_collision_.blocked(x,y)) return true;
         for (std::size_t i = 0; i < scene->world_.placement_count(); ++i) {
             const auto* placement = scene->world_.placement(i);
+            // A tilemap's rectangular bounds mostly contain EMPTY cells.
+            // Only actual original Solid cells (above) are obstacles.
+            if (placement) {
+                const auto* kind= minidayz::stage1::find_object(placement->object);
+                if (kind && kind->type==16) continue;
+            }
             if (!placement || placement->width <= 0.0f ||
                 placement->height <= 0.0f) continue;
             const auto* layer = minidayz::stage1::find_layer(
@@ -1848,6 +1862,7 @@ private:
     }
 
     minidayz::WorldSystem world_{};
+    minidayz::terrain::SolidTerrain terrain_collision_{};
     minidayz::NpcSystem npcs_{};
     std::uint32_t world_seed_{};
     float save_elapsed_{};
