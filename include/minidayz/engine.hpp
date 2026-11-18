@@ -23,7 +23,7 @@ public:
  bool draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f) noexcept;
  // Draw the original Construct sprite frame to an exact 3DS rectangle.
  // Keeps source artwork and texture scaling; only the destination changes.
- bool draw_original_ground_floor(float camera_x,float camera_y,float view_width,float view_height) noexcept;
+ bool draw_original_ground_floor(float camera_x,float camera_y,float view_width,float view_height,std::uint8_t source_level=0) noexcept;
   bool draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth=0.4f) noexcept;
   bool draw_source_animation(std::uint16_t object,const char* animation_name,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f) noexcept;
  bool draw_menu_art(std::size_t index,float x,float y,float width,float height,float depth=0.7f) noexcept;
@@ -31,7 +31,7 @@ public:
  void set_camera(float x,float y) noexcept { camera_x_=x; camera_y_=y; C2D_ViewReset(); C2D_ViewTranslate(-x,-y); }
  void reset_camera() noexcept { set_camera(0.0f,0.0f); }
 private:
- C3D_RenderTarget* top_{}; C3D_RenderTarget* bottom_{}; C2D_SpriteSheet floor_sheets_[8]{}; C2D_SpriteSheet base_floor_sheet_{}; C2D_SpriteSheet menu_sheets_[3]{};
+ C3D_RenderTarget* top_{}; C3D_RenderTarget* bottom_{}; C2D_SpriteSheet floor_sheets_[8]{}; C2D_SpriteSheet base_floor_sheets_[3]{}; C2D_SpriteSheet menu_sheets_[3]{};
   struct GroundMap {float x{},y{};std::uint32_t columns{},rows{};std::vector<std::uint32_t> cells;};
   std::vector<GroundMap> ground_maps_{};std::uint32_t ground_tile_pixels_{};std::uint32_t ground_pages_{};
   bool ground_load_attempted_{};bool ground_loaded_{}; C2D_SpriteSheet sheets_[kMaxSheets]{};
