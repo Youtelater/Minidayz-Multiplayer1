@@ -119,6 +119,11 @@ public:
     bool initialize(std::uint32_t seed, WorldBounds bounds = {}) noexcept;
     bool generate_from_source(std::uint32_t seed, std::string_view layout_name = "Map",
                               std::uint8_t level = 0);
+    bool begin_source_generation(std::uint32_t seed, std::string_view layout_name = "Map",
+                                 std::uint8_t level = 0);
+    bool advance_source_generation();
+    std::uint8_t generation_phase() const noexcept { return generation_phase_; }
+    bool generation_complete() const noexcept { return generation_phase_ == 6; }
     bool generate_procedural_grid(std::uint8_t level, std::uint32_t seed);
     bool build_map_markers(std::uint8_t level, std::uint32_t seed);
     std::size_t expand_map_element(std::uint8_t var1, std::uint8_t var2,
@@ -155,6 +160,9 @@ private:
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
     std::size_t source_location_spawn_count_{};
+    std::uint8_t generation_phase_{};
+    std::uint8_t generation_level_{};
+    bool generation_is_map_{};
     bool generate_source_locations(std::uint8_t level);
     bool initialized_{};
 };
