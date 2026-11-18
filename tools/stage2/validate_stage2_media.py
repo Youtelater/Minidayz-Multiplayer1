@@ -79,6 +79,13 @@ def validate_atlas() -> None:
     background = ATLAS / "original_map_base_ground.t3x"
     if not background.is_file() or background.stat().st_size < 32:
         raise SystemExit("Original-source grass background missing: gameplay would show black terrain")
+    detail_layout = ATLAS / "original_map_details_layout.bin"
+    if not detail_layout.is_file() or detail_layout.read_bytes()[:4] != b"MDT1":
+        raise SystemExit("Original environment water/forest/beach terrain layout absent")
+    for object_id in (208, 211, 418, 230):
+        detail = ATLAS / f"original_map_detail_{object_id}.t3x"
+        if not detail.is_file() or detail.stat().st_size <= 32:
+            raise SystemExit(f"Original environment texture missing: {detail.name}")
     floor = ATLAS / "original_map_ground_p000.t3x"
     floor_layout = ATLAS / "original_map_ground_layout.bin"
     if not floor_layout.is_file() or floor_layout.read_bytes()[:4] != b"MDG3":
