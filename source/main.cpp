@@ -69,6 +69,11 @@ public:
             rain_timer_.reset();
         if (restored && !loot_timer_.restore(restored->source_loot))
             loot_timer_.reset();
+        if (restored && restored->pending_craft.recipe_index != 0xffffu) {
+            pending_craft_recipe_ = restored->pending_craft.recipe_index;
+            pending_craft_seconds_ = restored->pending_craft.seconds_remaining;
+            crafting_feedback_ = CraftFeedback::pending;
+        }
         if (restored && !item_use_runtime_.restore(restored->pending_item_use))
             item_use_runtime_.clear();
         if (restored && !perks_.restore(restored->perks)) perks_.clear();
@@ -96,6 +101,18 @@ public:
         last_source_snowborn_level_ = perks_.level(minidayz::items::SourcePerk::snowborn);
     }
 
+    bool write_scene_save() noexcept {
+        minidayz::persistence::PendingCraftSnapshot craft{};
+        if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount &&
+            pending_craft_seconds_ > 0.0f) {
+            craft.recipe_index = static_cast<std::uint16_t>(pending_craft_recipe_);
+            craft.seconds_remaining = pending_craft_seconds_;
+        }
+        return write_saved_game(world_seed_, player_.state(), inventory_,
+            equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_,
+            &stashes_, &day_night_, &rain_timer_, &loot_timer_, &craft);
+    }
+
     void on_enter() noexcept override {
         // Audio is optional. RomFS is already mounted by Engine::initialize;
         // DSP failure must never prevent inventory or crafting gameplay.
@@ -105,7 +122,7 @@ public:
 
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_, &rain_timer_, &loot_timer_);
+            (void)write_scene_save();
         stage2_audio_.shutdown();
     }
 
@@ -613,7 +630,7 @@ public:
         save_elapsed_ += dt;
         if (save_elapsed_ >= 2.0f) {
             save_elapsed_ = 0.0f;
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_, &rain_timer_, &loot_timer_);
+            (void)write_scene_save();
         }
     }
 
@@ -1362,7 +1379,7 @@ private:
         // Never enter a blank gameplay scene when source world generation
         // fails. Keep the menu available so the player can retry instead.
         menu_active_ = !world_ready_;
-        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_, &rain_timer_, &loot_timer_);
+        if (world_ready_) (void)write_scene_save();
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {

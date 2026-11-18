@@ -16,7 +16,12 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 17u;
+inline constexpr std::uint32_t kSaveVersion = 18u;
+// Preserve the original Construct wait when a craft is interrupted by autosave.
+struct PendingCraftSnapshot {
+    std::uint16_t recipe_index{0xffffu};
+    float seconds_remaining{};
+};
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
@@ -46,6 +51,7 @@ struct SavedGame {
     minidayz::items::SourceRainTimerSnapshot source_rain{};
     // v17 adds the original repeated Check_loot event timer (1480s).
     minidayz::items::SourceLootTimerSnapshot source_loot{};
+    PendingCraftSnapshot pending_craft{};
 };
 
 
@@ -63,7 +69,8 @@ bool write_saved_game(std::uint32_t seed,
                       const items::StashStorageSystem* stashes = nullptr,
                       const items::SourceDayNightClock* source_time = nullptr,
                       const items::SourceRainTimer* source_rain = nullptr,
-                      const items::SourceLootTimer* source_loot = nullptr) noexcept;
+                      const items::SourceLootTimer* source_loot = nullptr,
+                      const PendingCraftSnapshot* pending_craft = nullptr) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
@@ -78,5 +85,6 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       const items::StashStorageSystem* stashes = nullptr,
                       const items::SourceDayNightClock* source_time = nullptr,
                       const items::SourceRainTimer* source_rain = nullptr,
-                      const items::SourceLootTimer* source_loot = nullptr) noexcept;
+                      const items::SourceLootTimer* source_loot = nullptr,
+                      const PendingCraftSnapshot* pending_craft = nullptr) noexcept;
 } // namespace minidayz::persistence

@@ -141,6 +141,23 @@ struct PreviousSaveV16 {
     SourceRainTimerSnapshot source_rain{};
 };
 
+// Previous source v17 file had no pending crafting field.
+struct PreviousSaveV17 {
+    std::uint32_t magic{kSaveMagic}, version{17}, seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+    SourcePerkSnapshot perks{};
+    SatchelSnapshot satchel{};
+    EquipmentFractionSnapshot equipment_fraction{};
+    StashStorageSnapshot stashes{};
+    SourceDayNightSnapshot source_time{};
+    SourceRainTimerSnapshot source_rain{};
+    SourceLootTimerSnapshot source_loot{};
+};
 struct LegacyPerkSnapshotV8ForTest {
     std::uint32_t experience_points{};
     std::uint32_t perk_cost{100};
@@ -255,6 +272,7 @@ int main() {
     SavedGame restored{};
     assert(load_saved_game_from_path(restored, kFile));
     assert(restored.version == kSaveVersion);
+    assert(restored.pending_craft.recipe_index == 0xffffu);
     assert(restored.seed == 42);
     assert(restored.player.x == 231.5f && restored.player.bleeding == 1.5f);
     InventorySystem loaded_inventory;
@@ -274,6 +292,50 @@ int main() {
     assert(loaded_tents.tent(0)->items[0].count == 2);
     assert(loaded_tents.tent(0)->items[0].condition == 75);
     assert(loaded_tents.tent(0)->condition == 83);
+
+    // Delayed original crafting persists through Continue, including subsecond time.
+    PendingCraftSnapshot craft{0, 2.25f};
+    assert(write_saved_game_to_paths(43, player, inventory, equipment, ground,
+        tents, kFile, kTemp, nullptr, nullptr, nullptr, nullptr, nullptr,
+        nullptr, &craft));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.pending_craft.recipe_index == 0);
+    assert(restored.pending_craft.seconds_remaining == 2.25f);
+    craft.recipe_index = 0xffffu;
+    craft.seconds_remaining = 1.0f;
+    assert(!write_saved_game_to_paths(43, player, inventory, equipment, ground,
+        tents, kFile, kTemp, nullptr, nullptr, nullptr, nullptr, nullptr,
+        nullptr, &craft));
+    craft.recipe_index = 0;
+    craft.seconds_remaining = std::numeric_limits<float>::quiet_NaN();
+    assert(!write_saved_game_to_paths(43, player, inventory, equipment, ground,
+        tents, kFile, kTemp, nullptr, nullptr, nullptr, nullptr, nullptr,
+        nullptr, &craft));
+    craft.recipe_index = 999;
+    craft.seconds_remaining = 1.0f;
+    assert(!write_saved_game_to_paths(43, player, inventory, equipment, ground,
+        tents, kFile, kTemp, nullptr, nullptr, nullptr, nullptr, nullptr,
+        nullptr, &craft));
+
+    // v17 continues with all original source timers and an idle craft.
+    PreviousSaveV17 old17{};
+    old17.seed = 44;
+    old17.player = player;
+    old17.inventory = inventory.snapshot();
+    old17.equipment = equipment.snapshot();
+    old17.ground_loot = ground.snapshot();
+    old17.tents = tents.snapshot();
+    {
+        auto* file = std::fopen(kFile, "wb");
+        assert(file && std::fwrite(&old17, sizeof(old17), 1, file) == 1);
+        assert(std::fclose(file) == 0);
+    }
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 17u && restored.seed == 44);
+    assert(restored.pending_craft.recipe_index == 0xffffu);
+    assert(restored.pending_craft.seconds_remaining == 0.0f);
+    assert(write_saved_game_to_paths(42, player, inventory, equipment,
+                                    ground, tents, kFile, kTemp));
 
     // A failed write must never replace an existing usable save.
     assert(!write_saved_game_to_paths(0, player, inventory, equipment,

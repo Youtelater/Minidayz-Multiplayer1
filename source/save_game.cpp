@@ -1,5 +1,6 @@
 #include "minidayz/save_game.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/crafting.hpp"
 #include <array>
 #include <cmath>
 #include <cstdio>
@@ -180,6 +181,33 @@ struct SavedGameV16 {
     minidayz::items::SourceDayNightSnapshot source_time{};
     minidayz::items::SourceRainTimerSnapshot source_rain{};
 };
+
+// Exact v17 on-disk layout, before persisting a pending craft.
+struct SavedGameV17 {
+    std::uint32_t magic{}, version{}, seed{};
+    minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
+    minidayz::items::GroundLootSnapshot ground_loot{};
+    minidayz::items::TentStorageSnapshot tents{};
+    minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
+    minidayz::items::SourcePerkSnapshot perks{};
+    minidayz::items::SatchelSnapshot satchel{};
+    minidayz::items::EquipmentFractionSnapshot equipment_fraction{};
+    minidayz::items::StashStorageSnapshot stashes{};
+    minidayz::items::SourceDayNightSnapshot source_time{};
+    minidayz::items::SourceRainTimerSnapshot source_rain{};
+    minidayz::items::SourceLootTimerSnapshot source_loot{};
+};
+bool valid_pending_craft(const PendingCraftSnapshot& craft) noexcept {
+    if (craft.recipe_index == 0xffffu)
+        return craft.seconds_remaining == 0.0f;
+    const auto* recipe = minidayz::items::source_craft_recipe(craft.recipe_index);
+    return recipe && recipe->delay_seconds > 0.0f &&
+        std::isfinite(craft.seconds_remaining) &&
+        craft.seconds_remaining > 0.0f &&
+        craft.seconds_remaining <= recipe->delay_seconds;
+}
 
 // Version 6 introduced native persistent tents, before timed medical actions.
 struct SavedGameV6 {
@@ -439,6 +467,26 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.source_time=old.source_time;
             candidate.source_rain=old.source_rain;
         }
+    } else if (header_ok && candidate.version == 17u) {
+        SavedGameV17 old{};
+        body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
+                  std::fread(&old, sizeof(old), 1, file) == 1;
+        if (body_ok) {
+            candidate.seed = old.seed;
+            candidate.player = old.player;
+            candidate.inventory = old.inventory;
+            candidate.equipment = old.equipment;
+            candidate.ground_loot = old.ground_loot;
+            candidate.tents = old.tents;
+            candidate.pending_item_use = old.pending_item_use;
+            candidate.perks = old.perks;
+            candidate.satchel = old.satchel;
+            candidate.equipment_fraction = old.equipment_fraction;
+            candidate.stashes = old.stashes;
+            candidate.source_time = old.source_time;
+            candidate.source_rain = old.source_rain;
+            candidate.source_loot = old.source_loot;
+        }
     } else if (header_ok && candidate.version == kSaveVersion) {
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
@@ -496,6 +544,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
         !time_validation.restore(candidate.source_time) ||
         !rain_validation.restore(candidate.source_rain) ||
         !loot_timer_validation.restore(candidate.source_loot) ||
+        !valid_pending_craft(candidate.pending_craft) ||
         !item_use_validation.restore(candidate.pending_item_use) ||
         !perk_validation.restore(candidate.perks))
         return false;
@@ -517,7 +566,8 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       const minidayz::items::StashStorageSystem* stashes,
                        const minidayz::items::SourceDayNightClock* source_time,
                       const minidayz::items::SourceRainTimer* source_rain,
-                      const minidayz::items::SourceLootTimer* source_loot) noexcept {
+                      const minidayz::items::SourceLootTimer* source_loot,
+                      const PendingCraftSnapshot* pending_craft) noexcept {
     if (!target_path || !temporary_path || !target_path[0] || !temporary_path[0] ||
         std::strcmp(target_path, temporary_path) == 0 || seed == 0) return false;
     SavedGame save{};
@@ -537,6 +587,7 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     save.source_loot = source_loot ? source_loot->snapshot() :
         minidayz::items::SourceLootTimerSnapshot{};
     save.pending_item_use = item_use ? item_use->snapshot() : minidayz::items::ItemUseRuntimeSnapshot{};
+    save.pending_craft = pending_craft ? *pending_craft : PendingCraftSnapshot{};
     save.perks = perks ? perks->snapshot() : minidayz::items::SourcePerkSnapshot{};
     // Reject an invalid or corrupt in-memory snapshot before touching the
     // temporary file. The existing valid save must remain intact.
@@ -566,6 +617,7 @@ bool write_saved_game_to_paths(std::uint32_t seed,
         !time_validation.restore(save.source_time) ||
         !rain_validation.restore(save.source_rain) ||
         !loot_timer_validation.restore(save.source_loot) ||
+        !valid_pending_craft(save.pending_craft) ||
         !item_use_validation.restore(save.pending_item_use) ||
         !perk_validation.restore(save.perks))
         return false;
@@ -604,12 +656,14 @@ bool write_saved_game(std::uint32_t seed,
                       const items::StashStorageSystem* stashes,
                        const items::SourceDayNightClock* source_time,
                       const items::SourceRainTimer* source_rain,
-                      const items::SourceLootTimer* source_loot) noexcept {
+                      const items::SourceLootTimer* source_loot,
+                      const PendingCraftSnapshot* pending_craft) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     return write_saved_game_to_paths(seed, player, inventory, equipment,
                                     ground_loot, tents, kSavePath, kSaveTempPath,
-                                    item_use, perks, stashes, source_time, source_rain, source_loot);
+                                    item_use, perks, stashes, source_time, source_rain, source_loot,
+                                    pending_craft);
 }
 
 } // namespace minidayz::persistence
