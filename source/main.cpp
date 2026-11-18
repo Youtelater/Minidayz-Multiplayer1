@@ -191,8 +191,10 @@ public:
                 } else if (y >= 164 && y <= 216) {
                     pause_save_feedback_ = write_scene_save();
                     has_saved_game_ = has_saved_game_ || pause_save_feedback_;
-                    paused_ = false;
-                    menu_active_ = true;
+                    if (pause_save_feedback_) {
+                        paused_ = false;
+                        menu_active_ = true;
+                    }
                 }
             }
             return;
