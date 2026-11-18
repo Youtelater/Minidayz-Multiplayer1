@@ -54,6 +54,7 @@ class WorldPreviewScene final : public minidayz::Scene {
 public:
     explicit WorldPreviewScene(const SavedGame* restored = nullptr) noexcept
         : world_seed_(restored ? restored->seed : make_new_world_seed()),
+          world_level_(restored ? restored->world_level : 0),
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
         if (restored && !inventory_.restore_with_satchel(restored->inventory, restored->satchel))
@@ -116,7 +117,8 @@ public:
         }
         return write_saved_game(world_seed_, player_.state(), inventory_,
             equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_,
-            &stashes_, &day_night_, &rain_timer_, &loot_timer_, &craft);
+            &stashes_, &day_night_, &rain_timer_, &loot_timer_, &craft,
+            world_level_);
     }
 
     void on_enter() noexcept override {
@@ -157,6 +159,7 @@ public:
                     return;
                 }
                 new_game_generation_ = false;
+                travel_generation_ = false;
                 menu_active_ = false;
                 // Only overwrite the existing save after a new world succeeds.
                 has_saved_game_ = write_scene_save();
@@ -243,6 +246,14 @@ public:
         }
         pause_save_feedback_ = false;
         pause_save_attempted_ = false;
+        // The original map has bridge elements which connect its later
+        // procedurally generated worlds. On a 3DS, A near a source bridge
+        // platform initiates travel without interfering with inventory use.
+        if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0 &&
+            near_source_bridge_exit() && world_level_ < 5) {
+            start_next_source_map();
+            return;
+        }
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount) {
             pending_craft_seconds_ -= std::max(0.0f, dt);
             if (pending_craft_seconds_ <= 0.0f) {
@@ -1734,8 +1745,48 @@ private:
             : -1;
     }
 
+    bool near_source_bridge_exit() const noexcept {
+        if (!world_ready_ || world_level_ >= 5) return false;
+        const auto& player = player_.state();
+        for(std::size_t i=0;i<world_.feature_count();++i){
+            const auto* feature=world_.feature(i);
+            if (!feature ||
+                feature->kind!=minidayz::WorldFeatureKind::Bridge ||
+                (feature->variant & 1u)==0u ||
+                feature->source_object != 318)continue;
+            const float dx=player.x-feature->position.x;
+            const float dy=player.y-feature->position.y;
+            if(dx*dx+dy*dy<100.0f*100.0f)return true;
+        }
+        return false;
+    }
+
+    void start_next_source_map() noexcept {
+        if(world_level_>=5)return;
+        // A new map is a new Construct world generation, not simply a
+        // background texture swap. Preserve survivor condition and items.
+        // The source bridge artwork remains the travel landmark on 3DS.
+        ++world_level_;
+        world_seed_ ^= (0x9e3779b9u + static_cast<std::uint32_t>(world_level_) * 0x85ebca6bu);
+        if(world_seed_==0)world_seed_=0x6d696e69u;
+        ground_loot_.clear();
+        tents_.clear();
+        stashes_.clear();
+        selected_inventory_slot_=-1;
+        storage_open_=false;
+        crafting_open_=false;
+        perks_open_=false;
+        details_open_=false;
+        paused_=false;
+        new_game_generation_=true;
+        travel_generation_=true;
+        begin_world_generation();
+    }
+
     void start_new_game() noexcept {
         world_seed_ = make_new_world_seed();
+        world_level_ = 0;
+        travel_generation_ = false;
         player_ = minidayz::PlayerSystem(make_initial_state());
         inventory_.clear();
         equipment_.clear();
@@ -1809,7 +1860,9 @@ private:
                    blocked(this,px+6.0f,py-8.0f) ||
                    blocked(this,px-6.0f,py+8.0f) ||
                    blocked(this,px+6.0f,py+8.0f)) continue;
-                auto state=make_initial_state();
+                // A bridge transition retains original survivor stats,
+                // injuries, hunger, equipment and perk progression.
+                auto state=travel_generation_ ? player_.state() : make_initial_state();
                 state.x=px;
                 state.y=py;
                 player_=minidayz::PlayerSystem(state);
@@ -1824,7 +1877,7 @@ private:
         world_ready_ = false;
         npc_ready_ = false;
         menu_active_ = true;
-        loading_world_ = world_.begin_source_generation(world_seed_, "Map", 0);
+        loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_);
         if (!loading_world_) generation_failed_ = true;
     }
 
@@ -1885,6 +1938,8 @@ private:
     minidayz::terrain::SolidTerrain terrain_collision_{};
     minidayz::NpcSystem npcs_{};
     std::uint32_t world_seed_{};
+    std::uint8_t world_level_{};
+    bool travel_generation_{};
     float save_elapsed_{};
     bool world_ready_{};
     bool npc_ready_{};
