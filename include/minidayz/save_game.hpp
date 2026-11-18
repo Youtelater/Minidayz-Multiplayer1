@@ -7,6 +7,7 @@
 #include "minidayz/tent_storage.hpp"
 #include "minidayz/stash_storage.hpp"
 #include "minidayz/source_day_night.hpp"
+#include "minidayz/source_rain_timer.hpp"
 #include "minidayz/item_use_runtime.hpp"
 #include "minidayz/perks.hpp"
 #include <cstdint>
@@ -14,7 +15,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 15u;
+inline constexpr std::uint32_t kSaveVersion = 16u;
 
 struct SavedGame {
     std::uint32_t magic{kSaveMagic};
@@ -40,6 +41,8 @@ struct SavedGame {
     minidayz::items::StashStorageSnapshot stashes{};
     // v15 appends the original 1.5-second Timer_ALL and its phase state.
     minidayz::items::SourceDayNightSnapshot source_time{};
+    // v16 persists the original 360-second Rain timer and active phase.
+    minidayz::items::SourceRainTimerSnapshot source_rain{};
 };
 
 
@@ -55,7 +58,8 @@ bool write_saved_game(std::uint32_t seed,
                       const items::ItemUseRuntime* item_use = nullptr,
                       const items::SourcePerkSystem* perks = nullptr,
                       const items::StashStorageSystem* stashes = nullptr,
-                      const items::SourceDayNightClock* source_time = nullptr) noexcept;
+                      const items::SourceDayNightClock* source_time = nullptr,
+                      const items::SourceRainTimer* source_rain = nullptr) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
@@ -68,5 +72,6 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                                const items::ItemUseRuntime* item_use = nullptr,
                                const items::SourcePerkSystem* perks = nullptr,
                       const items::StashStorageSystem* stashes = nullptr,
-                      const items::SourceDayNightClock* source_time = nullptr) noexcept;
+                      const items::SourceDayNightClock* source_time = nullptr,
+                      const items::SourceRainTimer* source_rain = nullptr) noexcept;
 } // namespace minidayz::persistence
