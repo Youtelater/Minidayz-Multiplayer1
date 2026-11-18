@@ -52,6 +52,14 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/construct_expression.cpp source/construct_array.cpp tests/construct_array_tests.cpp -o /tmp/construct_array_tests
           /tmp/construct_array_tests
 
+      - name: Verify boot menu controls before the 3DS build
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/boot_menu_tests.cpp -o /tmp/minidayz_boot_menu_tests
+          /tmp/minidayz_boot_menu_tests
+
       - name: Compile 3DS Executable
         shell: bash
         run: |
