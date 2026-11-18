@@ -135,6 +135,21 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  return draw_sprite(slot,selected->image,draw_x,draw_y,
                      sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth);
 }
+bool Renderer::draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth) noexcept {
+ if(width<=0.0f||height<=0.0f) return false;
+ const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,animation,frame};
+ const auto* begin=stage1::kSpriteFrames;
+ const auto* end=begin+stage1::kSpriteFrameCount;
+ const auto* selected=std::lower_bound(begin,end,key,[](const stage1::SpriteFrameDef& item,const auto& wanted){
+  return std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{item.object,item.animation,item.frame}<wanted;
+ });
+ if(selected==end||selected->object!=object||selected->animation!=animation||selected->frame!=frame ||
+    selected->width<=0.0f||selected->height<=0.0f) return false;
+ const float sx=width/selected->width;
+ const float sy=height/selected->height;
+ return draw_source_sprite(object,animation,frame,
+    x+selected->origin_x*width,y+selected->origin_y*height,sx,sy,depth);
+}
 bool Renderer::draw_source_animation(std::uint16_t object,const char* animation_name,
                                       std::uint32_t frame,float x,float y,
                                       float sx,float sy,float depth,float rotation) noexcept {
