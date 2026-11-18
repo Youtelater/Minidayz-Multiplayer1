@@ -146,12 +146,17 @@ void Renderer::unload_sheet(std::size_t slot) noexcept {
  sprite_cache_[slot]={};
 }
 void Renderer::unload_all() noexcept { for(std::size_t i=0;i<kMaxSheets;++i) unload_sheet(i); }
-bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx,float sy,float rotation,float depth) noexcept {
+bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx,float sy,float rotation,float depth,float opacity) noexcept {
  if(slot>=kMaxSheets||!sheets_[slot]||image>=C2D_SpriteSheetCount(sheets_[slot])) return false;
+ if(!std::isfinite(opacity)||opacity<=0.0f)return true;
  C2D_Sprite sprite{}; C2D_SpriteFromSheet(&sprite,sheets_[slot],image); C2D_SpriteSetPos(&sprite,x,y);
- C2D_SpriteSetScale(&sprite,sx,sy); C2D_SpriteSetRotation(&sprite,rotation); C2D_SpriteSetDepth(&sprite,depth); return C2D_DrawSprite(&sprite);
+ C2D_SpriteSetScale(&sprite,sx,sy); C2D_SpriteSetRotation(&sprite,rotation); C2D_SpriteSetDepth(&sprite,depth);
+ if(opacity>=1.0f)return C2D_DrawSprite(&sprite);
+ C2D_ImageTint tint{};
+ C2D_AlphaImageTint(&tint,std::clamp(opacity,0.0f,1.0f));
+ return C2D_DrawSpriteTinted(&sprite,&tint);
 }
-bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float sx,float sy,float depth,float rotation) noexcept {
+bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float sx,float sy,float depth,float rotation,float opacity) noexcept {
  const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,animation,frame};
  const auto* begin=stage1::kSpriteFrames;
  const auto* end=begin+stage1::kSpriteFrameCount;
@@ -176,7 +181,7 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  const float draw_x=x-selected->origin_x*selected->width*sx;
  const float draw_y=y-selected->origin_y*selected->height*sy;
  return draw_sprite(slot,selected->image,draw_x,draw_y,
-                     sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth);
+                     sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth,opacity);
 }
 bool Renderer::draw_original_image(const char* original_png,float x,float y,
                                    float width,float height,float depth) noexcept {
