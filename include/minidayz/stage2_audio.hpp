@@ -15,6 +15,8 @@ public:
     void play_item_drop() noexcept;
     void play_equipment_drop() noexcept;
     void play_backpack_zip() noexcept;
+    void start_rain_loop() noexcept;
+    void stop_rain_loop() noexcept;
     void shutdown() noexcept;
     ~Stage2Audio() { shutdown(); }
     Stage2Audio() = default;
@@ -28,7 +30,7 @@ private:
         std::uint32_t sample_rate{};
         std::uint16_t channels{};
     };
-    static constexpr std::size_t kClipCount = 6;
+    static constexpr std::size_t kClipCount = 7;
     bool load_wav(const char* path, Clip& destination) noexcept;
     void play(std::size_t clip) noexcept;
     std::array<Clip,kClipCount> clips_{};
