@@ -40,3 +40,18 @@ for e,anc in walk([root]):
               "conditions",json.dumps(e[5],separators=(",",":"))[:850],
               "action",json.dumps(a,separators=(",",":"))[:1500])
 print("ANCHOR_CREATION_COUNTS",counts)
+
+
+# Find exact 344/434 source creation sites across *all* source event sheets.
+for sheet in sheets:
+    for e,anc in walk(sheet[1]):
+        for action in e[6]:
+            if not isinstance(action,list) or len(action)<6 or not isinstance(action[5],list) or not action[5]:
+                continue
+            if not (action[:2]==[-1,94] or action[1]==73):continue
+            created=action[5][0]
+            if not isinstance(created,list) or created[0]!=4 or created[1] not in (344,434):continue
+            print("GLOBAL_ANCHOR_CREATE",sheet[0],"obj",created[1],"event",e[4],
+                "parent",[(p[4],json.dumps(p[5],separators=(",",":"))[:580]) for p in anc[-7:]],
+                "cond",json.dumps(e[5],separators=(",",":"))[:900],
+                "action",json.dumps(action,separators=(",",":"))[:1300])
