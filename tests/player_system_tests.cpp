@@ -117,6 +117,52 @@ int main() {
     assert(edge_move.blocked_x);
     assert(edge_player.state().x == 1.0f);
 
+    // A thin obstacle between the current position and destination must
+    // stop movement even when the unstepped endpoint lies beyond it.
+    PlayerState tunnel_state{};
+    tunnel_state.health=100.0f;
+    tunnel_state.x=10.0f;
+    tunnel_state.y=20.0f;
+    PlayerSystem tunnel(tunnel_state);
+    PlayerRules tunnel_rules{};
+    tunnel_rules.run_speed=600.0f;
+    tunnel_rules.collision_half_width=1.0f;
+    tunnel_rules.collision_half_height=1.0f;
+    const auto narrow_wall=+[](void*,float x,float) noexcept {
+        return x>=23.0f && x<=26.0f;
+    };
+    PlayerInput sprint{};
+    sprint.move_x=1.0f;
+    sprint.run=true;
+    const auto stop=tunnel.update_movement(
+        sprint,0.05f,tunnel_rules,narrow_wall,nullptr);
+    assert(stop.blocked_x);
+    assert(tunnel.state().x<23.0f);
+    assert(tunnel.state().animation==PlayerAnimation::run);
+    // Changing direction resets the old run animation frame: a new
+    // directional sprite should never inherit a mismatched pose.
+    PlayerState turn_state{};
+    turn_state.health=100.0f;
+    PlayerSystem turning(turn_state);
+    for(int i=0;i<21;++i)
+        turning.update_movement(up,0.05f,movement_rules);
+    assert(turning.source_animation_frame()==1);
+    PlayerInput right{};
+    right.move_x=1.0f;
+    turning.update_movement(right,0.05f,movement_rules);
+    assert(turning.source_animation_index()==6);
+    assert(turning.source_animation_frame()==0);
+    // Switching to another original player skin preserves physical stats
+    // while using the newly selected skin's own animation timing.
+    turning.set_source_skin(826); // Original player_skin_aika.
+    assert(turning.source_skin()==826);
+    assert(turning.source_animation_frame()==0);
+    assert(turning.state().health==100.0f);
+    turning.set_source_skin(999); // Original player_skin_pilot.
+    assert(turning.source_skin()==999);
+    turning.set_source_skin(65535); // Invalid object cannot replace skin.
+    assert(turning.source_skin()==999);
+
     // Non-finite input must not poison player coordinates or stats.
     PlayerInput invalid{};
     invalid.move_x = std::numeric_limits<float>::quiet_NaN();
