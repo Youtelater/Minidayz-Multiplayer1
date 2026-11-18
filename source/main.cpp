@@ -1248,9 +1248,28 @@ public:
             // Render the actual source Map layout in world coordinates.
             // Cull placements outside the camera rectangle to keep 3DS draw
             // cost bounded instead of drawing the entire 36k x 20k layout.
+            const auto* source_map = minidayz::stage1::find_layout("Map");
+            const auto source_map_index = source_map
+                ? static_cast<std::uint16_t>(
+                      source_map - minidayz::stage1::kLayoutTable)
+                : 0;
             for (std::size_t i = 0; i < world_.placement_count(); ++i) {
                 const auto* placement = world_.placement(i);
                 if (!placement) continue;
+                // Original source Tilemaps, Arrays and invisible trigger
+                // objects must not be drawn as bogus marker rectangles.
+                const auto* source_object =
+                    minidayz::stage1::find_object(placement->object);
+                if (!source_object || source_object->type != 18) continue;
+                const auto* source_layer = source_map
+                    ? minidayz::stage1::find_layer(
+                          source_map_index, placement->layer)
+                    : nullptr;
+                if (source_layer && !source_layer->visible) continue;
+                if (source_layer &&
+                    (std::strstr(source_layer->name, "respawn") ||
+                     std::strstr(source_layer->name, "_resp") ||
+                     std::strstr(source_layer->name, "points"))) continue;
                 const float px = placement->x;
                 const float py = placement->y;
                 if (px < camera_x - 96.0f || px > camera_x + view_w + 96.0f ||
@@ -1260,10 +1279,8 @@ public:
                 if (!renderer.draw_source_sprite(placement->object, 0, 0,
                         px, py, sx, sx, 0.5f,
                         placement->angle * 0.01745329251994329577f)) {
-                    // Keep missing atlas frames visible as small source-position
-                    // markers, without inventing replacement artwork.
-                    renderer.draw_solid_rect(px - 1.0f, py - 1.0f, 2.0f, 2.0f,
-                                             C2D_Color32(105, 120, 95, 255));
+                    // Original art was not loaded: do not draw a fake object.
+                    // Missing source atlas frames are audited during CI.
                 }
             }
 
@@ -1603,31 +1620,34 @@ private:
 
     static bool blocked(void* context, float x, float y) noexcept {
         const auto* scene = static_cast<const WorldPreviewScene*>(context);
-        if (!scene || x < 0.0f || y < 0.0f ||
-            x > scene->world_.bounds().width || y > scene->world_.bounds().height)
+        if (!scene || !std::isfinite(x) || !std::isfinite(y) ||
+            x < 0.0f || y < 0.0f ||
+            x > scene->world_.bounds().width ||
+            y > scene->world_.bounds().height)
             return true;
         const auto* map_layout = minidayz::stage1::find_layout("Map");
         if (!map_layout) return true;
         const auto map_index = static_cast<std::uint16_t>(
             map_layout - minidayz::stage1::kLayoutTable);
-        for (std::size_t i = 0; i < scene->world_.feature_count(); ++i) {
-            const auto* feature = scene->world_.feature(i);
-            if (!feature) continue;
-            bool blocks = feature->kind == minidayz::WorldFeatureKind::Bunker ||
-                          feature->kind == minidayz::WorldFeatureKind::Obstacle ||
-                          feature->kind == minidayz::WorldFeatureKind::Water;
-            if (feature->kind == minidayz::WorldFeatureKind::Building) {
-                const auto* layer = minidayz::stage1::find_layer(
-                    map_index, feature->source_layer);
-                // Construct's building collision is attached to the actual
-                // Buildings layer, not its decorative shadows/base duplicates.
-                blocks = layer && std::strcmp(layer->name, "Buildings") == 0;
-            }
-            if (!blocks) continue;
-            const float w = feature->width > 0.0f ? feature->width : 12.0f;
-            const float h = feature->height > 0.0f ? feature->height : 12.0f;
-            if (x >= feature->position.x && x <= feature->position.x + w &&
-                y >= feature->position.y && y <= feature->position.y + h)
+        // Original Construct instance positions are relative to their
+        // sprite origins, not always their upper-left corners.
+        for (std::size_t i = 0; i < scene->world_.placement_count(); ++i) {
+            const auto* placement = scene->world_.placement(i);
+            if (!placement || placement->width <= 0.0f ||
+                placement->height <= 0.0f) continue;
+            const auto* layer = minidayz::stage1::find_layer(
+                map_index, placement->layer);
+            if (!layer) continue;
+            const bool building = std::strcmp(layer->name, "Buildings") == 0;
+            const bool barrier = std::strcmp(layer->name, "Obstacles") == 0 ||
+                                 std::strcmp(layer->name, "Water") == 0;
+            if (!building && !barrier) continue;
+            const float left = placement->x -
+                               placement->width * placement->origin_x;
+            const float top = placement->y -
+                              placement->height * placement->origin_y;
+            if (x >= left && x <= left + placement->width &&
+                y >= top && y <= top + placement->height)
                 return true;
         }
         return false;
