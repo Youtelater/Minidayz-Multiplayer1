@@ -123,6 +123,7 @@ stage1-assets:
 	@python3 tools/stage1/extract_location_templates.py
 	@python3 tools/stage1/audit_event_groups.py data/stage1/construct_project_parsed.json --out data/stage1/event_groups.csv
 	@python3 tools/stage1/validate_stage1.py
+	@python3 tests/test_original_image_names.py
 	@python3 tools/stage1/build_sprite_catalog.py
 	@python3 tools/stage1/build_ground_floor.py
 	@python3 tools/stage1/build_environment_tilemaps.py
