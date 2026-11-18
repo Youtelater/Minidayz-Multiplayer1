@@ -261,7 +261,8 @@ void Stage2Audio::stop_environment_ambience() noexcept {
     clips_[12]={};
     waves_[12]={};
     ambient_variant_=-1;
-    weather_sample_variant_=-1;
+    // Rain has its own NDSP voice and independent buffer lifetime. Changing
+    // day/night ambience must not invalidate the active weather sample.
 }
 
 void Stage2Audio::start_rain_loop(bool blizzard) noexcept {
@@ -314,5 +315,6 @@ void Stage2Audio::shutdown() noexcept {
     loaded_step_surfaces_={{-1,-1,-1,-1}};
     loaded_pickup_variant_=-1;
     ambient_variant_=-1;
+    weather_sample_variant_=-1;
 }
 }
