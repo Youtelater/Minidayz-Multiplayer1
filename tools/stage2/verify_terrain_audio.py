@@ -15,9 +15,11 @@ required={
     "road_run_1.wav","road_run_2.wav",
     "forest_run_1.wav","forest_run_2.wav",
     "sand_run_1.wav","sand_run_2.wav",
+    "snow_run_1.wav","snow_run_2.wav",
     "swamp_step_1.wav","swamp_step_2.wav",
     "pick1.wav","pick2.wav",
     "ambient.wav","night_loop.wav","rain_loop.wav",
+    "md_winter_amb.wav","md_winter_night_amb.wav",
     "crafting.wav","drop1.wav","drop2.wav","zippero.wav",
     "geardrop1.wav","geardrop2.wav",
 }
@@ -35,12 +37,13 @@ for name in required:
 audio=(root/"source/stage2_audio.cpp").read_text(encoding="utf-8")
 scene=(root/"source/main.cpp").read_text(encoding="utf-8")
 surface=(root/"include/minidayz/terrain_surface.hpp").read_text(encoding="utf-8")
-for stem in ("hard_ground","road_run","forest_run","sand_run","swamp_step"):
+for stem in ("hard_ground","road_run","forest_run","sand_run","snow_run","swamp_step"):
     assert re.search(r'prefix = "'+stem+'"',audio),stem
 for symbol in ("play_footstep","play_item_pickup",
                "set_environment_ambience","start_rain_loop"):
     assert symbol in scene,symbol
 assert 'night_loop.wav' in audio and 'ambient.wav' in audio
+assert 'md_winter_amb.wav' in audio and 'md_winter_night_amb.wav' in audio
 assert 'wave.looping=(which==6 || which==10)' in audio
 assert "FootstepSurface" in surface
 all_wavs=list(sounds.glob("*.wav"))
