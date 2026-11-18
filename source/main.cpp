@@ -174,6 +174,30 @@ public:
                 start_new_game();
             return;
         }
+        // START is a physical 3DS pause control. Keep survival, AI,
+        // crafting timers and autosave time frozen while the menu is up.
+        if (input.pressed & KEY_START) paused_ = !paused_;
+        if (paused_) {
+            const bool pressed = input.touching && !touch_down_;
+            touch_down_ = input.touching;
+            if (input.pressed & KEY_B) paused_ = false;
+            if (pressed && input.touch.px >= 20 && input.touch.px <= 300) {
+                const int y = input.touch.py;
+                if (y >= 52 && y <= 102) {
+                    paused_ = false;
+                } else if (y >= 109 && y <= 157) {
+                    pause_save_feedback_ = write_scene_save();
+                    has_saved_game_ = has_saved_game_ || pause_save_feedback_;
+                } else if (y >= 164 && y <= 216) {
+                    pause_save_feedback_ = write_scene_save();
+                    has_saved_game_ = has_saved_game_ || pause_save_feedback_;
+                    paused_ = false;
+                    menu_active_ = true;
+                }
+            }
+            return;
+        }
+        pause_save_feedback_ = false;
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount) {
             pending_craft_seconds_ -= std::max(0.0f, dt);
             if (pending_craft_seconds_ <= 0.0f) {
@@ -742,6 +766,24 @@ public:
             renderer.draw_text("A: Continue   X: New Game", 18.0f, 216.0f, 0.32f);
             return;
         }
+        if (paused_) {
+            renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
+                                     C2D_Color32(20, 25, 23, 255));
+            (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 320.0f, 240.0f, 0.95f);
+            renderer.draw_text("PAUSED", 108.0f, 18.0f, 0.60f);
+            constexpr float y[] = {52.0f, 109.0f, 164.0f};
+            for (float top : y) {
+                renderer.draw_solid_rect(20.0f, top, 280.0f, 48.0f,
+                                         C2D_Color32(93, 73, 45, 255));
+                (void)renderer.draw_menu_art(1, 20.0f, top, 280.0f, 48.0f);
+            }
+            renderer.draw_text("RESUME", 115.0f, 67.0f, 0.47f);
+            renderer.draw_text("SAVE GAME", 91.0f, 124.0f, 0.47f);
+            renderer.draw_text("MAIN MENU", 86.0f, 180.0f, 0.47f);
+            if (pause_save_feedback_)
+                renderer.draw_text("GAME SAVED", 115.0f, 220.0f, 0.28f);
+            return;
+        }
         // Native 3DS inventory: use the actual Construct GUI frames
         // from assets/gfx, scaled to the 320x240 touch display.
         // Never use placeholder rectangles when the source sprite exists.
@@ -1225,6 +1267,17 @@ public:
             renderer.draw_text("SELECT NEW GAME OR CONTINUE BELOW", 50.0f, 206.0f, 0.32f);
             return;
         }
+        if (paused_) {
+            renderer.reset_camera();
+            renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
+                                     C2D_Color32(24, 34, 29, 255));
+            (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 400.0f, 240.0f, 0.95f);
+            if (!renderer.draw_menu_art(0, 42.0f, 27.0f, 316.0f, 112.0f))
+                renderer.draw_text("MINI DAYZ", 76.0f, 68.0f, 1.05f);
+            renderer.draw_text("GAME PAUSED", 128.0f, 162.0f, 0.60f);
+            renderer.draw_text("START OR B: RESUME", 114.0f, 208.0f, 0.32f);
+            return;
+        }
         const auto& p = player_.state();
         constexpr float view_w = 400.0f;
         constexpr float view_h = 240.0f;
@@ -1549,6 +1602,7 @@ private:
         selected_inventory_slot_ = -1;
         save_elapsed_ = 0.0f;
         new_game_generation_ = true;
+        paused_ = false;
         has_saved_game_ = false; // Keep old disk save intact if generation fails.
         begin_world_generation();
     }
@@ -1660,6 +1714,8 @@ private:
     bool world_ready_{};
     bool npc_ready_{};
     bool menu_active_{true};
+    bool paused_{};
+    bool pause_save_feedback_{};
     bool loading_world_{};
     bool new_game_generation_{};
     bool generation_failed_{};
