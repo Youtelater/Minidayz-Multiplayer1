@@ -25,7 +25,7 @@ TILE_MASK = 0x1fffffff
 def rle_cells(payload, expected):
     cells = []
     for piece in str(payload).split(","):
-        match = re.fullmatch(r"(\\d+)x(-?\\d+)|(-?\\d+)", piece)
+        match = re.fullmatch(r"(\d+)x(-?\d+)|(-?\d+)", piece)
         if match is None:
             raise ValueError("Invalid source tilemap RLE " + repr(piece))
         length = int(match.group(1) or 1)
@@ -37,7 +37,7 @@ def rle_cells(payload, expected):
         raise ValueError(f"Original tilemap requires {expected} cells, found {len(cells)}")
     return cells
 
-project = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-",
+project = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\d)", "-",
     SOURCE.read_text(encoding="utf-8-sig")))["project"]
 obj = project[3][OBJECT]
 if obj[1] != 16 or Path(obj[6][0]).name != "ground_lvl1_tilemap.png":
@@ -109,8 +109,8 @@ with Image.open(image) as source:
                 source.crop((px, py, px + tile_width, py + tile_width)).save(directory / name)
                 names.append(name)
             manifest = directory / "ground.t3s"
-            manifest.write_text("--atlas -f rgba -z auto\\n" +
-                                "\\n".join(names) + "\\n", encoding="utf-8")
+            manifest.write_text("--atlas -f rgba -z auto\n" +
+                                "\n".join(names) + "\n", encoding="utf-8")
             destination = ROMFS / f"original_map_ground_p{page:03}.t3x"
             subprocess.run(["tex3ds", "-i", str(manifest), "-o", str(destination)],
                            cwd=directory, check=True)
@@ -136,11 +136,11 @@ with destination.open("wb") as out:
             out.write(struct.pack("<I", descriptor))
 if destination.stat().st_size < 32:
     raise SystemExit("Original ground tilemap binary empty")
-HEADER.write_text("#pragma once\\n#include <cstdint>\\nnamespace minidayz::stage1 {\\n" +
-    f"inline constexpr std::uint16_t kOriginalFloorTileObject={OBJECT};\\n" +
-    f"inline constexpr std::uint16_t kOriginalFloorTileId={tile_ids[0]};\\n" +
-    f"inline constexpr float kOriginalFloorTileSize={float(tile_width):.1f}f;\\n" +
-    f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\\n" +
-    "}\\n", encoding="utf-8")
+HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 {\n" +
+    f"inline constexpr std::uint16_t kOriginalFloorTileObject={OBJECT};\n" +
+    f"inline constexpr std::uint16_t kOriginalFloorTileId={tile_ids[0]};\n" +
+    f"inline constexpr float kOriginalFloorTileSize={float(tile_width):.1f}f;\n" +
+    f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\n" +
+    "}\n", encoding="utf-8")
 print(f"Original Map: {len(instances)} tilemap instances; {len(tile_ids)} source tiles; "
       f"{page_count} 3DS atlases; packed layout {destination.stat().st_size} bytes")
