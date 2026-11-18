@@ -419,6 +419,14 @@ bool Renderer::draw_original_environment_tilemaps(
     // Only fill currently EMPTY source cells; never overwrite the exact
     // RLE-authored water, beach or shoreline frames.
     for(const auto& rule:stage1::kWaterShoreRules){
+     // Some source branches explicitly handle zero surrounding water.
+     // They belong to the larger procedural water-creation event and must
+     // not be applied to every empty cell in an authored Map tilemap.
+     bool has_source_water=false;
+     for(std::uint16_t i=0;i<rule.count;++i)
+      if(stage1::kWaterShoreChecks[rule.first+i].requires_water)
+       has_source_water=true;
+     if(!has_source_water)continue;
      bool match=true;
      for(std::uint16_t i=0;i<rule.count;++i){
       const auto& check=stage1::kWaterShoreChecks[rule.first+i];
