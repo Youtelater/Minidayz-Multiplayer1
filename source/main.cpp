@@ -694,12 +694,13 @@ public:
         // from assets/gfx, scaled to the 320x240 touch display.
         // Never use placeholder rectangles when the source sprite exists.
         const auto ui_art = [&](const minidayz::stage1::OriginalUiArt& art,
-                                float x, float y, float w, float h) noexcept {
+                                float x, float y, float w, float h,
+                                float depth = 0.78f) noexcept {
             return renderer.draw_source_sprite_fitted(art.object,
-                art.animation, art.frame, x, y, w, h, 0.48f);
+                art.animation, art.frame, x, y, w, h, depth);
         };
         if (!ui_art(minidayz::stage1::kOriginalInventoryBackgroundArt,
-                    0.0f, 0.0f, 320.0f, 240.0f)) {
+                    0.0f, 0.0f, 320.0f, 240.0f, 0.98f)) {
             renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
                                      C2D_Color32(70, 60, 48, 255));
         }
