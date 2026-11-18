@@ -18,6 +18,8 @@ public:
     void play_backpack_zip() noexcept;
     void play_item_pickup() noexcept;
     void play_footstep(terrain::FootstepSurface surface) noexcept;
+    void set_environment_ambience(bool night) noexcept;
+    void stop_environment_ambience() noexcept;
     void start_rain_loop() noexcept;
     void stop_rain_loop() noexcept;
     void shutdown() noexcept;
@@ -33,7 +35,7 @@ private:
         std::uint32_t sample_rate{};
         std::uint16_t channels{};
     };
-    static constexpr std::size_t kClipCount = 10;
+    static constexpr std::size_t kClipCount = 11;
     bool load_wav(const char* path, Clip& destination) noexcept;
     void play(std::size_t clip) noexcept;
     std::array<Clip,kClipCount> clips_{};
@@ -48,6 +50,7 @@ private:
     unsigned step_serial_{};
     std::array<int,2> loaded_step_surfaces_{{-1,-1}};
     int loaded_pickup_variant_{-1};
+    int ambient_variant_{-1};
 };
 
 } // namespace minidayz
