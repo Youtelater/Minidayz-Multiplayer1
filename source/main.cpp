@@ -1547,7 +1547,8 @@ public:
                     0.10f, 0.90f);
                 if (!renderer.draw_source_sprite(placement->object, 0, 0,
                         px, py, sx, sx, layer_depth,
-                        placement->angle * 0.01745329251994329577f)) {
+                        placement->angle * 0.01745329251994329577f,
+                        placement->opacity)) {
                     // Original art was not loaded: do not draw a fake object.
                     // Missing source atlas frames are audited during CI.
                 }
