@@ -88,11 +88,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \\
-            source/world.cpp source/stage1_data_access.cpp \\
-            source/construct_array.cpp source/construct_expression.cpp \\
-            source/construct_event_interpreter.cpp source/location_event_runtime.cpp \\
-            source/npc_system.cpp tests/world_system_tests.cpp \\
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
+            source/world.cpp source/stage1_data_access.cpp \
+            source/construct_array.cpp source/construct_expression.cpp \
+            source/construct_event_interpreter.cpp source/location_event_runtime.cpp \
+            source/npc_system.cpp tests/world_system_tests.cpp \
             -o /tmp/minidayz_world_tests
           /tmp/minidayz_world_tests
 
