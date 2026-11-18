@@ -82,7 +82,7 @@ with Image.open(image) as source:
     sheet_columns = source.width // tile_width
     maximum_id = (source.width // tile_width) * (source.height // tile_width)
     tile_ids = sorted({(v & TILE_MASK) for _, _, _, _, cells in instances
-                       for v in cells if v >= 0})
+                       for v in cells if v != -1})
     if not tile_ids:
         raise SystemExit("Original ground layout contains no visible tiles")
     if tile_ids[-1] >= maximum_id:
@@ -128,7 +128,7 @@ with destination.open("wb") as out:
     for x, y, cols, rows, cells in instances:
         out.write(struct.pack("<ffII", x, y, cols, rows))
         for raw in cells:
-            if raw < 0:
+            if raw == RAW_EMPTY:
                 descriptor = 0xffffffff
             else:
                 page, frame = mapping[raw & TILE_MASK]
