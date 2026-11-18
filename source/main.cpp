@@ -695,11 +695,13 @@ public:
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 320.0f, 240.0f, 0.95f);
             renderer.draw_text("GENERATING WORLD", 45.0f, 52.0f, 0.52f);
             static constexpr const char* steps[] = {
-                "PREPARING MAP", "PLACING LOCATIONS", "BUILDING MAP MARKERS",
-                "GENERATING TOWNS AND ROADS", "ADDING BUNKERS", "ADDING BRIDGES"
+                "PREPARING ORIGINAL MAP", "GENERATING ROADS AND LOCATIONS",
+                "BUILDING MAP MARKERS", "PLACING ORIGINAL TOWNS",
+                "ADDING BUNKERS", "ADDING BRIDGES"
             };
             const auto phase = world_.generation_phase();
-            const auto step = phase < 6 ? phase : 5;
+            // Generation phases start at 1; phase 1 generates the road grid.
+            const auto step = phase > 0 && phase <= 6 ? phase - 1 : 0;
             renderer.draw_text(steps[step], 26.0f, 112.0f, 0.32f);
             renderer.draw_solid_rect(24.0f, 169.0f, 272.0f, 16.0f,
                                      C2D_Color32(20, 28, 23, 255));
