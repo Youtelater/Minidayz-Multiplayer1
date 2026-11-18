@@ -136,20 +136,22 @@ void Stage2Audio::play(std::size_t which) noexcept {
     if (!ndsp_ready_ || which>=kClipCount) return;
     const auto& clip=clips_[which];
     if (!clip.pcm || clip.frames==0) return;
-    ndspChnWaveBufClear(0);
-    ndspChnReset(0);
-    ndspChnSetRate(0, static_cast<float>(clip.sample_rate));
-    ndspChnSetFormat(0, clip.channels==1
+    const int channel = static_cast<int>(which);
+    ndspChnWaveBufClear(channel);
+    ndspChnReset(channel);
+    ndspChnSetRate(channel, static_cast<float>(clip.sample_rate));
+    ndspChnSetFormat(channel, clip.channels==1
         ? NDSP_FORMAT_MONO_PCM16 : NDSP_FORMAT_STEREO_PCM16);
     float mix[12]{};
     mix[0]=1.0f;
     mix[1]=1.0f;
-    ndspChnSetMix(0,mix);
-    wave_={};
-    wave_.data_vaddr=clip.pcm;
-    wave_.nsamples=clip.frames;
-    wave_.looping=false;
-    ndspChnWaveBufAdd(0,&wave_);
+    ndspChnSetMix(channel,mix);
+    auto& wave=waves_[which];
+    wave={};
+    wave.data_vaddr=clip.pcm;
+    wave.nsamples=clip.frames;
+    wave.looping=false;
+    ndspChnWaveBufAdd(channel,&wave);
 }
 
 void Stage2Audio::play_crafting() noexcept {
@@ -175,8 +177,11 @@ void Stage2Audio::play_backpack_zip() noexcept {
 
 void Stage2Audio::shutdown() noexcept {
     if (ndsp_ready_) {
-        ndspChnWaveBufClear(0);
-        ndspChnReset(0);
+        for (std::size_t i=0;i<kClipCount;++i) {
+            const int channel=static_cast<int>(i);
+            ndspChnWaveBufClear(channel);
+            ndspChnReset(channel);
+        }
         ndspExit();
         ndsp_ready_ = false;
     }
@@ -184,7 +189,7 @@ void Stage2Audio::shutdown() noexcept {
         if (clip.pcm) linearFree(clip.pcm);
         clip={};
     }
-    wave_={};
+    waves_={};
     drop_serial_=0;
     gear_drop_serial_=0;
 }
