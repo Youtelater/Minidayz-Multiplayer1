@@ -52,6 +52,8 @@ struct WorldPlacement {
     std::uint64_t source_uid{};
     float x{}, y{}, z{}, width{}, height{}, angle{}, opacity{}, scale_x{}, origin_x{}, origin_y{};
     std::uint8_t image_point{};
+    // Original Construct Set animation frame actions on created world sprites.
+    std::uint32_t source_frame{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
