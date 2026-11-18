@@ -305,6 +305,9 @@ jobs:
       - name: Trace Original Rain Timer Start and Reset Actions
         run: python3 tools/stage2/audit_rain_timer_setup.py
 
+      - name: Trace Original Rain Speed Assignments
+        run: python3 tools/stage2/audit_rain_speed_source.py
+
       - name: Trace Source Rain and Day-Night Transition Guards
         run: python3 tools/stage2/audit_weather_transition_source.py
 
