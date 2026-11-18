@@ -30,9 +30,14 @@ inline const char* original_equipment_pose(
     if(!visual)return nullptr;
     constexpr unsigned idle=1u,run=2u;
     if(weapon){
-        for(unsigned bit=2;bit<9;++bit)
+        // Carry the original held weapon while running; switch to an
+        // original pistol/axe/two-hand stance when standing still.
+        if(moving && (visual->animations & run)) return "run";
+        for(unsigned bit=2;bit<=6;++bit)
             if(visual->animations & (1u<<bit))
                 return kEquipmentPosePrefixes[bit];
+        if(visual->animations & idle)return "idle";
+        if(visual->animations & run)return "run";
         return nullptr;
     }
     if(moving && (visual->animations & run)) return "run";
