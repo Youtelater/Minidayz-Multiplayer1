@@ -117,6 +117,34 @@ with Image.open(image) as source:
             if not destination.is_file() or destination.stat().st_size < 32:
                 raise SystemExit("Original ground sprite atlas failed: " + str(destination))
 
+# The authored Map holds only two very narrow ground tilemap strips.
+# Construct's game events populate the rest of the playable world at runtime.
+# Until the per-cell Construct tile painting events are fully translated,
+# a 3DS renderer must draw a source-art ground tile BEHIND those authored
+# placements; otherwise every generated settlement outside the strips is
+# rendered over a black/empty GPU clear color.
+#
+# Take the grass-textured lower-right source tile from the ORIGINAL
+# ground_lvl1_tilemap.png; never synthesize artwork or use images/ copies.
+# Keep this separate from source tile IDs so the authored RLE tiles remain
+# exact and the existing source layout verifier is not weakened.
+BASE_GROUND = ROMFS / "original_map_base_ground.t3x"
+with Image.open(image) as source:
+    source = source.convert("RGBA")
+    if source.width < tile_width * 2 or source.height < tile_width * 2:
+        raise SystemExit("Original source ground art lacks its grass base tile")
+    with tempfile.TemporaryDirectory(prefix="mdz_original_base_floor_") as tmp:
+        work = Path(tmp)
+        source.crop((source.width - tile_width,
+                     source.height - tile_width,
+                     source.width, source.height)).save(work / "base.png")
+        (work / "base.t3s").write_text(
+            "--atlas -f rgba -z auto\\nbase.png\\n", encoding="utf-8")
+        subprocess.run(["tex3ds", "-i", str(work / "base.t3s"),
+                        "-o", str(BASE_GROUND)], cwd=work, check=True)
+if not BASE_GROUND.is_file() or BASE_GROUND.stat().st_size < 32:
+    raise SystemExit("Original source base ground atlas not generated")
+
 # Format: magic (4), tile width (u32), atlas pages (u32), instance count (u32);
 # each instance: x,y (float), width,height (u32), then width*height
 # unsigned 32-bit tile descriptors: 0xffffffff empty; otherwise packed
@@ -142,5 +170,6 @@ HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 
     f"inline constexpr float kOriginalFloorTileSize={float(tile_width):.1f}f;\n" +
     f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\n" +
     "}\n", encoding="utf-8")
-print(f"Original Map: {len(instances)} tilemap instances; {len(tile_ids)} source tiles; "
-      f"{page_count} 3DS atlases; packed layout {destination.stat().st_size} bytes")
+print(f"Original Map: {len(instances)} authored tilemap strips; {len(tile_ids)} source tiles; "
+      f"{page_count} authored atlases plus 1 original grass base; "
+      f"packed layout {destination.stat().st_size} bytes")
