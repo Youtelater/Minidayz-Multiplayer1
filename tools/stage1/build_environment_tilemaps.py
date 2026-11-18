@@ -98,7 +98,12 @@ with tempfile.TemporaryDirectory(prefix="mdz_source_terrain_") as scratch:
             columns=art.width//tile_size
             count=columns*(art.height//tile_size)
             ordered=sorted(palette[object_id])
-            if len(ordered)>64 or not ordered:
+            # The original ground_enviroment object (230) is an empty
+            # authored tilemap: its scenery is painted by game events.
+            # Still package the original first frame for runtime use.
+            if not ordered and object_id==230:
+                ordered=[0]
+            if len(ordered)>128 or not ordered:
                 raise SystemExit(f"Unexpected source terrain tile count: {object_id}")
             directory=work/str(object_id)
             directory.mkdir()
