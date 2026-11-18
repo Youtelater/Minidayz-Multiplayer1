@@ -219,24 +219,6 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
     }
    }
   }
-  if(valid){
-   const char* const paths[7]={
-    "romfs:/gfx/original_map_base_ground.t3x",
-    "romfs:/gfx/original_map_base_ground_lvl2.t3x",
-    "romfs:/gfx/original_map_base_ground_lvl3.t3x",
-    "romfs:/gfx/original_map_base_ground_lvl4.t3x",
-    "romfs:/gfx/original_map_base_ground_lvl5.t3x",
-    "romfs:/gfx/original_map_base_ground_lvl6.t3x",
-    "romfs:/gfx/original_map_base_ground_lvl7.t3x"
-   };
-   for(int i=0;i<7;++i){
-    base_floor_sheets_[i]=C2D_SpriteSheetLoad(paths[i]);
-    if(!base_floor_sheets_[i] ||
-       C2D_SpriteSheetCount(base_floor_sheets_[i])==0){
-     valid=false;break;
-    }
-   }
-  }
   if(!valid){
    for(auto& sheet:base_floor_sheets_){
     if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}
@@ -250,8 +232,27 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   ground_loaded_=true;
  }
  if(!ground_loaded_) return false;
- // Each source map level has its own original terrain image.
- if(!base_floor_sheets_[terrain::active_ground_texture(source_level)]) return false;
+ // Keep only the needed original ground theme resident. Loading all seven
+ // terrain sheets at startup can exhaust original 3DS texture memory and
+ // make every map fail to render, even when the current sheet is valid.
+ // The final source map can use a second theme below its row boundary.
+ const auto ensure_ground_sheet=[&](std::uint32_t theme) noexcept -> bool {
+  if(theme>=7) return false;
+  if(base_floor_sheets_[theme]) return true;
+  char path[96]{};
+  if(theme==0)
+   std::snprintf(path,sizeof(path),"romfs:/gfx/original_map_base_ground.t3x");
+  else
+   std::snprintf(path,sizeof(path),
+     "romfs:/gfx/original_map_base_ground_lvl%u.t3x",
+     static_cast<unsigned>(theme+1));
+  auto sheet=C2D_SpriteSheetLoad(path);
+  if(!sheet) return false;
+  if(C2D_SpriteSheetCount(sheet)==0){C2D_SpriteSheetFree(sheet);return false;}
+  base_floor_sheets_[theme]=sheet;
+  return true;
+ };
+ if(!ensure_ground_sheet(terrain::active_ground_texture(source_level))) return false;
  const float tile=static_cast<float>(ground_tile_pixels_);
  const float base_tile=stage1::kOriginalFloorBaseTileSize;
  // Source Map object 482 has only two authored ground strips. The original
@@ -266,7 +267,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
    const float tile_world_y=(static_cast<float>(row)+0.5f)*base_tile;
    const auto theme=terrain::ground_texture_at(
       source_level,tile_world_y,second_half_y);
-   if(!base_floor_sheets_[theme]) return false;
+   if(!ensure_ground_sheet(theme)) return false;
    C2D_Sprite sprite{};
    C2D_SpriteFromSheet(&sprite,base_floor_sheets_[theme],0);
    if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f) return false;
