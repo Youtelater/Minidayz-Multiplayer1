@@ -201,6 +201,26 @@ for level, object_id in enumerate(SOURCE_GROUND):
                         "-o", str(destination_base)], cwd=work, check=True)
     if not destination_base.is_file() or destination_base.stat().st_size < 32:
         raise SystemExit(f"Original source level {level} ground atlas missing")
+# Original road corridors use the existing ground source sheets, not
+# separate invented geometry art. Cell 0 is the stone/paved road texture
+# in each 5x5 original tilemap. Export it for source grid codes 12/13/14.
+for level, object_id in enumerate(SOURCE_GROUND, start=1):
+    source = images[object_id]
+    stone_tile = source.crop((0, 0, tile_width, tile_width))
+    if stone_tile.getbbox() is None:
+        raise SystemExit(f"Original road artwork missing in ground level {level}")
+    with tempfile.TemporaryDirectory(prefix=f"mdz_road_{level}_") as tmp:
+        work = Path(tmp)
+        stone_tile.save(work / "road.png")
+        (work / "road.t3s").write_text(
+            "--atlas -f rgba -z auto" + chr(10) + "road.png" + chr(10),
+            encoding="utf-8")
+        road_atlas = ROMFS / f"original_map_road_lvl{level}.t3x"
+        subprocess.run(["tex3ds", "-i", str(work / "road.t3s"),
+                        "-o", str(road_atlas)], cwd=work, check=True)
+        if not road_atlas.is_file() or road_atlas.stat().st_size < 32:
+            raise SystemExit(f"Original road texture {level} was not exported")
+
 BASE_GROUND = ROMFS / "original_map_base_ground.t3x"
 
 # Format: magic (4), tile width (u32), atlas pages (u32), instance count (u32);
