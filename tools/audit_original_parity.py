@@ -79,7 +79,8 @@ floor = text("tools/stage1/build_ground_floor.py")
 ui_builder = text("tools/stage2/build_inventory_ui_art.py")
 makefile = text("Makefile")
 require("start_new_game()" in game and
-        'begin_source_generation(world_seed_, "Map", 0)' in game and
+        'begin_source_generation(world_seed_, "Map", world_level_)' in game and
+        'world_level_ = 0;' in game and
         "advance_source_generation()" in game and
         "generation_complete()" in game,
         "New Game starts staged source Map generation before gameplay")
