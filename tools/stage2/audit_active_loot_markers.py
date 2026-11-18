@@ -55,3 +55,24 @@ for sheet in sheets:
                 "parent",[(p[4],json.dumps(p[5],separators=(",",":"))[:580]) for p in anc[-7:]],
                 "cond",json.dumps(e[5],separators=(",",":"))[:900],
                 "action",json.dumps(action,separators=(",",":"))[:1300])
+
+
+# Exact helicopter crash generator: preceding original source actions and guards.
+for s in sheets:
+    for e,anc in walk(s[1]):
+        if e[4] not in (924737797383123,494432490588559,
+                       354316058670731,116073859892425,
+                       8627807469654645,5393337214081211,
+                       9982964175883407,897613305483386,
+                       254687386232869,427158362727888,820958392602955):
+            continue
+        print("CRASH_TREE_NODE",s[0],e[4],"parent", [x[4] for x in anc[-5:]],
+              "event_HEAD",json.dumps(e[:5],separators=(",",":"))[:250],
+              "conditions",json.dumps(e[5],separators=(",",":"))[:2300],
+              "actions",json.dumps(e[6],separators=(",",":"))[:4000])
+for s in sheets:
+    for e,anc in walk(s[1]):
+        if not any(term in str(e[5])+str(e[6]) for term in ("helispawned","hammerspawned")):continue
+        print("CRASH_COUNTER_SOURCE",s[0],e[4],"parent",[a[4] for a in anc[-4:]],
+              "conditions",json.dumps(e[5],separators=(",",":"))[:1100],
+              "actions",json.dumps(e[6],separators=(",",":"))[:1700])
