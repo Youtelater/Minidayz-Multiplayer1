@@ -301,6 +301,17 @@ int main() {
     assert(load_saved_game_from_path(restored, kFile));
     assert(restored.pending_craft.recipe_index == 0);
     assert(restored.pending_craft.seconds_remaining == 2.25f);
+    // World progression must survive Continue without resetting the
+    // survivor to level-one terrain. Level zero remains the old default.
+    assert(restored.world_level == 0);
+    assert(write_saved_game_to_paths(43, player, inventory, equipment, ground,
+        tents, kFile, kTemp, nullptr, nullptr, nullptr, nullptr, nullptr,
+        nullptr, &craft, 5));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.world_level == 5);
+    assert(!write_saved_game_to_paths(43, player, inventory, equipment, ground,
+        tents, kFile, kTemp, nullptr, nullptr, nullptr, nullptr, nullptr,
+        nullptr, &craft, 6));
     craft.recipe_index = 0xffffu;
     craft.seconds_remaining = 1.0f;
     assert(!write_saved_game_to_paths(43, player, inventory, equipment, ground,
