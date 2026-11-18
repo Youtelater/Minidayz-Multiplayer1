@@ -5,6 +5,7 @@
 #include <cstring>
 #include <vector>
 #include <utility>
+#include "minidayz/terrain_surface.hpp"
 
 namespace minidayz::terrain {
 
@@ -57,9 +58,10 @@ public:
             }
             // Preserve the original Solid behavior of tilemap_water (208)
             // and tilemap_forest (211); sand/ground decorations are non-solid.
-            const bool solid=(map.object==208||map.object==211)&&map.layer<44;
+            const bool relevant=(map.object==208||map.object==211||
+                                 map.object==418)&&map.layer<44;
             const std::size_t cells=static_cast<std::size_t>(map.columns)*map.rows;
-            if(solid){
+            if(relevant){
                 map.cells.resize(cells);
                 ok=std::fread(map.cells.data(),4,cells,file)==cells;
                 if(ok)maps_.push_back(std::move(map));
@@ -74,8 +76,22 @@ public:
 
     bool blocked(float x,float y) const noexcept {
         for(const auto& map:maps_)
-            if(map.occupied(x,y))return true;
+            if(detail_blocks_player(map.object) && map.occupied(x,y))
+                return true;
         return false;
+    }
+
+    FootstepSurface surface_at(float x,float y) const noexcept {
+        // Sand and forest may overlap; water takes precedence if present.
+        FootstepSurface surface=FootstepSurface::ground;
+        for(const auto& map:maps_) {
+            if(!map.occupied(x,y))continue;
+            if(map.object==208)return FootstepSurface::shallow_water;
+            if(map.object==211)surface=FootstepSurface::forest;
+            if(map.object==418 && surface==FootstepSurface::ground)
+                surface=FootstepSurface::sand;
+        }
+        return surface;
     }
 
 private:
