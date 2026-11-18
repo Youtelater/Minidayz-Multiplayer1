@@ -167,6 +167,9 @@ jobs:
           name: original-stage2-perk-rules
           path: data/stage2/original_perk_actions.json
 
+      - name: Audit native world active loot marker provenance
+        run: python3 tools/stage2/audit_active_loot_markers.py
+
       - name: Trace original loot category selection guards
         run: python3 tools/stage2/audit_loot_dispatch.py
 
