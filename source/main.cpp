@@ -809,7 +809,8 @@ public:
             if (generation_failed_)
                 renderer.draw_text("WORLD GENERATION FAILED - RETRY NEW GAME",
                                    18.0f, 204.0f, 0.27f);
-            renderer.draw_text("A: Continue   X: New Game", 18.0f, 216.0f, 0.32f);
+            renderer.draw_text(has_saved_game_ ? "A: Continue   X: New Game" :
+                               "A/X: New Game", 18.0f, 216.0f, 0.32f);
             return;
         }
         if (paused_) {
