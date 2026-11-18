@@ -47,7 +47,7 @@ if original.is_file() and snapshots:
             "Root original and source snapshot bytes match")
 if parsed.is_file() and original.is_file():
     def parse(path):
-        return json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-",
+        return json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-",
                                  path.read_text(encoding="utf-8-sig")))
     try:
         source = parse(original)
