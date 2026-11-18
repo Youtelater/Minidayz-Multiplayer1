@@ -209,16 +209,10 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
    }
   }
   std::fclose(file);
-  if(valid){
-   for(std::uint32_t page=0;page<ground_pages_;++page){
-    char path[80]{};
-    std::snprintf(path,sizeof(path),"romfs:/gfx/original_map_ground_p%03u.t3x",page);
-    floor_sheets_[page]=C2D_SpriteSheetLoad(path);
-    if(!floor_sheets_[page]||C2D_SpriteSheetCount(floor_sheets_[page])==0){
-     valid=false;break;
-    }
-   }
-  }
+  // Parsed source tilemap references are retained here, but the texture
+  // atlas pages are loaded only if a source-authored tile actually enters
+  // the 400x240 viewport. Eagerly loading all atlas pages can leave no
+  // texture memory for the player, items, or procedurally placed objects.
   if(!valid){
    for(auto& sheet:base_floor_sheets_){
     if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}
@@ -311,8 +305,15 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
      static_cast<std::size_t>(row)*map.columns+static_cast<std::size_t>(col)];
    if(descriptor==0xffffffffu) continue;
    const std::uint32_t page=descriptor>>16,frame=descriptor&0xffffu;
-   if(page>=ground_pages_||!floor_sheets_[page]||
-      frame>=C2D_SpriteSheetCount(floor_sheets_[page])) continue;
+   if(page>=ground_pages_||page>=floor_sheets_.size()) continue;
+   if(!floor_sheets_[page]){
+    char path[80]{};
+    std::snprintf(path,sizeof(path),
+                  "romfs:/gfx/original_map_ground_p%03u.t3x",page);
+    floor_sheets_[page]=C2D_SpriteSheetLoad(path);
+    if(!floor_sheets_[page]) return false;
+   }
+   if(frame>=C2D_SpriteSheetCount(floor_sheets_[page])) continue;
    C2D_Sprite sprite{};
    C2D_SpriteFromSheet(&sprite,floor_sheets_[page],frame);
    C2D_SpriteSetPos(&sprite,map.x+col*tile,map.y+row*tile);
