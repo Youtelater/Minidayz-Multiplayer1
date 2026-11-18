@@ -33,6 +33,8 @@ void Renderer::shutdown() noexcept {
  for(auto& sheet:floor_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  for(auto& sheet:base_floor_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  for(auto& sheet:road_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
+ for(auto& sheet:detail_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
+ detail_maps_.clear(); detail_load_attempted_=false; detail_loaded_=false;
  ground_maps_.clear();ground_load_attempted_=false;ground_loaded_=false;
  for(auto& sheet:menu_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  if(debug_buffer_) C2D_TextBufDelete(debug_buffer_);
@@ -295,6 +297,104 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
                              tile/sprite.params.pos.h);
    C2D_SpriteSetDepth(&sprite,0.92f);
    C2D_DrawSprite(&sprite);
+  }
+ }
+ return true;
+}
+bool Renderer::draw_original_environment_tilemaps(
+    float camera_x,float camera_y,float width,float height) noexcept {
+ if(!(width>0.0f&&height>0.0f))return false;
+ if(!detail_load_attempted_){
+  detail_load_attempted_=true;
+  constexpr std::uint16_t kOriginalObjects[4]={208,211,418,230};
+  std::FILE* file=std::fopen("romfs:/gfx/original_map_details_layout.bin","rb");
+  if(!file)return false;
+  char magic[4]{};
+  std::uint32_t count=0;
+  bool valid=std::fread(magic,1,4,file)==4 &&
+             std::memcmp(magic,"MDT1",4)==0 &&
+             std::fread(&count,sizeof(count),1,file)==1 &&
+             count>0 && count<=32;
+  for(std::uint32_t i=0;i<count&&valid;++i){
+   DetailMap map{};
+   valid=std::fread(&map.object_id,sizeof(map.object_id),1,file)==1 &&
+         std::fread(&map.layer,sizeof(map.layer),1,file)==1 &&
+         std::fread(&map.x,sizeof(map.x),1,file)==1 &&
+         std::fread(&map.y,sizeof(map.y),1,file)==1 &&
+         std::fread(&map.tile_size,sizeof(map.tile_size),1,file)==1 &&
+         std::fread(&map.columns,sizeof(map.columns),1,file)==1 &&
+         std::fread(&map.rows,sizeof(map.rows),1,file)==1;
+   if(!valid||!std::isfinite(map.x)||!std::isfinite(map.y)||
+      map.tile_size<8||map.tile_size>256||
+      map.columns==0||map.rows==0||
+      map.columns>4096||map.rows>4096||
+      static_cast<std::uint64_t>(map.columns)*map.rows>2000000u){
+    valid=false; break;
+   }
+   bool object_valid=false;
+   for(const auto object:kOriginalObjects)
+    if(map.object_id==object)object_valid=true;
+   if(!object_valid){valid=false;break;}
+   map.cells.resize(static_cast<std::size_t>(map.columns)*map.rows);
+   if(std::fread(map.cells.data(),sizeof(std::uint32_t),
+                 map.cells.size(),file)!=map.cells.size()){
+    valid=false;break;
+   }
+   detail_maps_.push_back(std::move(map));
+  }
+  std::fclose(file);
+  for(std::size_t i=0;i<4&&valid;++i){
+   char path[80]{};
+   std::snprintf(path,sizeof(path),
+                 "romfs:/gfx/original_map_detail_%u.t3x",
+                 static_cast<unsigned>(kOriginalObjects[i]));
+   detail_sheets_[i]=C2D_SpriteSheetLoad(path);
+   if(!detail_sheets_[i]||C2D_SpriteSheetCount(detail_sheets_[i])==0)
+    valid=false;
+  }
+  if(!valid){
+   for(auto& sheet:detail_sheets_){
+    if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}
+   }
+   detail_maps_.clear();
+   return false;
+  }
+  detail_loaded_=true;
+ }
+ if(!detail_loaded_)return false;
+ constexpr std::uint16_t kOriginalObjects[4]={208,211,418,230};
+ for(const DetailMap& map:detail_maps_){
+  // Original browser UI/rain event layers must not become static world
+  // scenery on the top 3DS screen.
+  if(map.layer>=44)continue;
+  std::size_t slot=4;
+  for(std::size_t k=0;k<4;++k)
+   if(kOriginalObjects[k]==map.object_id){slot=k;break;}
+  if(slot>=4||!detail_sheets_[slot])continue;
+  const float tile=static_cast<float>(map.tile_size);
+  const int x0=std::max(0,static_cast<int>(
+      std::floor((camera_x-map.x)/tile))-1);
+  const int y0=std::max(0,static_cast<int>(
+      std::floor((camera_y-map.y)/tile))-1);
+  const int x1=std::min(static_cast<int>(map.columns),
+      static_cast<int>(std::ceil((camera_x+width-map.x)/tile))+1);
+  const int y1=std::min(static_cast<int>(map.rows),
+      static_cast<int>(std::ceil((camera_y+height-map.y)/tile))+1);
+  if(x1<=x0||y1<=y0)continue;
+  const float depth=std::clamp(0.90f-0.0125f*map.layer,0.55f,0.95f);
+  for(int row=y0;row<y1;++row)for(int col=x0;col<x1;++col){
+   const auto frame=map.cells[static_cast<std::size_t>(row)*
+                              map.columns+static_cast<std::size_t>(col)];
+   if(frame==0xffffffffu||frame>=C2D_SpriteSheetCount(detail_sheets_[slot]))
+    continue;
+   C2D_Sprite sprite{};
+   C2D_SpriteFromSheet(&sprite,detail_sheets_[slot],frame);
+   if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)continue;
+   C2D_SpriteSetPos(&sprite,map.x+col*tile,map.y+row*tile);
+   C2D_SpriteSetScale(&sprite,tile/sprite.params.pos.w,
+                             tile/sprite.params.pos.h);
+   C2D_SpriteSetDepth(&sprite,depth);
+   (void)C2D_DrawSprite(&sprite);
   }
  }
  return true;
