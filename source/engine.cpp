@@ -26,6 +26,7 @@ bool Renderer::initialize() noexcept {
 void Renderer::shutdown() noexcept {
  unload_all();
  if(floor_sheet_){C2D_SpriteSheetFree(floor_sheet_);floor_sheet_=nullptr;}
+ for(auto& sheet:menu_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  if(debug_buffer_) C2D_TextBufDelete(debug_buffer_);
  if(debug_font_) C2D_FontFree(debug_font_);
  debug_buffer_=nullptr; debug_font_=nullptr; debug_ready_=false;
@@ -137,6 +138,25 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  const float draw_y=y-selected->origin_y*selected->height*sy;
  return draw_sprite(slot,selected->image,draw_x,draw_y,
                      sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth);
+}
+bool Renderer::draw_menu_art(std::size_t index,float x,float y,float width,float height,float depth) noexcept {
+ // Original assets/gfx menu sprites, already converted into romfs/gfx.
+ static constexpr const char* paths[]={
+  "romfs:/gfx/main_menu_logo_sheet0.t3x",
+  "romfs:/gfx/menu_btn_wood_sheet0.t3x",
+  "romfs:/gfx/tiledbgmenu_city_up.t3x"
+ };
+ if(index>=3||width<=0.0f||height<=0.0f) return false;
+ if(!menu_sheets_[index]) menu_sheets_[index]=C2D_SpriteSheetLoad(paths[index]);
+ if(!menu_sheets_[index]||C2D_SpriteSheetCount(menu_sheets_[index])==0) return false;
+ C2D_Sprite sprite{};
+ C2D_SpriteFromSheet(&sprite,menu_sheets_[index],0);
+ const float sw=sprite.params.pos.w, sh=sprite.params.pos.h;
+ if(sw<=0.0f||sh<=0.0f) return false;
+ C2D_SpriteSetPos(&sprite,x,y);
+ C2D_SpriteSetScale(&sprite,width/sw,height/sh);
+ C2D_SpriteSetDepth(&sprite,depth);
+ return C2D_DrawSprite(&sprite);
 }
 bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float width,float height) noexcept {
  // Tilemap objects (Construct type 16) are NOT included in the normal
