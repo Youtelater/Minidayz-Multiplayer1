@@ -1402,6 +1402,11 @@ public:
             // even a correctly loaded ground sheet shows an empty wilderness.
             (void)renderer.draw_source_road_grid(world_.grid(),world_.bounds(),
                     camera_x,camera_y,view_w,view_h,world_.generation_level());
+            // Tilemap objects are not sprite objects. Without their exact
+            // original RLE cells, beaches/water/forests appear empty even
+            // if all PNG files are successfully converted to 3DS textures.
+            (void)renderer.draw_original_environment_tilemaps(
+                    camera_x,camera_y,view_w,view_h);
             // Render the actual source Map layout in world coordinates.
             // Cull placements outside the camera rectangle to keep 3DS draw
             // cost bounded instead of drawing the entire 36k x 20k layout.
