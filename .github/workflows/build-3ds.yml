@@ -110,6 +110,13 @@ jobs:
             tests/item_use_tests.cpp -o /tmp/minidayz_item_use_tests
           /tmp/minidayz_item_use_tests
 
+      - name: Test source-backed 1480-second loot respawn guards
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp source/ground_loot.cpp \
+            tests/original_timed_loot_tests.cpp -o /tmp/original_timed_loot_tests
+          /tmp/original_timed_loot_tests
+
       - name: Test Construct location event interpreter
         run: |
           g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/construct_expression.cpp source/construct_event_interpreter.cpp tests/construct_event_interpreter_tests.cpp -o /tmp/construct_event_interpreter_tests
