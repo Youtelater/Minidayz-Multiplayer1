@@ -125,6 +125,20 @@ jobs:
           set -euo pipefail
           python3 tools/stage1/verify_environment_tilemaps.py
 
+      - name: Audit original procedural terrain painting events and artwork
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/audit_procedural_terrain.py
+
+      - name: Upload original source terrain painting event manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minidayz-original-terrain-paint-events
+          path: data/stage1/original_terrain_paint_events.json
+          if-no-files-found: warn
+
       - name: Compare generated 3DS ground map with every original source tile
         shell: bash
         run: |
