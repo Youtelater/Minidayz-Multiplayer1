@@ -50,4 +50,36 @@ for layout in j["project"][5]:
                 if count<8:print("SOURCE_MARKER_INSTANCE","layer",layer[0],"record",json.dumps(inst,separators=(",",":"))[:1600])
                 count+=1
     print("SOURCE_MARKER_INSTANCE_COUNT",count)
+
+# Source tree audit for active marker creation and the drop entity constructor.
+for sheet in sheets:
+    if not isinstance(sheet,list) or len(sheet)<2:continue
+    for e,anc in walk(sheet[1]):
+        cs=e[5]
+        if not any(q[0:2]==[189,40] and q[9][0]==[1,[2,"create_map_location"]]
+                   for q in cs if isinstance(q,list) and len(q)>9):
+            continue
+        nodes=list(walk([e]))
+        print("LOCATION_LOADER_ROOT",sheet[0],e[4],"descendants",len(nodes))
+        from collections import Counter
+        cc,ac=Counter(),Counter()
+        for node,anc2 in nodes:
+            for q in node[5]:cc[tuple(q[:2])]+=1
+            for a in node[6]:ac[tuple(a[:2])]+=1
+            if any(a[0]==218 or
+                   (a[0]==-1 and a[1]==94 and any("218" in str(v) for v in a[5])) or
+                   (a[0]==189 and "Trigger_spawn" in str(a[5]))
+                   for a in node[6]):
+                print("MARKER_SOURCE_EVENT",node[4],"parent",[x[4] for x in anc2[-5:]],"conds",json.dumps(node[5],separators=(",",":"))[:1200],"actions",json.dumps(node[6],separators=(",",":"))[:1700])
+        print("LOCATION_LOADER_OPS",cc.most_common(30),ac.most_common(30))
+for sheet in sheets:
+    if not isinstance(sheet,list) or len(sheet)<2:continue
+    for e,anc in walk(sheet[1]):
+        if not any(q[0:2]==[189,40] and q[9][0]==[1,[2,"Spawn_drop"]]
+                   for q in e[5] if isinstance(q,list) and len(q)>9):
+            continue
+        nodes=list(walk([e]))
+        print("SPAWN_DROP_SOURCE",e[4],"n",len(nodes))
+        for node,pa in nodes[:45]:
+            print("DROP_NODE",node[4],"parents",[x[4] for x in pa[-4:]],"conds",json.dumps(node[5],separators=(",",":"))[:1400],"actions",json.dumps(node[6],separators=(",",":"))[:2100])
 print("DIAGNOSTIC_END")
