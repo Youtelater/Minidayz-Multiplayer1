@@ -152,24 +152,28 @@ with tempfile.TemporaryDirectory(prefix="mdz_original_ground_") as tmp:
 # Keep this separate from source tile IDs so the authored RLE tiles remain
 # exact and the existing source layout verifier is not weakened.
 # CurrentLevel 0/1/2 source events create tilemap objects 482/687/688.
-# Package their ORIGINAL distinct ground art for native level-aware rendering.
-base_tile_pixels = None
+# A Construct ground sheet is a 5x5 grid of actual 60px tile cells, not
+# a 2x2 set of 150px quadrants. Use each sheet's most frequent authored
+# tile as its level-specific background; never cut across tile boundaries.
+base_tile_pixels = tile_width
 for level, object_id in enumerate(SOURCE_GROUND):
     source = images[object_id]
-    if source.width % 2 or source.height % 2:
-        raise SystemExit(f"Original ground atlas dimensions changed: {object_id}")
-    quadrant = min(source.width // 2, source.height // 2)
-    if quadrant < 8 or (base_tile_pixels is not None and quadrant != base_tile_pixels):
-        raise SystemExit("Original ground levels use incompatible tile dimensions")
-    base_tile_pixels = quadrant
+    distribution = Counter((raw & TILE_MASK)
+                           for _, _, _, _, cells, inst_object in instances
+                           if inst_object == object_id
+                           for raw in cells if raw != RAW_EMPTY)
+    if not distribution:
+        raise SystemExit(f"Original ground level {level} has no source tile IDs")
+    base_id = distribution.most_common(1)[0][0]
+    x = (base_id % sheet_columns[object_id]) * tile_width
+    y = (base_id // sheet_columns[object_id]) * tile_width
     if level == 0:
         destination_base = ROMFS / "original_map_base_ground.t3x"
     else:
         destination_base = ROMFS / f"original_map_base_ground_lvl{level + 1}.t3x"
     with tempfile.TemporaryDirectory(prefix=f"mdz_base_{level}_") as tmp:
         work = Path(tmp)
-        source.crop((source.width - quadrant, source.height - quadrant,
-                     source.width, source.height)).save(work / "base.png")
+        source.crop((x, y, x + tile_width, y + tile_width)).save(work / "base.png")
         (work / "base.t3s").write_text(
             "--atlas -f rgba -z auto" + chr(10) + "base.png" + chr(10),
             encoding="utf-8")
