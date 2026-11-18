@@ -162,7 +162,8 @@ public:
                 new_game_generation_ = false;
                 travel_generation_ = false;
                 menu_active_ = false;
-                stage2_audio_.set_environment_ambience(!day_night_.day_mode());
+                stage2_audio_.set_environment_ambience(
+                    !day_night_.day_mode(),world_level_==4);
                 if (rain_timer_.active()) stage2_audio_.start_rain_loop();
                 else stage2_audio_.stop_rain_loop();
                 // Only overwrite the existing save after a new world succeeds.
@@ -677,7 +678,8 @@ public:
         // Original Construct Timer_ALL advances once per 1.5 seconds,
         // toggling the day/night source cold branch at its real boundary.
         (void)day_night_.update(std::max(0.0f, dt));
-        stage2_audio_.set_environment_ambience(!day_night_.day_mode());
+        stage2_audio_.set_environment_ambience(
+                    !day_night_.day_mode(),world_level_==4);
         // Original Rain_speed=360s is armed in Start events 8520771380755414.
         // CurrentLevel=0 sets rains_level=2; single-player is never inRaid.
         // choose(1,2,3,4)>1 starts rain; a later timer tick stops it.
@@ -1948,6 +1950,10 @@ private:
             y*static_cast<float>(grid.height())/bounds.height);
         if(minidayz::terrain::generated_road_cell(grid.at(col,row)))
             return minidayz::terrain::FootstepSurface::road;
+        // The fifth original ground sheet is snow and has its own
+        // snow_run WAV set; don't use ordinary hard-earth footsteps there.
+        if(world_level_==4)
+            return minidayz::terrain::FootstepSurface::snow;
         return surface;
     }
 
