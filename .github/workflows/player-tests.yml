@@ -302,6 +302,9 @@ jobs:
       - name: Trace Exact Construct Rain Timer Event Tree
         run: python3 tools/stage2/audit_rain_source_tree.py
 
+      - name: Trace Original Rain Timer Start and Reset Actions
+        run: python3 tools/stage2/audit_rain_timer_setup.py
+
       - name: Trace Source Rain and Day-Night Transition Guards
         run: python3 tools/stage2/audit_weather_transition_source.py
 
