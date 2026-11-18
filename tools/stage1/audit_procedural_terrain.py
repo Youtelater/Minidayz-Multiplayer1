@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""Audit the original Construct procedural terrain-painting event tree.
+
+The source performs SetTile actions after the original Map is loaded. Export
+those actions and their ancestry verbatim so that static Map RLE is never
+mistaken for complete procedural terrain. Also verify every literal tile
+choice is present in the original source PNG, not only authored placements.
+"""
+from __future__ import annotations
+
+import json
+import re
+from collections import Counter
+from pathlib import Path
+from PIL import Image
+
+ROOT = Path(__file__).resolve().parents[2]
+SOURCE = ROOT / "data/stage1/construct_project_parsed.json"
+DEST = ROOT / "data/stage1/original_terrain_paint_events.json"
+TERRAIN = (208, 211, 418, 230)
+# Original Construct Tilemap 'Set tile at' opcode, confirmed from root source.
+SET_TILE = 192
+
+
+def original_events(events, ancestors=()):
+    for event in events:
+        if not isinstance(event, list) or not event or event[0] != 0:
+            continue
+        yield event, ancestors
+        children = event[7] if len(event) > 7 and isinstance(event[7], list) else ()
+        yield from original_events(children, ancestors + (event,))
+
+
+def tile_choices(tree):
+    """Only literals inside Construct choose(...) are definite tile choices."""
+    if not isinstance(tree, list):
+        return []
+    found = []
+    if len(tree) >= 3 and tree[0] == 19 and tree[1] == 82:
+        args = tree[2] if isinstance(tree[2], list) else []
+        found.extend(int(node[1]) for node in args
+                     if isinstance(node, list) and len(node) > 1
+                     and node[0] == 0 and isinstance(node[1], int))
+    for child in tree[1:]:
+        if isinstance(child, list):
+            found.extend(tile_choices(child))
+    return found
+
+
+def main():
+    data = json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-",
+        SOURCE.read_text(encoding="utf-8-sig")))["project"]
+    source_objects = data[3]
+    capacity = {}
+    for object_id in TERRAIN:
+        definition = source_objects[object_id]
+        original = ROOT / "assets/gfx" / Path(definition[6][0]).name
+        with Image.open(original) as im:
+            # Tilemap sheet metadata is source-authored and all original
+            # terrain tile cells in these sheets use 60px square tiles.
+            columns, rows = im.width // 60, im.height // 60
+            capacity[object_id] = columns * rows
+    records = []
+    counters = Counter()
+    for sheet in data[6]:
+        for event, ancestors in original_events(sheet[1]):
+            for action in event[6] if len(event) > 6 and isinstance(event[6], list) else []:
+                if not isinstance(action, list) or len(action) < 6:
+                    continue
+                object_id, opcode = action[0], action[1]
+                if object_id not in TERRAIN:
+                    continue
+                counters[(object_id, opcode)] += 1
+                if opcode != SET_TILE:
+                    continue
+                params = action[5]
+                if not isinstance(params, list) or len(params) < 4:
+                    raise SystemExit(f"Malformed source SetTile action {action[3]}")
+                expr = params[2][1]
+                candidates = tile_choices(expr)
+                for tile in candidates:
+                    if not 0 <= tile < capacity[object_id]:
+                        raise SystemExit(
+                            f"Original terrain image {object_id} has {capacity[object_id]} "
+                            f"tiles but SetTile action {action[3]} chooses {tile}")
+                records.append({
+                    "sheet": sheet[0],
+                    "object": object_id,
+                    "event_uid": event[4],
+                    "action_uid": action[3],
+                    "ancestor_event_uids": [e[4] for e in ancestors],
+                    "conditions": event[5],
+                    "parameters": params,
+                    "literal_choice_tile_ids": candidates,
+                })
+    if not records or not any(r["object"] == 230 for r in records):
+        raise SystemExit("Missing original dynamic terrain SetTile actions")
+    report = {
+        "status": "Original source events extracted; native 3DS execution not implied",
+        "tile_capacity": capacity,
+        "action_counts": {f"{obj}:{opcode}": number
+                          for (obj, opcode), number in sorted(counters.items())},
+        "set_tile_actions": records,
+    }
+    DEST.parent.mkdir(parents=True, exist_ok=True)
+    DEST.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(f"Source procedural terrain: {len(records)} SetTile actions; "
+          f"recorded to {DEST}")
+
+
+if __name__ == "__main__":
+    main()
