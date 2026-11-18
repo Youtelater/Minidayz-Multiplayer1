@@ -92,13 +92,21 @@ for object_id, filename in source_objects.items():
         assert len(base.getcolors(maxcolors=50000) or []) > 8, (
             f"Incorrect background crop {object_id}:{selected}")
 per_page = min(128, max(1, 1024 // tile_pixels) ** 2)
-mapping = {key: (i // per_page, i % per_page) for i, key in enumerate(sorted(visible))}
+# The atlas now packages the COMPLETE original seven-level tile palette,
+# not only tiles seen in authored source strips. This protects procedural
+# SetTile calls from missing textures on later generated maps.
+all_tiles = sorted((obj, tile_id)
+                   for obj, (width, height) in source_tiles.items()
+                   for tile_id in range((width // tile_pixels) *
+                                        (height // tile_pixels)))
+assert visible <= set(all_tiles)
+mapping = {key: (i // per_page, i % per_page) for i, key in enumerate(all_tiles)}
 path = ROOT / "romfs/gfx/original_map_ground_layout.bin"
 with path.open("rb") as stream:
     header = stream.read(16)
     magic, tw, pages, count = struct.unpack("<4sIII", header)
     assert magic == b"MDG3" and tw == tile_pixels and count == len(expected)
-    assert pages == (len(visible) + per_page - 1) // per_page
+    assert pages == (len(all_tiles) + per_page - 1) // per_page
     total = 0
     for x, y, cols, rows, object_id, cells in expected:
         sx, sy, w, h, stored_object = struct.unpack("<ffIII", stream.read(20))
@@ -128,5 +136,5 @@ for level in range(7):
 header = (ROOT / "include/minidayz/generated/ground_floor_source.hpp").read_text()
 assert f"kOriginalFloorBaseTileSize={float(tile_pixels):.1f}f" in header
 print(f"Verified all SEVEN original ground-level images and {len(instances)} Map "
-      f"source tilemap instances ({total} cells, {len(visible)} keyed tile frames, "
+      f"source tilemap instances ({total} cells, {len(all_tiles)} full-palette tile frames, "
       f"{pages} atlas pages)")
