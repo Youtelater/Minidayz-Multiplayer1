@@ -25,7 +25,7 @@ required={
 }
 # Construct source has choose(*_1,*_2,*_3,*_4) for these
 # material families; hard_ground uses the two authored variants.
-for family in ("forest_run","road_run","sand_run","snow_run","swamp_step"):
+for family in ("run","forest_run","road_run","sand_run","snow_run","swamp_step"):
     required.update(f"{family}_{i}.wav" for i in range(1,5))
 available={p.name for p in sounds.glob("*.wav")}
 missing=required-available
@@ -41,7 +41,7 @@ for name in required:
 audio=(root/"source/stage2_audio.cpp").read_text(encoding="utf-8")
 scene=(root/"source/main.cpp").read_text(encoding="utf-8")
 surface=(root/"include/minidayz/terrain_surface.hpp").read_text(encoding="utf-8")
-for stem in ("hard_ground","road_run","forest_run","sand_run","snow_run","swamp_step"):
+for stem in ("run","road_run","forest_run","sand_run","snow_run","swamp_step"):
     assert re.search(r'prefix = "'+stem+'"',audio),stem
 for symbol in ("play_footstep","play_item_pickup",
                "set_environment_ambience","start_rain_loop"):
@@ -52,6 +52,7 @@ assert 'wave.looping=(which==6 || which==12)' in audio
 assert "FootstepSurface" in surface
 assert "source_variant" in audio
 assert "step_serial_++ % 4u" in audio
+assert "kSourceFootstepSeconds=0.25f" in scene
 all_wavs=list(sounds.glob("*.wav"))
 print(f"Verified {len(required)} original terrain/gameplay WAVs out of "
       f"{len(all_wavs)} supplied RomFS WAV files, audio event connections, "
