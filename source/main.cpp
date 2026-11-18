@@ -16,6 +16,7 @@
 #include "minidayz/item_description.hpp"
 #include "minidayz/weather_source.hpp"
 #include "minidayz/source_day_night.hpp"
+#include "minidayz/source_rain_timer.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -63,6 +64,8 @@ public:
             stashes_.clear();
         if (restored && !day_night_.restore(restored->source_time))
             day_night_.reset();
+        if (restored && !rain_timer_.restore(restored->source_rain))
+            rain_timer_.reset();
         if (restored && !item_use_runtime_.restore(restored->pending_item_use))
             item_use_runtime_.clear();
         if (restored && !perks_.restore(restored->perks)) perks_.clear();
@@ -98,7 +101,7 @@ public:
 
     void on_exit() noexcept override {
         if (world_ready_ && !menu_active_)
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_, &rain_timer_);
         stage2_audio_.shutdown();
     }
 
@@ -539,6 +542,21 @@ public:
         // Original Construct Timer_ALL advances once per 1.5 seconds,
         // toggling the day/night source cold branch at its real boundary.
         (void)day_night_.update(std::max(0.0f, dt));
+        // Original Rain_speed=360s is armed in Start events 8520771380755414.
+        // CurrentLevel=0 sets rains_level=2; single-player is never inRaid.
+        // choose(1,2,3,4)>1 starts rain; a later timer tick stops it.
+        std::uint8_t rain_choice=1;
+        const float rain_dt=std::clamp(dt,0.0f,1.0f);
+        if (rain_timer_.snapshot().elapsed_seconds + rain_dt >=
+            minidayz::items::SourceRainTimer::kOriginalRainSeconds) {
+            const auto firing=rain_timer_.snapshot().timer_firings;
+            std::mt19937 rng(world_seed_ ^ (0x9e3779b9u + firing));
+            rain_choice=static_cast<std::uint8_t>(1u+(rng()%4u));
+        }
+        const bool was_raining=rain_timer_.active();
+        (void)rain_timer_.update(rain_dt,2,false,rain_choice);
+        if (was_raining!=rain_timer_.active())
+            source_temperature_initialized_=false;
         const float current_source_warmth = equipment_.temperature_offset();
         const auto snowborn_level =
             perks_.level(minidayz::items::SourcePerk::snowborn);
@@ -549,9 +567,11 @@ public:
             float source_temperature = 0.0f;
             if (minidayz::items::source_weather_temperature_with_snowborn(
                     minidayz::SurvivalDifficulty::regular,
-                    day_night_.day_mode()
-                        ? minidayz::items::SourceColdPhase::day
-                        : minidayz::items::SourceColdPhase::night,
+                    rain_timer_.active()
+                        ? minidayz::items::SourceColdPhase::rain
+                        : day_night_.day_mode()
+                            ? minidayz::items::SourceColdPhase::day
+                            : minidayz::items::SourceColdPhase::night,
                     current_source_warmth,
                     minidayz::items::SourceRainColdBranch::full,
                     snowborn_level, source_temperature))
@@ -580,7 +600,7 @@ public:
         save_elapsed_ += dt;
         if (save_elapsed_ >= 2.0f) {
             save_elapsed_ = 0.0f;
-            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_);
+            (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_, &rain_timer_);
         }
     }
 
@@ -1299,6 +1319,7 @@ private:
         tents_.clear();
         stashes_.clear();
         day_night_.reset();
+        rain_timer_.reset();
         item_use_runtime_.clear();
         perks_.clear();
         source_temperature_initialized_ = false;
@@ -1327,7 +1348,7 @@ private:
         // Never enter a blank gameplay scene when source world generation
         // fails. Keep the menu available so the player can retry instead.
         menu_active_ = !world_ready_;
-        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_);
+        if (world_ready_) (void)write_saved_game(world_seed_, player_.state(), inventory_, equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_, &stashes_, &day_night_, &rain_timer_);
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
@@ -1388,6 +1409,7 @@ private:
     minidayz::items::TentStorageSystem tents_{};
     minidayz::items::StashStorageSystem stashes_{};
     minidayz::items::SourceDayNightClock day_night_{};
+    minidayz::items::SourceRainTimer rain_timer_{};
     minidayz::items::ItemUseRuntime item_use_runtime_{};
     minidayz::items::SourcePerkSystem perks_{};
     minidayz::Stage2Audio stage2_audio_{};
