@@ -30,7 +30,7 @@ public:
  void set_camera(float x,float y) noexcept { camera_x_=x; camera_y_=y; C2D_ViewReset(); C2D_ViewTranslate(-x,-y); }
  void reset_camera() noexcept { set_camera(0.0f,0.0f); }
 private:
- C3D_RenderTarget* top_{}; C3D_RenderTarget* bottom_{}; C2D_SpriteSheet floor_sheet_{}; C2D_SpriteSheet sheets_[kMaxSheets]{};
+ C3D_RenderTarget* top_{}; C3D_RenderTarget* bottom_{}; C2D_SpriteSheet floor_sheet_{}; C2D_SpriteSheet menu_sheets_[3]{}; C2D_SpriteSheet sheets_[kMaxSheets]{};
  struct SpriteCacheEntry { char sheet[128]{}; std::size_t slot{}; };
  SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{};
  C2D_Font debug_font_{}; C2D_TextBuf debug_buffer_{}; C2D_Text debug_text_{};
