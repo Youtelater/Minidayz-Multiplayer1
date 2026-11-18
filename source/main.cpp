@@ -1472,6 +1472,14 @@ public:
                 renderer.draw_text("ORIGINAL ENVIRONMENT TILES FAILED TO LOAD",
                                    camera_x+12.0f,camera_y+40.0f,0.30f);
             }
+            // Original Game_events scatter source Tilemap object 230 per
+            // generated location cell. These are real 30px sprites from
+            // assets/gfx/ground_enviroment_tilemap.png, not placeholder art.
+            if (!renderer.draw_source_procedural_environment(world_,
+                    camera_x,camera_y,view_w,view_h)) {
+                renderer.draw_text("PROCEDURAL TERRAIN TILES FAILED",
+                                   camera_x+12.0f,camera_y+54.0f,0.30f);
+            }
             // Render the actual source Map layout in world coordinates.
             // Cull placements outside the camera rectangle to keep 3DS draw
             // cost bounded instead of drawing the entire 36k x 20k layout.
