@@ -125,6 +125,7 @@ stage1-assets:
 	@python3 tools/stage1/validate_stage1.py
 	@python3 tools/stage1/build_sprite_catalog.py
 	@python3 tools/stage2/build_item_sprite_catalog.py
+	@python3 tools/stage2/build_inventory_ui_art.py
 	@python3 tools/stage2/build_item_source_catalog.py
 	@python3 tools/stage2/build_item_description_catalog.py
 	@python3 tools/stage2/build_backpack_capacity_catalog.py
