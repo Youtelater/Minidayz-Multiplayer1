@@ -23,7 +23,11 @@ HEADER = ROOT / "include/minidayz/generated/ground_floor_source.hpp"
 # events select between them for different CurrentLevel branches.
 SOURCE_GROUND = {482: "ground_lvl1_tilemap.png",
                  687: "ground_lvl2_tilemap.png",
-                 688: "ground_lvl3_tilemap.png"}
+                 688: "ground_lvl3_tilemap.png",
+                 776: "ground_lvl4_tilemap.png",
+                 980: "ground_lvl5_tilemap.png",
+                 1138: "ground_lvl6_tilemap.png",
+                 1139: "ground_lvl7_tilemap.png"}
 OBJECT = 482
 RAW_EMPTY = -1
 TILE_MASK = 0x1fffffff
@@ -162,9 +166,24 @@ for level, object_id in enumerate(SOURCE_GROUND):
                            for _, _, _, _, cells, inst_object in instances
                            if inst_object == object_id
                            for raw in cells if raw != RAW_EMPTY)
-    if not distribution:
-        raise SystemExit(f"Original ground level {level} has no source tile IDs")
-    base_id = distribution.most_common(1)[0][0]
+    # Only five ground objects have preauthored Map instances; others
+    # are spawned by source Construct events. Their source sprite sheets
+    # still provide terrain for later levels, and must not be excluded.
+    if distribution:
+        base_id = distribution.most_common(1)[0][0]
+    else:
+        # Select the first visible, nontransparent source tile. Do not
+        # fabricate pixel art or borrow artwork from another level.
+        base_id = next(
+            (index for index in range((source.width // tile_width) *
+                                       (source.height // tile_width))
+             if source.crop(((index % sheet_columns[object_id]) * tile_width,
+                             (index // sheet_columns[object_id]) * tile_width,
+                             ((index % sheet_columns[object_id]) + 1) * tile_width,
+                             ((index // sheet_columns[object_id]) + 1) * tile_width)
+             .getbbox() is not None), None)
+        if base_id is None:
+            raise SystemExit(f"Ground level {level} sheet contains no visible tile")
     x = (base_id % sheet_columns[object_id]) * tile_width
     y = (base_id // sheet_columns[object_id]) * tile_width
     if level == 0:
@@ -190,9 +209,9 @@ BASE_GROUND = ROMFS / "original_map_base_ground.t3x"
 # the upper flags byte of descriptor for future transform support.
 destination = ROMFS / "original_map_ground_layout.bin"
 with destination.open("wb") as out:
-    out.write(struct.pack("<4sIII", b"MDG2", tile_width, page_count, len(instances)))
+    out.write(struct.pack("<4sIII", b"MDG3", tile_width, page_count, len(instances)))
     for x, y, cols, rows, cells, object_id in instances:
-        out.write(struct.pack("<ffII", x, y, cols, rows))
+        out.write(struct.pack("<ffIII", x, y, cols, rows, object_id))
         for raw in cells:
             if raw == RAW_EMPTY:
                 descriptor = 0xffffffff
@@ -213,5 +232,5 @@ HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 
     f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\n" +
     "}\n", encoding="utf-8")
 print(f"Original Map: {len(instances)} authored tilemap strips; {len(tile_keys)} source tiles across three ground sheets; "
-      f"{page_count} authored atlases plus 3 original map-level grass bases; "
+      f"{page_count} authored atlases plus {len(SOURCE_GROUND)} original map-level ground bases; "
       f"packed layout {destination.stat().st_size} bytes")
