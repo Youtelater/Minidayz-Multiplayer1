@@ -174,6 +174,37 @@ public:
                 start_new_game();
             return;
         }
+        // Once the original survival rules kill the player, stop gameplay
+        // updates and present a 3DS touch/physical-button death screen.
+        // Do not permit dead characters to use, craft or transfer items.
+        if (!player_.state().alive) {
+            if (!death_saved_) {
+                death_saved_ = write_scene_save();
+                has_saved_game_ = has_saved_game_ || death_saved_;
+            }
+            const bool touch_pressed = input.touching && !touch_down_;
+            touch_down_ = input.touching;
+            bool restart = (input.pressed & KEY_X) != 0;
+            bool to_menu = (input.pressed & KEY_Y) != 0;
+            if (touch_pressed && input.touch.px >= 18 &&
+                input.touch.px <= 302) {
+                const int ty = input.touch.py;
+                if (ty >= 87 && ty <= 140) restart = true;
+                if (ty >= 153 && ty <= 207) to_menu = true;
+            }
+            if (restart) start_new_game();
+            else if (to_menu) {
+                if (death_saved_) menu_active_ = true;
+                else {
+                    death_saved_ = write_scene_save();
+                    if (death_saved_) {
+                        has_saved_game_ = true;
+                        menu_active_ = true;
+                    }
+                }
+            }
+            return;
+        }
         // START is a physical 3DS pause control. Keep survival, AI,
         // crafting timers and autosave time frozen while the menu is up.
         if (input.pressed & KEY_START) paused_ = !paused_;
@@ -791,6 +822,27 @@ public:
             }
             return;
         }
+        if (!player_.state().alive) {
+            renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
+                                     C2D_Color32(18, 22, 21, 255));
+            (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 320.0f, 240.0f, 0.95f);
+            renderer.draw_text("SURVIVAL ENDED", 66.0f, 26.0f, 0.51f);
+            renderer.draw_solid_rect(18.0f, 87.0f, 284.0f, 53.0f,
+                                     C2D_Color32(90, 67, 44, 255));
+            (void)renderer.draw_menu_art(1, 18.0f, 87.0f, 284.0f, 53.0f);
+            (void)renderer.draw_source_sprite_fitted(
+                minidayz::stage1::kOriginalRestartButtonArt.object,
+                minidayz::stage1::kOriginalRestartButtonArt.animation,
+                minidayz::stage1::kOriginalRestartButtonArt.frame,
+                26.0f, 93.0f, 39.0f, 39.0f);
+            renderer.draw_text("NEW GAME", 93.0f, 105.0f, 0.49f);
+            renderer.draw_solid_rect(18.0f, 153.0f, 284.0f, 54.0f,
+                                     C2D_Color32(57, 69, 56, 255));
+            (void)renderer.draw_menu_art(1, 18.0f, 153.0f, 284.0f, 54.0f);
+            renderer.draw_text("MAIN MENU", 91.0f, 172.0f, 0.49f);
+            renderer.draw_text("X: RESTART  Y: MENU", 63.0f, 219.0f, 0.29f);
+            return;
+        }
         // Native 3DS inventory: use the actual Construct GUI frames
         // from assets/gfx, scaled to the 320x240 touch display.
         // Never use placeholder rectangles when the source sprite exists.
@@ -1274,6 +1326,33 @@ public:
             renderer.draw_text("SELECT NEW GAME OR CONTINUE BELOW", 50.0f, 206.0f, 0.32f);
             return;
         }
+        if (!player_.state().alive) {
+            renderer.reset_camera();
+            renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
+                                     C2D_Color32(24, 20, 19, 255));
+            if (!renderer.draw_source_sprite_fitted(
+                    minidayz::stage1::kOriginalDeathScreenArt.object,
+                    minidayz::stage1::kOriginalDeathScreenArt.animation,
+                    minidayz::stage1::kOriginalDeathScreenArt.frame,
+                    0.0f, 0.0f, 400.0f, 240.0f, 0.95f))
+                (void)renderer.draw_menu_art(
+                    2, 0.0f, 0.0f, 400.0f, 240.0f, 0.95f);
+            renderer.draw_text("YOU DIED", 132.0f, 86.0f, 0.85f);
+            const char* reason = "SURVIVOR LOST";
+            switch (player_.state().death_reason) {
+            case minidayz::PlayerDeathReason::hunger:
+                reason = "STARVATION"; break;
+            case minidayz::PlayerDeathReason::thirst:
+                reason = "DEHYDRATION"; break;
+            case minidayz::PlayerDeathReason::cold:
+                reason = "HYPOTHERMIA"; break;
+            default: break;
+            }
+            renderer.draw_text(reason, 124.0f, 151.0f, 0.40f);
+            renderer.draw_text("CHOOSE AN OPTION ON THE TOUCH SCREEN",
+                               38.0f, 215.0f, 0.30f);
+            return;
+        }
         if (paused_) {
             renderer.reset_camera();
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
@@ -1609,6 +1688,7 @@ private:
         selected_inventory_slot_ = -1;
         save_elapsed_ = 0.0f;
         new_game_generation_ = true;
+        death_saved_ = false;
         paused_ = false;
         has_saved_game_ = false; // Keep old disk save intact if generation fails.
         begin_world_generation();
@@ -1722,6 +1802,7 @@ private:
     bool npc_ready_{};
     bool menu_active_{true};
     bool paused_{};
+    bool death_saved_{};
     bool pause_save_feedback_{};
     bool pause_save_attempted_{};
     bool loading_world_{};
