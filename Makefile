@@ -126,6 +126,7 @@ stage1-assets:
 	@python3 tests/test_original_image_names.py
 	@python3 tools/stage1/build_sprite_catalog.py
 	@python3 tools/stage1/build_player_skin_catalog.py
+	@python3 tests/test_original_player_skins.py
 	@python3 tools/stage1/build_ground_floor.py
 	@python3 tools/stage1/build_environment_tilemaps.py
 	@python3 tools/stage1/build_procedural_environment.py
