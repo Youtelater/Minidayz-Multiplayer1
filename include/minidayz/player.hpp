@@ -111,6 +111,10 @@ public:
 
     // Maps the state/facing to the original player object's animation order:
     // idle_* = 0..3 and run_* = 4..7 for the default skin.
+    // Source-derived skin object controls frame count/timing. A character
+    // can change appearance without resetting health, warmth or equipment.
+    void set_source_skin(std::uint16_t object) noexcept;
+    std::uint16_t source_skin() const noexcept { return source_skin_object_; }
     std::uint16_t source_animation_index() const noexcept;
     std::uint32_t source_animation_frame() const noexcept {
         return state_.animation_frame;
@@ -145,6 +149,7 @@ private:
     void update_life_state() noexcept;
     void advance_animation(float delta_seconds) noexcept;
     PlayerState state_{};
+    std::uint16_t source_skin_object_{kSourcePlayerObject};
 };
 
 } // namespace minidayz
