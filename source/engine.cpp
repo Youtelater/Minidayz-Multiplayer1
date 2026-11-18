@@ -229,21 +229,22 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
  }
  if(!ground_loaded_ || !base_floor_sheet_) return false;
  const float tile=static_cast<float>(ground_tile_pixels_);
+ const float base_tile=stage1::kOriginalFloorBaseTileSize;
  // Source Map object 482 has only two authored ground strips. The original
  // game's Construct events dynamically populate the rest of each new map.
  // Tile the ORIGINAL grass image beneath those authored strips rather than
  // showing a black GPU-clear color at virtually every new spawn.
  TerrainTileWindow visible{};
- if(!calculate_terrain_tile_window(camera_x,camera_y,width,height,tile,
+ if(!calculate_terrain_tile_window(camera_x,camera_y,width,height,base_tile,
                                    visible)) return false;
  for(int row=visible.first_row;row<visible.last_row;++row)
   for(int col=visible.first_column;col<visible.last_column;++col){
    C2D_Sprite sprite{};
    C2D_SpriteFromSheet(&sprite,base_floor_sheet_,0);
    if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f) return false;
-   C2D_SpriteSetPos(&sprite,col*tile,row*tile);
-   C2D_SpriteSetScale(&sprite,tile/sprite.params.pos.w,
-                            tile/sprite.params.pos.h);
+   C2D_SpriteSetPos(&sprite,col*base_tile,row*base_tile);
+   C2D_SpriteSetScale(&sprite,base_tile/sprite.params.pos.w,
+                            base_tile/sprite.params.pos.h);
    C2D_SpriteSetDepth(&sprite,0.98f);
    if(!C2D_DrawSprite(&sprite)) return false;
   }
