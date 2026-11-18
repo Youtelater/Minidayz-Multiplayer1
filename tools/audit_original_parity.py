@@ -67,7 +67,7 @@ for path in ("assets/gfx/main_menu_logo-sheet0.png",
              "assets/gfx/ground_lvl1_tilemap.png"):
     require((ROOT / path).is_file(), "Root original image present: " + path)
 for name in ("main_menu_logo_sheet0", "menu_btn_wood_sheet0",
-             "tiledbgmenu_city_up", "original_map_ground_floor"):
+             "tiledbgmenu_city_up", "original_map_ground_p000"):
     path = ROOT / "romfs/gfx" / (name + ".t3x")
     require(path.is_file() and path.stat().st_size > 32,
             "3DS texture packaged: " + name)
@@ -93,7 +93,7 @@ require("generation_phase_ = 1" in world and
 require("menu_active_ = false" in game and "npc_ready_ = npcs_.initialize(world_)" in game,
         "Successful generation enables gameplay and initializes NPCs")
 require("draw_original_ground_floor(" in game and
-        'romfs:/gfx/original_map_ground_floor.t3x' in renderer,
+        'romfs:/gfx/original_map_ground_layout.bin' in renderer,
         "World renderer attempts an original-source ground atlas")
 require("draw_source_sprite_fitted" in game and
         "build_inventory_ui_art.py" in makefile and
@@ -108,8 +108,11 @@ require("tools/stage1/validate_stage1.py" in makefile and
 
 # Clearly identified equivalence gaps; these are warnings so a working 3DS
 # build is not misrepresented as a fully faithful game.
-if "tiles.most_common(1)" in floor:
-    warning("TERRAIN: floor is one dominant original tile repeated; it does not reconstruct all original tilemap cells.")
+require("rle_cells" in floor and "MDG2" in floor and "mapping[raw & TILE_MASK]" in floor,
+        "Original terrain exporter keeps source RLE tile placements")
+require((ROOT / "romfs/gfx/original_map_ground_layout.bin").is_file(),
+        "Original Map cell layout packed in RomFS")
+warning("TERRAIN: original tile IDs and placements are ported; Construct tile flipping and layered tilemap effects still require 3DS visual parity tests.")
 if "preview_rules_.walk_speed = 72.0f" in game:
     warning("MOVEMENT: fixed preview speeds and hitbox do not establish original Construct equivalence.")
 if "state.x = 160.0f" in game and "state.y = 120.0f" in game:
