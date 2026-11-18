@@ -413,15 +413,22 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
                                     std::uint8_t source_level) noexcept {
  if(grid.width()==0||grid.height()==0||!ground_loaded_) return false;
  if(!(bounds.width>0.0f && bounds.height>0.0f)) return false;
- const std::uint32_t theme=terrain::active_ground_texture(source_level);
- if(!road_sheets_[theme]){
+ const auto ensure_road_sheet=[&](std::uint32_t theme) noexcept -> bool {
+  if(theme>=7) return false;
+  if(road_sheets_[theme]) return true;
   char name[80]{};
   std::snprintf(name,sizeof(name),"romfs:/gfx/original_map_road_lvl%u.t3x",
                 static_cast<unsigned>(theme+1));
-  road_sheets_[theme]=C2D_SpriteSheetLoad(name);
- }
- if(!road_sheets_[theme] || C2D_SpriteSheetCount(road_sheets_[theme])==0)
-  return false;
+  auto sheet=C2D_SpriteSheetLoad(name);
+  if(!sheet) return false;
+  if(C2D_SpriteSheetCount(sheet)==0){C2D_SpriteSheetFree(sheet);return false;}
+  road_sheets_[theme]=sheet;
+  return true;
+ };
+ // The last source world changes ground art at row 18. Roads must follow
+ // that same boundary rather than always using the seventh road sheet.
+ const float second_half_y=(source_level==5 && grid.height()==33)
+     ? bounds.height*18.0f/33.0f : 1.0e30f;
  const float cell_w=bounds.width/grid.width();
  const float cell_h=bounds.height/grid.height();
  const float road_width=stage1::kOriginalFloorTileSize;
@@ -446,6 +453,9 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
                                      cell_w,cell_h,road_width);
    if(!terrain::intersects_view(band,camera_x,camera_y,
                                 view_width,view_height))continue;
+   const auto theme=terrain::ground_texture_at(source_level,
+       band.y+band.height*0.5f,second_half_y);
+   if(!ensure_road_sheet(theme)) return false;
    // Repeat native 60px Construct stone tiles instead of stretching
    // one source tile across a 2300px world cell. Limit draw calls to
    // the pieces visible in the 400x240 native top-screen camera.
