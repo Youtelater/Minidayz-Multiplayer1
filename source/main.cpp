@@ -1397,6 +1397,11 @@ public:
         }
 
         if (world_ready_) {
+            // WorldGrid codes 12/13/14 are the original procedural road
+            // network. They must be drawn before buildings and trees, or
+            // even a correctly loaded ground sheet shows an empty wilderness.
+            (void)renderer.draw_source_road_grid(world_.grid(),world_.bounds(),
+                    camera_x,camera_y,view_w,view_h,world_.generation_level());
             // Render the actual source Map layout in world coordinates.
             // Cull placements outside the camera rectangle to keep 3DS draw
             // cost bounded instead of drawing the entire 36k x 20k layout.
