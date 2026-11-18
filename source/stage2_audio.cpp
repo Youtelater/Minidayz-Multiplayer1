@@ -189,12 +189,11 @@ void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
     case terrain::FootstepSurface::sand: prefix = "sand_run"; break;
     case terrain::FootstepSurface::snow: prefix = "snow_run"; break;
     case terrain::FootstepSurface::shallow_water: prefix = "swamp_step"; break;
-    default: prefix = "hard_ground"; break;
+    default: prefix = "run"; break;
     }
     const unsigned variant=step_serial_++ % 4u;
     const std::size_t voice=7u+variant;
-    const unsigned source_variant = surface==terrain::FootstepSurface::ground
-        ? variant%2u+1u : variant+1u;
+    const unsigned source_variant=variant+1u;
     const auto surface_id=static_cast<int>(surface);
     if (loaded_step_surfaces_[variant]!=surface_id) {
         ndspChnWaveBufClear(static_cast<int>(voice));
