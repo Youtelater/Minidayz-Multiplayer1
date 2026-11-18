@@ -2,6 +2,7 @@
 #include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/generated/ground_floor_source.hpp"
 #include "minidayz/terrain_tiling.hpp"
+#include "minidayz/terrain_level.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
 
 #include <algorithm>
@@ -245,8 +246,8 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
  }
  if(!ground_loaded_) return false;
  // Each source map level has its own original terrain image.
- const std::uint32_t theme=std::min<std::uint32_t>(source_level,6);
- constexpr std::uint32_t kGroundObjects[7]={482,687,688,776,980,1138,1139};
+ const std::uint32_t theme=terrain::active_ground_texture(source_level);
+ const std::uint32_t ground_object=terrain::active_ground_object(source_level);
  if(!base_floor_sheets_[theme]) return false;
  const float tile=static_cast<float>(ground_tile_pixels_);
  const float base_tile=stage1::kOriginalFloorBaseTileSize;
@@ -270,7 +271,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   }
  // Preserve the exact source RLE cells at their original Map positions.
  for(const GroundMap& map:ground_maps_){
-  if(map.object_id!=kGroundObjects[theme]) continue;
+  if(map.object_id!=ground_object) continue;
   const int x0=std::max(0,static_cast<int>(std::floor((camera_x-map.x)/tile)));
   const int y0=std::max(0,static_cast<int>(std::floor((camera_y-map.y)/tile)));
   const int x1=std::min(static_cast<int>(map.columns),
