@@ -32,7 +32,10 @@ private:
     bool load_wav(const char* path, Clip& destination) noexcept;
     void play(std::size_t clip) noexcept;
     std::array<Clip,kClipCount> clips_{};
-    ndspWaveBuf wave_{};
+    // Independent NDSP voices prevent a pickup/drop from cutting off an
+    // in-progress crafting or zipper sound. Wave buffers must stay alive
+    // for the entire native playback, not just the play() stack frame.
+    std::array<ndspWaveBuf,kClipCount> waves_{};
     bool ndsp_ready_{};
     unsigned drop_serial_{};
     unsigned gear_drop_serial_{};
