@@ -7,6 +7,7 @@
 #include "minidayz/terrain_source_visibility.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/generated/player_skin_source.hpp"
+#include "minidayz/player_equipment_visual.hpp"
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/inventory.hpp"
@@ -1679,46 +1680,36 @@ public:
                 skin_animation,player_.source_animation_frame(),
                 p.x,p.y,0.55f,0.55f);
         if (p.alive) {
-            const char* direction = "down";
-            switch (p.facing) {
-            case minidayz::PlayerFacing::down: direction = "down"; break;
-            case minidayz::PlayerFacing::up: direction = "up"; break;
-            case minidayz::PlayerFacing::left: direction = "left"; break;
-            case minidayz::PlayerFacing::right: direction = "right"; break;
-            }
-            char animation_name[24]{};
-            std::snprintf(animation_name, sizeof(animation_name), "%s_%s",
-                p.animation == minidayz::PlayerAnimation::idle ? "idle" : "run",
-                direction);
-            const auto draw_equipped_layer = [&](std::uint16_t item_id) {
-                if (item_id == 0) return;
-                const auto object = minidayz::items::source_sprite_object(item_id);
-                if (object == 65535) return;
-                (void)renderer.draw_source_animation(object, animation_name,
-                    p.animation_frame, p.x, p.y, 0.55f, 0.55f, 0.42f);
+            // Original item pickups and wearable actor overlays are NOT
+            // interchangeable. Only draw original animation poses proven to
+            // exist for this source item. The selected skin supplies the
+            // player hotspot; all original equipment layers use that hotspot.
+            const bool moving=p.animation!=minidayz::PlayerAnimation::idle;
+            const auto draw_equipped_layer=[&](std::uint16_t item_id,
+                                               bool weapon,float depth) {
+                if(item_id==0)return;
+                const auto* visual=minidayz::stage1::original_equipment_visual(item_id);
+                const auto* prefix=minidayz::stage1::original_equipment_pose(
+                    visual,moving,weapon);
+                if(!visual||!prefix)return;
+                char name[32]{};
+                std::snprintf(name,sizeof(name),"%s_%s",prefix,skin_direction);
+                (void)renderer.draw_source_animation(visual->object,name,
+                    player_.source_animation_frame(),p.x,p.y,0.55f,0.55f,depth);
             };
-            // Match the original player equipment layers: pants, clothing,
-            // vest, helmet, backpack, then the held weapon.
-            draw_equipped_layer(equipment_.equipped(minidayz::items::EquipmentSlot::pants));
-            draw_equipped_layer(equipment_.equipped(minidayz::items::EquipmentSlot::outerwear));
-            draw_equipped_layer(equipment_.equipped(minidayz::items::EquipmentSlot::vest));
-            draw_equipped_layer(equipment_.equipped(minidayz::items::EquipmentSlot::head));
-            draw_equipped_layer(inventory_.equipped_backpack());
-            const auto held_weapon = equipment_.equipped(minidayz::items::EquipmentSlot::hands);
-            if (held_weapon != 0) {
-                const auto object = minidayz::items::source_sprite_object(held_weapon);
-                if (object != 65535) {
-                    char weapon_animation[24]{};
-                    const char* candidates[] = {"pistol", "axe", "twohand", "idle", "run"};
-                    for (const char* prefix : candidates) {
-                        std::snprintf(weapon_animation, sizeof(weapon_animation), "%s_%s",
-                                      prefix, direction);
-                        if (renderer.draw_source_animation(object, weapon_animation,
-                                p.animation_frame, p.x, p.y, 0.55f, 0.55f, 0.42f))
-                            break;
-                    }
-                }
-            }
+            // Source-authored equipment back-to-front. The originals use
+            // separate layers on top of the chosen character base skin.
+            draw_equipped_layer(equipment_.equipped(
+                minidayz::items::EquipmentSlot::pants),false,0.44f);
+            draw_equipped_layer(equipment_.equipped(
+                minidayz::items::EquipmentSlot::outerwear),false,0.43f);
+            draw_equipped_layer(equipment_.equipped(
+                minidayz::items::EquipmentSlot::vest),false,0.42f);
+            draw_equipped_layer(equipment_.equipped(
+                minidayz::items::EquipmentSlot::head),false,0.41f);
+            draw_equipped_layer(inventory_.equipped_backpack(),false,0.40f);
+            draw_equipped_layer(equipment_.equipped(
+                minidayz::items::EquipmentSlot::hands),true,0.39f);
         }
         if (!sprite_drawn) {
             renderer.draw_solid_rect(p.x - 5.0f, p.y - 5.0f, 10.0f, 12.0f,
