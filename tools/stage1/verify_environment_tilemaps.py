@@ -41,14 +41,12 @@ for layer_index,layer in enumerate(layout[6]):
 source_sizes={obj:next(row[4] for row in instances if row[0]==obj)
               for obj in objects}
 mapping={}
-for obj,keys in palette.items():
-    if obj in (208,230):
-        filename=Path(source[3][obj][6][0]).name
-        with Image.open(ROOT/"assets/gfx"/filename) as image:
-            cell=source_sizes[obj]
-            ordered=list(range((image.width//cell)*(image.height//cell)))
-    else:
-        ordered=sorted(keys)
+for obj in objects:
+    filename=Path(source[3][obj][6][0]).name
+    with Image.open(ROOT/"assets/gfx"/filename) as image:
+        cell=source_sizes[obj]
+        ordered=list(range((image.width//cell)*(image.height//cell)))
+    assert palette[obj] <= set(ordered)
     mapping[obj]={tile:i for i,tile in enumerate(ordered)}
 assert len(instances)>10 and {x[0] for x in instances}==objects
 file=ROOT/"romfs/gfx/original_map_details_layout.bin"
