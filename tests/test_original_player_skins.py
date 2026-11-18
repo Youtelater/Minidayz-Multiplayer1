@@ -37,7 +37,7 @@ def main():
                     assert (ROOT/"assets/gfx"/png).is_file(),png
     sprite_text=SPRITES.read_text(encoding="utf-8")
     for obj_id,_ in entries:
-        assert re.search(r"^\{"+str(obj_id)+r",\d+,\d+,\d+,",sprite_text,re.M),obj_id
+        assert re.search(r"^\s*\{"+str(obj_id)+r",\d+,\d+,\d+,",sprite_text,re.M),obj_id
     print(f"Verified all {len(entries)} original playable skin images and "
           "eight directional source animations per skin")
 
