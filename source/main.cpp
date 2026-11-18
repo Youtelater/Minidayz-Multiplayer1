@@ -19,6 +19,7 @@
 #include "minidayz/source_rain_timer.hpp"
 #include "minidayz/source_loot_timer.hpp"
 #include "minidayz/original_timed_loot.hpp"
+#include "minidayz/generated/inventory_ui_art.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
@@ -689,8 +690,19 @@ public:
             renderer.draw_text("A: Continue   X: New Game", 18.0f, 216.0f, 0.32f);
             return;
         }
-        // The lower 3DS screen is the touch inventory, not a debug panel.
-        renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f, C2D_Color32(20, 25, 23, 255));
+        // Native 3DS inventory: use the actual Construct GUI frames
+        // from assets/gfx, scaled to the 320x240 touch display.
+        // Never use placeholder rectangles when the source sprite exists.
+        const auto ui_art = [&](const minidayz::stage1::OriginalUiArt& art,
+                                float x, float y, float w, float h) noexcept {
+            return renderer.draw_source_sprite_fitted(art.object,
+                art.animation, art.frame, x, y, w, h, 0.48f);
+        };
+        if (!ui_art(minidayz::stage1::kOriginalInventoryBackgroundArt,
+                    0.0f, 0.0f, 320.0f, 240.0f)) {
+            renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
+                                     C2D_Color32(70, 60, 48, 255));
+        }
         renderer.draw_solid_rect(6.0f, 6.0f, 308.0f, 25.0f, C2D_Color32(54, 68, 55, 255));
         // Compact live player status meters. Values are normalized against
         // the preview caps above; exact source caps/rates remain under audit.
@@ -766,8 +778,14 @@ public:
         static constexpr const char* equipment_labels[] = {"HELM","COAT","VEST","PANTS","HAND","PACK","SATCH"};
         for (std::size_t i = 0; i < 7; ++i) {
             const float x = 5.0f + static_cast<float>(i) * 45.0f;
-            renderer.draw_solid_rect(x, 38.0f, 43.0f, 43.0f, C2D_Color32(8, 11, 10, 255));
-            renderer.draw_solid_rect(x + 2.0f, 40.0f, 39.0f, 39.0f, C2D_Color32(47, 54, 48, 255));
+            const auto& frame = i == 1 ? minidayz::stage1::kOriginalEquipmentCoatArt
+                : i == 2 ? minidayz::stage1::kOriginalEquipmentVestArt
+                : i == 5 ? minidayz::stage1::kOriginalEquipmentBackpackArt
+                : i == 6 ? minidayz::stage1::kOriginalEquipmentSatchelArt
+                : minidayz::stage1::kOriginalInventoryCardArt;
+            if (!ui_art(frame, x, 38.0f, 43.0f, 43.0f))
+                renderer.draw_solid_rect(x, 38.0f, 43.0f, 43.0f,
+                    C2D_Color32(125, 111, 84, 255));
             const auto item_id = i == 5 ? inventory_.equipped_backpack()
                 : i == 6 ? inventory_.equipped_satchel()
                 : equipment_.equipped(static_cast<minidayz::items::EquipmentSlot>(i));
@@ -1053,14 +1071,21 @@ public:
                 const bool restricted = index >= 0 &&
                     inventory_.is_exclusive_satchel_slot(
                         static_cast<std::size_t>(index));
-                renderer.draw_solid_rect(x, y, 56.0f, 39.0f,
-                    selected ? C2D_Color32(225, 190, 105, 255)
-                             : restricted ? C2D_Color32(105, 130, 126, 255)
-                             : C2D_Color32(5, 8, 7, 255));
-                renderer.draw_solid_rect(x + 2.0f, y + 2.0f, 52.0f, 35.0f,
-                    selected ? C2D_Color32(76, 76, 54, 255)
-                             : restricted ? C2D_Color32(33, 62, 57, 255)
-                             : C2D_Color32(43, 49, 44, 255));
+                if (!ui_art(minidayz::stage1::kOriginalSlotBackgroundArt,
+                            x, y, 56.0f, 39.0f))
+                    renderer.draw_solid_rect(x, y, 56.0f, 39.0f,
+                        C2D_Color32(129, 115, 91, 255));
+                if (selected) {
+                    const u32 accent = C2D_Color32(224, 187, 87, 255);
+                    renderer.draw_solid_rect(x, y, 56.0f, 2.0f, accent);
+                    renderer.draw_solid_rect(x, y + 37.0f, 56.0f, 2.0f, accent);
+                    renderer.draw_solid_rect(x, y, 2.0f, 39.0f, accent);
+                    renderer.draw_solid_rect(x + 54.0f, y, 2.0f, 39.0f, accent);
+                }
+                if (restricted) {
+                    renderer.draw_solid_rect(x, y + 33.0f, 56.0f, 6.0f,
+                        C2D_Color32(86, 112, 103, 190));
+                }
                 if (restricted) {
                     const auto satchel_id = inventory_.equipped_satchel();
                     const char* label =
