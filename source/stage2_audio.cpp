@@ -7,7 +7,7 @@
 
 namespace minidayz {
 namespace {
-constexpr std::size_t kMaximumClipBytes = 4 * 1024 * 1024;
+constexpr std::size_t kMaximumClipBytes = 6 * 1024 * 1024;
 
 std::uint16_t le16(const unsigned char* p) noexcept {
     return static_cast<std::uint16_t>(p[0]) |
@@ -114,7 +114,7 @@ bool Stage2Audio::initialize() noexcept {
     if (ndsp_ready_) return true;
     if (R_FAILED(ndspInit())) return false;
     ndsp_ready_ = true;
-    constexpr const char* paths[kClipCount] = {
+    constexpr const char* paths[6] = {
         "romfs:/wav/crafting.wav",
         "romfs:/wav/drop1.wav",
         "romfs:/wav/drop2.wav",
@@ -122,8 +122,10 @@ bool Stage2Audio::initialize() noexcept {
         "romfs:/wav/geardrop1.wav",
         "romfs:/wav/geardrop2.wav"
     };
+    // rain_loop.wav is 5 MB. Load it only when Rain actually starts so
+    // the original 3DS doesn't reserve that linear memory on dry days.
     bool any = false;
-    for (std::size_t i=0;i<kClipCount;++i)
+    for (std::size_t i=0;i<6;++i)
         any = load_wav(paths[i],clips_[i]) || any;
     if (!any) {
         shutdown();
@@ -150,7 +152,7 @@ void Stage2Audio::play(std::size_t which) noexcept {
     wave={};
     wave.data_vaddr=clip.pcm;
     wave.nsamples=clip.frames;
-    wave.looping=false;
+    wave.looping=(which==6);
     ndspChnWaveBufAdd(channel,&wave);
 }
 
@@ -173,6 +175,27 @@ void Stage2Audio::play_equipment_drop() noexcept {
 void Stage2Audio::play_backpack_zip() noexcept {
     // Source event 443039046724475 plays zippero for backpack activation.
     play(3);
+}
+
+void Stage2Audio::start_rain_loop() noexcept {
+    if (!ndsp_ready_) return;
+    if (!clips_[6].pcm &&
+        !load_wav("romfs:/wav/rain_loop.wav",clips_[6])) return;
+    // Construct Rain group 609331584746158 plays rain_loop
+    // continuously while original Rain=1 (outdoors).
+    play(6);
+}
+
+void Stage2Audio::stop_rain_loop() noexcept {
+    // Stop the dedicated rain voice without interrupting crafting,
+    // footsteps, backpacks or equipment audio on other channels.
+    if (ndsp_ready_) {
+        ndspChnWaveBufClear(6);
+        ndspChnReset(6);
+    }
+    if (clips_[6].pcm) linearFree(clips_[6].pcm);
+    clips_[6]={};
+    waves_[6]={};
 }
 
 void Stage2Audio::shutdown() noexcept {
