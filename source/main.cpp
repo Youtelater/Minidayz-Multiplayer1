@@ -151,8 +151,7 @@ public:
                 new_game_generation_ = false;
                 menu_active_ = false;
                 // Only overwrite the existing save after a new world succeeds.
-                (void)write_scene_save();
-                has_saved_game_ = true;
+                has_saved_game_ = write_scene_save();
             }
             return;
         }
@@ -1533,6 +1532,7 @@ private:
         selected_inventory_slot_ = -1;
         save_elapsed_ = 0.0f;
         new_game_generation_ = true;
+        has_saved_game_ = false; // Keep old disk save intact if generation fails.
         begin_world_generation();
     }
 
