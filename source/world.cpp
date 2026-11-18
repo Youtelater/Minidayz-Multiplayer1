@@ -344,22 +344,51 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     features_.clear();
     placements_.clear();
     source_location_spawn_count_ = 0;
+    generation_phase_ = 0;
+    generation_level_ = 0;
+    generation_is_map_ = false;
     initialized_ = true;
+    return true;
+}
+
+bool WorldSystem::begin_source_generation(std::uint32_t seed,
+                                          std::string_view name,
+                                          std::uint8_t level) {
+    if (!initialize(seed) || !load_source_layout(name)) {
+        reset();
+        return false;
+    }
+    generation_level_ = level;
+    generation_is_map_ = name == "Map";
+    generation_phase_ = 1;
+    return true;
+}
+
+bool WorldSystem::advance_source_generation() {
+    if (!initialized_ || generation_phase_ == 0) return false;
+    if (generation_phase_ == 6) return true;
+    bool ok = false;
+    switch (generation_phase_) {
+    case 1: ok = generate_procedural_grid(generation_level_, seed_); break;
+    case 2: ok = build_map_markers(generation_level_, seed_); break;
+    case 3: ok = !generation_is_map_ || generate_source_locations(generation_level_); break;
+    case 4: ok = !generation_is_map_ || load_source_bunker_spawns(false); break;
+    case 5: ok = !generation_is_map_ || load_source_bridge_elements(); break;
+    default: return false;
+    }
+    if (!ok) {
+        reset();
+        return false;
+    }
+    ++generation_phase_;
     return true;
 }
 
 bool WorldSystem::generate_from_source(std::uint32_t seed, std::string_view name,
                                        std::uint8_t level) {
-    if (!initialize(seed) || !load_source_layout(name) ||
-        !generate_procedural_grid(level, seed) || !build_map_markers(level, seed)) {
-        reset();
-        return false;
-    }
-    if (name == "Map" &&
-        (!generate_source_locations(level) || !load_source_bunker_spawns(false) ||
-         !load_source_bridge_elements())) {
-        reset();
-        return false;
+    if (!begin_source_generation(seed, name, level)) return false;
+    while (!generation_complete()) {
+        if (!advance_source_generation()) return false;
     }
     return true;
 }
@@ -614,6 +643,9 @@ void WorldSystem::reset() noexcept {
     features_.clear();
     placements_.clear();
     source_location_spawn_count_ = 0;
+    generation_phase_ = 0;
+    generation_level_ = 0;
+    generation_is_map_ = false;
     seed_ = 0;
     initialized_ = false;
 }
