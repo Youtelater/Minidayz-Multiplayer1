@@ -595,7 +595,8 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
 
         placements_.push_back({
             layer, spawn.object, 0, position.x, position.y, 0.0f,
-            object_width, object_height, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0
+            object_width, object_height, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0,
+            static_cast<std::uint32_t>(std::max(0, spawn.frame))
         });
         WorldFeatureKind kind{};
         if (const auto* source_layer = stage1::find_layer(layout_index, layer);
