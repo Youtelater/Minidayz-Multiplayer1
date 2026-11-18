@@ -1332,6 +1332,12 @@ public:
         renderer.draw_text("TOUCH ACTIONS ABOVE", 14.0f, 226.0f, 0.18f);
         renderer.draw_text("CRAFT", 132.0f, 226.0f, 0.30f);
         renderer.draw_text(page_label, 213.0f, 226.0f, 0.23f);
+        if(near_source_bridge_exit()){
+            renderer.draw_solid_rect(18.0f, 104.0f, 284.0f, 21.0f,
+                                     C2D_Color32(39, 63, 46, 230));
+            renderer.draw_text("A: TRAVEL TO NEXT MAP",
+                               48.0f, 108.0f, 0.37f);
+        }
     }
 
     void render(minidayz::Renderer& renderer) noexcept override {
