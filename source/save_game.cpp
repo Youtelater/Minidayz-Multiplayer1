@@ -199,6 +199,25 @@ struct SavedGameV17 {
     minidayz::items::SourceRainTimerSnapshot source_rain{};
     minidayz::items::SourceLootTimerSnapshot source_loot{};
 };
+// v18 persisted pending crafting but not the active source map level.
+struct SavedGameV18 {
+    std::uint32_t magic{},version{},seed{};
+    minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
+    minidayz::items::GroundLootSnapshot ground_loot{};
+    minidayz::items::TentStorageSnapshot tents{};
+    minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
+    minidayz::items::SourcePerkSnapshot perks{};
+    minidayz::items::SatchelSnapshot satchel{};
+    minidayz::items::EquipmentFractionSnapshot equipment_fraction{};
+    minidayz::items::StashStorageSnapshot stashes{};
+    minidayz::items::SourceDayNightSnapshot source_time{};
+    minidayz::items::SourceRainTimerSnapshot source_rain{};
+    minidayz::items::SourceLootTimerSnapshot source_loot{};
+    PendingCraftSnapshot pending_craft{};
+};
+
 bool valid_pending_craft(const PendingCraftSnapshot& craft) noexcept {
     if (craft.recipe_index == 0xffffu)
         return craft.seconds_remaining == 0.0f;
@@ -488,6 +507,28 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.source_rain = old.source_rain;
             candidate.source_loot = old.source_loot;
         }
+    } else if (header_ok && candidate.version == 18u) {
+        SavedGameV18 old{};
+        body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
+                  std::fread(&old, sizeof(old), 1, file) == 1;
+        if (body_ok) {
+            candidate.seed = old.seed;
+            candidate.player = old.player;
+            candidate.inventory = old.inventory;
+            candidate.equipment = old.equipment;
+            candidate.ground_loot = old.ground_loot;
+            candidate.tents = old.tents;
+            candidate.pending_item_use = old.pending_item_use;
+            candidate.perks = old.perks;
+            candidate.satchel = old.satchel;
+            candidate.equipment_fraction = old.equipment_fraction;
+            candidate.stashes = old.stashes;
+            candidate.source_time = old.source_time;
+            candidate.source_rain = old.source_rain;
+            candidate.source_loot = old.source_loot;
+            candidate.pending_craft = old.pending_craft;
+            candidate.world_level = 0;
+        }
     } else if (header_ok && candidate.version == kSaveVersion) {
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
@@ -496,7 +537,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
     std::fclose(file);
     const bool header_and_body_valid =
         header_ok && body_ok && no_extra_data && candidate.magic == kSaveMagic &&
-        candidate.seed != 0 &&
+        candidate.seed != 0 && candidate.world_level <= 5u &&
         std::isfinite(candidate.player.x) && std::isfinite(candidate.player.y) &&
         candidate.player.x >= 0.0f && candidate.player.y >= 0.0f &&
         candidate.player.x <= minidayz::WorldSystem::kSourceMapWidth &&
@@ -568,11 +609,14 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                        const minidayz::items::SourceDayNightClock* source_time,
                       const minidayz::items::SourceRainTimer* source_rain,
                       const minidayz::items::SourceLootTimer* source_loot,
-                      const PendingCraftSnapshot* pending_craft) noexcept {
+                      const PendingCraftSnapshot* pending_craft,
+                      std::uint8_t world_level) noexcept {
     if (!target_path || !temporary_path || !target_path[0] || !temporary_path[0] ||
-        std::strcmp(target_path, temporary_path) == 0 || seed == 0) return false;
+        std::strcmp(target_path, temporary_path) == 0 || seed == 0 ||
+        world_level > 5u) return false;
     SavedGame save{};
     save.seed = seed;
+    save.world_level = world_level;
     save.player = player;
     save.inventory = inventory.snapshot();
     save.satchel = inventory.satchel_snapshot();
@@ -658,13 +702,14 @@ bool write_saved_game(std::uint32_t seed,
                        const items::SourceDayNightClock* source_time,
                       const items::SourceRainTimer* source_rain,
                       const items::SourceLootTimer* source_loot,
-                      const PendingCraftSnapshot* pending_craft) noexcept {
+                      const PendingCraftSnapshot* pending_craft,
+                      std::uint8_t world_level) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     return write_saved_game_to_paths(seed, player, inventory, equipment,
                                     ground_loot, tents, kSavePath, kSaveTempPath,
                                     item_use, perks, stashes, source_time, source_rain, source_loot,
-                                    pending_craft);
+                                    pending_craft, world_level);
 }
 
 } // namespace minidayz::persistence
