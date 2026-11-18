@@ -237,8 +237,10 @@ void Stage2Audio::set_environment_ambience(bool night) noexcept {
     // Load only one loop on demand to protect original 3DS linear memory.
     const char* path=night ? "romfs:/wav/night_loop.wav"
                            : "romfs:/wav/ambient.wav";
-    if (!load_wav(path,clips_[10])) return;
+    // Do not hammer the SD/RomFS with a multi-megabyte WAV load every
+    // frame if this optional ambience cannot fit in 3DS linear memory.
     ambient_variant_=wanted;
+    if (!load_wav(path,clips_[10])) return;
     play(10);
 }
 
