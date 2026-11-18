@@ -1,6 +1,7 @@
 #include "minidayz/generated/water_shore_source.hpp"
 #include <cassert>
 #include <cstdint>
+#include <initializer_list>
 
 int main() {
     using namespace minidayz::stage1;
