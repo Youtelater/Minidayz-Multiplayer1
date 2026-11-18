@@ -198,10 +198,11 @@ public:
             touch_down_ = input.touching;
             if (menu_tap) {
                 if (input.touch.py >= 184 && input.touch.py < 203) {
-                    selected_skin_ = (selected_skin_ +
-                        minidayz::stage1::kOriginalPlayerSkinCount +
-                        (input.touch.px < 160 ? -1 : 1)) %
-                        minidayz::stage1::kOriginalPlayerSkinCount;
+                    const auto total=minidayz::stage1::kOriginalPlayerSkinCount;
+                    if(input.touch.px < 160)
+                        selected_skin_=(selected_skin_+total-1)%total;
+                    else
+                        selected_skin_=(selected_skin_+1)%total;
                 } else {
                     const auto tapped = minidayz::menu::touch_action(
                         input.touch.px, input.touch.py, has_saved_game_);
