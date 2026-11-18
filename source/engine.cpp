@@ -279,11 +279,8 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   }
  // Preserve the exact source RLE cells at their original Map positions.
  for(const GroundMap& map:ground_maps_){
-  // Preserve source-authored tilemap identity for the active half.
-  // The final map has a second original terrain sheet below row 18.
-  const auto map_theme=terrain::ground_texture_at(
-      source_level,map.y+tile*0.5f,second_half_y);
-  if(map.object_id!=terrain::kGroundObjectByTexture[map_theme]) continue;
+  // Source tilemap objects can cross the split-world seam. Resolve the
+  // original terrain object per visible row, not once at map origin.
   const int x0=std::max(0,static_cast<int>(std::floor((camera_x-map.x)/tile)));
   const int y0=std::max(0,static_cast<int>(std::floor((camera_y-map.y)/tile)));
   const int x1=std::min(static_cast<int>(map.columns),
@@ -291,6 +288,10 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
   const int y1=std::min(static_cast<int>(map.rows),
               static_cast<int>(std::ceil((camera_y+height-map.y)/tile))+1);
   for(int row=y0;row<y1;++row) for(int col=x0;col<x1;++col){
+   const auto map_theme=terrain::ground_texture_at(
+       source_level,map.y+(static_cast<float>(row)+0.5f)*tile,
+       second_half_y);
+   if(map.object_id!=terrain::kGroundObjectByTexture[map_theme]) continue;
    const std::uint32_t descriptor=map.cells[
      static_cast<std::size_t>(row)*map.columns+static_cast<std::size_t>(col)];
    if(descriptor==0xffffffffu) continue;
