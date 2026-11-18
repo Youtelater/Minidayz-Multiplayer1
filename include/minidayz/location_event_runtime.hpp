@@ -37,6 +37,13 @@ public:
 
     const Array& map_array() const noexcept { return map_array_; }
     const Array& location_array() const noexcept { return location_array_; }
+    // A new source map marker gets a fresh 75x8 location proposal array.
+    // Reusing the previous marker's rows duplicates stale world artwork.
+    bool reset_location_array() {
+        if (!location_array_.set_size(75, 8, 1)) return false;
+        location_array_.clear();
+        return true;
+    }
     const std::vector<SourceLocationSpawn>& spawns() const noexcept { return spawns_; }
 
 private:
