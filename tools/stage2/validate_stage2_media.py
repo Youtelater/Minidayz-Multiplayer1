@@ -62,6 +62,9 @@ def validate_atlas() -> None:
     print(f"Original Construct atlases OK: {len(sheets)} ROMFS .t3x files")
     # Ground tiles are Construct Tilemaps (type 16), not sprites, so the
     # regular source animation atlas cannot cover them.
+    background = ATLAS / "original_map_base_ground.t3x"
+    if not background.is_file() or background.stat().st_size < 32:
+        raise SystemExit("Original-source grass background missing: gameplay would show black terrain")
     floor = ATLAS / "original_map_ground_p000.t3x"
     floor_layout = ATLAS / "original_map_ground_layout.bin"
     if not floor_layout.is_file() or floor_layout.read_bytes()[:4] != b"MDG2":
