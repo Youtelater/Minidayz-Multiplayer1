@@ -92,8 +92,10 @@ public:
         preview_rules_.collision_half_height = 7.0f;
         preview_rules_.min_temperature = -10.0f;
         preview_rules_.max_temperature = 10.0f;
-        world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
-        if (world_ready_) npc_ready_ = npcs_.initialize(world_);
+        // The boot menu must appear immediately, before world generation.
+        // Continue reconstructs the saved world only after the player selects it.
+        world_ready_ = false;
+        npc_ready_ = false;
         // Continuing a save preserves its exact persisted temperature;
         // a fresh run initializes the original daytime exposure once.
         // A save persists body warmth; weather exposure is recalculated
@@ -129,6 +131,23 @@ public:
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
+        if (loading_world_) {
+            if (!world_.advance_source_generation()) {
+                loading_world_ = false;
+                generation_failed_ = true;
+                return;
+            }
+            if (world_.generation_complete()) {
+                loading_world_ = false;
+                world_ready_ = true;
+                npc_ready_ = npcs_.initialize(world_);
+                menu_active_ = false;
+                // Only overwrite the existing save after a new world succeeds.
+                (void)write_scene_save();
+                has_saved_game_ = true;
+            }
+            return;
+        }
         if (menu_active_) {
             bool continue_game = has_saved_game_ && (input.pressed & KEY_A) != 0;
             bool new_game = (input.pressed & KEY_X) != 0;
@@ -143,7 +162,7 @@ public:
                     new_game = true;
             }
             if (new_game) start_new_game();
-            else if (continue_game) menu_active_ = false;
+            else if (continue_game) begin_world_generation();
             else if (!has_saved_game_ && (input.pressed & KEY_A))
                 start_new_game();
             return;
@@ -670,6 +689,26 @@ public:
     }
 
     void render_bottom(minidayz::Renderer& renderer) noexcept override {
+        if (loading_world_) {
+            renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
+                                     C2D_Color32(20, 25, 23, 255));
+            (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 320.0f, 240.0f, 0.95f);
+            renderer.draw_text("GENERATING WORLD", 45.0f, 52.0f, 0.52f);
+            static constexpr const char* steps[] = {
+                "PREPARING MAP", "PLACING LOCATIONS", "BUILDING MAP MARKERS",
+                "GENERATING TOWNS AND ROADS", "ADDING BUNKERS", "ADDING BRIDGES"
+            };
+            const auto phase = world_.generation_phase();
+            const auto step = phase < 6 ? phase : 5;
+            renderer.draw_text(steps[step], 26.0f, 112.0f, 0.32f);
+            renderer.draw_solid_rect(24.0f, 169.0f, 272.0f, 16.0f,
+                                     C2D_Color32(20, 28, 23, 255));
+            renderer.draw_solid_rect(27.0f, 172.0f,
+                266.0f * static_cast<float>(phase) / 6.0f, 10.0f,
+                C2D_Color32(121, 156, 93, 255));
+            renderer.draw_text("PLEASE KEEP THE GAME OPEN", 41.0f, 206.0f, 0.28f);
+            return;
+        }
         if (menu_active_) {
             renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
                                      C2D_Color32(20, 25, 23, 255));
@@ -689,7 +728,7 @@ public:
                                      C2D_Color32(110, 75, 49, 255));
             (void)renderer.draw_menu_art(1, 18.0f, 145.0f, 284.0f, 57.0f);
             renderer.draw_text("NEW GAME", 92.0f, 165.0f, 0.55f);
-            if (!world_ready_)
+            if (generation_failed_)
                 renderer.draw_text("WORLD GENERATION FAILED - RETRY NEW GAME", 18.0f, 204.0f, 0.27f);
             renderer.draw_text("A: Continue   X: New Game", 18.0f, 216.0f, 0.32f);
             return;
@@ -1156,6 +1195,16 @@ public:
     }
 
     void render(minidayz::Renderer& renderer) noexcept override {
+        if (loading_world_) {
+            renderer.reset_camera();
+            renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
+                                     C2D_Color32(24, 34, 29, 255));
+            (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 400.0f, 240.0f, 0.95f);
+            if (!renderer.draw_menu_art(0, 42.0f, 36.0f, 316.0f, 112.0f))
+                renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
+            renderer.draw_text("GENERATING NEW SURVIVAL WORLD", 51.0f, 198.0f, 0.37f);
+            return;
+        }
         if (menu_active_) {
             renderer.reset_camera();
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
@@ -1472,14 +1521,17 @@ private:
         details_open_ = false;
         tap_was_selected_ = false;
         selected_inventory_slot_ = -1;
-        world_ready_ = world_.generate_from_source(world_seed_, "Map", 0);
-        npc_ready_ = world_ready_ && npcs_.initialize(world_);
         save_elapsed_ = 0.0f;
-        has_saved_game_ = false;
-        // Never enter a blank gameplay scene when source world generation
-        // fails. Keep the menu available so the player can retry instead.
-        menu_active_ = !world_ready_;
-        if (world_ready_) (void)write_scene_save();
+        begin_world_generation();
+    }
+
+    void begin_world_generation() noexcept {
+        generation_failed_ = false;
+        world_ready_ = false;
+        npc_ready_ = false;
+        menu_active_ = true;
+        loading_world_ = world_.begin_source_generation(world_seed_, "Map", 0);
+        if (!loading_world_) generation_failed_ = true;
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
@@ -1532,6 +1584,8 @@ private:
     bool world_ready_{};
     bool npc_ready_{};
     bool menu_active_{true};
+    bool loading_world_{};
+    bool generation_failed_{};
     bool has_saved_game_{};
     minidayz::PlayerSystem player_;
     minidayz::items::InventorySystem inventory_{};
