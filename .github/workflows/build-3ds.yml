@@ -95,6 +95,14 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude tests/terrain_roads_tests.cpp -o /tmp/minidayz_source_road_tests
           /tmp/minidayz_source_road_tests
 
+      - name: Verify source tilemap mirrors and rotations
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/terrain_source_tile_flags_tests.cpp -o /tmp/minidayz_tile_flags
+          /tmp/minidayz_tile_flags
+
       - name: Verify original map-specific ground image selection
         shell: bash
         run: |
