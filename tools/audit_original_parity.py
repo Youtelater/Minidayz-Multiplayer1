@@ -108,11 +108,11 @@ require("tools/stage1/validate_stage1.py" in makefile and
 
 # Clearly identified equivalence gaps; these are warnings so a working 3DS
 # build is not misrepresented as a fully faithful game.
-require("rle_cells" in floor and "MDG2" in floor and "mapping[raw & TILE_MASK]" in floor,
-        "Original terrain exporter keeps source RLE tile placements")
+require("rle_cells" in floor and "MDG2" in floor and "mapping[(object_id, raw & TILE_MASK)]" in floor,
+        "Original terrain exporter keeps all source RLE cells and tilemap object identities")
 require((ROOT / "romfs/gfx/original_map_ground_layout.bin").is_file(),
         "Original Map cell layout packed in RomFS")
-warning("TERRAIN: original tile IDs and placements are ported; Construct tile flipping and layered tilemap effects still require 3DS visual parity tests.")
+warning("TERRAIN: level 0/1/2 artwork and all authored ground objects are packaged; full Construct procedural tile painting, later-level rules, bridges and transitions remain unported.")
 if "preview_rules_.walk_speed = 72.0f" in game:
     warning("MOVEMENT: fixed preview speeds and hitbox do not establish original Construct equivalence.")
 if "place_new_player_on_generated_map()" in game:
