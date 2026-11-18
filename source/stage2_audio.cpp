@@ -261,15 +261,22 @@ void Stage2Audio::stop_environment_ambience() noexcept {
     clips_[12]={};
     waves_[12]={};
     ambient_variant_=-1;
+    weather_sample_variant_=-1;
 }
 
-void Stage2Audio::start_rain_loop() noexcept {
+void Stage2Audio::start_rain_loop(bool blizzard) noexcept {
     if (!ndsp_ready_) return;
-    if (!clips_[6].pcm &&
-        !load_wav("romfs:/wav/rain_loop.wav",clips_[6])) return;
-    // Construct Rain group 609331584746158 plays rain_loop
-    // continuously while original Rain=1 (outdoors).
-    play(6);
+    const int wanted=blizzard ? 1 : 0;
+    if (weather_sample_variant_!=wanted) {
+        stop_rain_loop();
+        // Source Rain event 609331584746158 uses blizzard when
+        // original rains_level=2; levels 1/3 use rain_loop.
+        const char* path=blizzard ? "romfs:/wav/blizzard.wav"
+                                  : "romfs:/wav/rain_loop.wav";
+        weather_sample_variant_=wanted;
+        if (!load_wav(path,clips_[6])) return;
+    }
+    if (clips_[6].pcm) play(6);
 }
 
 void Stage2Audio::stop_rain_loop() noexcept {
@@ -282,6 +289,7 @@ void Stage2Audio::stop_rain_loop() noexcept {
     if (clips_[6].pcm) linearFree(clips_[6].pcm);
     clips_[6]={};
     waves_[6]={};
+    weather_sample_variant_=-1;
 }
 
 void Stage2Audio::shutdown() noexcept {
