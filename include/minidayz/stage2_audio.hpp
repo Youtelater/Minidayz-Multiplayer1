@@ -18,7 +18,7 @@ public:
     void play_backpack_zip() noexcept;
     void play_item_pickup() noexcept;
     void play_footstep(terrain::FootstepSurface surface) noexcept;
-    void set_environment_ambience(bool night) noexcept;
+    void set_environment_ambience(bool night,bool winter=false) noexcept;
     void stop_environment_ambience() noexcept;
     void start_rain_loop() noexcept;
     void stop_rain_loop() noexcept;
