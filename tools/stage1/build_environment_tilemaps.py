@@ -97,12 +97,14 @@ with tempfile.TemporaryDirectory(prefix="mdz_source_terrain_") as scratch:
                 raise SystemExit(f"Bad terrain sheet dimensions: {filename}")
             columns=art.width//tile_size
             count=columns*(art.height//tile_size)
-            ordered=sorted(palette[object_id])
-            # The original ground_enviroment object (230) is an empty
-            # authored tilemap: its scenery is painted by game events.
-            # Still package the original first frame for runtime use.
-            if not ordered and object_id==230:
-                ordered=[0]
+            # Original Construct events dynamically paint object 208 (water)
+            # and object 230 (ground_enviroment). The authored Map RLE alone
+            # does not reference those runtime tile IDs; exporting only the
+            # preauthored cells silently drops almost all real scenery art.
+            # Pack every ORIGINAL tile from these two source sheets, keeping
+            # source ID == atlas frame for dynamic SetTile event integration.
+            ordered=(list(range(count)) if object_id in (208,230)
+                     else sorted(palette[object_id]))
             if len(ordered)>128 or not ordered:
                 raise SystemExit(f"Unexpected source terrain tile count: {object_id}")
             directory=work/str(object_id)
