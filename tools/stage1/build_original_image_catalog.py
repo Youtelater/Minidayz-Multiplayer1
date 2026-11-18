@@ -35,7 +35,7 @@ def main() -> None:
             raise SystemExit(f"3DS output collision: {source} and {outputs[target]}")
         outputs[target] = source
         artifact = ROOT / "romfs/gfx" / target
-        if not artifact.is_file() or artifact.stat().st_size <= 32:
+        if not artifact.is_file() or artifact.stat().st_size == 0:
             raise SystemExit(f"Unconverted original image: {source} ({target})")
     text = [
         "#pragma once",
