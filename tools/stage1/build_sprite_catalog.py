@@ -98,11 +98,17 @@ def main() -> int:
             # Construct frame. Only then use the known asset roots.
             # Stage 1 artwork is sourced exclusively from assets/gfx.
             # Never fall back to the duplicate images/ directory.
-            exact_candidates = [
-                ROOT / source_ref,
-                ASSETS / source_ref,
-            ]
-            exact_candidates = [p for p in exact_candidates if p.is_file()]
+            # Source JS may spell its asset path as images/foo.png.
+            # Those are duplicate exports, not the canonical art directory.
+            # Resolve only against assets/gfx, even when the JS path starts
+            # with images/, to prevent accidental use of duplicate artwork.
+            normalized = source_path.replace("\\\\", "/").replace("\\", "/")
+            if normalized.startswith("assets/gfx/"):
+                normalized = normalized[len("assets/gfx/"):]
+            elif normalized.startswith("images/"):
+                normalized = normalized[len("images/"):]
+            exact_candidates = [ASSETS / normalized]
+            exact_candidates = [p for p in exact_candidates if p.is_file() and ASSETS.resolve() in p.resolve().parents]
             if not exact_candidates:
                 exact_candidates = [p for p in ASSETS.rglob(basename) if p.is_file()]
 
