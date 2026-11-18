@@ -72,6 +72,7 @@ jobs:
           python3 tools/stage2/extract_item_catalog.py
           python3 tools/stage2/build_item_source_catalog.py
           python3 tools/stage2/build_item_sprite_catalog.py
+          python3 tools/stage2/build_inventory_ui_art.py
           python3 tools/stage2/build_item_description_catalog.py
           python3 tools/stage2/extract_item_behavior_trace.py
           python3 tools/stage2/validate_item_condition_trace.py
