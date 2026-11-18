@@ -104,6 +104,24 @@ struct PreviousSaveV14 {
     StashStorageSnapshot stashes{};
 };
 
+// Source v15 file predated rain timer phase persistence.
+struct PreviousSaveV15 {
+    std::uint32_t magic{kSaveMagic};
+    std::uint32_t version{15};
+    std::uint32_t seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+    SourcePerkSnapshot perks{};
+    SatchelSnapshot satchel{};
+    EquipmentFractionSnapshot equipment_fraction{};
+    StashStorageSnapshot stashes{};
+    SourceDayNightSnapshot source_time{};
+};
+
 struct LegacyPerkSnapshotV8ForTest {
     std::uint32_t experience_points{};
     std::uint32_t perk_cost{100};
@@ -557,6 +575,47 @@ int main() {
     assert(restored.source_time.timer_all==60);
     assert(restored.source_time.elapsed_seconds==0.75f);
     assert(!restored.source_time.day_mode);
+
+    // v15 retained the world clock but predates Rain_speed/Rain phase.
+    PreviousSaveV15 old15{};
+    old15.seed=1502;
+    old15.player=warm_player;
+    old15.inventory=fractional_inventory.snapshot();
+    old15.equipment=equipment.snapshot();
+    old15.ground_loot=fractional_ground.snapshot();
+    old15.tents=tents.snapshot();
+    old15.source_time=source_clock.snapshot();
+    {
+        auto* file=std::fopen(kFile,"wb");
+        assert(file && std::fwrite(&old15,sizeof(old15),1,file)==1);
+        assert(std::fclose(file)==0);
+    }
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==15u && restored.seed==1502);
+    assert(restored.source_time.timer_all==60);
+    assert(restored.source_rain.timer_firings==0);
+    assert(!restored.source_rain.rain.active);
+
+    SourceRainTimer source_rain;
+    for(unsigned i=0;i<360;++i)
+        assert(source_rain.update(1.0f,2,false,4));
+    assert(source_rain.active());
+    for(unsigned i=0;i<30;++i)
+        assert(source_rain.update(1.0f,2,false,4));
+    assert(write_saved_game_to_paths(1601,warm_player,fractional_inventory,
+        equipment,fractional_ground,tents,kFile,kTemp,
+        nullptr,nullptr,nullptr,&source_clock,&source_rain));
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==kSaveVersion && restored.seed==1601);
+    assert(restored.source_rain.rain.active);
+    assert(restored.source_rain.timer_firings==1);
+    assert(restored.source_rain.elapsed_seconds==30.0f);
+    SourceRainTimer resumed_rain;
+    assert(resumed_rain.restore(restored.source_rain));
+    for(unsigned i=0;i<330;++i)
+        assert(resumed_rain.update(1.0f,2,false,1));
+    assert(!resumed_rain.active());
+    assert(resumed_rain.snapshot().timer_firings==2);
 
     // v13 retains the six-source-slot Supplies Stash and its exact
     // subpercent item wear independently of permanent Civilian Tent storage.
