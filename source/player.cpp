@@ -1,7 +1,10 @@
 #include "minidayz/player.hpp"
+#include "minidayz/generated/stage1_data.hpp"
+#include <cstring>
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 
 namespace minidayz {
 namespace {
@@ -106,6 +109,20 @@ void PlayerSystem::update_life_state() noexcept {
     }
 }
 
+void PlayerSystem::set_source_skin(std::uint16_t object) noexcept {
+    if (source_skin_object_ == object) return;
+    bool has_idle=false,has_run=false;
+    for (const auto& anim:stage1::kAnimations) {
+        if (anim.object != object) continue;
+        if (std::strcmp(anim.name,"idle_down")==0 && anim.frames>0) has_idle=true;
+        if (std::strcmp(anim.name,"run_down")==0 && anim.frames>0) has_run=true;
+    }
+    if (!has_idle || !has_run) return;
+    source_skin_object_=object;
+    state_.animation_elapsed=0.0f;
+    state_.animation_frame=0;
+}
+
 std::uint16_t PlayerSystem::source_animation_index() const noexcept {
     if (!state_.alive || state_.animation == PlayerAnimation::dead) return 0;
     const std::uint16_t direction = static_cast<std::uint16_t>(facing_offset(state_.facing));
@@ -123,13 +140,39 @@ void PlayerSystem::advance_animation(float delta_seconds) noexcept {
         return;
     }
 
-    // animations.csv records speed=1 and four looping frames for run_*.
-    constexpr float kSourceRunFramesPerSecond = 1.0f;
-    constexpr std::uint32_t kSourceRunFrameCount = 4;
+    // The selected original skin defines the correct source animation speed,
+    // loop setting and frame count. Do not assume every survivor has 4 frames.
+    const char* direction="down";
+    switch (state_.facing) {
+    case PlayerFacing::down: direction="down"; break;
+    case PlayerFacing::up: direction="up"; break;
+    case PlayerFacing::left: direction="left"; break;
+    case PlayerFacing::right: direction="right"; break;
+    }
+    char name[24]{};
+    const char* prefix=state_.animation==PlayerAnimation::idle?"idle":"run";
+    std::snprintf(name,sizeof(name),"%s_%s",prefix,direction);
+    const stage1::AnimationDef* source=nullptr;
+    for (const auto& anim:stage1::kAnimations)
+        if (anim.object==source_skin_object_ && std::strcmp(anim.name,name)==0) {
+            source=&anim;break;
+        }
+    if (!source || source->frames==0 || !std::isfinite(source->speed) ||
+        source->speed<=0.0f) {
+        state_.animation_frame=0;
+        return;
+    }
     state_.animation_elapsed += std::max(0.0f, delta_seconds);
-    const auto elapsed_frames = static_cast<std::uint32_t>(
-        state_.animation_elapsed * kSourceRunFramesPerSecond);
-    state_.animation_frame = elapsed_frames % kSourceRunFrameCount;
+    // Wrap the elapsed time before float->integer conversion to avoid frame
+    // overflow after very long sessions, keeping save/restore deterministic.
+    const float cycle=static_cast<float>(source->frames)/source->speed;
+    if (source->loop && cycle>0.0f)
+        state_.animation_elapsed=std::fmod(state_.animation_elapsed,cycle);
+    const auto elapsed_frames=static_cast<std::uint32_t>(
+        state_.animation_elapsed*source->speed);
+    state_.animation_frame=source->loop
+        ? elapsed_frames%source->frames
+        : std::min(elapsed_frames,source->frames-1);
 }
 
 PlayerMoveResult PlayerSystem::update_movement(
@@ -161,10 +204,15 @@ PlayerMoveResult PlayerSystem::update_movement(
         return result;
     }
 
+    const auto old_facing=state_.facing;
     if (std::fabs(ix) > std::fabs(iy))
         state_.facing = ix < 0.0f ? PlayerFacing::left : PlayerFacing::right;
     else
         state_.facing = iy < 0.0f ? PlayerFacing::up : PlayerFacing::down;
+    if (state_.facing!=old_facing) {
+        state_.animation_elapsed=0.0f;
+        state_.animation_frame=0;
+    }
 
     const PlayerAnimation next_animation =
         input.run ? PlayerAnimation::run : PlayerAnimation::walk;
