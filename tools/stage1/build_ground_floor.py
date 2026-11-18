@@ -81,7 +81,7 @@ with tempfile.TemporaryDirectory(prefix="minidayz_ground_") as tmp:
     # Citro2D expects a Tex3DS sprite SHEET (atlas manifest), not a bare
     # standalone texture. The former exposes image 0 to SpriteSheetCount.
     manifest=tmpdir/"floor.t3s"
-    manifest.write_text("--atlas -f rgba -z auto\\noriginal_floor.png\\n",
+    manifest.write_text("--atlas -f rgba -z auto\noriginal_floor.png\n",
                         encoding="utf-8")
     subprocess.run(["tex3ds","-i",str(manifest),"-o",str(destination)],
                    cwd=tmpdir,check=True)
