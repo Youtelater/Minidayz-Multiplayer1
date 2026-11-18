@@ -9,6 +9,7 @@ Do not source duplicate images/ assets.
 from __future__ import annotations
 
 import re
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -16,6 +17,7 @@ ORIGINAL = ROOT / "assets" / "gfx"
 TEXTURES = ROOT / "romfs" / "gfx"
 SPRITES = ROOT / "include/minidayz/generated/sprite_catalog.hpp"
 ITEMS = ROOT / "include/minidayz/generated/item_sprite_catalog.hpp"
+ALL_IMAGES = ROOT / "include/minidayz/generated/original_image_catalog.hpp"
 
 FRAME = re.compile(
     r'^\{(\d+),(\d+),(\d+),(\d+),"([^"]+)",', re.MULTILINE
@@ -50,6 +52,16 @@ def check() -> None:
         raise SystemExit(
             f"{len(missing)} original PNGs have no nonempty preconverted .t3x: "
             + ", ".join(missing[:25]))
+    if not ALL_IMAGES.is_file():
+        raise SystemExit("Missing complete original image runtime catalog")
+    full_catalog = ALL_IMAGES.read_text(encoding="utf-8")
+    match = re.search(r"kOriginalImageCount=(\d+);", full_catalog)
+    if not match or int(match.group(1)) != len(source):
+        raise SystemExit("Original runtime image catalog count mismatch")
+    for original in source:
+        row = "  {" + json.dumps(original.as_posix(), ensure_ascii=False) + "," + json.dumps(mapped_name(original).as_posix(), ensure_ascii=False) + "},"
+        if row not in full_catalog:
+            raise SystemExit(f"Original image runtime mapping missing: {original}")
     if not SPRITES.is_file() or not ITEMS.is_file():
         raise SystemExit("Missing generated Construct sprite or item mappings")
     sprites = SPRITES.read_text(encoding="utf-8")
