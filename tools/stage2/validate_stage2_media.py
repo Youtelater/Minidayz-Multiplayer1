@@ -62,7 +62,10 @@ def validate_atlas() -> None:
     print(f"Original Construct atlases OK: {len(sheets)} ROMFS .t3x files")
     # Ground tiles are Construct Tilemaps (type 16), not sprites, so the
     # regular source animation atlas cannot cover them.
-    floor = ATLAS / "original_map_ground_floor.t3x"
+    floor = ATLAS / "original_map_ground_p000.t3x"
+    floor_layout = ATLAS / "original_map_ground_layout.bin"
+    if not floor_layout.is_file() or floor_layout.read_bytes()[:4] != b"MDG2":
+        raise SystemExit("Original Construct Map ground tile placement data missing")
     floor_header = ROOT / "include/minidayz/generated/ground_floor_source.hpp"
     ui_header = ROOT / "include/minidayz/generated/inventory_ui_art.hpp"
     if not floor.is_file() or floor.stat().st_size < 32:
