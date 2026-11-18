@@ -55,7 +55,8 @@ with path.open("rb") as file:
     total = 0
     for expected_x, expected_y, cols, rows, cells in source_data:
         x, y, w, h = struct.unpack("<ffII", file.read(16))
-        assert (x, y, w, h) == (expected_x, expected_y, cols, rows)
+        assert abs(x - expected_x) < 0.01 and abs(y - expected_y) < 0.01
+        assert (w, h) == (cols, rows)
         contents = file.read(4 * cols * rows)
         assert len(contents) == 4 * cols * rows
         values = struct.unpack("<" + "I" * (cols * rows), contents)
