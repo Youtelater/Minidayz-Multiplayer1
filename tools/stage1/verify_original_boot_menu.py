@@ -49,8 +49,13 @@ assert "minidayz::menu::touch_action(" in main
 assert "if (menu_active_) {" in main
 assert "draw_menu_art(0," in main, "Original game logo must be on top screen"
 assert "kContinueButton" in main and "kNewGameButton" in main
-assert "kContinueButton{18, 78, 302, 132}" in menu
-assert "kNewGameButton{18, 145, 302, 202}" in menu
+assert "kContinueButton{18, 58, 302, 106}" in menu
+assert "kNewGameButton{18, 115, 302, 163}" in menu
+assert "kSkinPrevious{18, 174, 155, 207}" in menu
+assert "kSkinNext{165, 174, 302, 207}" in menu
+assert "skin_touch_action(" in main and "advance_skin(" in main
+assert "menu_bitmap_font.hpp" in engine and "ui_font_glyph" in engine
+assert "if(index==1 && depth>=0.5f)depth=0.45f" in engine, "Wooden buttons obscured by solid panel"
 assert "WorldPreviewScene scene(has_saved_game ? &restored : nullptr);" in main
 assert "engine.set_scene(&scene)" in main
 print("PASS: original root Construct artwork bundled, scene starts on menu, "
