@@ -938,8 +938,7 @@ public:
                     selected_inventory_slot_ = -1;
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
-                const auto target = static_cast<minidayz::items::EquipmentSlot>(
-                    drag_target_equipment_slot_);
+                const auto target = gear_slot_for_card(drag_target_equipment_slot_);
                 bool changed = equipment_.equip_from_inventory(
                     inventory_, source_slot, target);
                 if (!changed) {
@@ -1975,7 +1974,7 @@ public:
                 const auto condition=slot==5
                     ?inventory_.equipped_backpack_condition()
                     :slot==6 ? inventory_.equipped_satchel_condition()
-                    :equipment_.snapshot().conditions[static_cast<std::size_t>(slot)];
+                    :equipment_.snapshot().conditions[gear_index_for_card(slot)];
                 const auto fraction=slot<5
                     ?equipment_.fraction_snapshot().fractional_loss[static_cast<std::size_t>(slot)]
                     :0u;
