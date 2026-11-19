@@ -60,6 +60,12 @@ jobs:
             tests/boot_menu_tests.cpp -o /tmp/minidayz_boot_menu_tests
           /tmp/minidayz_boot_menu_tests
 
+      - name: Audit exact original Construct inventory, drag and item-use event groups
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage2/audit_original_inventory_events.py
+
       - name: Verify original source inventory art and touch dragging
         shell: bash
         run: |
