@@ -5,6 +5,7 @@
 #include "minidayz/terrain_level.hpp"
 #include "minidayz/terrain_roads.hpp"
 #include "minidayz/terrain_source_tile_flags.hpp"
+#include "minidayz/menu_bitmap_font.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
 #include "minidayz/generated/water_shore_source.hpp"
 #include "minidayz/world.hpp"
@@ -127,11 +128,33 @@ void Renderer::draw_solid_rect(float x,float y,float width,float height,u32 colo
  if(width>0.0f&&height>0.0f) C2D_DrawRectSolid(x,y,0.5f,width,height,color);
 }
 void Renderer::draw_text(const char* value,float x,float y,float scale) noexcept {
- if(!debug_ready_||!value||!value[0]) return;
- C2D_TextBufClear(debug_buffer_);
- C2D_TextParse(&debug_text_,debug_buffer_,value);
- C2D_TextOptimize(&debug_text_);
- C2D_DrawText(&debug_text_,C2D_AlignLeft,x,y,0.4f,scale,scale);
+ if(!value||!value[0]||!(scale>0.0f))return;
+ if(debug_ready_) {
+  C2D_TextBufClear(debug_buffer_);
+  C2D_TextParse(&debug_text_,debug_buffer_,value);
+  C2D_TextOptimize(&debug_text_);
+  C2D_DrawText(&debug_text_,C2D_AlignLeft,x,y,0.4f,scale,scale);
+  return;
+ }
+ // Some iOS/3DS emulators cannot provide the region system font at all.
+ // A menu made of textured buttons without text is functionally unusable.
+ // This 5x7 fallback draws labels directly, without any external font file.
+ const float pixel=std::max(0.7f,scale*2.1f);
+ float at_x=x,at_y=y;
+ const u32 ink=C2D_Color32(243,234,211,255);
+ for(const char* p=value;*p;++p) {
+  if(*p=='\\n'){at_x=x;at_y+=pixel*9.0f;continue;}
+  if(at_x>410.0f)break;
+  char upper=*p;
+  if(upper>='a'&&upper<='z')upper=static_cast<char>(upper-'a'+'A');
+  const auto* glyph=menu::ui_font_glyph(upper);
+  if(glyph)for(int row=0;row<7;++row)
+   for(int col=0;col<5;++col)
+    if(glyph[row]&(1u<<(4-col)))
+     C2D_DrawRectSolid(at_x+col*pixel,at_y+row*pixel,0.39f,
+                       pixel,pixel,ink);
+  at_x+=pixel*6.0f;
+ }
 }
 bool Renderer::load_sheet(std::size_t slot,const char* path) noexcept {
  if(!initialized_||slot>=kMaxSheets||!path||!path[0]) return false;
