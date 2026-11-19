@@ -4,6 +4,9 @@
 int main(){
     using namespace minidayz::items::ui;
     static_assert(kPageSize==15);
+    static_assert(kEquipment.size()==8);
+    static_assert(kEquipment[7].h>kEquipment[4].h,
+                  "Original gun uses a separate portrait card from melee");
     static_assert(kSlotSize==30);
     static_assert(kColumns==8 && kRows==2);
     // All original equipment hitboxes are independent and match the
@@ -29,6 +32,11 @@ int main(){
             assert(equipment_at(cx,cy)==-1);
         }
     }
+    assert(equipment_at(285,89)==7);
+    assert(equipment_at(94,119)==4); // melee
+    assert(equipment_at(48,119)==3); // pants
+    assert(equipment_at(150,119)==5); // backpack
+    assert(equipment_at(220,119)==6); // satchel
     assert(inventory_at(0,0,0)==-1);
     assert(inventory_at(305,222,0)==-1); // unused 16th tile
     assert(inventory_at(300,238,0)==-1);
