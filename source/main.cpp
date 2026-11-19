@@ -1,5 +1,6 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/boot_menu.hpp"
+#include "minidayz/generated/menu_source_catalog.hpp"
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/source_map_overlay.hpp"
@@ -232,6 +233,47 @@ public:
                     if(tap)choose_skin(minidayz::menu::skin_touch_action(
                         input.touch.px,input.touch.py));
                     if(input.pressed & KEY_A)go_main();
+                } else if(menu_page_==minidayz::menu::BootPage::difficulty){
+                    if(input.pressed & KEY_DUP)
+                        difficulty_index_=(difficulty_index_+2)%3;
+                    if(input.pressed & KEY_DDOWN)
+                        difficulty_index_=(difficulty_index_+1)%3;
+                    int chosen=-1;
+                    if(input.pressed & KEY_A)chosen=static_cast<int>(difficulty_index_);
+                    if(tap)chosen=minidayz::menu::difficulty_at(
+                        input.touch.px,input.touch.py);
+                    if(chosen>=0 && chosen<3){
+                        difficulty_index_=static_cast<std::size_t>(chosen);
+                        selected_difficulty_=static_cast<minidayz::SurvivalDifficulty>(chosen);
+                        preview_rules_=minidayz::source_survival_rules(selected_difficulty_);
+                        // Original AltMove max-speed action is 100 before equipment effects.
+                        preview_rules_.walk_speed=100.0f;
+                        preview_rules_.run_speed=100.0f;
+                        preview_rules_.collision_half_width=5.0f;
+                        preview_rules_.collision_half_height=7.0f;
+                        preview_rules_.min_temperature=-10.0f;
+                        preview_rules_.max_temperature=10.0f;
+                        start_new_game();
+                    }
+                } else if(menu_page_==minidayz::menu::BootPage::achievements ||
+                          menu_page_==minidayz::menu::BootPage::unlocks){
+                    const auto count=menu_page_==minidayz::menu::BootPage::achievements
+                        ?minidayz::menu::kSourceAchievementCount
+                        :minidayz::menu::kSourceUnlockCount;
+                    if(input.pressed & KEY_DUP && menu_list_index_>0)
+                        --menu_list_index_;
+                    if(input.pressed & KEY_DDOWN && menu_list_index_+1<count)
+                        ++menu_list_index_;
+                    if(input.pressed & KEY_L)
+                        menu_list_index_=menu_list_index_>=4?menu_list_index_-4:0;
+                    if(input.pressed & KEY_R)
+                        menu_list_index_=std::min(count-1,menu_list_index_+4);
+                    if(tap && input.touch.py>=43 && input.touch.py<163){
+                        const auto row=(input.touch.py-43)/30;
+                        const auto offset=(menu_list_index_/4)*4;
+                        if(offset+static_cast<std::size_t>(row)<count)
+                            menu_list_index_=offset+static_cast<std::size_t>(row);
+                    }
                 } else if(menu_page_==minidayz::menu::BootPage::options){
                     if((input.pressed & KEY_A) ||
                         (tap && input.touch.py>=70 && input.touch.py<=117)){
@@ -285,12 +327,16 @@ public:
                 if(has_saved_game_)begin_world_generation();
                 break;
             case minidayz::menu::MenuEntry::new_game:
-                start_new_game();
+                // The original source does not start world generation
+                // before the user chooses Novice/Regular/Veteran.
+                menu_page_=minidayz::menu::BootPage::difficulty;
                 break;
             case minidayz::menu::MenuEntry::achievements:
+                menu_list_index_=0;
                 menu_page_=minidayz::menu::BootPage::achievements;
                 break;
             case minidayz::menu::MenuEntry::unlocks:
+                menu_list_index_=0;
                 menu_page_=minidayz::menu::BootPage::unlocks;
                 break;
             case minidayz::menu::MenuEntry::options:
@@ -2438,6 +2484,9 @@ private:
     minidayz::menu::StartInputGate boot_input_gate_{};
     minidayz::menu::BootPage menu_page_{minidayz::menu::BootPage::main};
     minidayz::menu::MenuEntry menu_selection_{minidayz::menu::MenuEntry::new_game};
+    minidayz::SurvivalDifficulty selected_difficulty_{minidayz::SurvivalDifficulty::regular};
+    std::size_t difficulty_index_{1};
+    std::size_t menu_list_index_{};
     bool paused_{};
     bool death_saved_{};
     bool pause_save_feedback_{};
