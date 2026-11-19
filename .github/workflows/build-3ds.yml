@@ -60,6 +60,12 @@ jobs:
             tests/boot_menu_tests.cpp -o /tmp/minidayz_boot_menu_tests
           /tmp/minidayz_boot_menu_tests
 
+      - name: Verify original spawning and low-FPS performance regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_fidelity_perf_guard.py
+
       - name: Verify emulator-correct menu and world depth layering
         shell: bash
         run: |
