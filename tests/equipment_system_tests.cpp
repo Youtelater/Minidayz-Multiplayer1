@@ -389,6 +389,30 @@ int main() {
     assert(migrated.fraction_snapshot().fractional_loss[
         static_cast<std::size_t>(EquipmentSlot::weapon)]==42);
 
+    // Some legacy native records had both firearm and melee categories
+    // reversed. Restore both atomically with their independent condition
+    // and sub-percent wear instead of rejecting a valid survivor save.
+    EquipmentSnapshot reversed{};
+    reversed.item_ids[static_cast<std::size_t>(EquipmentSlot::hands)]=158;
+    reversed.conditions[static_cast<std::size_t>(EquipmentSlot::hands)]=71;
+    reversed.item_ids[static_cast<std::size_t>(EquipmentSlot::weapon)]=206;
+    reversed.conditions[static_cast<std::size_t>(EquipmentSlot::weapon)]=84;
+    EquipmentFractionSnapshot reversed_wear{};
+    reversed_wear.fractional_loss[static_cast<std::size_t>(EquipmentSlot::hands)]=23;
+    reversed_wear.fractional_loss[static_cast<std::size_t>(EquipmentSlot::weapon)]=67;
+    EquipmentSystem swapped;
+    assert(swapped.restore_with_fraction(reversed,reversed_wear));
+    assert(swapped.equipped(EquipmentSlot::hands)==206);
+    assert(swapped.equipped(EquipmentSlot::weapon)==158);
+    assert(swapped.snapshot().conditions[static_cast<std::size_t>(
+        EquipmentSlot::hands)]==84);
+    assert(swapped.snapshot().conditions[static_cast<std::size_t>(
+        EquipmentSlot::weapon)]==71);
+    assert(swapped.fraction_snapshot().fractional_loss[
+        static_cast<std::size_t>(EquipmentSlot::hands)]==67);
+    assert(swapped.fraction_snapshot().fractional_loss[
+        static_cast<std::size_t>(EquipmentSlot::weapon)]==23);
+
     // A 99.75%-exact jacket displays as 100% with the source byte
     // compatibility field, but it is still legitimately repairable.
     EquipmentSystem subpercent_jacket;
