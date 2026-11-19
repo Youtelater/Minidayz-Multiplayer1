@@ -1137,6 +1137,57 @@ public:
                 renderer.draw_text("B / TOUCH : BACK",91.0f,219.0f,0.36f);
             };
             using minidayz::menu::BootPage;
+            const auto render_source_list=[&](
+                const minidayz::menu::SourceMenuRecord* records,
+                std::size_t total,const char* title) noexcept {
+                renderer.draw_text(title,88.0f,10.0f,0.47f);
+                const std::size_t offset=(menu_list_index_/4)*4;
+                for(std::size_t row=0;row<4;++row){
+                    const auto index=offset+row;
+                    if(index>=total)break;
+                    const minidayz::menu::TouchBounds rect{
+                        15,static_cast<int>(43+row*30),
+                        305,static_cast<int>(71+row*30)};
+                    wood(rect,index==menu_list_index_,true);
+                    // Localized, source-provided achievement/character name.
+                    char text[65]{};
+                    std::snprintf(text,sizeof(text),"%.45s",records[index].name);
+                    renderer.draw_text(text,25.0f,rect.y()+6.0f,0.31f);
+                }
+                // Source descriptions are not native progression flags.
+                // Make their actual description readable without falsely
+                // marking an achievement completed or a survivor unlocked.
+                if(menu_list_index_<total){
+                    const char* description=records[menu_list_index_].description;
+                    const char* requirement=std::strstr(description,"Unlock Requirement:");
+                    if(requirement)description=requirement;
+                    int line=0;
+                    while(*description && line<2){
+                        while(*description==' ' || *description=='\\n')++description;
+                        if(!*description)break;
+                        char excerpt[46]{};
+                        std::size_t count=0,break_at=0;
+                        while(description[count] && description[count]!='\\n' &&
+                              count<40){
+                            if(description[count]==' ')break_at=count;
+                            ++count;
+                        }
+                        if(count==40 && description[count] && break_at>0)
+                            count=break_at;
+                        std::memcpy(excerpt,description,count);
+                        excerpt[count]=0;
+                        renderer.draw_text(excerpt,16.0f,
+                            172.0f+line*15.0f,0.25f);
+                        description+=count;
+                        ++line;
+                    }
+                }
+                char page[32]{};
+                std::snprintf(page,sizeof(page),"%u / %u  L/R PAGE",
+                    static_cast<unsigned>(menu_list_index_+1),
+                    static_cast<unsigned>(total));
+                renderer.draw_text(page,99.0f,199.0f,0.24f);
+            };
             switch(menu_page_){
             case BootPage::main:{
                 renderer.draw_text("MINI DAYZ",116.0f,8.0f,0.49f);
@@ -1175,16 +1226,28 @@ public:
                 back();
                 break;
             }
+            case BootPage::difficulty:{
+                renderer.draw_text("SELECT DIFFICULTY",72.0f,18.0f,0.45f);
+                for(std::size_t i=0;i<3;++i){
+                    wood(minidayz::menu::kDifficultyRows[i],
+                        difficulty_index_==i,true);
+                    renderer.draw_text(minidayz::menu::kDifficultyLabels[i],
+                        i==1?125.0f:133.0f,
+                        minidayz::menu::kDifficultyRows[i].y()+9.0f,0.41f);
+                }
+                renderer.draw_text("A / TOUCH : START NEW GAME",
+                    46.0f,194.0f,0.28f);
+                back();
+                break;
+            }
             case BootPage::achievements:
-                renderer.draw_text("ACHIEVEMENTS",89.0f,21.0f,0.47f);
-                renderer.draw_text("SOURCE ACHIEVEMENT EVENTS",35.0f,91.0f,0.29f);
-                renderer.draw_text("NOT YET PORTED TO 3DS",52.0f,117.0f,0.31f);
+                render_source_list(minidayz::menu::kSourceAchievements,
+                    minidayz::menu::kSourceAchievementCount,"ACHIEVEMENTS");
                 back();
                 break;
             case BootPage::unlocks:
-                renderer.draw_text("UNLOCKS",113.0f,21.0f,0.48f);
-                renderer.draw_text("SOURCE UNLOCK PROGRESSION",28.0f,91.0f,0.29f);
-                renderer.draw_text("NOT YET PORTED TO 3DS",52.0f,117.0f,0.31f);
+                render_source_list(minidayz::menu::kSourceUnlocks,
+                    minidayz::menu::kSourceUnlockCount,"UNLOCKS");
                 back();
                 break;
             case BootPage::options:{
