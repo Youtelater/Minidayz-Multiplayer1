@@ -32,6 +32,14 @@ int main(){
     assert(!kSkinPrevious.contains(160,170));
     assert(!kSkinNext.contains(160,170));
     assert(kSubpageBack.contains(160,223));
+    assert(difficulty_at(160,80)==0);
+    assert(difficulty_at(160,120)==1);
+    assert(difficulty_at(160,165)==2);
+    assert(difficulty_at(160,222)==-1);
+    for(unsigned i=0;i<3;++i)
+        assert(difficulty_at(160,
+            (kDifficultyRows[i].top+kDifficultyRows[i].bottom)/2)
+            ==static_cast<int>(i));
     assert(default_selection(false)==MenuEntry::new_game);
     assert(default_selection(true)==MenuEntry::continue_game);
     assert(move_selection(MenuEntry::continue_game,1,true)==MenuEntry::new_game);
@@ -49,6 +57,12 @@ int main(){
     assert(advance_skin(8,20,SkinAction::none)==8);
     assert(advance_skin(8,0,SkinAction::next)==0);
     StartInputGate gate{};
+    StartInputGate low_fps{};
+    for(int i=0;i<12;++i)assert(!low_fps.update(0.25f,true));
+    assert(!low_fps.armed);
+    assert(!low_fps.update(0.25f,false));
+    assert(low_fps.armed);
+    assert(low_fps.update(0.25f,false));
     for(int i=0;i<25;++i)assert(!gate.update(0.05f,true));
     assert(!gate.armed);
     assert(!gate.update(0.05f,false));
