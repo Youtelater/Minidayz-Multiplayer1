@@ -240,6 +240,13 @@ jobs:
           name: original-condition-wear-actions
           path: data/stage2/condition_wear_source_audit.json
 
+      - name: Test source-sized inventory sprites and touchscreen mapping
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/inventory_touch_layout_tests.cpp -o inventory_touch_layout_tests
+          ./inventory_touch_layout_tests
+          python3 tests/test_original_inventory_ui.py
+
       - name: Compile Item and Inventory Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
