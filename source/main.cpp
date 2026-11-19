@@ -404,6 +404,9 @@ public:
                     if (pause_save_feedback_) {
                         paused_ = false;
                         menu_active_ = true;
+                        menu_page_=minidayz::menu::BootPage::main;
+                        menu_selection_=minidayz::menu::default_selection(has_saved_game_);
+                        boot_input_gate_.reset();
                     }
                 }
             }
@@ -2406,7 +2409,8 @@ private:
         new_game_generation_ = true;
         death_saved_ = false;
         paused_ = false;
-        has_saved_game_ = false; // Keep old disk save intact if generation fails.
+        // Keep the old Continue entry available if the new world fails.
+        // The save file is replaced only after successful generation.
         begin_world_generation();
     }
 
