@@ -49,6 +49,21 @@ assert "unequip_to_inventory" in release
 assert "unequip_backpack_to_slot" in release
 assert "unequip_satchel_to_slot" in release
 assert "touch_released" in src
+# Source equipment requires a genuine stylus drag into a visible storage cell.
+# A stationary touch selects worn gear for inspection, not auto-unequip.
+assert "drag_moved_ && drag_target_slot_>=0" in src
+assert "selected_equipment_slot_=equipment_target" in src
+assert "if(source<5)stage2_audio_.play_equipment_drop()" in src
+assert "std::uint16_t item_id=selected && !selected->empty()" in src
+assert "source_item_description(item_id)" in src
+assert "details_scroll_+=3" in src
+assert "stage2_audio_.play_item_pickup();" in src
+# Tent/stash cells must use original source gui_slot and exact lower-screen
+# input bounds, excluding gutters and touches outside the visible 30 cells.
+storage=src.split("if (storage_open_) {",1)[1].split("if (crafting_open_) {",1)[0]
+assert "kOriginalSlotArt" in storage
+assert "storage_at(" in src
+assert "ui::kEquipment" in src
 # Original artwork must not vanish under its own fallback panel.
 assert "C2D_Color32(70, 60, 48, 255),0.01f" in src
 print("PASS: original inventory art, selection, equipment drag and depth checks")
