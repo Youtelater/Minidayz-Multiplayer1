@@ -16,6 +16,7 @@ public:
  static constexpr std::size_t kMaxSheets=32;
  bool initialize() noexcept; void shutdown() noexcept;
  void begin_frame() noexcept; void begin_screen(gfxScreen_t screen) noexcept; void end_frame() noexcept;
+ std::size_t sprite_cache_misses() const noexcept { return sprite_cache_misses_; }
  void load_debug_overlay(std::uint64_t frame, float delta, const InputState& input, bool scene_active) noexcept;
  void draw_debug_overlay() noexcept;
  void draw_solid_rect(float x,float y,float width,float height,u32 color,float depth=0.5f) noexcept;
@@ -73,7 +74,7 @@ private:
   std::vector<GroundMap> ground_maps_{};std::uint32_t ground_tile_pixels_{};std::uint32_t ground_pages_{};
   bool ground_load_attempted_{};bool ground_loaded_{}; std::uint8_t ground_active_level_{255}; C2D_SpriteSheet sheets_[kMaxSheets]{};
  struct SpriteCacheEntry { char sheet[128]{}; std::size_t slot{}; };
- SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{};
+ SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{}; std::size_t sprite_cache_misses_{};
  C2D_Font debug_font_{}; C2D_TextBuf debug_buffer_{}; C2D_Text debug_text_{};
  float camera_x_{},camera_y_{}; bool initialized_{}; bool debug_ready_{};
 };
@@ -90,6 +91,8 @@ public:
 private:
  void poll_input() noexcept; void update(float dt) noexcept; void render() noexcept;
  Renderer renderer_{}; Scene* scene_{}; InputState input_{}; u32 previous_held_{}; u64 previous_time_{};
- float delta_seconds_{}; std::uint64_t frame_number_{}; bool initialized_{};
+ float delta_seconds_{}; std::uint64_t frame_number_{};
+ bool performance_overlay_{};
+ bool initialized_{};
 };
 }
