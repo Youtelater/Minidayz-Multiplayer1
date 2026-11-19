@@ -103,8 +103,11 @@ public:
         // event/ACE trace is complete.
         preview_rules_ = minidayz::source_survival_rules(
             minidayz::SurvivalDifficulty::regular);
-        preview_rules_.walk_speed = 72.0f;
-        preview_rules_.run_speed = 108.0f;
+        // Game_events/Animations Set AltMove MaxSpeed source action
+        // 156884066447061 uses base value 100 before clothing modifiers.
+        // Old 72/108 numbers were invented preview speed values.
+        preview_rules_.walk_speed = 100.0f;
+        preview_rules_.run_speed = 100.0f;
         preview_rules_.collision_half_width = 5.0f;
         preview_rules_.collision_half_height = 7.0f;
         preview_rules_.min_temperature = -10.0f;
@@ -1370,10 +1373,15 @@ public:
                 const bool restricted = index >= 0 &&
                     inventory_.is_exclusive_satchel_slot(
                         static_cast<std::size_t>(index));
-                if (!ui_art(minidayz::stage1::kOriginalSlotBackgroundArt,
-                            x, y, 56.0f, 29.0f))
+                // The original gui_slot_bg sheet is a BRIGHT CYAN
+                // drag/drop selection texture (as seen in Manic Emu).
+                // It is NOT the parchment item card from the original
+                // screenshot. Use the exact gui_inventory_card sprite
+                // exported by the supplied Construct project instead.
+                if (!ui_art(minidayz::stage1::kOriginalInventoryCardArt,
+                            x, y, 56.0f, 29.0f, 0.30f))
                     renderer.draw_solid_rect(x, y, 56.0f, 29.0f,
-                        C2D_Color32(129, 115, 91, 255));
+                        C2D_Color32(154, 142, 116, 255),0.30f);
                 if (selected) {
                     const u32 accent = C2D_Color32(224, 187, 87, 255);
                     renderer.draw_solid_rect(x, y, 56.0f, 2.0f, accent);
