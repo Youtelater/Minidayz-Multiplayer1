@@ -1244,9 +1244,9 @@ public:
             }else if(menu_page_==minidayz::menu::BootPage::options){
                 (void)renderer.draw_original_image(
                     "options_menu-sheet0.png",
-                    13.0f,45.0f,294.0f,150.0f,0.19f);
-                renderer.draw_solid_rect(13.0f,45.0f,294.0f,150.0f,
-                    C2D_Color32(14,19,17,165),0.21f);
+                    // Original Construct source sprite is 128x211.
+                    // Preserve its aspect instead of stretching it 294x150.
+                    96.0f,24.0f,128.0f,211.0f,0.19f);
             }
             const auto wood=[&](const minidayz::menu::TouchBounds& box,
                                 bool selected,bool enabled) noexcept {
@@ -1407,7 +1407,7 @@ public:
                 break;
             case BootPage::options:{
                 renderer.draw_text("OPTIONS",111.0f,15.0f,0.50f);
-                const minidayz::menu::TouchBounds audio_row{38,70,282,117};
+                const minidayz::menu::TouchBounds audio_row{64,70,256,117};
                 wood(audio_row,false,true);
                 renderer.draw_text(stage2_audio_.muted()?"SOUND : OFF":"SOUND : ON",
                     103.0f,87.0f,0.41f);
@@ -2021,7 +2021,7 @@ public:
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
                                      C2D_Color32(24, 34, 29, 255),0.01f);
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 400.0f, 240.0f, 0.05f);
-            if (!renderer.draw_menu_art(0, 42.0f, 36.0f, 316.0f, 112.0f))
+            if (!renderer.draw_menu_art(0, 42.0f, 50.0f, 316.0f, 80.0f))
                 renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
             renderer.draw_text("GENERATING NEW SURVIVAL WORLD", 51.0f, 198.0f, 0.37f);
             return;
@@ -2031,7 +2031,7 @@ public:
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
                                      C2D_Color32(24, 34, 29, 255),0.01f);
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 400.0f, 240.0f, 0.05f);
-            if (!renderer.draw_menu_art(0, 42.0f, 36.0f, 316.0f, 112.0f))
+            if (!renderer.draw_menu_art(0, 42.0f, 50.0f, 316.0f, 80.0f))
                 renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
             renderer.draw_text("3DS EDITION", 143.0f, 156.0f, 0.43f);
             (void)renderer.draw_source_animation(
@@ -2072,7 +2072,7 @@ public:
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
                                      C2D_Color32(24, 34, 29, 255),0.01f);
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 400.0f, 240.0f, 0.05f);
-            if (!renderer.draw_menu_art(0, 42.0f, 27.0f, 316.0f, 112.0f))
+            if (!renderer.draw_menu_art(0, 42.0f, 35.0f, 316.0f, 80.0f))
                 renderer.draw_text("MINI DAYZ", 76.0f, 68.0f, 1.05f);
             renderer.draw_text("GAME PAUSED", 128.0f, 162.0f, 0.60f);
             renderer.draw_text("START OR B: RESUME", 114.0f, 208.0f, 0.32f);
