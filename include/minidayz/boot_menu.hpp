@@ -43,6 +43,22 @@ constexpr std::size_t advance_skin(std::size_t current,std::size_t count,
     return current;
 }
 
+// Ignore an emulator launcher/overlay's synthetic A/X or touch press
+// immediately after starting the 3DS executable. The menu must remain
+// visible until the user releases ALL menu controls and presses again.
+struct StartInputGate {
+    float elapsed{};
+    bool armed{};
+    void reset() noexcept { elapsed=0.0f; armed=false; }
+    bool update(float dt,bool controls_held) noexcept {
+        if(armed)return true;
+        if(dt>0.0f && dt<=0.10f)elapsed+=dt;
+        // Require a full second plus one neutral frame on the launcher.
+        if(elapsed>=1.0f && !controls_held)armed=true;
+        return false;
+    }
+};
+
 enum class BootAction : std::uint8_t { none, continue_game, new_game };
 
 constexpr BootAction touch_action(int px, int py, bool has_saved_game) noexcept {
