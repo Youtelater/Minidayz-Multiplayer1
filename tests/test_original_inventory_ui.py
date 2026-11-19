@@ -77,6 +77,10 @@ assert "active_held_slot_" in src, "Separate firearm/melee mode must control pla
 assert "std::uint16_t item_id=selected && !selected->empty()" in src
 assert "source_item_description(item_id)" in src
 assert "details_scroll_+=3" in src
+assert "drag_touch_x_=input.touch.px" in src
+assert "drag_touch_y_=input.touch.py" in src
+assert "if(drag_moved_ && (drag_source_slot_>=0 ||" in src
+assert "27.0f,27.0f,0.98f" in src, "Original item must follow touchscreen drag in foreground"
 assert "stage2_audio_.play_item_pickup();" in src
 # Tent/stash cells must use original source gui_slot and exact lower-screen
 # input bounds, excluding gutters and touches outside the visible 30 cells.
