@@ -924,6 +924,13 @@ public:
                             : C2D_Color32(218,204,158,255);
                     renderer.draw_solid_rect(xx+(cw-size)*0.5f,
                         yy+(ch-size)*0.5f,size,size,color,0.52f);
+                    // The source project includes an actual minimap
+                    // location marker; keep its icon instead of replacing
+                    // every settlement with a fabricated map symbol.
+                    (void)renderer.draw_original_image(
+                        "minimap_mark-sheet0.png",
+                        xx+(cw-size)*0.5f,yy+(ch-size)*0.5f,
+                        size,size,0.57f);
                 }
             }
         }
