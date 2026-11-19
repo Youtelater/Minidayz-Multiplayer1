@@ -17,7 +17,7 @@ public:
  void begin_frame() noexcept; void begin_screen(gfxScreen_t screen) noexcept; void end_frame() noexcept;
  void load_debug_overlay(std::uint64_t frame, float delta, const InputState& input, bool scene_active) noexcept;
  void draw_debug_overlay() noexcept;
- void draw_solid_rect(float x,float y,float width,float height,u32 color) noexcept;
+ void draw_solid_rect(float x,float y,float width,float height,u32 color,float depth=0.5f) noexcept;
  void draw_text(const char* value,float x,float y,float scale=0.4f) noexcept;
  bool load_sheet(std::size_t slot,const char* romfs_path) noexcept;
  void unload_sheet(std::size_t slot) noexcept; void unload_all() noexcept;
