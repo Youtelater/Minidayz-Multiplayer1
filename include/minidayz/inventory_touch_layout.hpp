@@ -17,7 +17,7 @@ struct Rect {
         return px>=x && px<x+w && py>=y && py<y+h;
     }
 };
-inline constexpr std::array<Rect,8> kEquipment{{
+inline constexpr std::array<Rect,9> kEquipment{{
     {8,39,56,53},     // head: source inventory card
     {68,39,92,62},    // coat: source outerwear card
     {162,39,92,62},   // vest: source vest card
@@ -25,7 +25,8 @@ inline constexpr std::array<Rect,8> kEquipment{{
     {68,103,52,34},   // hands: original melee/tool slot
     {124,103,64,34},  // backpack: source card, scaled to fit
     {192,103,62,34},  // satchel: source card, scaled to fit
-    {257,39,55,98}    // firearm: source gui_firearm rotated 90 degrees
+    {257,39,55,64},   // firearm: source gui_firearm rotated 90 degrees
+    {257,105,55,32}   // MP quick pistol: separate Drop_pistol slot
 }};
 inline constexpr int kColumns=8;
 inline constexpr int kRows=2;
