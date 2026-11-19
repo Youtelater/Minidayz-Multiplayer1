@@ -969,7 +969,7 @@ public:
                 art.animation, art.frame, x, y, w, h, depth);
         };
         if (!ui_art(minidayz::stage1::kOriginalInventoryBackgroundArt,
-                    0.0f, 0.0f, 320.0f, 240.0f, 0.98f)) {
+                    0.0f, 0.0f, 320.0f, 240.0f, 0.05f)) {
             renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
                                      C2D_Color32(70, 60, 48, 255));
         }
@@ -1594,13 +1594,12 @@ public:
                         placement->angle*0.01745329251994329577f,
                         camera_x,camera_y,view_w,view_h)) continue;
                 } // Keep unknown frame dimensions visible for diagnostics.
-                // Source Map layer 32 is player, with Buildings_bg (31)
-                // below it and Buildings/Trees (41-43) above it. Preserve
-                // those layers through Citro2D's depth ordering instead of
-                // drawing every building behind the player.
+                // Manic Emu confirms larger Z is in front. Keep source
+                // layer 31 (background buildings) behind player .57 and
+                // source layers 41-43 (foreground buildings/trees) above.
                 const float layer_depth = std::clamp(
-                    0.90f - 0.0125f * static_cast<float>(placement->layer),
-                    0.10f, 0.90f);
+                    0.15f + 0.0125f * static_cast<float>(placement->layer),
+                    0.15f, 0.80f);
                 if (!renderer.draw_source_sprite(placement->object, 0, placement->source_frame,
                         px, py, sx, sx, layer_depth,
                         placement->angle * 0.01745329251994329577f,
@@ -1715,12 +1714,12 @@ public:
                           weapon_pose,skin_direction);
             sprite_drawn=renderer.draw_source_animation(source_skin_object,
                 armed_animation,player_.source_animation_frame(),
-                p.x,p.y,0.55f,0.55f);
+                p.x,p.y,0.55f,0.55f,0.57f);
         }
         if(p.alive && !sprite_drawn)
             sprite_drawn=renderer.draw_source_animation(source_skin_object,
                 skin_animation,player_.source_animation_frame(),
-                p.x,p.y,0.55f,0.55f);
+                p.x,p.y,0.55f,0.55f,0.57f);
         if (p.alive) {
             // Original item pickups and wearable actor overlays are NOT
             // interchangeable. Only draw original animation poses proven to
@@ -1742,19 +1741,19 @@ public:
             // Source-authored equipment back-to-front. The originals use
             // separate layers on top of the chosen character base skin.
             draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::pants),false,0.44f);
+                minidayz::items::EquipmentSlot::pants),false,0.575f);
             draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::outerwear),false,0.43f);
+                minidayz::items::EquipmentSlot::outerwear),false,0.580f);
             draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::vest),false,0.42f);
+                minidayz::items::EquipmentSlot::vest),false,0.585f);
             draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::head),false,0.41f);
-            draw_equipped_layer(inventory_.equipped_backpack(),false,0.40f);
+                minidayz::items::EquipmentSlot::head),false,0.590f);
+            draw_equipped_layer(inventory_.equipped_backpack(),false,0.595f);
             // Original satchels are separate wearable storage equipment,
             // not part of the main backpack slot. Show both when equipped.
-            draw_equipped_layer(inventory_.equipped_satchel(),false,0.395f);
+            draw_equipped_layer(inventory_.equipped_satchel(),false,0.600f);
             draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::hands),true,0.39f);
+                minidayz::items::EquipmentSlot::hands),true,0.605f);
         }
         if (!sprite_drawn) {
             renderer.draw_solid_rect(p.x - 5.0f, p.y - 5.0f, 10.0f, 12.0f,
