@@ -761,8 +761,9 @@ public:
             const int action = minidayz::items::ui::action_at(
                 input.touch.px,input.touch.py);
             if (action == 3) {
-                (void)ground_loot_.pickup_nearest(
-                    inventory_, player_.state().x, player_.state().y, 36.0f);
+                if(ground_loot_.pickup_nearest(
+                       inventory_, player_.state().x, player_.state().y, 36.0f))
+                    stage2_audio_.play_item_pickup();
             } else if (selected_inventory_slot_ >= 0) {
                 const auto selected = static_cast<std::size_t>(selected_inventory_slot_);
                 const auto* item = inventory_.slot(selected);
@@ -801,6 +802,9 @@ public:
         }
         if (!crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ && touch_pressed) {
             tap_was_selected_ = false;
+            drag_start_x_=input.touch.px;
+            drag_start_y_=input.touch.py;
+            drag_moved_=false;
             drag_source_slot_ = -1;
             drag_equipped_source_slot_ = -1;
             drag_target_slot_ = -1;
@@ -820,7 +824,8 @@ public:
                 if(item_id!=0){
                     drag_equipped_source_slot_=equipment_target;
                     drag_target_equipment_slot_=equipment_target;
-                }
+                    selected_equipment_slot_=equipment_target;
+                }else selected_equipment_slot_=-1;
                 selected_inventory_slot_=-1;
             }
             // Page through larger backpacks without changing the 5 x 3 grid.
@@ -840,6 +845,7 @@ public:
                                                    input.touch.py,
                                                    inventory_page_);
                 if (slot >= 0) {
+                    selected_equipment_slot_=-1;
                     const auto* item = inventory_.slot(static_cast<std::size_t>(slot));
                     tap_was_selected_ = item && !item->empty() &&
                         selected_inventory_slot_ == slot;
@@ -853,6 +859,9 @@ public:
         }
         if (!crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ &&
             input.touching && (drag_source_slot_>=0 || drag_equipped_source_slot_>=0)) {
+            const int dx=input.touch.px-drag_start_x_;
+            const int dy=input.touch.py-drag_start_y_;
+            if(dx*dx+dy*dy>=36)drag_moved_=true;
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
             if (equipment_target >= 0 && equipment_target < 7) {
                 drag_target_equipment_slot_ = equipment_target;
@@ -876,16 +885,12 @@ public:
                 // suitable free cell. Dropping on another equipment card
                 // is not interpreted as a discard.
                 std::size_t destination=inventory_.capacity();
-                if(drag_target_slot_>=0)
+                if(drag_moved_ && drag_target_slot_>=0)
                     destination=static_cast<std::size_t>(drag_target_slot_);
-                else if(same_equipment)
-                    destination=(source>=5)
-                        ? first_available_base_inventory_slot()
-                        : first_available_inventory_slot(
-                            equipment_.equipped(static_cast<minidayz::items::EquipmentSlot>(source)),
-                            equipment_.snapshot().conditions[static_cast<std::size_t>(source)],
-                            equipment_.fraction_snapshot().fractional_loss[
-                                static_cast<std::size_t>(source)]);
+                // A stationary touch merely selects an equipment card.
+                // Never silently unequip a helmet/backpack on a tap,
+                // especially when its storage contains items.
+                (void)same_equipment;
                 bool moved=false;
                 if(source==5 && destination<minidayz::items::kInventorySlotCount){
                     moved=inventory_.unequip_backpack_to_slot(destination);
@@ -897,7 +902,11 @@ public:
                         inventory_,static_cast<minidayz::items::EquipmentSlot>(source),
                         destination);
                 }
-                if(moved)selected_inventory_slot_=static_cast<int>(destination);
+                if(moved){
+                    selected_inventory_slot_=static_cast<int>(destination);
+                    selected_equipment_slot_=-1;
+                    stage2_audio_.play_equipment_drop();
+                }
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
                 // Dragging an original repair material onto the backpack slot
@@ -976,6 +985,7 @@ public:
                 }
             }
             tap_was_selected_ = false;
+            drag_moved_=false;
             drag_source_slot_ = -1;
             drag_equipped_source_slot_ = -1;
             drag_target_slot_ = -1;
@@ -2565,6 +2575,8 @@ private:
         details_open_ = false;
         tap_was_selected_ = false;
         selected_inventory_slot_ = -1;
+        selected_equipment_slot_=-1;
+        drag_moved_=false;
         drag_source_slot_=-1;
         drag_equipped_source_slot_=-1;
         drag_target_slot_=-1;
@@ -2757,6 +2769,10 @@ private:
     int selected_inventory_slot_{-1};
     int drag_source_slot_{-1};
     int drag_equipped_source_slot_{-1};
+    int selected_equipment_slot_{-1};
+    int drag_start_x_{};
+    int drag_start_y_{};
+    bool drag_moved_{};
     int drag_target_slot_{-1};
     int drag_target_equipment_slot_{-1};
     std::size_t inventory_page_{};
