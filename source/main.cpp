@@ -1188,104 +1188,106 @@ public:
             static constexpr const char* equipment_labels[] = {
                 "HELM", "COAT", "VEST", "PANTS", "HAND", "PACK", "SATCH"
             };
-            for (std::size_t i = 0; i < 7; ++i) {
-                const float x = 6.0f + static_cast<float>(i % 4) * 77.0f;
-                const float y = 40.0f + static_cast<float>(i / 4) * 38.0f;
-                const auto& frame =
-                    i == 1 ? minidayz::stage1::kOriginalEquipmentCoatArt
-                    : i == 2 ? minidayz::stage1::kOriginalEquipmentVestArt
-                    : i == 5 ? minidayz::stage1::kOriginalEquipmentBackpackArt
-                    : i == 6 ? minidayz::stage1::kOriginalEquipmentSatchelArt
+            for (std::size_t i = 0; i < minidayz::items::ui::kEquipment.size(); ++i) {
+                // Actual original frame dimensions, not stretched equal cards:
+                // coat/vest 91x62, backpack/satchel 216x62, inventory 57x54.
+                const auto& card=minidayz::items::ui::kEquipment[i];
+                const float x=static_cast<float>(card.x);
+                const float y=static_cast<float>(card.y);
+                const float w=static_cast<float>(card.w);
+                const float h=static_cast<float>(card.h);
+                const auto& art=
+                    i==1 ? minidayz::stage1::kOriginalEquipmentCoatArt
+                    : i==2 ? minidayz::stage1::kOriginalEquipmentVestArt
+                    : i==5 ? minidayz::stage1::kOriginalEquipmentBackpackArt
+                    : i==6 ? minidayz::stage1::kOriginalEquipmentSatchelArt
                     : minidayz::stage1::kOriginalInventoryCardArt;
-                if (!ui_art(frame, x, y, 76.0f, 36.0f,0.24f))
-                    renderer.draw_solid_rect(x, y, 76.0f, 36.0f,
-                                             C2D_Color32(125, 111, 84, 255),0.24f);
-                if(drag_equipped_source_slot_==static_cast<int>(i)){
-                    // Show the original card being dragged; highlight only
-                    // this source slot and never replace all inventory tiles.
-                    const auto border=C2D_Color32(229,185,83,255);
-                    renderer.draw_solid_rect(x,y,76.0f,2.0f,border,0.71f);
-                    renderer.draw_solid_rect(x,y+34.0f,76.0f,2.0f,border,0.71f);
+                // The original held weapon is in its own slot. The source
+                // inventory-card image is square, so never stretch it 56x34.
+                if(i==4){
+                    renderer.draw_solid_rect(x,y,w,h,
+                        C2D_Color32(131,118,91,255),0.24f);
+                    (void)ui_art(minidayz::stage1::kOriginalSlotArt,
+                                 x+13.0f,y+2.0f,30.0f,30.0f,0.27f);
+                } else if(!ui_art(art,x,y,w,h,0.24f)) {
+                    renderer.draw_solid_rect(x,y,w,h,
+                        C2D_Color32(146,130,99,255),0.24f);
                 }
-                const auto item_id =
-                    i == 5 ? inventory_.equipped_backpack()
-                    : i == 6 ? inventory_.equipped_satchel()
-                    : equipment_.equipped(static_cast<minidayz::items::EquipmentSlot>(i));
-                const auto condition =
-                    i == 5 ? inventory_.equipped_backpack_condition()
-                    : i == 6 ? inventory_.equipped_satchel_condition()
+                if(drag_equipped_source_slot_==static_cast<int>(i)){
+                    const auto gold=C2D_Color32(229,185,83,255);
+                    renderer.draw_solid_rect(x,y,w,2.0f,gold,0.77f);
+                    renderer.draw_solid_rect(x,y+h-2.0f,w,2.0f,gold,0.77f);
+                }
+                const auto item_id=
+                    i==5 ? inventory_.equipped_backpack()
+                    : i==6 ? inventory_.equipped_satchel()
+                    : equipment_.equipped(
+                        static_cast<minidayz::items::EquipmentSlot>(i));
+                const auto condition=
+                    i==5 ? inventory_.equipped_backpack_condition()
+                    : i==6 ? inventory_.equipped_satchel_condition()
                     : equipment_.snapshot().conditions[i];
-                if (item_id != 0) {
-                    (void)renderer.draw_item_icon(item_id, x + 17.0f,
-                                                  y + 18.0f, 29.0f, 29.0f);
-                    const auto fraction = i < 5
-                        ? equipment_.fraction_snapshot().fractional_loss[i] : 0u;
-                    const float exact_condition =
-                        static_cast<float>(condition) -
-                        static_cast<float>(fraction) / 100.0f;
-                    const char* source_name = minidayz::items::source_item_name(item_id);
-                    if (source_name && *source_name) {
-                        char short_name[15]{};
-                        std::snprintf(short_name, sizeof(short_name),
-                                      "%.13s", source_name);
-                        renderer.draw_text(short_name, x + 34.0f, y + 8.0f, 0.17f);
-                    } else {
-                        renderer.draw_text(equipment_labels[i],
-                                           x + 34.0f, y + 8.0f, 0.19f);
-                    }
-                    // Original parchment cards show the actual item
-                    // Heat and Armor properties, not only its condition.
-                    // Values come from source item definitions; vests do
-                    // not contribute to the original warmth expression.
-                    minidayz::items::SourceItemProtection effects{};
-                    if(i<4 && minidayz::items::source_item_protection(
-                            item_id,effects)){
-                        const float armor=i==0?effects.helmet:
-                            i==1?effects.outerwear:
-                            i==2?effects.vest:effects.pants;
-                        const float warmth=i==2?0.0f:effects.warmth;
-                        char properties[36]{};
-                        if(warmth!=0.0f && armor!=0.0f)
-                            std::snprintf(properties,sizeof(properties),
-                                "H%+.0f A%+.0f",
-                                static_cast<double>(warmth),
-                                static_cast<double>(armor));
-                        else if(warmth!=0.0f)
-                            std::snprintf(properties,sizeof(properties),
-                                "HEAT %+.0f",static_cast<double>(warmth));
-                        else if(armor!=0.0f)
-                            std::snprintf(properties,sizeof(properties),
-                                "ARMOR %+.0f",static_cast<double>(armor));
-                        if(properties[0])
-                            renderer.draw_text(properties,x+34.0f,y+17.0f,0.16f);
-                    }
+                const float icon_size=i==1||i==2?34.0f:
+                    i==0||i==3?31.0f:26.0f;
+                const float icon_x=x+(i==1||i==2?18.0f:
+                    i==0||i==3?w*0.5f:16.0f);
+                const float icon_y=y+(i==1||i==2?30.0f:
+                    i==0||i==3?25.0f:17.0f);
+                if(item_id!=0){
+                    (void)renderer.draw_item_icon(item_id,
+                        icon_x,icon_y,icon_size,icon_size,0.86f);
+                    const auto fraction=i<5
+                        ? equipment_.fraction_snapshot().fractional_loss[i]:0u;
+                    const float exact_condition=static_cast<float>(condition)-
+                        static_cast<float>(fraction)/100.0f;
                     char durability[16]{};
-                    std::snprintf(durability, sizeof(durability), "%.0f%%",
-                                  static_cast<double>(exact_condition));
-                    renderer.draw_text(durability, x + 34.0f, y + 25.0f, 0.18f);
-                    renderer.draw_solid_rect(x + 34.0f, y + 32.0f,
-                                             38.0f, 2.0f,
-                                             C2D_Color32(44, 40, 30, 255));
-                    renderer.draw_solid_rect(x + 34.0f, y + 32.0f,
-                        38.0f * std::clamp(exact_condition / 100.0f, 0.0f, 1.0f),
-                        2.0f, C2D_Color32(177, 146, 79, 255));
-                } else {
-                    // The original game shows equipment silhouettes on
-                    // parchment cards. Use only source PNG-backed icons.
-                    const auto& empty_icon =
-                        i == 0 ? minidayz::stage1::kOriginalHelmetPlaceholderArt
-                        : i == 1 ? minidayz::stage1::kOriginalOuterwearPlaceholderArt
-                        : i == 2 ? minidayz::stage1::kOriginalVestPlaceholderArt
-                        : i == 3 ? minidayz::stage1::kOriginalPantsPlaceholderArt
-                        : i == 5 ? minidayz::stage1::kOriginalBackpackPlaceholderArt
+                    std::snprintf(durability,sizeof(durability),"%.0f%%",
+                        static_cast<double>(exact_condition));
+                    const bool long_coat=i==1||i==2;
+                    if(long_coat){
+                        // In the original inventory the jacket and vest
+                        // show condition and separate armor/warmth lines.
+                        renderer.draw_text(durability,x+45.0f,y+9.0f,0.25f);
+                        minidayz::items::SourceItemProtection effects{};
+                        if(minidayz::items::source_item_protection(
+                            item_id,effects)){
+                            const float armor=i==1
+                                ? effects.outerwear:effects.vest;
+                            if(effects.warmth!=0.0f && i==1){
+                                char heat[24]{};
+                                std::snprintf(heat,sizeof(heat),"HEAT %+.0f",
+                                    static_cast<double>(effects.warmth));
+                                renderer.draw_text(heat,x+43.0f,y+26.0f,0.22f);
+                            }
+                            if(armor!=0.0f){
+                                char armor_text[24]{};
+                                std::snprintf(armor_text,sizeof(armor_text),
+                                    "ARMOR %+.0f",static_cast<double>(armor));
+                                renderer.draw_text(armor_text,x+43.0f,y+41.0f,0.22f);
+                            }
+                        }
+                    } else if(i==0||i==3) {
+                        renderer.draw_text(durability,x+16.0f,y+41.0f,0.23f);
+                    } else {
+                        const char* name=minidayz::items::source_item_name(item_id);
+                        renderer.draw_text(name&&*name?name:equipment_labels[i],
+                                           x+34.0f,y+7.0f,0.18f);
+                        renderer.draw_text(durability,x+34.0f,y+20.0f,0.22f);
+                    }
+                }else{
+                    const auto& empty_icon=
+                        i==0 ? minidayz::stage1::kOriginalHelmetPlaceholderArt
+                        : i==1 ? minidayz::stage1::kOriginalOuterwearPlaceholderArt
+                        : i==2 ? minidayz::stage1::kOriginalVestPlaceholderArt
+                        : i==3 ? minidayz::stage1::kOriginalPantsPlaceholderArt
+                        : i==5 ? minidayz::stage1::kOriginalBackpackPlaceholderArt
                         : minidayz::stage1::kOriginalSlotArt;
-                    if(empty_icon.object==65535 ||
-                       !ui_art(empty_icon,x+5.0f,y+5.0f,25.0f,25.0f,0.82f))
+                    if(empty_icon.object!=65535)
+                        (void)ui_art(empty_icon,icon_x-icon_size*0.5f,
+                            icon_y-icon_size*0.5f,icon_size,icon_size,0.82f);
+                    if(i!=0&&i!=3)
                         renderer.draw_text(equipment_labels[i],
-                                           x + 9.0f, y + 11.0f, 0.25f);
-                    else
-                        renderer.draw_text(equipment_labels[i],
-                                           x + 36.0f, y + 12.0f, 0.19f);
+                            x+(i==1||i==2?43.0f:34.0f),y+8.0f,0.20f);
                 }
             }
             static constexpr const char* actions[] = {
@@ -1293,9 +1295,11 @@ public:
             };
             for (int i = 0; i < 5; ++i) {
                 const float x = static_cast<float>(i * 64);
-                renderer.draw_solid_rect(x + 1.0f, 115.0f, 62.0f, 11.0f,
-                                         C2D_Color32(90, 76, 55, 255));
-                renderer.draw_text(actions[i], x + 13.0f, 117.0f, 0.27f);
+                renderer.draw_solid_rect(x+1.0f,
+                    static_cast<float>(minidayz::items::ui::kActions.y),
+                    62.0f,13.0f,C2D_Color32(90,76,55,255),0.61f);
+                renderer.draw_text(actions[i],x+13.0f,
+                    static_cast<float>(minidayz::items::ui::kActions.y+3),0.27f);
             }
         }
         if (perks_open_) {
