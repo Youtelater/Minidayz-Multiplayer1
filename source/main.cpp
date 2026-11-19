@@ -183,6 +183,16 @@ public:
             return;
         }
         if (menu_active_) {
+            // Manic Emu can forward the launcher A/X press into the new
+            // process. Do not silently start a world before the user has
+            // seen the menu, released controls and made a fresh selection.
+            const bool menu_controls_held =
+                (input.held & (KEY_A|KEY_X|KEY_L|KEY_R|KEY_TOUCH))!=0 ||
+                input.touching;
+            if (!boot_input_gate_.update(dt,menu_controls_held)) {
+                touch_down_=input.touching;
+                return;
+            }
             // Original player skins have their own Construct sprite objects.
             // L/R or touching the bottom-screen skin selector cycles the
             // actual original texture, never a recolored default sprite.
@@ -240,12 +250,16 @@ public:
             }
             if (restart) start_new_game();
             else if (to_menu) {
-                if (death_saved_) menu_active_ = true;
+                if (death_saved_) {
+                    menu_active_ = true;
+                    boot_input_gate_.reset();
+                }
                 else {
                     death_saved_ = write_scene_save();
                     if (death_saved_) {
                         has_saved_game_ = true;
                         menu_active_ = true;
+                        boot_input_gate_.reset();
                     }
                 }
             }
@@ -2128,6 +2142,7 @@ private:
     bool world_ready_{};
     bool npc_ready_{};
     bool menu_active_{true};
+    minidayz::menu::StartInputGate boot_input_gate_{};
     bool paused_{};
     bool death_saved_{};
     bool pause_save_feedback_{};
