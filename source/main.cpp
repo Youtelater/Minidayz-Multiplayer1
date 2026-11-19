@@ -986,7 +986,7 @@ public:
                     selected_inventory_slot_ = drag_target_slot_;
             } else if (drag_source_slot_ >= 0 &&
                        drag_target_slot_ == drag_source_slot_ &&
-                       tap_was_selected_) {
+                       tap_was_selected_ && !drag_moved_) {
                 // Touch activates the already-selected original primary Use
                 // effect, or deploys the original civilian tent.
                 const auto source = static_cast<std::size_t>(drag_source_slot_);
