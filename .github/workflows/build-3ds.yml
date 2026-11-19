@@ -60,6 +60,12 @@ jobs:
             tests/boot_menu_tests.cpp -o /tmp/minidayz_boot_menu_tests
           /tmp/minidayz_boot_menu_tests
 
+      - name: Verify original source inventory art and touch dragging
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_original_inventory_ui.py
+
       - name: Verify original spawning and low-FPS performance regressions
         shell: bash
         run: |
