@@ -49,6 +49,11 @@ assert "if(!has_saved_game_)break;" in main
 assert "menu_achieves_bg-sheet0.png" in main
 assert "options_menu-sheet0.png" in main
 assert "boot_input_gate_.update" in main
+# Source descriptions contain real newline characters. A multi-character
+# C++ literal '\\\\n' compares the wrong value and can break text wrapping.
+assert "cursor[count]!='\\n'" in main
+assert "cursor[count]!='\\\\n'" not in main
+assert "char page_label[48]{};" in main
 print("PASS: original Menu_Events group provenance and source-based 3DS menu UI")
 print("ORIGINAL MENU EVENT GROUPS:",json.dumps(
     {key:groups[key] for key in sorted(required)},sort_keys=True))
