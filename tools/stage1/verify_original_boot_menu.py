@@ -56,6 +56,10 @@ assert "kSkinNext{165, 174, 302, 207}" in menu
 assert "skin_touch_action(" in main and "advance_skin(" in main
 assert "menu_bitmap_font.hpp" in engine and "ui_font_glyph" in engine
 assert "if(index==1 && depth>=0.5f)depth=0.45f" in engine, "Wooden buttons obscured by solid panel"
+assert "if(screen==GFX_TOP)" in engine, "Bottom-screen menu must never scroll with the world"
+assert "C2D_ViewTranslate(-camera_x_,-camera_y_)" in engine
+assert "if(!debug_ready_||!value" not in engine, "Text cannot disappear when emulator system font is unavailable"
+assert "void Renderer::draw_text" in engine and "menu::ui_font_glyph" in engine
 assert "WorldPreviewScene scene(has_saved_game ? &restored : nullptr);" in main
 assert "engine.set_scene(&scene)" in main
 print("PASS: original root Construct artwork bundled, scene starts on menu, "
