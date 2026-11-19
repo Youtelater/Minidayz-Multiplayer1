@@ -55,7 +55,10 @@ assert "kSkinPrevious{18, 174, 155, 207}" in menu
 assert "kSkinNext{165, 174, 302, 207}" in menu
 assert "skin_touch_action(" in main and "advance_skin(" in main
 assert "menu_bitmap_font.hpp" in engine and "ui_font_glyph" in engine
-assert "if(index==1 && depth>=0.5f)depth=0.45f" in engine, "Wooden buttons obscured by solid panel"
+assert "if(index==1 && depth<=0.5f)depth=0.75f" in engine, "Wooden button depth must be in front"
+assert "C2D_AlignLeft,x,y,0.90f" in engine, "Menu text must render in foreground"
+assert "0.0f,0.0f,320.0f,240.0f,0.05f" in main, "Menu background must render behind buttons"
+assert "boot_input_gate_.update" in main, "Startup launcher input must not auto-start the world"
 assert "if(screen==GFX_TOP)" in engine, "Bottom-screen menu must never scroll with the world"
 assert "C2D_ViewTranslate(-camera_x_,-camera_y_)" in engine
 assert "if(!debug_ready_||!value" not in engine, "Text cannot disappear when emulator system font is unavailable"
