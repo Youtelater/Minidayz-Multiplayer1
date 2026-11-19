@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <vector>
 
 namespace minidayz::terrain {
@@ -38,9 +39,11 @@ public:
             if(!building&&!barrier)continue;
             // Conservative circumscribed AABB covers every rotation and
             // hotspot, without producing false negatives at the border.
-            const float center_x=p->x+(0.5f-p->origin_x)*p->width;
-            const float center_y=p->y+(0.5f-p->origin_y)*p->height;
-            const float radius=0.5f*std::hypot(p->width,p->height);
+            const float center_x=p->x;
+            const float center_y=p->y;
+            // Rotation is around the Construct hotspot, not the centre.
+            // hypot(w,h) encloses every possible hotspot-relative corner.
+            const float radius=std::hypot(p->width,p->height);
             const int x0=std::clamp(static_cast<int>(
                 std::floor((center_x-radius)/kCell)),0,cols_-1);
             const int y0=std::clamp(static_cast<int>(
