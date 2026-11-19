@@ -55,3 +55,9 @@ For each row, record: source event UID/file and branch conditions; C++ function 
 - Exposed a SELECT-toggle overlay with **uncapped measured FPS**, frame milliseconds and runtime sprite-sheet reloads for diagnosis in Manic Emu.
 - Added source item Heat/Armor readouts to worn-item parchment cards. The full original inventory interaction design is still unverified and not signed off.
 - **None of these fixes proves original behavioral equivalence until a new emulator video and performance trace confirm them.**
+
+## Map / minimap feature (November 19, 2026)
+- **Original source evidence:** `Game_events -> Map generation -> MiniMap_legend` contains seven event nodes (see `docs/STAGE1_MAP_GENERATION_AUDIT.md`). Original assets include `minimap_tile-sheet0.png`, `minimap_mark-sheet0.png`, `minimap_player-sheet0.png`, `minimap_hint-sheet0.png` and `minimap_dragger-sheet0.png`.
+- **Native integration:** `Y` or the `MAP` touchscreen label opens a map on the **320x240 bottom screen**. It reads the live generated `WorldGrid` and world bounds, displays source road Array codes 12/13/14, source POI categories, a live `X` at the player position, and uses the original minimap background/marker/player artwork when available. `Y`, `B` or bottom touch closes it.
+- **Not identical yet:** This is a source-data-backed map preview, **not** a verified translation of all original minimap discovery/fog-of-war, panning, zoom, labels, world markers, touch gestures and event timing. These behaviors must be traced from the original Construct `MiniMap_legend` and GUI event groups before parity sign-off.
+- **Build coverage:** `tests/source_map_overlay_tests.cpp` checks road/POI codes and world-to-map position; the 3DS build workflow runs the native test.
