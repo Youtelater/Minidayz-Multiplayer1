@@ -73,6 +73,7 @@ public:
           world_level_(restored ? restored->world_level : 0),
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
+        menu_selection_=minidayz::menu::default_selection(has_saved_game_);
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
         if (restored && !inventory_.restore_with_satchel(restored->inventory, restored->satchel))
@@ -195,51 +196,109 @@ public:
             return;
         }
         if (menu_active_) {
-            // Manic Emu can forward the launcher A/X press into the new
-            // process. Do not silently start a world before the user has
-            // seen the menu, released controls and made a fresh selection.
-            const bool menu_controls_held =
-                (input.held & (KEY_A|KEY_X|KEY_L|KEY_R|KEY_TOUCH))!=0 ||
+            // Ignore a stale launcher/overlay A/X press until all boot
+            // controls have been released; a new press is then required.
+            const bool menu_controls_held=
+                (input.held & (KEY_A|KEY_B|KEY_X|KEY_Y|KEY_L|
+                               KEY_R|KEY_TOUCH|KEY_DUP|KEY_DDOWN))!=0 ||
                 input.touching;
-            if (!boot_input_gate_.update(dt,menu_controls_held)) {
+            if(!boot_input_gate_.update(dt,menu_controls_held)){
                 touch_down_=input.touching;
                 return;
             }
-            // Original player skins have their own Construct sprite objects.
-            // L/R or touching the bottom-screen skin selector cycles the
-            // actual original texture, never a recolored default sprite.
-            if ((input.pressed & KEY_L) != 0)
-                selected_skin_ = minidayz::menu::advance_skin(
+            const bool tap=input.touching && !touch_down_;
+            touch_down_=input.touching;
+            const auto go_main=[&]()noexcept {
+                menu_page_=minidayz::menu::BootPage::main;
+                menu_selection_=minidayz::menu::default_selection(has_saved_game_);
+            };
+            if(menu_page_!=minidayz::menu::BootPage::main){
+                if((input.pressed & KEY_B) ||
+                    (tap && minidayz::menu::kSubpageBack.contains(
+                        input.touch.px,input.touch.py))){
+                    go_main();
+                    return;
+                }
+                if(menu_page_==minidayz::menu::BootPage::character){
+                    const auto choose_skin=[&](minidayz::menu::SkinAction action)noexcept {
+                        selected_skin_=minidayz::menu::advance_skin(
+                            selected_skin_,minidayz::stage1::kOriginalPlayerSkinCount,
+                            action);
+                    };
+                    if(input.pressed & KEY_L)
+                        choose_skin(minidayz::menu::SkinAction::previous);
+                    if(input.pressed & KEY_R)
+                        choose_skin(minidayz::menu::SkinAction::next);
+                    if(tap)choose_skin(minidayz::menu::skin_touch_action(
+                        input.touch.px,input.touch.py));
+                    if(input.pressed & KEY_A)go_main();
+                } else if(menu_page_==minidayz::menu::BootPage::options){
+                    if((input.pressed & KEY_A) ||
+                        (tap && input.touch.py>=70 && input.touch.py<=117)){
+                        stage2_audio_.set_muted(!stage2_audio_.muted());
+                        if(!stage2_audio_.muted() && world_ready_){
+                            stage2_audio_.set_environment_ambience(
+                                !day_night_.day_mode(),world_level_==4);
+                            if(rain_timer_.active())
+                                stage2_audio_.start_rain_loop(
+                                    kSourceDefaultRainsLevel==2);
+                        }
+                    }
+                }
+                return;
+            }
+            if(input.pressed & KEY_DUP)
+                menu_selection_=minidayz::menu::move_selection(
+                    menu_selection_,-1,has_saved_game_);
+            if(input.pressed & KEY_DDOWN)
+                menu_selection_=minidayz::menu::move_selection(
+                    menu_selection_,1,has_saved_game_);
+            if(input.pressed & KEY_L)
+                selected_skin_=minidayz::menu::advance_skin(
                     selected_skin_,minidayz::stage1::kOriginalPlayerSkinCount,
                     minidayz::menu::SkinAction::previous);
-            if ((input.pressed & KEY_R) != 0)
-                selected_skin_ = minidayz::menu::advance_skin(
+            if(input.pressed & KEY_R)
+                selected_skin_=minidayz::menu::advance_skin(
                     selected_skin_,minidayz::stage1::kOriginalPlayerSkinCount,
                     minidayz::menu::SkinAction::next);
-            // The game always boots here, even when a saved run exists.
-            // A Continue tap/press starts loading only after selection.
-            auto action = minidayz::menu::button_action(
-                (input.pressed & KEY_A) != 0,
-                (input.pressed & KEY_X) != 0, has_saved_game_);
-            const bool menu_tap = input.touching && !touch_down_;
-            touch_down_ = input.touching;
-            if (menu_tap) {
-                const auto skin_action=minidayz::menu::skin_touch_action(
-                    input.touch.px,input.touch.py);
-                if(skin_action!=minidayz::menu::SkinAction::none)
-                    selected_skin_=minidayz::menu::advance_skin(
-                        selected_skin_,minidayz::stage1::kOriginalPlayerSkinCount,
-                        skin_action);
-                else {
-                    const auto tapped=minidayz::menu::touch_action(
-                        input.touch.px,input.touch.py,has_saved_game_);
-                    if(tapped!=minidayz::menu::BootAction::none)action=tapped;
-                }
+            if(input.pressed & KEY_X)
+                menu_page_=minidayz::menu::BootPage::character;
+            if(input.pressed & KEY_Y)
+                menu_page_=minidayz::menu::BootPage::multiplayer;
+            auto chosen=minidayz::menu::MenuEntry::none;
+            if((input.pressed & KEY_A) &&
+                menu_page_==minidayz::menu::BootPage::main)
+                chosen=menu_selection_;
+            if(tap){
+                if(minidayz::menu::kCharacterButton.contains(
+                    input.touch.px,input.touch.py))
+                    menu_page_=minidayz::menu::BootPage::character;
+                else if(minidayz::menu::kMultiplayerButton.contains(
+                    input.touch.px,input.touch.py))
+                    menu_page_=minidayz::menu::BootPage::multiplayer;
+                else if(menu_page_==minidayz::menu::BootPage::main)
+                    chosen=minidayz::menu::main_entry_at(
+                        input.touch.px,input.touch.py);
             }
-            if (action == minidayz::menu::BootAction::new_game)
+            switch(chosen){
+            case minidayz::menu::MenuEntry::continue_game:
+                if(has_saved_game_)begin_world_generation();
+                break;
+            case minidayz::menu::MenuEntry::new_game:
                 start_new_game();
-            else if (action == minidayz::menu::BootAction::continue_game)
-                begin_world_generation();
+                break;
+            case minidayz::menu::MenuEntry::achievements:
+                menu_page_=minidayz::menu::BootPage::achievements;
+                break;
+            case minidayz::menu::MenuEntry::unlocks:
+                menu_page_=minidayz::menu::BootPage::unlocks;
+                break;
+            case minidayz::menu::MenuEntry::options:
+                menu_page_=minidayz::menu::BootPage::options;
+                break;
+            case minidayz::menu::MenuEntry::none:
+                break;
+            }
             return;
         }
         // Once the original survival rules kill the player, stop gameplay
@@ -2324,6 +2383,8 @@ private:
     bool npc_ready_{};
     bool menu_active_{true};
     minidayz::menu::StartInputGate boot_input_gate_{};
+    minidayz::menu::BootPage menu_page_{minidayz::menu::BootPage::main};
+    minidayz::menu::MenuEntry menu_selection_{minidayz::menu::MenuEntry::new_game};
     bool paused_{};
     bool death_saved_{};
     bool pause_save_feedback_{};
