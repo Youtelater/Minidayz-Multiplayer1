@@ -169,6 +169,15 @@ jobs:
             tests/mp_item_reference_tests.cpp -o /tmp/minidayz_mp_item_reference
           /tmp/minidayz_mp_item_reference
 
+      - name: Verify original menu achievements and character unlock text
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/build_menu_localization.py
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/menu_source_catalog_tests.cpp -o /tmp/minidayz_menu_source
+          /tmp/minidayz_menu_source
+
       - name: Verify map roads, source locations and player X marker
         shell: bash
         run: |
