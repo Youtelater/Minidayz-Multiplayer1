@@ -40,6 +40,16 @@ for original_name, converted in original_menu.items():
     assert atlas.is_file() and atlas.stat().st_size > 32, converted
     assert f"romfs:/gfx/{converted}" in engine, converted
 
+for filename in ("menu_achieves_bg-sheet0.png","options_menu-sheet0.png"):
+    assert filename in authored, f"Not in ROOT original Construct images: {filename}"
+    assert (ROOT/"assets/gfx"/filename).is_file(), filename
+    assert (ROOT/"romfs/gfx"/filename.replace("-","_").replace(".png",".t3x")).is_file(), filename
+    assert f'"{filename}"' in main, f"Original {filename} artwork not used by menu"
+assert "restore_continue_from_disk()" in main, "Continue must reload save from disk"
+assert "generation_failed_" in main and "WORLD LOAD FAILED" in main, "Show generation failure"
+assert "menu_detail_open_" in main and "menu_detail_scroll_" in main, "Original achievement/unlock descriptions must be readable"
+assert "kSourceAchievementCount" in main and "kSourceUnlockCount" in main
+
 assert "bool menu_active_{true};" in main, "Scene must start on boot menu"
 constructor = main.split("explicit WorldPreviewScene(", 1)[1].split(
     "bool write_scene_save()", 1)[0]
