@@ -43,6 +43,8 @@
 #include <cstdio>
 #include <cstring>
 #include <tuple>
+#include <memory>
+#include <new>
 #include <sys/stat.h>
 
 namespace {
@@ -136,6 +138,49 @@ public:
         source_temperature_initialized_ = false;
         last_source_warmth_ = equipment_.temperature_offset();
         last_source_snowborn_level_ = perks_.level(minidayz::items::SourcePerk::snowborn);
+    }
+
+    // Continue MUST load the persisted record at selection time.
+    // Without this, attempting a new world first mutates the in-memory
+    // player/seed and a later Continue incorrectly resumes the new run.
+    bool restore_continue_from_disk() noexcept {
+        std::unique_ptr<SavedGame> restored(new(std::nothrow) SavedGame{});
+        if(!restored || !load_saved_game(*restored)) {
+            has_saved_game_=false;
+            menu_selection_=minidayz::menu::default_selection(false);
+            return false;
+        }
+        world_seed_=restored->seed;
+        world_level_=restored->world_level;
+        player_=minidayz::PlayerSystem(restored->player);
+        player_.set_source_skin(
+            minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
+        if(!inventory_.restore_with_satchel(
+                restored->inventory,restored->satchel))return false;
+        if(!equipment_.restore_with_fraction(
+                restored->equipment,restored->equipment_fraction))return false;
+        if(!ground_loot_.restore(restored->ground_loot))return false;
+        if(!tents_.restore(restored->tents))return false;
+        if(!stashes_.restore(restored->stashes))return false;
+        if(!day_night_.restore(restored->source_time))return false;
+        if(!rain_timer_.restore(restored->source_rain))return false;
+        if(!loot_timer_.restore(restored->source_loot))return false;
+        if(!item_use_runtime_.restore(restored->pending_item_use))return false;
+        if(!perks_.restore(restored->perks))return false;
+        pending_craft_recipe_=restored->pending_craft.recipe_index;
+        pending_craft_seconds_=restored->pending_craft.seconds_remaining;
+        crafting_feedback_=pending_craft_recipe_<minidayz::items::kSourceCraftRecipeCount
+            ?CraftFeedback::pending:CraftFeedback::none;
+        new_game_generation_=false;
+        travel_generation_=false;
+        source_temperature_initialized_=false;
+        last_source_warmth_=equipment_.temperature_offset();
+        last_source_snowborn_level_=
+            perks_.level(minidayz::items::SourcePerk::snowborn);
+        inventory_page_=0;
+        selected_inventory_slot_=-1;
+        paused_=false;
+        return true;
     }
 
     void persist_menu_settings() noexcept {
@@ -351,7 +396,10 @@ public:
             }
             switch(chosen){
             case minidayz::menu::MenuEntry::continue_game:
-                if(has_saved_game_)begin_world_generation();
+                if(has_saved_game_ && restore_continue_from_disk())
+                    begin_world_generation();
+                else
+                    generation_failed_=true;
                 break;
             case minidayz::menu::MenuEntry::new_game:
                 // The original source does not start world generation
