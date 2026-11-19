@@ -695,7 +695,8 @@ bool Renderer::draw_source_animation(std::uint16_t object,const char* animation_
  return false;
 }
 bool Renderer::draw_item_icon(std::uint16_t item_id,float center_x,float center_y,
-                              float max_width,float max_height,float depth) noexcept {
+                              float max_width,float max_height,float depth,
+                              float rotation) noexcept {
  std::size_t first=0, last=items::kItemSpriteDefinitionCount;
  while(first<last) {
   const std::size_t middle=first+(last-first)/2;
@@ -725,9 +726,14 @@ bool Renderer::draw_item_icon(std::uint16_t item_id,float center_x,float center_
    if(frame==end||frame->object!=object) return false;
  }
  if(max_width<=0.0f||max_height<=0.0f) return false;
- const float scale=std::min(max_width/frame->width,max_height/frame->height);
+ // The source gui_firearm slot rotates horizontal rifle artwork by 90°;
+ // use rotated frame bounds when fitting, not a squeezed/warped sprite.
+ const bool quarter_turn=std::fabs(std::fabs(rotation)-1.5707963268f)<0.01f;
+ const float natural_w=quarter_turn?frame->height:frame->width;
+ const float natural_h=quarter_turn?frame->width:frame->height;
+ const float scale=std::min(max_width/natural_w,max_height/natural_h);
  return draw_source_sprite(object,frame->animation,frame->frame,
-                           center_x,center_y,scale,scale,depth);
+                           center_x,center_y,scale,scale,depth,rotation);
 }
 bool Engine::initialize() noexcept {
  gfxInitDefault();
