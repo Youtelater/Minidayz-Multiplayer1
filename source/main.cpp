@@ -1607,7 +1607,7 @@ public:
         // image proportions and shows its original item sprite/condition.
         if (!storage_open_ && !crafting_open_ && !perks_open_ && !details_open_) {
             static constexpr const char* equipment_labels[] = {
-                "HELM", "COAT", "VEST", "PANTS", "HAND", "PACK", "SATCH"
+                "HELM", "COAT", "VEST", "PANTS", "HAND", "PACK", "SATCH", "GUN"
             };
             for (std::size_t i = 0; i < minidayz::items::ui::kEquipment.size(); ++i) {
                 // Actual original frame dimensions, not stretched equal cards:
@@ -1622,15 +1622,34 @@ public:
                     : i==2 ? minidayz::stage1::kOriginalEquipmentVestArt
                     : i==5 ? minidayz::stage1::kOriginalEquipmentBackpackArt
                     : i==6 ? minidayz::stage1::kOriginalEquipmentSatchelArt
+                    : i==7 ? minidayz::stage1::kOriginalEquipmentFirearmArt
                     : minidayz::stage1::kOriginalInventoryCardArt;
                 // The original held weapon is in its own slot. The source
                 // inventory-card image is square, so never stretch it 56x34.
-                if(i==4){
+                if(i==7){
+                    // Original gui_firearm is 167x55. Construct rotates it
+                    // ninety degrees for the portrait rifle equipment card.
+                    const float scale=std::min(w/55.0f,h/167.0f);
+                    if(!renderer.draw_source_sprite(art.object,art.animation,
+                         art.frame,x+w*0.5f,y+h*0.5f,scale,scale,
+                         0.24f,1.5707963268f))
+                        renderer.draw_solid_rect(x,y,w,h,
+                            C2D_Color32(146,130,99,255),0.24f);
+                }else if(i==4 || i==3){
                     renderer.draw_solid_rect(x,y,w,h,
                         C2D_Color32(131,118,91,255),0.24f);
-                    (void)ui_art(minidayz::stage1::kOriginalSlotArt,
-                                 x+13.0f,y+2.0f,30.0f,30.0f,0.27f);
-                } else if(!ui_art(art,x,y,w,h,0.24f)) {
+                    if(i==4)
+                        (void)ui_art(minidayz::stage1::kOriginalSlotArt,
+                                     x+11.0f,y+2.0f,30.0f,30.0f,0.27f);
+                    else
+                        (void)ui_art(art,x+12.0f,y+1.0f,32.0f,32.0f,0.27f);
+                }else if(i==5 || i==6){
+                    // Source bags are 216x62. Fit within the smaller 3DS
+                    // toolbar cell WITHOUT stretching their native aspect.
+                    if(!ui_art(art,x,y+2.0f,w,w*62.0f/216.0f,0.24f))
+                        renderer.draw_solid_rect(x,y,w,h,
+                            C2D_Color32(146,130,99,255),0.24f);
+                }else if(!ui_art(art,x,y,w,h,0.24f)){
                     renderer.draw_solid_rect(x,y,w,h,
                         C2D_Color32(146,130,99,255),0.24f);
                 }
@@ -1648,18 +1667,23 @@ public:
                 const auto condition=
                     i==5 ? inventory_.equipped_backpack_condition()
                     : i==6 ? inventory_.equipped_satchel_condition()
-                    : equipment_.snapshot().conditions[i];
+                    : equipment_.snapshot().conditions[gear_index_for_card(static_cast<int>(i))];
                 const float icon_size=i==1||i==2?34.0f:
-                    i==0||i==3?31.0f:26.0f;
-                const float icon_x=x+(i==1||i==2?18.0f:
-                    i==0||i==3?w*0.5f:16.0f);
-                const float icon_y=y+(i==1||i==2?30.0f:
-                    i==0||i==3?25.0f:17.0f);
+                    i==0||i==3?31.0f:i==7?42.0f:26.0f;
+                const float icon_x=x+(i==7?w*0.5f:
+                    i==1||i==2?18.0f:i==0||i==3?w*0.5f:16.0f);
+                const float icon_y=y+(i==7?h*0.5f:
+                    i==1||i==2?30.0f:i==0?25.0f:i==3?16.0f:17.0f);
                 if(item_id!=0){
-                    (void)renderer.draw_item_icon(item_id,
-                        icon_x,icon_y,icon_size,icon_size,0.86f);
-                    const auto fraction=i<5
-                        ? equipment_.fraction_snapshot().fractional_loss[i]:0u;
+                    if(i==7)
+                        (void)renderer.draw_item_icon(item_id,icon_x,icon_y,
+                            42.0f,77.0f,0.86f,1.5707963268f);
+                    else
+                        (void)renderer.draw_item_icon(item_id,
+                            icon_x,icon_y,icon_size,icon_size,0.86f);
+                    const auto fraction=(i<5 || i==7)
+                        ? equipment_.fraction_snapshot().fractional_loss[
+                            gear_index_for_card(static_cast<int>(i))]:0u;
                     const float exact_condition=static_cast<float>(condition)-
                         static_cast<float>(fraction)/100.0f;
                     char durability[16]{};
@@ -1688,8 +1712,11 @@ public:
                                 renderer.draw_text(armor_text,x+43.0f,y+41.0f,0.22f);
                             }
                         }
+                    } else if(i==7){
+                        renderer.draw_text(durability,x+8.0f,y+h-14.0f,0.22f);
                     } else if(i==0||i==3) {
-                        renderer.draw_text(durability,x+16.0f,y+41.0f,0.23f);
+                        renderer.draw_text(durability,x+10.0f,
+                            y+(i==3?23.0f:41.0f),0.21f);
                     } else {
                         const char* name=minidayz::items::source_item_name(item_id);
                         renderer.draw_text(name&&*name?name:equipment_labels[i],
@@ -1709,7 +1736,8 @@ public:
                             icon_y-icon_size*0.5f,icon_size,icon_size,0.82f);
                     if(i!=0&&i!=3)
                         renderer.draw_text(equipment_labels[i],
-                            x+(i==1||i==2?43.0f:34.0f),y+8.0f,0.20f);
+                            i==7?x+9.0f:x+(i==1||i==2?43.0f:34.0f),
+                            y+8.0f,0.20f);
                 }
             }
             static constexpr const char* actions[] = {
