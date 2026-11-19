@@ -26,6 +26,11 @@ for label,code in (
         "menu text foreground","bitmap font foreground","menu wood foreground",
         "original floor background","original road over floor") else main
     assert code in source, f"3DS screen depth/input regression: {label}"
+# Opaque fallback panels must sit BEHIND the .05 menu-city art;
+# otherwise the menu background vanishes as soon as the depth order is fixed.
+assert "C2D_Color32(20,25,23,255),0.01f" in main
+assert "C2D_Color32(24, 34, 29, 255),0.01f" in main
+assert "float depth=0.5f" in (ROOT/"include/minidayz/engine.hpp").read_text(encoding="utf-8")
 assert "kSkinPrevious{18, 174, 155, 207}" in menu
 assert "kNewGameButton{18, 115, 302, 163}" in menu
 print("PASS: emulator-tested foreground/background depths and startup controls")
