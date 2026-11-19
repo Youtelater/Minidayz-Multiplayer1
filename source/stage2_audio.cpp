@@ -134,8 +134,22 @@ bool Stage2Audio::initialize() noexcept {
     return true;
 }
 
+void Stage2Audio::set_muted(bool value) noexcept {
+    if(muted_==value)return;
+    muted_=value;
+    if(muted_ && ndsp_ready_) {
+        for(std::size_t voice=0;voice<kClipCount;++voice) {
+            ndspChnWaveBufClear(static_cast<int>(voice));
+            ndspChnReset(static_cast<int>(voice));
+            waves_[voice]={};
+        }
+        ambient_variant_=-1;
+        weather_sample_variant_=-1;
+    }
+}
+
 void Stage2Audio::play(std::size_t which) noexcept {
-    if (!ndsp_ready_ || which>=kClipCount) return;
+    if (muted_ || !ndsp_ready_ || which>=kClipCount) return;
     const auto& clip=clips_[which];
     if (!clip.pcm || clip.frames==0) return;
     const int channel = static_cast<int>(which);
@@ -178,7 +192,7 @@ void Stage2Audio::play_backpack_zip() noexcept {
 }
 
 void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
-    if (!ndsp_ready_) return;
+    if (muted_ || !ndsp_ready_) return;
     // Original WAV sets are grouped by terrain in the Construct source.
     // Each NDSP footstep voice retains its own variant until the surface
     // actually changes, avoiding WAV reloads on every step.
@@ -212,7 +226,7 @@ void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
 }
 
 void Stage2Audio::play_item_pickup() noexcept {
-    if (!ndsp_ready_) return;
+    if (muted_ || !ndsp_ready_) return;
     const int variant=static_cast<int>(pickup_serial_++ & 1u);
     constexpr const char* paths[2]={"romfs:/wav/pick1.wav",
                                     "romfs:/wav/pick2.wav"};
