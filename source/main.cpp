@@ -1347,13 +1347,13 @@ public:
                     std::size_t wrapped_line=0;
                     int displayed=0;
                     while(*cursor && wrapped_line<menu_detail_scroll_+8){
-                        while(*cursor==' '||*cursor=='\\n'||*cursor=='\\r')
+                        while(*cursor==' '||*cursor=='\n'||*cursor=='\r')
                             ++cursor;
                         if(!*cursor)break;
                         char line[46]{};
                         std::size_t count=0,break_at=0;
-                        while(cursor[count] && cursor[count]!='\\n' &&
-                              cursor[count]!='\\r' && count<43){
+                        while(cursor[count] && cursor[count]!='\n' &&
+                              cursor[count]!='\r' && count<43){
                             if(cursor[count]==' ')break_at=count;
                             ++count;
                         }
@@ -2182,7 +2182,7 @@ public:
         }
         const std::size_t page_count =
             (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize;
-        char page_label[24]{};
+        char page_label[48]{};
         std::snprintf(page_label, sizeof(page_label), "<  BACKPACK  %u/%u  >",
             static_cast<unsigned>(inventory_page_ + 1),
             static_cast<unsigned>(page_count));
