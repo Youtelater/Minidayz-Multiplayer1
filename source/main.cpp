@@ -309,7 +309,12 @@ public:
         // B/Y or a lower-screen close tap returns to the backpack.
         // This screen is an adaptation of the original minimap/map display,
         // and MUST be compared to its Construct MiniMap_legend/GUI events.
-        if(input.pressed & KEY_Y) map_open_=!map_open_;
+        const bool map_button_tap=input.touching && !touch_down_ &&
+            input.touch.px>=258 && input.touch.py<14;
+        if((input.pressed & KEY_Y) || map_button_tap) {
+            map_open_=!map_open_;
+            if(map_button_tap)touch_down_=true;
+        }
         if(map_open_) {
             const bool tap=input.touching && !touch_down_;
             touch_down_=input.touching;
@@ -1069,6 +1074,9 @@ public:
                                      C2D_Color32(70, 60, 48, 255));
         }
         renderer.draw_solid_rect(6.0f, 6.0f, 308.0f, 25.0f, C2D_Color32(54, 68, 55, 255));
+        renderer.draw_solid_rect(258.0f,1.0f,56.0f,13.0f,
+            C2D_Color32(92,81,52,255),0.68f);
+        renderer.draw_text("Y MAP",267.0f,3.0f,0.27f);
         // Compact live player status meters. Values are normalized against
         // the preview caps above; exact source caps/rates remain under audit.
         const auto meter = [&](float x, float value, float maximum, u32 color) {
