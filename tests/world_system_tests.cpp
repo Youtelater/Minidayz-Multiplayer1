@@ -1,8 +1,12 @@
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/terrain_visible_index.hpp"
+#include "minidayz/terrain_obstacle_index.hpp"
 #include "minidayz/npc_system.hpp"
 
 #include <cassert>
+#include <algorithm>
+#include <vector>
 #include <cstdint>
 #include <cstdio>
 #include <initializer_list>
@@ -74,6 +78,25 @@ void test_original_map_layout_and_descriptors() {
     assert(world.seed() == seed);
     assert(world.bounds().width == minidayz::WorldSystem::kSourceMapWidth);
     assert(world.bounds().height == minidayz::WorldSystem::kSourceMapHeight);
+
+    // A 400x240 3DS frame must iterate only camera-visible source sprites,
+    // never all thousands of generated Map placements on every frame.
+    minidayz::terrain::VisibleSourcePlacementIndex visibility{};
+    visibility.rebuild(world);
+    std::vector<std::uint32_t> viewport{};
+    visibility.query(400.0f,4000.0f,400.0f,240.0f,viewport);
+    assert(viewport.size()<world.placement_count());
+    assert(std::is_sorted(viewport.begin(),viewport.end()));
+    for(std::size_t i=1;i<viewport.size();++i)
+        assert(viewport[i-1]!=viewport[i]);
+    for(const auto index:viewport)assert(world.placement(index));
+
+    // Likewise, player corner-collision queries must never scan every
+    // building in the original 36,850x20,000 world.
+    minidayz::terrain::SourceObstacleIndex collision{};
+    collision.rebuild(world);
+    assert(collision.candidates(600.0f,5000.0f).size()<
+           world.placement_count());
 
     // These counts come from the original Map layout and source spawn calls.
     assert(world.placement_count() >= 1250);
