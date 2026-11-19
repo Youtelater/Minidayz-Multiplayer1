@@ -86,6 +86,12 @@ jobs:
           set -euo pipefail
           python3 tools/stage1/audit_multiplayer_scripts.py
 
+      - name: Audit MP player inventory and equipment mappings
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/audit_mp_player_parity.py
+
       - name: Verify original spawning and low-FPS performance regressions
         shell: bash
         run: |
