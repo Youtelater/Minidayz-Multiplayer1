@@ -89,8 +89,9 @@ public:
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
         if (restored && !inventory_.restore_with_satchel(restored->inventory, restored->satchel))
             inventory_.clear();
-        if (restored && !equipment_.restore_with_fraction(
-                restored->equipment, restored->equipment_fraction))
+        if (restored && (!equipment_.restore_with_fraction(
+                restored->equipment, restored->equipment_fraction) ||
+                !equipment_.restore_quick_pistol(restored->quick_pistol)))
             equipment_.clear();
         if (restored && !ground_loot_.restore(restored->ground_loot))
             ground_loot_.clear();
@@ -158,7 +159,8 @@ public:
         if(!inventory_.restore_with_satchel(
                 restored->inventory,restored->satchel))return false;
         if(!equipment_.restore_with_fraction(
-                restored->equipment,restored->equipment_fraction))return false;
+                restored->equipment,restored->equipment_fraction) ||
+           !equipment_.restore_quick_pistol(restored->quick_pistol))return false;
         if(!ground_loot_.restore(restored->ground_loot))return false;
         if(!tents_.restore(restored->tents))return false;
         if(!stashes_.restore(restored->stashes))return false;
@@ -828,8 +830,10 @@ public:
                     ? inventory_.equipped_backpack()
                     : equipment_target==6
                         ? inventory_.equipped_satchel()
-                        : equipment_.equipped(
-                            gear_slot_for_card(equipment_target));
+                        : equipment_target==8
+                            ? equipment_.quick_pistol()
+                            : equipment_.equipped(
+                                gear_slot_for_card(equipment_target));
                 if(item_id!=0){
                     drag_equipped_source_slot_=equipment_target;
                     drag_target_equipment_slot_=equipment_target;
@@ -837,8 +841,11 @@ public:
                     // Source supports simultaneously worn rifle and melee.
                     // Selecting either equipment card makes it the active
                     // original player hands/weapon appearance.
-                    if(equipment_target==4 || equipment_target==7)
+                    if(equipment_target==8)active_quick_pistol_=true;
+                    else if(equipment_target==4 || equipment_target==7){
+                        active_quick_pistol_=false;
                         active_held_slot_=gear_slot_for_card(equipment_target);
+                    }
                     details_scroll_=0;
                 }else selected_equipment_slot_=-1;
                 selected_inventory_slot_=-1;
@@ -881,7 +888,8 @@ public:
             const int dy=input.touch.py-drag_start_y_;
             if(dx*dx+dy*dy>=36)drag_moved_=true;
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
-            if (equipment_target >= 0 && equipment_target < 8) {
+            if (equipment_target >= 0 &&
+                equipment_target < static_cast<int>(minidayz::items::ui::kEquipment.size())) {
                 drag_target_equipment_slot_ = equipment_target;
                 drag_target_slot_ = -1;
             } else {
@@ -915,6 +923,10 @@ public:
                     if(moved)stage2_audio_.play_backpack_zip();
                 }else if(source==6 && destination<minidayz::items::kInventorySlotCount){
                     moved=inventory_.unequip_satchel_to_slot(destination);
+                }else if(source==8 && destination<inventory_.capacity()){
+                    moved=equipment_.unequip_quick_pistol_to_inventory(
+                        inventory_,destination);
+                    if(moved)active_quick_pistol_=false;
                 }else if((source>=0 && (source<5 || source==7)) && destination<inventory_.capacity()){
                     moved=equipment_.unequip_to_inventory(
                         inventory_,gear_slot_for_card(source),
@@ -923,7 +935,8 @@ public:
                 if(moved){
                     selected_inventory_slot_=static_cast<int>(destination);
                     selected_equipment_slot_=-1;
-                    if(source<5 || source==7)stage2_audio_.play_equipment_drop();
+                    if(source<5 || source==7 || source==8)
+                        stage2_audio_.play_equipment_drop();
                 }
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
@@ -939,6 +952,16 @@ public:
                 if (inventory_.equip_satchel_from_slot(
                         static_cast<std::size_t>(drag_source_slot_)))
                     selected_inventory_slot_ = -1;
+            } else if (drag_source_slot_ >= 0 &&
+                       drag_target_equipment_slot_ == 8) {
+                // MP Drop_pistol is independent of the source rifle/melee slots.
+                // Accept only the exact handgun IDs from root mp_kit.js.
+                if(equipment_.equip_quick_pistol_from_inventory(
+                        inventory_,static_cast<std::size_t>(drag_source_slot_))){
+                    selected_inventory_slot_=-1;
+                    active_quick_pistol_=true;
+                    stage2_audio_.play_equipment_drop();
+                }
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ >= 0) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
                 const auto target = gear_slot_for_card(drag_target_equipment_slot_);
@@ -979,8 +1002,10 @@ public:
                 if (changed){
                     selected_inventory_slot_ = -1;
                     if(drag_target_equipment_slot_==4 ||
-                       drag_target_equipment_slot_==7)
+                       drag_target_equipment_slot_==7){
                         active_held_slot_=target;
+                        active_quick_pistol_=false;
+                    }
                 }
             } else if (drag_source_slot_ >= 0 && drag_target_slot_ >= 0 &&
                        drag_target_slot_ != drag_source_slot_) {
@@ -2731,6 +2756,7 @@ private:
         selected_inventory_slot_ = -1;
         selected_equipment_slot_=-1;
         active_held_slot_=minidayz::items::EquipmentSlot::hands;
+        active_quick_pistol_=false;
         drag_moved_=false;
         drag_source_slot_=-1;
         drag_equipped_source_slot_=-1;
@@ -2927,6 +2953,7 @@ private:
     int selected_equipment_slot_{-1};
     minidayz::items::EquipmentSlot active_held_slot_{
         minidayz::items::EquipmentSlot::hands};
+    bool active_quick_pistol_{};
     int drag_start_x_{};
     int drag_start_y_{};
     int drag_touch_x_{};
