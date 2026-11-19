@@ -187,12 +187,13 @@ public:
             // L/R or touching the bottom-screen skin selector cycles the
             // actual original texture, never a recolored default sprite.
             if ((input.pressed & KEY_L) != 0)
-                selected_skin_ = (selected_skin_ +
-                    minidayz::stage1::kOriginalPlayerSkinCount - 1) %
-                    minidayz::stage1::kOriginalPlayerSkinCount;
+                selected_skin_ = minidayz::menu::advance_skin(
+                    selected_skin_,minidayz::stage1::kOriginalPlayerSkinCount,
+                    minidayz::menu::SkinAction::previous);
             if ((input.pressed & KEY_R) != 0)
-                selected_skin_ = (selected_skin_ + 1) %
-                    minidayz::stage1::kOriginalPlayerSkinCount;
+                selected_skin_ = minidayz::menu::advance_skin(
+                    selected_skin_,minidayz::stage1::kOriginalPlayerSkinCount,
+                    minidayz::menu::SkinAction::next);
             // The game always boots here, even when a saved run exists.
             // A Continue tap/press starts loading only after selection.
             auto action = minidayz::menu::button_action(
@@ -201,17 +202,16 @@ public:
             const bool menu_tap = input.touching && !touch_down_;
             touch_down_ = input.touching;
             if (menu_tap) {
-                if (input.touch.py >= 184 && input.touch.py < 203) {
-                    const auto total=minidayz::stage1::kOriginalPlayerSkinCount;
-                    if(input.touch.px < 160)
-                        selected_skin_=(selected_skin_+total-1)%total;
-                    else
-                        selected_skin_=(selected_skin_+1)%total;
-                } else {
-                    const auto tapped = minidayz::menu::touch_action(
-                        input.touch.px, input.touch.py, has_saved_game_);
-                    if (tapped != minidayz::menu::BootAction::none)
-                        action = tapped;
+                const auto skin_action=minidayz::menu::skin_touch_action(
+                    input.touch.px,input.touch.py);
+                if(skin_action!=minidayz::menu::SkinAction::none)
+                    selected_skin_=minidayz::menu::advance_skin(
+                        selected_skin_,minidayz::stage1::kOriginalPlayerSkinCount,
+                        skin_action);
+                else {
+                    const auto tapped=minidayz::menu::touch_action(
+                        input.touch.px,input.touch.py,has_saved_game_);
+                    if(tapped!=minidayz::menu::BootAction::none)action=tapped;
                 }
             }
             if (action == minidayz::menu::BootAction::new_game)
@@ -856,43 +856,52 @@ public:
             return;
         }
         if (menu_active_) {
-            // Top screen carries the original logo; the original wooden
-            // menu buttons and labels belong on the 3DS touch screen.
-            renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
-                                     C2D_Color32(20, 25, 23, 255));
-            (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 320.0f, 240.0f, 0.95f);
-            renderer.draw_text("SELECT GAME", 18.0f, 20.0f, 0.48f);
-            const auto& cont = minidayz::menu::kContinueButton;
-            const auto& start = minidayz::menu::kNewGameButton;
-            if (has_saved_game_) {
-                renderer.draw_solid_rect(cont.x(), cont.y(), cont.width(),
-                    cont.height(), C2D_Color32(62, 92, 66, 255));
-                (void)renderer.draw_menu_art(1, cont.x(), cont.y(),
-                    cont.width(), cont.height());
-                renderer.draw_text("CONTINUE", 92.0f, 96.0f, 0.55f);
-            } else {
-                renderer.draw_solid_rect(cont.x(), cont.y(), cont.width(),
-                    cont.height(), C2D_Color32(55, 65, 58, 255));
-                renderer.draw_text("NO SAVE FOUND", 70.0f, 96.0f, 0.45f);
-            }
-            renderer.draw_solid_rect(start.x(), start.y(),
-                start.width(), start.height(),
-                C2D_Color32(110, 75, 49, 255));
-            (void)renderer.draw_menu_art(1, start.x(), start.y(),
-                start.width(), start.height());
-            renderer.draw_text("NEW GAME", 92.0f, 165.0f, 0.55f);
-            char skin_label[64]{};
+            // Screen-specific original art; independent touch hitboxes
+            // match the button rectangles exactly on 320x240.
+            renderer.reset_camera();
+            renderer.draw_solid_rect(0.0f,0.0f,320.0f,240.0f,
+                                     C2D_Color32(20,25,23,255));
+            (void)renderer.draw_menu_art(2,0.0f,0.0f,320.0f,240.0f,0.95f);
+            renderer.draw_solid_rect(10.0f,8.0f,300.0f,37.0f,
+                                     C2D_Color32(24,31,27,232));
+            renderer.draw_text("MINI DAYZ 3DS",82.0f,16.0f,0.55f);
+            const auto& cont=minidayz::menu::kContinueButton;
+            const auto& start=minidayz::menu::kNewGameButton;
+            const auto draw_button=[&](const minidayz::menu::TouchBounds& button,
+                                        bool enabled) {
+                renderer.draw_solid_rect(button.x(),button.y(),
+                    button.width(),button.height(),enabled
+                    ?C2D_Color32(84,70,48,255)
+                    :C2D_Color32(48,49,44,255));
+                (void)renderer.draw_menu_art(1,button.x(),button.y(),
+                    button.width(),button.height(),0.60f);
+            };
+            draw_button(cont,has_saved_game_);
+            renderer.draw_text(has_saved_game_?"CONTINUE":"NO SAVED GAME",
+                has_saved_game_?99.0f:77.0f,74.0f,0.54f);
+            draw_button(start,true);
+            renderer.draw_text("NEW GAME",102.0f,130.0f,0.54f);
+            const auto& prev=minidayz::menu::kSkinPrevious;
+            const auto& next=minidayz::menu::kSkinNext;
+            draw_button(prev,true);
+            draw_button(next,true);
+            renderer.draw_text("< PREV SKIN",30.0f,184.0f,0.36f);
+            renderer.draw_text("NEXT SKIN >",185.0f,184.0f,0.36f);
+            char skin_label[72]{};
             std::snprintf(skin_label,sizeof(skin_label),
-                "< SKIN %u/%u: %s >",
+                "SKIN %u/%u: %s",
                 static_cast<unsigned>(selected_skin_+1),
                 static_cast<unsigned>(minidayz::stage1::kOriginalPlayerSkinCount),
                 minidayz::stage1::kOriginalPlayerSkins[selected_skin_].name);
-            renderer.draw_text(skin_label, 14.0f, 186.0f, 0.32f);
-            if (generation_failed_)
-                renderer.draw_text("WORLD GENERATION FAILED - RETRY NEW GAME",
-                                   18.0f, 204.0f, 0.27f);
-            renderer.draw_text(has_saved_game_ ? "A: Continue   X: New Game" :
-                               "A/X: New Game", 18.0f, 216.0f, 0.32f);
+            // Show the actual selected original skin on the top screen,
+            // and a compact label on the lower touch display.
+            renderer.draw_text(skin_label,15.0f,211.0f,0.29f);
+            if(generation_failed_)
+                renderer.draw_text("WORLD FAILED - PRESS NEW GAME",
+                                   18.0f,229.0f,0.23f);
+            else
+                renderer.draw_text(has_saved_game_?"A CONTINUE   X NEW   L/R SKIN"
+                    :"A/X NEW GAME   L/R SKIN",17.0f,230.0f,0.25f);
             return;
         }
         if (paused_) {
