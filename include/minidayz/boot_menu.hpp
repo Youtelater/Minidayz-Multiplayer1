@@ -96,7 +96,9 @@ struct StartInputGate {
     void reset() noexcept { elapsed=0.0f; armed=false; }
     bool update(float dt,bool controls_held) noexcept {
         if(armed)return true;
-        if(dt>0.0f && dt<=0.10f)elapsed+=dt;
+        // Slow Manic Emu frames can exceed 100ms. The gate must still
+        // arm, otherwise the menu will remain frozen at low FPS.
+        if(dt>0.0f)elapsed+=(dt>0.10f?0.10f:dt);
         // Require a full second plus one neutral frame on the launcher.
         if(elapsed>=1.0f && !controls_held)armed=true;
         return false;
