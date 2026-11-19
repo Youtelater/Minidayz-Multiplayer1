@@ -26,7 +26,7 @@ struct TouchBounds {
 // These 320x240 hitboxes are screen adaptations, but share geometry with
 // the renderer and physical D-Pad selection.
 enum class BootPage : std::uint8_t {
-    main, character, achievements, unlocks, options, multiplayer
+    main, character, difficulty, achievements, unlocks, options, multiplayer
 };
 enum class MenuEntry : std::uint8_t {
     continue_game, new_game, achievements, unlocks, options, none
@@ -49,6 +49,18 @@ inline constexpr TouchBounds kMultiplayerButton{167, 210, 307, 239};
 inline constexpr TouchBounds kSkinPrevious{18, 145, 154, 191};
 inline constexpr TouchBounds kSkinNext{166, 145, 302, 191};
 inline constexpr TouchBounds kSubpageBack{15, 211, 305, 239};
+inline constexpr TouchBounds kDifficultyRows[3]={
+    {38,65,282,98}, {38,105,282,138}, {38,145,282,178}
+};
+inline constexpr const char* kDifficultyLabels[3]={
+    "NOVICE","REGULAR","VETERAN"
+};
+constexpr int difficulty_at(int x,int y) noexcept {
+    for(int i=0;i<3;++i)
+        if(kDifficultyRows[i].contains(x,y))return i;
+    return -1;
+}
+
 
 constexpr MenuEntry main_entry_at(int x,int y) noexcept {
     for(std::size_t i=0;i<5;++i)
