@@ -67,7 +67,24 @@ def check() -> None:
     sprites = SPRITES.read_text(encoding="utf-8")
     items = ITEMS.read_text(encoding="utf-8")
     frame_rows = FRAME.findall(sprites)
-    item_rows = ITEM.findall(items)
+    # The supplied mp_itemtable.js has THREE separate catalogs. Count only
+    # the primary single-player item-to-sprite array here; matching the same
+    # two-column regex against all generated MP player-drop/variant arrays
+    # incorrectly doubled the count and caused a CI failure.
+    primary_start = items.find("kItemSpriteDefinitions[]")
+    primary_end = items.find("};", primary_start)
+    if primary_start < 0 or primary_end < 0:
+        raise SystemExit("Missing primary original item sprite array")
+    item_rows = ITEM.findall(items[primary_start:primary_end])
+    for array_name,count_name in (
+        ("kMpPlayerDropSpriteDefinitions[]","kMpPlayerDropSpriteCount"),
+        ("kMpSpriteVariants[]","kMpSpriteVariantCount"),
+    ):
+        start=items.find(array_name)
+        end=items.find("};",start)
+        count=re.search(rf"{count_name}\\s*=\\s*(\\d+);",items)
+        if start<0 or end<0 or not count or len(ITEM.findall(items[start:end]))!=int(count.group(1)):
+            raise SystemExit(f"Generated multiplayer source mapping mismatch: {array_name}")
     if not frame_rows or not item_rows:
         raise SystemExit("Empty generated original sprite or item atlas mapping")
     declared_frames = re.search(r"kSpriteFrameCount=(\d+);", sprites)
