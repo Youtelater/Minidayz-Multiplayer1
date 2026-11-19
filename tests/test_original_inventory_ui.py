@@ -56,6 +56,22 @@ assert "selected_equipment_slot_=equipment_target" in src
 assert "if(source<5 || source==7)stage2_audio_.play_equipment_drop()" in src
 assert "gear_slot_for_card" in src
 assert "kOriginalInventoryCardArt" in src
+# World visuals stay on the TOP 400x240 display. Every inventory,
+# equipment, crafting, item details and storage card is rendered solely
+# inside Scene::render_bottom for the 320x240 touchscreen.
+top=src.split("    void render(minidayz::Renderer& renderer) noexcept override {",1)[1].split(
+    "\nprivate:\n",1)[0]
+bottom=src.split("    void render_bottom(minidayz::Renderer& renderer) noexcept override {",1)[1].split(
+    "    void render(minidayz::Renderer& renderer) noexcept override {",1)[0]
+assert "kOriginalSlotArt" in bottom
+assert "kOriginalEquipmentBackpackArt" in bottom
+assert "kOriginalEquipmentSatchelArt" in bottom
+assert "if (crafting_open_)" in bottom
+assert "if (storage_open_)" in bottom
+assert "if (details_open_)" in bottom
+assert "kOriginalSlotArt" not in top
+assert "active_held_slot_" in top
+
 assert "1.5707963268f" in src, "Original rifle art must rotate into portrait weapon card"
 assert "active_held_slot_" in src, "Separate firearm/melee mode must control player stance"
 assert "std::uint16_t item_id=selected && !selected->empty()" in src
