@@ -831,6 +831,11 @@ public:
                     drag_equipped_source_slot_=equipment_target;
                     drag_target_equipment_slot_=equipment_target;
                     selected_equipment_slot_=equipment_target;
+                    // Source supports simultaneously worn rifle and melee.
+                    // Selecting either equipment card makes it the active
+                    // original player hands/weapon appearance.
+                    if(equipment_target==4 || equipment_target==7)
+                        active_held_slot_=gear_slot_for_card(equipment_target);
                     details_scroll_=0;
                 }else selected_equipment_slot_=-1;
                 selected_inventory_slot_=-1;
@@ -967,7 +972,12 @@ public:
                         changed = equipment_.repair_from_inventory(
                             inventory_, source_slot, repair_target);
                 }
-                if (changed) selected_inventory_slot_ = -1;
+                if (changed){
+                    selected_inventory_slot_ = -1;
+                    if(drag_target_equipment_slot_==4 ||
+                       drag_target_equipment_slot_==7)
+                        active_held_slot_=target;
+                }
             } else if (drag_source_slot_ >= 0 && drag_target_slot_ >= 0 &&
                        drag_target_slot_ != drag_source_slot_) {
                 if (inventory_.move(static_cast<std::size_t>(drag_source_slot_),
@@ -2381,8 +2391,13 @@ public:
         // An armed survivor uses the ORIGINAL player's held-weapon stance
         // when available, not an ordinary empty-hands idle pose. This works
         // for all 20 skins and chooses only authentic Construct animations.
+        const auto held_item=equipment_.equipped(active_held_slot_)!=0
+            ?equipment_.equipped(active_held_slot_)
+            :equipment_.equipped(minidayz::items::EquipmentSlot::weapon)!=0
+                ?equipment_.equipped(minidayz::items::EquipmentSlot::weapon)
+                :equipment_.equipped(minidayz::items::EquipmentSlot::hands);
         const auto* held_visual=minidayz::stage1::original_equipment_visual(
-            equipment_.equipped(minidayz::items::EquipmentSlot::hands));
+            held_item);
         const auto* weapon_pose=minidayz::stage1::original_equipment_pose(
             held_visual,p.animation!=minidayz::PlayerAnimation::idle,true);
         bool sprite_drawn=false;
@@ -2432,8 +2447,9 @@ public:
             // Original satchels are separate wearable storage equipment,
             // not part of the main backpack slot. Show both when equipped.
             draw_equipped_layer(inventory_.equipped_satchel(),false,0.600f);
-            draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::hands),true,0.605f);
+            // Draw only the selected held firearm OR melee overlay, not
+            // both weapons through the same hand at the same time.
+            draw_equipped_layer(held_item,true,0.605f);
         }
         if (!sprite_drawn) {
             renderer.draw_solid_rect(p.x - 5.0f, p.y - 5.0f, 10.0f, 12.0f,
@@ -2666,6 +2682,7 @@ private:
         tap_was_selected_ = false;
         selected_inventory_slot_ = -1;
         selected_equipment_slot_=-1;
+        active_held_slot_=minidayz::items::EquipmentSlot::hands;
         drag_moved_=false;
         drag_source_slot_=-1;
         drag_equipped_source_slot_=-1;
@@ -2860,6 +2877,8 @@ private:
     int drag_source_slot_{-1};
     int drag_equipped_source_slot_{-1};
     int selected_equipment_slot_{-1};
+    minidayz::items::EquipmentSlot active_held_slot_{
+        minidayz::items::EquipmentSlot::hands};
     int drag_start_x_{};
     int drag_start_y_{};
     bool drag_moved_{};
