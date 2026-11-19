@@ -39,40 +39,56 @@ bool Renderer::draw_source_procedural_environment(
   if(left>=view_right||top>=view_bottom||
      left+kPatchCells*kSourceTile<=camera_x||
      top+kPatchCells*kSourceTile<=camera_y)continue;
-  std::array<std::uint16_t,kPatchCells*kPatchCells> painted{};
-  painted.fill(kEmpty);
-  bool has_source_rule=false;
-  // Separate deterministic stream per cell: world generation, save/reload
-  // and camera movement always produce identical original art selections.
-  std::uint32_t state=world.seed()^0x9e3779b9u;
-  state^=static_cast<std::uint32_t>(marker->cell_x+1)*0x85ebca6bu;
-  state^=static_cast<std::uint32_t>(marker->cell_y+1)*0xc2b2ae35u;
-  state^=static_cast<std::uint32_t>(marker->marker_type)*0x27d4eb2du;
-  std::minstd_rand rng(state?state:1u);
-  for(const auto& rule:stage1::kTerrainScatterRules){
-   if(rule.marker!=marker->marker_type)continue;
-   has_source_rule=true;
-   if(rule.x_min>=rule.x_max||rule.y_min>=rule.y_max||
-      rule.x_max>kPatchCells||rule.y_max>kPatchCells||
-      rule.tile_count==0||
-      rule.tile_offset+rule.tile_count>stage1::kTerrainScatterChoiceCount)
-    return false;
-   std::uniform_int_distribution<int> xdist(rule.x_min,rule.x_max-1);
-   std::uniform_int_distribution<int> ydist(rule.y_min,rule.y_max-1);
-   std::uniform_int_distribution<unsigned> choose(0,rule.tile_count-1);
-   for(std::uint16_t n=0;n<rule.repeat;++n){
-    const int x=xdist(rng);
-    const int y=ydist(rng);
-    const auto frame=stage1::kTerrainScatterChoices[
-        rule.tile_offset+choose(rng)];
-    painted[static_cast<std::size_t>(y)*kPatchCells+x]=frame;
+  ScatterCacheEntry* patch=nullptr;
+  for(auto& candidate:scatter_cache_)
+   if(candidate.valid && candidate.seed==world.seed() &&
+      candidate.marker_index==index &&
+      candidate.marker_type==marker->marker_type &&
+      candidate.cell_x==marker->cell_x &&
+      candidate.cell_y==marker->cell_y){patch=&candidate;break;}
+  if(!patch){
+   patch=&scatter_cache_[next_scatter_cache_++%kScatterCacheEntries];
+   // Build the source-derived SetTile patch once on cache miss, then
+   // reuse the exact result on every frame and while the camera pans.
+   patch->valid=false;
+   patch->cells.fill(kEmpty);
+   patch->has_source_rule=false;
+   std::uint32_t state=world.seed()^0x9e3779b9u;
+   state^=static_cast<std::uint32_t>(marker->cell_x+1)*0x85ebca6bu;
+   state^=static_cast<std::uint32_t>(marker->cell_y+1)*0xc2b2ae35u;
+   state^=static_cast<std::uint32_t>(marker->marker_type)*0x27d4eb2du;
+   std::minstd_rand rng(state?state:1u);
+   for(const auto& rule:stage1::kTerrainScatterRules){
+    if(rule.marker!=marker->marker_type)continue;
+    patch->has_source_rule=true;
+    if(rule.x_min>=rule.x_max||rule.y_min>=rule.y_max||
+       rule.x_max>kPatchCells||rule.y_max>kPatchCells||
+       rule.tile_count==0||
+       rule.tile_offset+rule.tile_count>stage1::kTerrainScatterChoiceCount)
+     return false;
+    std::uniform_int_distribution<int> xdist(rule.x_min,rule.x_max-1);
+    std::uniform_int_distribution<int> ydist(rule.y_min,rule.y_max-1);
+    std::uniform_int_distribution<unsigned> choose(0,rule.tile_count-1);
+    for(std::uint16_t n=0;n<rule.repeat;++n){
+     const int x=xdist(rng);
+     const int y=ydist(rng);
+     const auto frame=stage1::kTerrainScatterChoices[
+         rule.tile_offset+choose(rng)];
+     patch->cells[static_cast<std::size_t>(y)*kPatchCells+x]=frame;
+    }
    }
+   patch->seed=world.seed();
+   patch->marker_index=index;
+   patch->marker_type=marker->marker_type;
+   patch->cell_x=marker->cell_x;
+   patch->cell_y=marker->cell_y;
+   patch->valid=true;
   }
-  if(!has_source_rule)continue;
+  if(!patch->has_source_rule)continue;
   // The generated 30px tile art shares the exact object-230 original
   // sheet with authored ground environment tiles, not a replacement PNG.
   for(int y=0;y<kPatchCells;++y)for(int x=0;x<kPatchCells;++x){
-   const auto frame=painted[static_cast<std::size_t>(y)*kPatchCells+x];
+   const auto frame=patch->cells[static_cast<std::size_t>(y)*kPatchCells+x];
    if(frame==kEmpty)continue;
    const float xx=left+x*kSourceTile, yy=top+y*kSourceTile;
    if(xx>=view_right||yy>=view_bottom||
