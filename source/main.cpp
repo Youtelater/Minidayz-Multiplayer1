@@ -1060,52 +1060,105 @@ public:
             return;
         }
         if (menu_active_) {
-            // Screen-specific original art; independent touch hitboxes
-            // match the button rectangles exactly on 320x240.
             renderer.reset_camera();
             renderer.draw_solid_rect(0.0f,0.0f,320.0f,240.0f,
-                                     C2D_Color32(20,25,23,255),0.01f);
+                C2D_Color32(22,26,24,255),0.01f);
             (void)renderer.draw_menu_art(2,0.0f,0.0f,320.0f,240.0f,0.05f);
-            renderer.draw_solid_rect(10.0f,8.0f,300.0f,37.0f,
-                                     C2D_Color32(24,31,27,232));
-            renderer.draw_text("MINI DAYZ 3DS",82.0f,16.0f,0.55f);
-            const auto& cont=minidayz::menu::kContinueButton;
-            const auto& start=minidayz::menu::kNewGameButton;
-            const auto draw_button=[&](const minidayz::menu::TouchBounds& button,
-                                        bool enabled) {
-                renderer.draw_solid_rect(button.x(),button.y(),
-                    button.width(),button.height(),enabled
-                    ?C2D_Color32(84,70,48,255)
-                    :C2D_Color32(48,49,44,255));
-                (void)renderer.draw_menu_art(1,button.x(),button.y(),
-                    button.width(),button.height(),0.60f);
+            renderer.draw_solid_rect(0.0f,0.0f,320.0f,240.0f,
+                C2D_Color32(12,15,13,160),0.16f);
+            const auto wood=[&](const minidayz::menu::TouchBounds& box,
+                                bool selected,bool enabled) noexcept {
+                renderer.draw_solid_rect(box.x(),box.y(),
+                    box.width(),box.height(),enabled
+                    ?C2D_Color32(74,54,37,255)
+                    :C2D_Color32(44,43,40,255),0.48f);
+                (void)renderer.draw_menu_art(1,box.x(),box.y(),
+                    box.width(),box.height(),0.75f);
+                if(selected){
+                    const auto gold=C2D_Color32(216,181,98,255);
+                    renderer.draw_solid_rect(box.x(),box.y(),
+                        box.width(),2.0f,gold,0.84f);
+                    renderer.draw_solid_rect(box.x(),box.y()+box.height()-2.0f,
+                        box.width(),2.0f,gold,0.84f);
+                }
+                if(!enabled)
+                    renderer.draw_solid_rect(box.x(),box.y(),
+                        box.width(),box.height(),
+                        C2D_Color32(13,17,17,160),0.85f);
             };
-            draw_button(cont,has_saved_game_);
-            renderer.draw_text(has_saved_game_?"CONTINUE":"NO SAVED GAME",
-                has_saved_game_?99.0f:77.0f,74.0f,0.54f);
-            draw_button(start,true);
-            renderer.draw_text("NEW GAME",102.0f,130.0f,0.54f);
-            const auto& prev=minidayz::menu::kSkinPrevious;
-            const auto& next=minidayz::menu::kSkinNext;
-            draw_button(prev,true);
-            draw_button(next,true);
-            renderer.draw_text("< PREV SKIN",30.0f,184.0f,0.36f);
-            renderer.draw_text("NEXT SKIN >",185.0f,184.0f,0.36f);
-            char skin_label[72]{};
-            std::snprintf(skin_label,sizeof(skin_label),
-                "SKIN %u/%u: %s",
-                static_cast<unsigned>(selected_skin_+1),
-                static_cast<unsigned>(minidayz::stage1::kOriginalPlayerSkinCount),
-                minidayz::stage1::kOriginalPlayerSkins[selected_skin_].name);
-            // Show the actual selected original skin on the top screen,
-            // and a compact label on the lower touch display.
-            renderer.draw_text(skin_label,15.0f,211.0f,0.29f);
-            if(generation_failed_)
-                renderer.draw_text("WORLD FAILED - PRESS NEW GAME",
-                                   18.0f,229.0f,0.23f);
-            else
-                renderer.draw_text(has_saved_game_?"A CONTINUE   X NEW   L/R SKIN"
-                    :"A/X NEW GAME   L/R SKIN",17.0f,230.0f,0.25f);
+            const auto back=[&]()noexcept {
+                wood(minidayz::menu::kSubpageBack,false,true);
+                renderer.draw_text("B / TOUCH : BACK",91.0f,219.0f,0.36f);
+            };
+            using minidayz::menu::BootPage;
+            switch(menu_page_){
+            case BootPage::main:{
+                renderer.draw_text("MINI DAYZ",116.0f,8.0f,0.49f);
+                static constexpr float label_x[5]={
+                    125.0f,125.0f,99.0f,134.0f,137.0f};
+                for(std::size_t i=0;i<5;++i){
+                    const bool available=i!=0||has_saved_game_;
+                    wood(minidayz::menu::kMenuRows[i],
+                        menu_selection_==static_cast<minidayz::menu::MenuEntry>(i),
+                        available);
+                    renderer.draw_text(
+                        i==0&&!has_saved_game_?"NO SAVE":
+                            minidayz::menu::kMainLabels[i],
+                        i==0&&!has_saved_game_?132.0f:label_x[i],
+                        minidayz::menu::kMenuRows[i].y()+8.0f,0.39f);
+                }
+                wood(minidayz::menu::kCharacterButton,false,true);
+                wood(minidayz::menu::kMultiplayerButton,false,true);
+                renderer.draw_text("X  CHARACTER",31.0f,218.0f,0.31f);
+                renderer.draw_text("Y  MULTIPLAYER",178.0f,218.0f,0.27f);
+                break;
+            }
+            case BootPage::character:{
+                renderer.draw_text("CHOOSE SURVIVOR",75.0f,13.0f,0.58f);
+                renderer.draw_solid_rect(39.0f,56.0f,242.0f,72.0f,
+                    C2D_Color32(35,37,31,225),0.31f);
+                char info[96]{};
+                std::snprintf(info,sizeof(info),"SURVIVOR %u / %u",
+                    static_cast<unsigned>(selected_skin_+1),
+                    static_cast<unsigned>(minidayz::stage1::kOriginalPlayerSkinCount));
+                renderer.draw_text(info,101.0f,79.0f,0.36f);
+                wood(minidayz::menu::kSkinPrevious,false,true);
+                wood(minidayz::menu::kSkinNext,false,true);
+                renderer.draw_text("< PREVIOUS",32.0f,163.0f,0.33f);
+                renderer.draw_text("NEXT >",211.0f,163.0f,0.33f);
+                back();
+                break;
+            }
+            case BootPage::achievements:
+                renderer.draw_text("ACHIEVEMENTS",89.0f,21.0f,0.47f);
+                renderer.draw_text("SOURCE ACHIEVEMENT EVENTS",35.0f,91.0f,0.29f);
+                renderer.draw_text("NOT YET PORTED TO 3DS",52.0f,117.0f,0.31f);
+                back();
+                break;
+            case BootPage::unlocks:
+                renderer.draw_text("UNLOCKS",113.0f,21.0f,0.48f);
+                renderer.draw_text("SOURCE UNLOCK PROGRESSION",28.0f,91.0f,0.29f);
+                renderer.draw_text("NOT YET PORTED TO 3DS",52.0f,117.0f,0.31f);
+                back();
+                break;
+            case BootPage::options:{
+                renderer.draw_text("OPTIONS",111.0f,15.0f,0.50f);
+                const minidayz::menu::TouchBounds audio_row{38,70,282,117};
+                wood(audio_row,false,true);
+                renderer.draw_text(stage2_audio_.muted()?"SOUND : OFF":"SOUND : ON",
+                    103.0f,87.0f,0.41f);
+                renderer.draw_text("A / TOUCH TO CHANGE",62.0f,137.0f,0.31f);
+                renderer.draw_text("SELECT IN GAME: FPS DISPLAY",25.0f,170.0f,0.27f);
+                back();
+                break;
+            }
+            case BootPage::multiplayer:
+                renderer.draw_text("MULTIPLAYER",95.0f,21.0f,0.48f);
+                renderer.draw_text("MP NETWORK GAMEPLAY",55.0f,91.0f,0.31f);
+                renderer.draw_text("NOT YET PORTED TO 3DS",52.0f,117.0f,0.31f);
+                back();
+                break;
+            }
             return;
         }
         if (paused_) {
