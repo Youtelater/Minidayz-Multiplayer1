@@ -11,9 +11,10 @@
 
 namespace minidayz::items {
 
-// The active source-backed slots are helmet, outerwear, vest, pants and
-// hands (held weapon). Feet and weapon are reserved legacy indices from the
-// first native save layout; backpack remains InventorySystem-owned.
+// The original inventory has distinct helmet, coat, vest, pants,
+// held melee tool and ranged firearm cards. Feet is a reserved legacy
+// index; weapon is now the independent ranged-firearm slot in native saves.
+// Backpacks and satchels remain InventorySystem-owned.
 enum class EquipmentSlot : std::uint8_t {
     head, outerwear, vest, pants, hands, feet, weapon, count
 };
