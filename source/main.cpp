@@ -1654,7 +1654,7 @@ public:
                 tent->y < camera_y - 24.0f ||
                 tent->y > camera_y + view_h + 24.0f) continue;
             (void)renderer.draw_item_icon(minidayz::items::kOriginalCivilianTentItemId,
-                                          tent->x, tent->y, 28.0f, 28.0f);
+                                          tent->x, tent->y, 28.0f, 28.0f, 0.54f);
         }
 
         for (std::size_t i = 0; i < stashes_.count(); ++i) {
@@ -1665,7 +1665,7 @@ public:
                 stash->y > camera_y + view_h + 24.0f) continue;
             (void)renderer.draw_item_icon(
                 minidayz::items::kOriginalSuppliesStashItemId,
-                stash->x, stash->y, 28.0f, 28.0f);
+                stash->x, stash->y, 28.0f, 28.0f, 0.54f);
         }
 
         for (std::size_t i = 0; i < ground_loot_.count(); ++i) {
@@ -1675,7 +1675,7 @@ public:
                 loot->y < camera_y - 24.0f ||
                 loot->y > camera_y + view_h + 24.0f) continue;
             (void)renderer.draw_item_icon(loot->item.item_id,
-                loot->x, loot->y, 18.0f, 18.0f);
+                loot->x, loot->y, 18.0f, 18.0f, 0.54f);
         }
 
         if (npc_ready_) {
