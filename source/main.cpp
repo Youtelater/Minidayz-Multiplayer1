@@ -905,7 +905,7 @@ public:
                 if(moved){
                     selected_inventory_slot_=static_cast<int>(destination);
                     selected_equipment_slot_=-1;
-                    stage2_audio_.play_equipment_drop();
+                    if(source<5)stage2_audio_.play_equipment_drop();
                 }
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
@@ -1538,13 +1538,23 @@ public:
         // Show the exact source-localized item name above the touch slots.
         // The source is the original root l_eng_items.xml, never a guessed ID
         // or a name from the excluded newer Minidayz folder.
-        if (selected_inventory_slot_ >= 0) {
-            const auto* selected = inventory_.slot(
-                static_cast<std::size_t>(selected_inventory_slot_));
-            if (selected && !selected->empty()) {
-                if (const char* name = minidayz::items::source_item_name(
-                        selected->item_id))
-                    renderer.draw_text(name, 10.0f, 25.0f, 0.19f);
+        {
+            std::uint16_t selected_id=0;
+            if(selected_inventory_slot_>=0){
+                const auto* selected=inventory_.slot(
+                    static_cast<std::size_t>(selected_inventory_slot_));
+                if(selected && !selected->empty())
+                    selected_id=selected->item_id;
+            }else if(selected_equipment_slot_>=0){
+                const int slot=selected_equipment_slot_;
+                selected_id=slot==5 ? inventory_.equipped_backpack()
+                    : slot==6 ? inventory_.equipped_satchel()
+                    : equipment_.equipped(
+                        static_cast<minidayz::items::EquipmentSlot>(slot));
+            }
+            if(selected_id!=0){
+                if(const char* name=minidayz::items::source_item_name(selected_id))
+                    renderer.draw_text(name,10.0f,25.0f,0.19f);
             }
         }
         // Bleeding/infection and temperature remain visible while managing
@@ -1616,7 +1626,8 @@ public:
                     renderer.draw_solid_rect(x,y,w,h,
                         C2D_Color32(146,130,99,255),0.24f);
                 }
-                if(drag_equipped_source_slot_==static_cast<int>(i)){
+                if(drag_equipped_source_slot_==static_cast<int>(i) ||
+                   selected_equipment_slot_==static_cast<int>(i)){
                     const auto gold=C2D_Color32(229,185,83,255);
                     renderer.draw_solid_rect(x,y,w,2.0f,gold,0.77f);
                     renderer.draw_solid_rect(x,y+h-2.0f,w,2.0f,gold,0.77f);
@@ -1890,20 +1901,42 @@ public:
         if (details_open_) {
             renderer.draw_solid_rect(8.0f, 94.0f, 304.0f, 126.0f,
                                      C2D_Color32(24, 37, 28, 255));
+            // Show original item descriptions for both backpack items
+            // and equipped gear; tapping worn clothing selects it rather
+            // than silently removing it.
             const auto* selected = selected_inventory_slot_ >= 0
                 ? inventory_.slot(static_cast<std::size_t>(selected_inventory_slot_))
                 : nullptr;
-            if (selected && !selected->empty()) {
+            std::uint16_t item_id=selected && !selected->empty()
+                ?selected->item_id:0;
+            unsigned count=selected && !selected->empty()?selected->count:1;
+            unsigned exact_hundredths=selected && !selected->empty()
+                ?static_cast<unsigned>(selected->condition)*100u-
+                 static_cast<unsigned>(selected->fractional_loss):10000u;
+            if(!item_id && selected_equipment_slot_>=0){
+                const int slot=selected_equipment_slot_;
+                item_id=slot==5 ? inventory_.equipped_backpack()
+                    :slot==6 ? inventory_.equipped_satchel()
+                    :equipment_.equipped(
+                        static_cast<minidayz::items::EquipmentSlot>(slot));
+                const auto condition=slot==5
+                    ?inventory_.equipped_backpack_condition()
+                    :slot==6 ? inventory_.equipped_satchel_condition()
+                    :equipment_.snapshot().conditions[static_cast<std::size_t>(slot)];
+                const auto fraction=slot<5
+                    ?equipment_.fraction_snapshot().fractional_loss[static_cast<std::size_t>(slot)]
+                    :0u;
+                exact_hundredths=static_cast<unsigned>(condition)*100u-
+                    static_cast<unsigned>(fraction);
+            }
+            if (item_id) {
                 const char* description =
-                    minidayz::items::source_item_description(selected->item_id);
+                    minidayz::items::source_item_description(item_id);
                 char heading[80]{};
-                const unsigned exact_hundredths =
-                    static_cast<unsigned>(selected->condition) * 100u -
-                    static_cast<unsigned>(selected->fractional_loss);
                 std::snprintf(heading, sizeof(heading),
                     "ITEM %u x%u CONDITION %u.%02u%%",
-                    static_cast<unsigned>(selected->item_id),
-                    static_cast<unsigned>(selected->count),
+                    static_cast<unsigned>(item_id),
+                    count,
                     exact_hundredths / 100u, exact_hundredths % 100u);
                 renderer.draw_text(heading, 16.0f, 101.0f, 0.27f);
                 if (description && *description) {
