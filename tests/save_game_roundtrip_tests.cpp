@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
+#include <cstddef>
 #include <limits>
 using namespace minidayz;
 using namespace minidayz::items;
@@ -230,6 +231,26 @@ void write_legacy_save(const char* path, std::uint32_t version,
     }
     assert(std::fclose(file) == 0);
 }
+
+
+struct PreviousSaveV19 {
+    std::uint32_t magic{kSaveMagic},version{19},seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    GroundLootSnapshot ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+    SourcePerkSnapshot perks{};
+    SatchelSnapshot satchel{};
+    EquipmentFractionSnapshot equipment_fraction{};
+    StashStorageSnapshot stashes{};
+    SourceDayNightSnapshot source_time{};
+    SourceRainTimerSnapshot source_rain{};
+    SourceLootTimerSnapshot source_loot{};
+    PendingCraftSnapshot pending_craft{};
+    std::uint8_t world_level{};
+};
 
 int main() {
     constexpr const char* kFile = "stage2_roundtrip_test.sav";
@@ -819,6 +840,58 @@ int main() {
     assert(restored.pending_item_use.pending_medical_item_id == 18);
     assert(restored.perks.camel_level == 0 && restored.perks.hamster_level == 0);
     assert(restored.perks.perk_cost == 100);
+
+    // MP quick pistol survives the v20 save and retains fractional wear.
+    InventorySystem quick_inventory;
+    EquipmentSystem quick_equipment;
+    assert(quick_inventory.add(151,1,0,79,21));
+    assert(quick_equipment.equip_quick_pistol_from_inventory(quick_inventory,0));
+    assert(write_saved_game_to_paths(123,player,quick_inventory,
+        quick_equipment,ground,tents,kFile,kTemp));
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==20u);
+    assert(restored.quick_pistol.item_id==151);
+    assert(restored.quick_pistol.condition==79);
+    assert(restored.quick_pistol.fractional_loss==21);
+    EquipmentSystem restored_quick_equipment;
+    assert(restored_quick_equipment.restore_with_fraction(
+        restored.equipment,restored.equipment_fraction));
+    assert(restored_quick_equipment.restore_quick_pistol(
+        restored.quick_pistol));
+    assert(restored_quick_equipment.quick_pistol()==151);
+    // A malicious/corrupt quick ID is not silently converted to a rifle.
+    {
+        auto* f=std::fopen(kFile,"r+b");
+        assert(f);
+        const QuickPistolSnapshot bad{158,100,0};
+        assert(std::fseek(f,static_cast<long>(
+            offsetof(SavedGame,quick_pistol)),SEEK_SET)==0);
+        assert(std::fwrite(&bad,sizeof(bad),1,f)==1);
+        assert(std::fclose(f)==0);
+        assert(!load_saved_game_from_path(restored,kFile));
+    }
+    // Old v19 native saves must still load byte-for-byte, with no quick
+    // pistol equipped. Their equipment layout must not be reinterpreted.
+    PreviousSaveV19 old19{};
+    old19.seed=124;
+    old19.player=player;
+    old19.inventory=inventory.snapshot();
+    old19.equipment=equipment.snapshot();
+    old19.equipment_fraction=equipment.fraction_snapshot();
+    old19.satchel=inventory.satchel_snapshot();
+    old19.ground_loot=ground.snapshot();
+    old19.tents=tents.snapshot();
+    old19.world_level=2;
+    {
+        auto* f=std::fopen(kFile,"wb");
+        assert(f&&std::fwrite(&old19,sizeof(old19),1,f)==1);
+        assert(std::fclose(f)==0);
+    }
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==19u);
+    assert(restored.seed==124 && restored.world_level==2u);
+    assert(restored.quick_pistol.item_id==0);
+    assert(restored.quick_pistol.condition==100);
 
     // Truncation, a spurious trailing byte, NaN, and bad inventory all reject.
     assert(write_saved_game_to_paths(42, player, inventory, equipment,
