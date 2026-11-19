@@ -17,12 +17,12 @@ OUTPUT=ROOT/"include/minidayz/generated/player_spawn_source.hpp"
 
 def nodes(items, groups=()):
     for entry in items:
-        if not isinstance(entry,list) or len(entry)<8 or entry[0]!=0:continue
+        if not isinstance(entry,list) or len(entry)<7 or entry[0]!=0:continue
         name=(entry[1][1] if isinstance(entry[1],list) and
               len(entry[1])>1 and isinstance(entry[1][1],str) else "")
         path=groups+(name,) if name else groups
         yield path,entry
-        yield from nodes(entry[7],path)
+        yield from nodes(entry[7] if len(entry)>7 and isinstance(entry[7],list) else [],path)
 
 def main():
     text=re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",
