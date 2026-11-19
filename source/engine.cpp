@@ -406,7 +406,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
    C2D_SpriteSetPos(&sprite,col*base_tile,row*base_tile);
    C2D_SpriteSetScale(&sprite,base_tile/sprite.params.pos.w,
                             base_tile/sprite.params.pos.h);
-   C2D_SpriteSetDepth(&sprite,0.98f);
+   C2D_SpriteSetDepth(&sprite,0.04f);
    if(!C2D_DrawSprite(&sprite)) return false;
   }
  // Preserve the exact source RLE cells at their original Map positions.
@@ -438,7 +438,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
    }
    if(!draw_original_tile(floor_sheets_[page],descriptor,
                            map.x+col*tile,map.y+row*tile,
-                           tile,0.92f))return false;
+                           tile,0.08f))return false;
   }
  }
  return true;
@@ -517,7 +517,7 @@ bool Renderer::draw_original_environment_tilemaps(
   const int y1=std::min(static_cast<int>(map.rows),
       static_cast<int>(std::ceil((camera_y+height-map.y)/tile))+1);
   if(x1<=x0||y1<=y0)continue;
-  const float depth=std::clamp(0.90f-0.0125f*map.layer,0.55f,0.95f);
+  const float depth=std::clamp(0.12f+0.008f*map.layer,0.12f,0.47f);
   for(int row=y0;row<y1;++row)for(int col=x0;col<x1;++col){
    auto frame=map.cells[static_cast<std::size_t>(row)*
                          map.columns+static_cast<std::size_t>(col)];
@@ -605,8 +605,8 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
        std::floor((camera_y-road_width)/cell_h))-1);
  const int bottom=std::min(static_cast<int>(grid.height()),
        static_cast<int>(std::ceil((camera_y+view_height+road_width)/cell_h))+1);
- // C2D sprite depth .96 sits behind source map placements and authored
- // tilemaps (.92), but in front of the original ground tile (.98).
+ // The emulator uses larger Z values as nearer: road .10 overlays
+ // authored ground .08 and base ground .04, below actors and buildings.
  // Render only clipped, camera-visible source Array road corridor pieces.
  for(int row=top;row<bottom;++row)for(int col=left;col<right;++col){
   const std::uint16_t code=grid.at(col,row);
@@ -648,7 +648,7 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
      C2D_SpriteSetPos(&sprite,band.x+x*tile,band.y+y*tile);
      C2D_SpriteSetScale(&sprite,clipped_w/sprite.params.pos.w,
                               clipped_h/sprite.params.pos.h);
-     C2D_SpriteSetDepth(&sprite,0.96f);
+     C2D_SpriteSetDepth(&sprite,0.10f);
      if(!C2D_DrawSprite(&sprite))return false;
     }
   }
