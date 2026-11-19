@@ -127,7 +127,7 @@ void Renderer::draw_debug_overlay() noexcept {
  draw_solid_rect(10.0f,90.0f,260.0f,8.0f,C2D_Color32(45,90,70,255));
  draw_solid_rect(10.0f,108.0f,140.0f,8.0f,C2D_Color32(45,90,70,255));
  draw_solid_rect(10.0f,126.0f,290.0f,2.0f,C2D_Color32(80,120,100,255));
- if(debug_ready_) C2D_DrawText(&debug_text_,C2D_AlignLeft,12.0f,12.0f,0.4f,0.38f,0.38f);
+ if(debug_ready_) C2D_DrawText(&debug_text_,C2D_AlignLeft,12.0f,12.0f,0.90f,0.38f,0.38f);
 }
 void Renderer::draw_solid_rect(float x,float y,float width,float height,u32 color) noexcept {
  if(width>0.0f&&height>0.0f) C2D_DrawRectSolid(x,y,0.5f,width,height,color);
@@ -138,7 +138,7 @@ void Renderer::draw_text(const char* value,float x,float y,float scale) noexcept
   C2D_TextBufClear(debug_buffer_);
   C2D_TextParse(&debug_text_,debug_buffer_,value);
   C2D_TextOptimize(&debug_text_);
-  C2D_DrawText(&debug_text_,C2D_AlignLeft,x,y,0.4f,scale,scale);
+  C2D_DrawText(&debug_text_,C2D_AlignLeft,x,y,0.90f,scale,scale);
   return;
  }
  // Some iOS/3DS emulators cannot provide the region system font at all.
@@ -156,7 +156,7 @@ void Renderer::draw_text(const char* value,float x,float y,float scale) noexcept
   if(glyph)for(int row=0;row<7;++row)
    for(int col=0;col<5;++col)
     if(glyph[row]&(1u<<(4-col)))
-     C2D_DrawRectSolid(at_x+col*pixel,at_y+row*pixel,0.39f,
+     C2D_DrawRectSolid(at_x+col*pixel,at_y+row*pixel,0.90f,
                        pixel,pixel,ink);
   at_x+=pixel*6.0f;
  }
@@ -268,11 +268,10 @@ bool Renderer::draw_menu_art(std::size_t index,float x,float y,float width,float
   "romfs:/gfx/tiledbgmenu_city_up.t3x"
  };
  if(index>=3||width<=0.0f||height<=0.0f) return false;
- // Citro2D's smaller depth is nearer the camera. The old .7 wood art
- // was ALWAYS behind the .5 solid-color button, leaving featureless
- // rectangles instead of actual MiniDAYZ menu buttons. Draw between
- // the .5 panel and the .4 text on EVERY screen.
- if(index==1 && depth>=0.5f)depth=0.45f;
+ // Real Manic Emu footage revealed the reversed depth assumption:
+ // larger Citro2D Z appears IN FRONT. Put the original wooden button
+ // above its 0.5f colored hitbox; text is at 0.90f.
+ if(index==1 && depth<=0.5f)depth=0.75f;
  if(!menu_sheets_[index]) menu_sheets_[index]=C2D_SpriteSheetLoad(paths[index]);
  if(!menu_sheets_[index]||C2D_SpriteSheetCount(menu_sheets_[index])==0) return false;
  C2D_Sprite sprite{};
