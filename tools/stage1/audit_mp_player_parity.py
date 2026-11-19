@@ -19,19 +19,19 @@ engine=(ROOT/"source/player.cpp").read_text(encoding="utf-8")
 out=ROOT/"data/stage1/mp_player_parity.json"
 
 def object_body(name):
-    match=re.search(r"\\b"+re.escape(name)+r"=\\{([^;]+)\\};",mp)
+    match=re.search(r"\b"+re.escape(name)+r"=\{([^;]+)\};",mp)
     if not match:
         raise AssertionError("Missing original MP equipment table: "+name)
     return match.group(1)
 
 raw=object_body("_xda7d")
-slot_expr=dict(re.findall(r'"(firearm|melee|head|backpack|vest|body|legs|quick)":(\\d+\\^\\d+)',raw))
+slot_expr=dict(re.findall(r'"(firearm|melee|head|backpack|vest|body|legs|quick)":(\d+\^\d+)',raw))
 expected={"firearm","melee","head","backpack","vest","body","legs","quick"}
 assert set(slot_expr)==expected,sorted(set(slot_expr)^expected)
 slot_indices={name:(int(a)^int(b)) for name,expr in slot_expr.items()
               for a,b in [expr.split("^")]}
 assert len(set(slot_indices.values()))==len(slot_indices),slot_indices
-drops=dict(re.findall(r'"(firearm|melee|quick|backpack|vest|body|head|legs)":\\{[^{}]*?"drop":"(Drop_[^"]+)"',object_body("_x4c865e")))
+drops=dict(re.findall(r'"(firearm|melee|quick|backpack|vest|body|head|legs)":\{[^{}]*?"drop":"(Drop_[^"]+)"',object_body("_x4c865e")))
 # The MP inventory uses named Construct inventory instance variables and
 # drop handlers. The native singleplayer port stores item IDs instead.
 assert drops=={"firearm":"Drop_firearm","melee":"Drop_melee",
@@ -40,7 +40,7 @@ assert drops=={"firearm":"Drop_firearm","melee":"Drop_melee",
 native={"firearm":"weapon","melee":"hands","head":"head","backpack":"backpack",
         "vest":"vest","body":"outerwear","legs":"pants"}
 for name in ("head","outerwear","vest","pants","hands","weapon"):
-    assert re.search(r"\\b"+name+r"\\b",header),("Missing native slot",name)
+    assert re.search(r"\b"+name+r"\b",header),("Missing native slot",name)
 assert "equipped_backpack()" in cpp
 assert "gear_slot_for_card(" in cpp
 assert "EquipmentSlot::weapon" in cpp and "EquipmentSlot::hands" in cpp
