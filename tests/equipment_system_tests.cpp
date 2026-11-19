@@ -428,5 +428,39 @@ int main() {
     assert(subpercent_jacket.fraction_snapshot().fractional_loss[outer]==0);
     assert(jacket_inventory.count(39)==0);
 
+    // MP quick pistol uses a THIRD independent weapon slot, whose allowed
+    // item IDs are extracted from root mp_kit.js and mp_players.js.
+    InventorySystem quick_bag;
+    EquipmentSystem quick_gear;
+    assert(quick_bag.add(151,1,0,88,37));  // source MP handgun
+    assert(quick_bag.add(170,1,0,92,23));  // source MP handgun
+    assert(quick_bag.add(158,1));           // rifle, not MP handgun
+    assert(!quick_gear.equip_quick_pistol_from_inventory(quick_bag,2));
+    assert(quick_bag.count(158)==1);
+    assert(quick_gear.equip_quick_pistol_from_inventory(quick_bag,0));
+    assert(quick_gear.quick_pistol()==151);
+    assert(quick_gear.quick_pistol_snapshot().condition==88);
+    assert(quick_gear.quick_pistol_snapshot().fractional_loss==37);
+    assert(quick_gear.equip_quick_pistol_from_inventory(quick_bag,1));
+    assert(quick_gear.quick_pistol()==170);
+    assert(quick_bag.count(151)==1);
+    assert(quick_gear.damage_quick_pistol_hundredths(625));
+    assert(quick_gear.quick_pistol_snapshot().condition==86);
+    assert(quick_gear.quick_pistol_snapshot().fractional_loss==48);
+    EquipmentSystem restored_quick;
+    assert(restored_quick.restore_quick_pistol(
+        quick_gear.quick_pistol_snapshot()));
+    assert(restored_quick.quick_pistol()==170);
+    assert(!restored_quick.restore_quick_pistol({158,100,0}));
+    assert(restored_quick.quick_pistol()==170);
+    assert(!restored_quick.restore_quick_pistol({170,101,0}));
+    assert(restored_quick.unequip_quick_pistol_to_inventory(quick_bag,3));
+    assert(restored_quick.quick_pistol()==0);
+    assert(quick_bag.count(170)==1);
+    assert(quick_bag.slot(3)->condition==86);
+    assert(quick_bag.slot(3)->fractional_loss==48);
+    restored_quick.clear();
+    assert(restored_quick.quick_pistol_snapshot().condition==100);
+
     return 0;
 }
