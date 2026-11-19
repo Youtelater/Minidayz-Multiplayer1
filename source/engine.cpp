@@ -129,8 +129,8 @@ void Renderer::draw_debug_overlay() noexcept {
  draw_solid_rect(10.0f,126.0f,290.0f,2.0f,C2D_Color32(80,120,100,255));
  if(debug_ready_) C2D_DrawText(&debug_text_,C2D_AlignLeft,12.0f,12.0f,0.90f,0.38f,0.38f);
 }
-void Renderer::draw_solid_rect(float x,float y,float width,float height,u32 color) noexcept {
- if(width>0.0f&&height>0.0f) C2D_DrawRectSolid(x,y,0.5f,width,height,color);
+void Renderer::draw_solid_rect(float x,float y,float width,float height,u32 color,float depth) noexcept {
+ if(width>0.0f&&height>0.0f) C2D_DrawRectSolid(x,y,depth,width,height,color);
 }
 void Renderer::draw_text(const char* value,float x,float y,float scale) noexcept {
  if(!value||!value[0]||!(scale>0.0f))return;
