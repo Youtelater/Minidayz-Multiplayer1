@@ -109,7 +109,7 @@ bool Renderer::draw_source_procedural_environment(
    C2D_SpriteSetPos(&sprite,xx,yy);
    C2D_SpriteSetScale(&sprite,kSourceTile/sprite.params.pos.w,
                               kSourceTile/sprite.params.pos.h);
-   C2D_SpriteSetDepth(&sprite,0.825f);
+   C2D_SpriteSetDepth(&sprite,0.17f);
    if(!C2D_DrawSprite(&sprite))return false;
   }
  }
