@@ -60,7 +60,7 @@ assert "details_scroll_+=3" in src
 assert "stage2_audio_.play_item_pickup();" in src
 # Tent/stash cells must use original source gui_slot and exact lower-screen
 # input bounds, excluding gutters and touches outside the visible 30 cells.
-storage=src.split("if (storage_open_) {",1)[1].split("if (crafting_open_) {",1)[0]
+storage=src.split("        if (storage_open_) {\n            // The tent item",1)[1].split("        if (crafting_open_) {",1)[0]
 assert "kOriginalSlotArt" in storage
 assert "storage_at(" in src
 assert "ui::kEquipment" in src
