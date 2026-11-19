@@ -41,7 +41,7 @@ public:
  // Render any original assets/gfx PNG by its exact source filename.
  bool draw_original_image(const char* original_png,float x,float y,float width,float height,float depth=0.5f) noexcept;
  bool draw_menu_art(std::size_t index,float x,float y,float width,float height,float depth=0.7f) noexcept;
- bool draw_item_icon(std::uint16_t item_id,float center_x,float center_y,float max_width,float max_height,float depth=0.87f) noexcept;
+ bool draw_item_icon(std::uint16_t item_id,float center_x,float center_y,float max_width,float max_height,float depth=0.87f,float rotation=0.0f) noexcept;
  void set_camera(float x,float y) noexcept { camera_x_=x; camera_y_=y; C2D_ViewReset(); C2D_ViewTranslate(-x,-y); }
  void reset_camera() noexcept { set_camera(0.0f,0.0f); }
 private:
