@@ -53,7 +53,11 @@ assert "touch_released" in src
 # A stationary touch selects worn gear for inspection, not auto-unequip.
 assert "drag_moved_ && drag_target_slot_>=0" in src
 assert "selected_equipment_slot_=equipment_target" in src
-assert "if(source<5)stage2_audio_.play_equipment_drop()" in src
+assert "if(source<5 || source==7)stage2_audio_.play_equipment_drop()" in src
+assert "gear_slot_for_card" in src
+assert "kOriginalInventoryCardArt" in src
+assert "1.5707963268f" in src, "Original rifle art must rotate into portrait weapon card"
+assert "active_held_slot_" in src, "Separate firearm/melee mode must control player stance"
 assert "std::uint16_t item_id=selected && !selected->empty()" in src
 assert "source_item_description(item_id)" in src
 assert "details_scroll_+=3" in src
