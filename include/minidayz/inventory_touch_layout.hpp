@@ -55,4 +55,26 @@ constexpr int action_at(int x,int y) noexcept {
     return kActions.contains(x,y) ? x/64 : -1;
 }
 
+// Tent / Supplies Stash is a different 5x3 dual-pane inventory.
+// Its touch hitboxes must match the exact painted cells and ignore the
+// 2px horizontal/3px vertical gutters, not round outside taps into slot 0.
+struct StorageTouch {
+    bool valid{};
+    bool carried{};
+    int local{-1};
+};
+constexpr StorageTouch storage_at(int px,int py) noexcept {
+    if(py<99 || py>=219)return {};
+    const int row=(py-99)/40;
+    if(row<0 || row>=3 || (py-99)%40>=37)return {};
+    for(int side=0;side<2;++side){
+        const int left=side==0?8:166;
+        if(px<left || px>=left+150)continue;
+        const int col=(px-left)/30;
+        if(col>=5 || (px-left)%30>=28)continue;
+        return {true,side==0,row*5+col};
+    }
+    return {};
+}
+
 } // namespace minidayz::items::ui
