@@ -91,7 +91,7 @@ public:
 private:
  void poll_input() noexcept; void update(float dt) noexcept; void render() noexcept;
  Renderer renderer_{}; Scene* scene_{}; InputState input_{}; u32 previous_held_{}; u64 previous_time_{};
- float delta_seconds_{}; std::uint64_t frame_number_{};
+ float delta_seconds_{}; float measured_frame_seconds_{}; std::uint64_t frame_number_{};
  bool performance_overlay_{};
  bool initialized_{};
 };
