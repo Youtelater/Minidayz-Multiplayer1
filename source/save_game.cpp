@@ -223,8 +223,16 @@ struct SavedGameV19 {
 static_assert(offsetof(SavedGameV19,world_level)==
               offsetof(SavedGame,world_level),
               "v19 world level offset changed; do not corrupt existing saves");
-static_assert(sizeof(SavedGameV19)<sizeof(SavedGame),
-              "v20 must extend rather than overwrite the v19 save layout");
+// SavedGameV19 ends with alignment padding. The four-byte v20 quick
+// pistol can fit inside that padding without enlarging the struct; its
+// position is validated here, and the versioned loader never interprets
+// old padding as an equipped handgun.
+static_assert(offsetof(SavedGame,quick_pistol)>
+              offsetof(SavedGameV19,world_level),
+              "v20 quick slot must follow the old world level byte");
+static_assert(offsetof(SavedGame,quick_pistol)+
+              sizeof(minidayz::items::QuickPistolSnapshot)<=sizeof(SavedGame),
+              "v20 quick slot must fit inside the new save layout");
 
 // v18 persisted pending crafting but not the active source map level.
 struct SavedGameV18 {
