@@ -216,6 +216,12 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude tests/water_shoreline_tests.cpp -o /tmp/minidayz_water_shoreline_tests
           /tmp/minidayz_water_shoreline_tests
 
+      - name: Verify exact original Menu Events action group provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/audit_source_menu_events.py
+
       - name: Verify original Construct boot menu assets and startup state
         shell: bash
         run: |
