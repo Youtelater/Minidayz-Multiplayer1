@@ -4,7 +4,7 @@
 int main(){
     using namespace minidayz::items::ui;
     static_assert(kPageSize==15);
-    static_assert(kEquipment.size()==8);
+    static_assert(kEquipment.size()==9);
     static_assert(kEquipment[7].h>kEquipment[4].h,
                   "Original gun uses a separate portrait card from melee");
     static_assert(kSlotSize==30);
@@ -33,6 +33,8 @@ int main(){
         }
     }
     assert(equipment_at(285,89)==7);
+    assert(equipment_at(285,119)==8); // independent MP quick pistol
+    assert(equipment_at(285,103)==-1); // gun / quick separator
     assert(equipment_at(94,119)==4); // melee
     assert(equipment_at(48,119)==3); // pants
     assert(equipment_at(150,119)==5); // backpack
