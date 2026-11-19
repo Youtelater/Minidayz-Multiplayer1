@@ -25,6 +25,18 @@ names={
     "NightOverlay":"night_overlay-sheet0.png",
     "RainFade":"rain_fade-sheet0.png",
 }
+# Dimensions come directly from the original Construct frame records, not
+# guessed UI sizing. Catch accidentally mapping the wrong image/sprite.
+expected_dimensions={
+    "InventoryBackground":(419,283),
+    "InventoryCard":(57,54),
+    "EquipmentCoat":(91,62),
+    "EquipmentVest":(91,62),
+    "EquipmentBackpack":(216,62),
+    "EquipmentSatchel":(216,62),
+    "Slot":(30,30),
+    "SlotBackground":(32,32),
+}
 found={}
 for i,obj in enumerate(objects):
     animations=obj[7] if len(obj)>7 and isinstance(obj[7],list) else []
@@ -34,6 +46,11 @@ for i,obj in enumerate(objects):
             if not isinstance(fr,list) or not fr or not isinstance(fr[0],str): continue
             for name,source in names.items():
                 if Path(fr[0]).name==source:
+                    if name in expected_dimensions:
+                        actual=(int(fr[4]),int(fr[5]))
+                        assert actual==expected_dimensions[name], (
+                            f"Original {name} GUI frame size changed",
+                            actual,expected_dimensions[name])
                     found.setdefault(name,(i,ai,fi))
 optional={"DeathScreen","RestartButton","NightOverlay","RainFade",
           "HelmetPlaceholder","OuterwearPlaceholder","VestPlaceholder",
