@@ -3,6 +3,7 @@
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/terrain_collision.hpp"
+#include "minidayz/terrain_obstacle_index.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
@@ -162,6 +163,7 @@ public:
             if (world_.generation_complete()) {
                 loading_world_ = false;
                 world_ready_ = true;
+                collision_index_.rebuild(world_);
                 npc_ready_ = npcs_.initialize(world_);
                 if (new_game_generation_ && !place_new_player_on_generated_map()) {
                     // Do not start a new run at a hard-coded, blocked map edge.
@@ -2101,7 +2103,7 @@ private:
         // Original Construct instance positions are relative to their
         // sprite origins, not always their upper-left corners.
         if (scene->terrain_collision_.blocked(x,y)) return true;
-        for (std::size_t i = 0; i < scene->world_.placement_count(); ++i) {
+        for (const auto i : scene->collision_index_.candidates(x,y)) {
             const auto* placement = scene->world_.placement(i);
             // A tilemap's rectangular bounds mostly contain EMPTY cells.
             // Only actual original Solid cells (above) are obstacles.
@@ -2132,6 +2134,7 @@ private:
 
     minidayz::WorldSystem world_{};
     minidayz::terrain::SolidTerrain terrain_collision_{};
+    minidayz::terrain::SourceObstacleIndex collision_index_{};
     minidayz::NpcSystem npcs_{};
     std::uint32_t world_seed_{};
     std::uint8_t world_level_{};
