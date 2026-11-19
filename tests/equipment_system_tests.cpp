@@ -45,7 +45,11 @@ int main() {
     assert(EquipmentSystem::source_slot_for_item(402, slot));
     assert(slot == EquipmentSlot::vest);
     assert(EquipmentSystem::source_slot_for_item(158, slot));
-    assert(slot == EquipmentSlot::hands);
+    assert(slot == EquipmentSlot::weapon); // original firearm card
+    assert(EquipmentSystem::source_slot_for_item(206, slot));
+    assert(slot == EquipmentSlot::hands); // original melee/pickaxe card
+    assert(EquipmentSystem::source_slot_for_item(244, slot));
+    assert(slot == EquipmentSlot::weapon); // Romero 77 Hatchet is a firearm
     assert(!EquipmentSystem::source_slot_for_item(137, slot)); // gloves are not a source equipment slot
     assert(!EquipmentSystem::source_slot_for_item(140, slot)); // no source footwear slot
     assert(!EquipmentSystem::source_slot_for_item(456, slot)); // civilian tent
@@ -322,20 +326,20 @@ int main() {
     assert(fraction_inventory.add(244, 1, 0, 100));
     assert(fraction_inventory.damage_condition_hundredths(0, 25));
     assert(fractional_gear.equip_from_inventory(
-        fraction_inventory,0,EquipmentSlot::hands));
-    const auto held=static_cast<std::size_t>(EquipmentSlot::hands);
+        fraction_inventory,0,EquipmentSlot::weapon));
+    const auto held=static_cast<std::size_t>(EquipmentSlot::weapon);
     assert(fractional_gear.snapshot().item_ids[held] == 244);
     assert(fractional_gear.snapshot().conditions[held] == 100);
     assert(fractional_gear.fraction_snapshot().fractional_loss[held] == 25);
     assert(!fractional_gear.apply_verified_wear_action(
-        EquipmentSlot::hands,6904772320561696ULL,875054325568454ULL,
+        EquipmentSlot::weapon,6904772320561696ULL,875054325568454ULL,
         744011060201717ULL,false,false));
     assert(fractional_gear.apply_verified_wear_action(
-        EquipmentSlot::hands,6904772320561696ULL,875054325568454ULL,
+        EquipmentSlot::weapon,6904772320561696ULL,875054325568454ULL,
         744011060201717ULL,true,false));
     assert(fractional_gear.fraction_snapshot().fractional_loss[held] == 50);
     assert(!fractional_gear.apply_verified_wear_action(
-        EquipmentSlot::hands,6904772320561696ULL,875054325568454ULL,
+        EquipmentSlot::weapon,6904772320561696ULL,875054325568454ULL,
         744011060201717ULL,true,true));
     EquipmentSystem fraction_loaded;
     assert(fraction_loaded.restore_with_fraction(
@@ -346,10 +350,44 @@ int main() {
         fractional_gear.snapshot(),bad_fraction));
     assert(fraction_loaded.fraction_snapshot().fractional_loss[held] == 50);
     assert(fraction_loaded.unequip_to_inventory(
-        fraction_inventory,EquipmentSlot::hands,0));
+        fraction_inventory,EquipmentSlot::weapon,0));
     assert(fraction_inventory.slot(0)->item_id == 244);
     assert(fraction_inventory.slot(0)->condition == 100);
     assert(fraction_inventory.slot(0)->fractional_loss == 50);
+
+    // The original inventory screenshot has a separate melee tool and
+    // rifle card. Preserve BOTH across native equipment and save cycles.
+    InventorySystem dual_inventory;
+    EquipmentSystem dual_gear;
+    assert(dual_inventory.add(206,1));
+    assert(dual_inventory.add(158,1));
+    assert(dual_gear.equip_from_inventory(dual_inventory,0,EquipmentSlot::hands));
+    assert(dual_gear.equip_from_inventory(dual_inventory,1,EquipmentSlot::weapon));
+    assert(dual_gear.equipped(EquipmentSlot::hands)==206);
+    assert(dual_gear.equipped(EquipmentSlot::weapon)==158);
+    EquipmentSystem dual_saved;
+    assert(dual_saved.restore_with_fraction(
+        dual_gear.snapshot(),dual_gear.fraction_snapshot()));
+    assert(dual_saved.equipped(EquipmentSlot::hands)==206);
+    assert(dual_saved.equipped(EquipmentSlot::weapon)==158);
+    assert(dual_saved.unequip_to_inventory(dual_inventory,EquipmentSlot::weapon,0));
+    assert(dual_inventory.count(158)==1);
+    assert(dual_saved.equipped(EquipmentSlot::hands)==206);
+    // Existing save v19 stored an active firearm in Hands. It must now
+    // migrate to the correct source weapon slot with its fractional wear.
+    EquipmentSnapshot legacy_gun{};
+    legacy_gun.item_ids[static_cast<std::size_t>(EquipmentSlot::hands)]=158;
+    legacy_gun.conditions[static_cast<std::size_t>(EquipmentSlot::hands)]=68;
+    EquipmentFractionSnapshot legacy_wear{};
+    legacy_wear.fractional_loss[static_cast<std::size_t>(EquipmentSlot::hands)]=42;
+    EquipmentSystem migrated;
+    assert(migrated.restore_with_fraction(legacy_gun,legacy_wear));
+    assert(migrated.equipped(EquipmentSlot::hands)==0);
+    assert(migrated.equipped(EquipmentSlot::weapon)==158);
+    assert(migrated.snapshot().conditions[
+        static_cast<std::size_t>(EquipmentSlot::weapon)]==68);
+    assert(migrated.fraction_snapshot().fractional_loss[
+        static_cast<std::size_t>(EquipmentSlot::weapon)]==42);
 
     // A 99.75%-exact jacket displays as 100% with the source byte
     // compatibility field, but it is still legitimately repairable.
