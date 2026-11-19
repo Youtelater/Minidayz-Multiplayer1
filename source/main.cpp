@@ -335,6 +335,16 @@ public:
                     }
                 } else if(menu_page_==minidayz::menu::BootPage::achievements ||
                           menu_page_==minidayz::menu::BootPage::unlocks){
+                    // Original Menu_Events has separate Character and
+                    // Weapon_unlocks groups; X switches their source pages.
+                    if(menu_page_==minidayz::menu::BootPage::unlocks &&
+                       (input.pressed & KEY_X)){
+                        unlock_weapons_page_=!unlock_weapons_page_;
+                        menu_list_index_=0;
+                        menu_detail_open_=false;
+                        menu_detail_scroll_=0;
+                        return;
+                    }
                     if(menu_detail_open_){
                         if((input.pressed & (KEY_DUP|KEY_L)) && menu_detail_scroll_>0)
                             --menu_detail_scroll_;
@@ -351,7 +361,9 @@ public:
                     }
                     const auto count=menu_page_==minidayz::menu::BootPage::achievements
                         ?minidayz::menu::kSourceAchievementCount
-                        :minidayz::menu::kSourceUnlockCount;
+                        :unlock_weapons_page_
+                            ?minidayz::menu::kSourceWeaponUnlockCount
+                            :minidayz::menu::kSourceUnlockCount;
                     if(input.pressed & KEY_DUP && menu_list_index_>0)
                         --menu_list_index_;
                     if(input.pressed & KEY_DDOWN && menu_list_index_+1<count)
@@ -442,6 +454,7 @@ public:
                 break;
             case minidayz::menu::MenuEntry::unlocks:
                 menu_detail_open_=false;
+                unlock_weapons_page_=false;
                 menu_list_index_=0;
                 menu_page_=minidayz::menu::BootPage::unlocks;
                 break;
@@ -1381,8 +1394,15 @@ public:
                 back();
                 break;
             case BootPage::unlocks:
-                render_source_list(minidayz::menu::kSourceUnlocks,
-                    minidayz::menu::kSourceUnlockCount,"UNLOCKS");
+                if(unlock_weapons_page_)
+                    render_source_list(minidayz::menu::kSourceWeaponUnlocks,
+                        minidayz::menu::kSourceWeaponUnlockCount,"WEAPON UNLOCKS");
+                else
+                    render_source_list(minidayz::menu::kSourceUnlocks,
+                        minidayz::menu::kSourceUnlockCount,"SURVIVOR UNLOCKS");
+                if(!menu_detail_open_)
+                    renderer.draw_text("X : SWITCH UNLOCK CATEGORY",
+                        49.0f,163.0f,0.24f);
                 back();
                 break;
             case BootPage::options:{
@@ -2702,6 +2722,7 @@ private:
     minidayz::SurvivalDifficulty selected_difficulty_{minidayz::SurvivalDifficulty::regular};
     std::size_t difficulty_index_{1};
     std::size_t menu_list_index_{};
+    bool unlock_weapons_page_{};
     bool menu_detail_open_{};
     std::size_t menu_detail_scroll_{};
     bool paused_{};
