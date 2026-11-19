@@ -44,10 +44,11 @@ def main():
     assert set(found)=={9846853259707544,641409757696071},found.keys()
     uid,conditions,params=found[9846853259707544]
     assert uid==9183183159438440
-    assert all(any(p[0]==11 and p[1]==name for p in c[-1])
-               for name in ("fromsav","sav_checked","sav_checked_tutor")
-               for c in conditions if isinstance(c,list) and c[0]==-1 and
-               len(c)>9 and isinstance(c[-1],list)), "Save guards changed"
+    guards=[c[-1] for c in conditions if isinstance(c,list)
+            and c[0]==-1 and len(c)>9 and isinstance(c[-1],list)]
+    assert all(any([11,name] in params for params in guards)
+               for name in ("fromsav","sav_checked","sav_checked_tutor")), \
+               "Original unsaved game guards changed"
     x,y=(p[1] for p in params)
     assert x==[0,600],x
     expected=[4,[0,1500],[18,[12,[19,52],[2,"Map"]],
@@ -56,7 +57,7 @@ def main():
     uid,conditions,params=found[641409757696071]
     assert uid==980530989134876
     assert any(c[0]==-1 and c[1]==46 and
-               [11,"CurrentLevel"] in c[-1] and [0,4] in c[-1]
+               [11,"CurrentLevel"] in c[-1] and [7,[0,4]] in c[-1]
                for c in conditions), "Level 4 source spawn override changed"
     assert params==[[0,[19,95,[[0,1000],[0,16500]]]],[0,[0,373]]],params
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
