@@ -35,6 +35,17 @@ struct EquipmentFractionSnapshot {
     std::array<std::uint8_t, kEquipmentSlotCount> fractional_loss{};
 };
 
+// The MP player's 'quick' slot is a separate pistol (Construct var 43),
+// not the rifle (var 2) or melee (var 5). Keep its snapshot separate from
+// EquipmentSnapshot so older native saves preserve their exact binary ABI.
+struct QuickPistolSnapshot {
+    std::uint16_t item_id{};
+    std::uint8_t condition{100};
+    std::uint8_t fractional_loss{};
+};
+static_assert(sizeof(QuickPistolSnapshot)==4,
+              "MP quick pistol save layout must remain four bytes");
+
 bool source_item_protection(std::uint16_t item_id,
                             SourceItemProtection& protection) noexcept;
 
@@ -62,6 +73,20 @@ public:
     EquipmentFractionSnapshot fraction_snapshot() const noexcept {
         return fractions_;
     }
+    QuickPistolSnapshot quick_pistol_snapshot() const noexcept {
+        return quick_pistol_;
+    }
+    std::uint16_t quick_pistol() const noexcept {
+        return quick_pistol_.item_id;
+    }
+    bool restore_quick_pistol(const QuickPistolSnapshot& saved) noexcept;
+    // mp_kit.js defines the allowed pistol item IDs; these transfers
+    // preserve exact source durability and are transactional.
+    bool equip_quick_pistol_from_inventory(InventorySystem& inventory,
+                                           std::size_t inventory_slot) noexcept;
+    bool unequip_quick_pistol_to_inventory(InventorySystem& inventory,
+                                           std::size_t inventory_slot) noexcept;
+    bool damage_quick_pistol_hundredths(std::uint16_t loss) noexcept;
 
     // Equipping is atomic: the incoming item is consumed and any replaced
     // item is returned to inventory. Equipment items must be single-count.
@@ -85,11 +110,12 @@ public:
     bool unequip_to_inventory(InventorySystem& inventory,
                               EquipmentSlot equipment_slot,
                               std::size_t inventory_slot) noexcept;
-    void clear() noexcept { state_ = {}; fractions_ = {}; }
+    void clear() noexcept { state_ = {}; fractions_ = {}; quick_pistol_ = {}; }
 
 private:
     EquipmentSnapshot state_{};
     EquipmentFractionSnapshot fractions_{};
+    QuickPistolSnapshot quick_pistol_{};
 };
 
 } // namespace minidayz::items
