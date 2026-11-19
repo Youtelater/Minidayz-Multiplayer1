@@ -82,7 +82,7 @@ def check() -> None:
     ):
         start=items.find(array_name)
         end=items.find("};",start)
-        count=re.search(rf"{count_name}\\s*=\\s*(\\d+);",items)
+        count=re.search(rf"{count_name}\s*=\s*(\d+);",items)
         if start<0 or end<0 or not count or len(ITEM.findall(items[start:end]))!=int(count.group(1)):
             raise SystemExit(f"Generated multiplayer source mapping mismatch: {array_name}")
     if not frame_rows or not item_rows:
