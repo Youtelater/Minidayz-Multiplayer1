@@ -1676,7 +1676,14 @@ public:
                     : minidayz::stage1::kOriginalInventoryCardArt;
                 // The original held weapon is in its own slot. The source
                 // inventory-card image is square, so never stretch it 56x34.
-                if(i==7){
+                if(i==8){
+                    // MP quick pistol uses the original gui_slot image, in a
+                    // compact separate card below the rifle card.
+                    if(!ui_art(minidayz::stage1::kOriginalSlotArt,
+                               x+11.0f,y+1.0f,30.0f,30.0f,0.24f))
+                        renderer.draw_solid_rect(x,y,w,h,
+                            C2D_Color32(146,130,99,255),0.24f);
+                }else if(i==7){
                     // gui_firearm is NOT a card background: Construct
                     // uses its 32 varying-size frames for actual guns.
                     // The slot remains source parchment while the exact
@@ -1721,15 +1728,15 @@ public:
                     : i==8 ? equipment_.quick_pistol_snapshot().condition
                     : equipment_.snapshot().conditions[gear_index_for_card(static_cast<int>(i))];
                 const float icon_size=i==1||i==2?34.0f:
-                    i==0||i==3?31.0f:i==7?42.0f:26.0f;
-                const float icon_x=x+(i==7?w*0.5f:
+                    i==0||i==3?31.0f:i==7?42.0f:i==8?24.0f:26.0f;
+                const float icon_x=x+(i==7?w*0.5f:i==8?14.0f:
                     i==1||i==2?18.0f:i==0||i==3?w*0.5f:16.0f);
-                const float icon_y=y+(i==7?h*0.5f:
+                const float icon_y=y+(i==7?h*0.5f:i==8?16.0f:
                     i==1||i==2?30.0f:i==0?25.0f:i==3?16.0f:17.0f);
                 if(item_id!=0){
                     if(i==7)
                         (void)renderer.draw_item_icon(item_id,icon_x,icon_y,
-                            42.0f,77.0f,0.86f,1.5707963268f);
+                            42.0f,57.0f,0.86f,1.5707963268f);
                     else
                         (void)renderer.draw_item_icon(item_id,
                             icon_x,icon_y,icon_size,icon_size,0.86f);
@@ -1768,6 +1775,9 @@ public:
                         }
                     } else if(i==7){
                         renderer.draw_text(durability,x+8.0f,y+h-14.0f,0.22f);
+                    } else if(i==8){
+                        renderer.draw_text("Q",x+31.0f,y+3.0f,0.20f);
+                        renderer.draw_text(durability,x+29.0f,y+19.0f,0.15f);
                     } else if(i==0||i==3) {
                         renderer.draw_text(durability,x+10.0f,
                             y+(i==3?23.0f:41.0f),0.21f);
@@ -1790,8 +1800,9 @@ public:
                             icon_y-icon_size*0.5f,icon_size,icon_size,0.82f);
                     if(i!=0&&i!=3)
                         renderer.draw_text(equipment_labels[i],
-                            i==7?x+9.0f:x+(i==1||i==2?43.0f:34.0f),
-                            y+8.0f,0.20f);
+                            i==7?x+9.0f:i==8?x+25.0f:
+                                x+(i==1||i==2?43.0f:34.0f),
+                            y+8.0f,i==8?0.17f:0.20f);
                 }
             }
             static constexpr const char* actions[] = {
@@ -2160,6 +2171,7 @@ public:
                 const int ui_slot=drag_equipped_source_slot_;
                 moving_id=ui_slot==5?inventory_.equipped_backpack()
                     :ui_slot==6?inventory_.equipped_satchel()
+                    :ui_slot==8?equipment_.quick_pistol()
                     :equipment_.equipped(gear_slot_for_card(ui_slot));
             }
             if(moving_id!=0)
