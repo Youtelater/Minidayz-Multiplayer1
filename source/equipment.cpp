@@ -2,6 +2,7 @@
 #include "minidayz/generated/item_equipment_catalog.hpp"
 #include "minidayz/item_repair.hpp"
 #include "minidayz/source_wear.hpp"
+#include "minidayz/generated/mp_quick_pistol_catalog.hpp"
 
 #include <cmath>
 
@@ -378,6 +379,69 @@ bool EquipmentSystem::unequip_to_inventory(
     state_.item_ids[slot_index] = 0;
     state_.conditions[slot_index] = 100;
     fractions_.fractional_loss[slot_index] = 0;
+    return true;
+}
+
+
+bool EquipmentSystem::restore_quick_pistol(
+    const QuickPistolSnapshot& saved) noexcept {
+    if(saved.condition>100 || saved.fractional_loss>=100)return false;
+    if(saved.item_id==0){
+        if(saved.condition!=100 || saved.fractional_loss!=0)return false;
+    }else{
+        if(!is_mp_quick_pistol(saved.item_id) ||
+           !source_item_exists(saved.item_id) ||
+           (saved.condition==0 && saved.fractional_loss!=0))
+            return false;
+    }
+    quick_pistol_=saved;
+    return true;
+}
+
+bool EquipmentSystem::equip_quick_pistol_from_inventory(
+    InventorySystem& inventory,std::size_t index) noexcept {
+    const auto* incoming=inventory.slot(index);
+    if(!incoming || incoming->empty() || incoming->count!=1 ||
+       !is_mp_quick_pistol(incoming->item_id))
+        return false;
+    const auto before=inventory.snapshot();
+    const QuickPistolSnapshot old=quick_pistol_;
+    const QuickPistolSnapshot next{
+        incoming->item_id,incoming->condition,incoming->fractional_loss};
+    if(!inventory.remove(index,1))return false;
+    if(old.item_id && !inventory.add(old.item_id,1,0,
+                                    old.condition,old.fractional_loss)){
+        (void)inventory.restore(before);
+        return false;
+    }
+    quick_pistol_=next;
+    return true;
+}
+
+bool EquipmentSystem::unequip_quick_pistol_to_inventory(
+    InventorySystem& inventory,std::size_t index) noexcept {
+    if(!quick_pistol_.item_id)return false;
+    if(!inventory.add_to_slot(index,quick_pistol_.item_id,1,0,
+                               quick_pistol_.condition,
+                               quick_pistol_.fractional_loss))
+        return false;
+    quick_pistol_={};
+    return true;
+}
+
+bool EquipmentSystem::damage_quick_pistol_hundredths(
+    std::uint16_t loss) noexcept {
+    if(quick_pistol_.item_id==0 || loss==0)return false;
+    const std::uint16_t exact=static_cast<std::uint16_t>(
+        quick_pistol_.condition*100u-quick_pistol_.fractional_loss);
+    if(loss>=exact){
+        quick_pistol_={};
+    }else{
+        const auto remaining=static_cast<std::uint16_t>(exact-loss);
+        quick_pistol_.condition=static_cast<std::uint8_t>((remaining+99u)/100u);
+        quick_pistol_.fractional_loss=static_cast<std::uint8_t>(
+            quick_pistol_.condition*100u-remaining);
+    }
     return true;
 }
 
