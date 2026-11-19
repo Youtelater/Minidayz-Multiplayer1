@@ -185,7 +185,9 @@ PlayerMoveResult PlayerSystem::update_movement(
     if (!state_.alive || !std::isfinite(delta_seconds) || delta_seconds <= 0.0f)
         return result;
 
-    const float dt = clamp(delta_seconds, 0.0f, 0.05f);
+    // Match 3DS frame-time budget: old 50ms clamp slowed movement
+    // by 50% as soon as the renderer dropped to 10 FPS.
+    const float dt = clamp(delta_seconds, 0.0f, 0.10f);
     float ix = clamp(finite_or_zero(input.move_x), -1.0f, 1.0f);
     float iy = clamp(finite_or_zero(input.move_y), -1.0f, 1.0f);
     const float magnitude = std::sqrt(ix * ix + iy * iy);
