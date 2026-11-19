@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cstddef>
 
 namespace minidayz::menu {
 
@@ -20,8 +21,27 @@ struct TouchBounds {
     }
 };
 
-inline constexpr TouchBounds kContinueButton{18, 78, 302, 132};
-inline constexpr TouchBounds kNewGameButton{18, 145, 302, 202};
+inline constexpr TouchBounds kContinueButton{18, 58, 302, 106};
+inline constexpr TouchBounds kNewGameButton{18, 115, 302, 163};
+// The old skin selector stole the lower part of New Game's hitbox.
+// Keep every menu action on an independent visible touch row.
+inline constexpr TouchBounds kSkinPrevious{18, 174, 155, 207};
+inline constexpr TouchBounds kSkinNext{165, 174, 302, 207};
+
+enum class SkinAction : std::int8_t { none, previous, next };
+constexpr SkinAction skin_touch_action(int px,int py) noexcept {
+    if(kSkinPrevious.contains(px,py))return SkinAction::previous;
+    if(kSkinNext.contains(px,py))return SkinAction::next;
+    return SkinAction::none;
+}
+constexpr std::size_t advance_skin(std::size_t current,std::size_t count,
+                                    SkinAction action) noexcept {
+    if(count==0)return 0;
+    current%=count;
+    if(action==SkinAction::previous)return (current+count-1)%count;
+    if(action==SkinAction::next)return (current+1)%count;
+    return current;
+}
 
 enum class BootAction : std::uint8_t { none, continue_game, new_game };
 
