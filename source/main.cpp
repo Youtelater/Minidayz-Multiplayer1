@@ -1077,8 +1077,10 @@ public:
         };
         if (!ui_art(minidayz::stage1::kOriginalInventoryBackgroundArt,
                     0.0f, 0.0f, 320.0f, 240.0f, 0.05f)) {
+            // The fallback must be BEHIND every original inventory sprite,
+            // not at the default .5f depth where it hides its own artwork.
             renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
-                                     C2D_Color32(70, 60, 48, 255));
+                                     C2D_Color32(70, 60, 48, 255),0.01f);
         }
         renderer.draw_solid_rect(6.0f, 6.0f, 308.0f, 25.0f, C2D_Color32(54, 68, 55, 255));
         renderer.draw_solid_rect(258.0f,1.0f,56.0f,13.0f,
@@ -1516,16 +1518,19 @@ public:
                 const bool restricted = index >= 0 &&
                     inventory_.is_exclusive_satchel_slot(
                         static_cast<std::size_t>(index));
-                // The original gui_slot_bg sheet is a BRIGHT CYAN
-                // drag/drop selection texture (as seen in Manic Emu).
-                // It is NOT the parchment item card from the original
-                // screenshot. Use the exact gui_inventory_card sprite
-                // exported by the supplied Construct project instead.
-                if (!ui_art(minidayz::stage1::kOriginalInventoryCardArt,
+                // The original project has *distinct* GUI sprites for
+                // inventory cards and item slots. The old renderer drew
+                // 15 equipment cards here, distorting the entire backpack.
+                // Draw the source gui_slot art for each backpack cell;
+                // gui_slot_bg is the cyan highlight and is never a default
+                // background for all slots.
+                if (!ui_art(minidayz::stage1::kOriginalSlotArt,
                             x, y, 56.0f, 29.0f, 0.30f))
                     renderer.draw_solid_rect(x, y, 56.0f, 29.0f,
                         C2D_Color32(154, 142, 116, 255),0.30f);
                 if (selected) {
+                    (void)ui_art(minidayz::stage1::kOriginalSlotBackgroundArt,
+                                 x,y,56.0f,29.0f,0.32f);
                     const u32 accent = C2D_Color32(224, 187, 87, 255);
                     renderer.draw_solid_rect(x, y, 56.0f, 2.0f, accent);
                     renderer.draw_solid_rect(x, y + 27.0f, 56.0f, 2.0f, accent);
@@ -1550,9 +1555,13 @@ public:
                     (void)renderer.draw_item_icon(item->item_id,
                         x + 28.0f, y + 12.0f, 29.0f, 19.0f);
                     char quantity[8]{};
-                    std::snprintf(quantity, sizeof(quantity), "x%u",
-                                  static_cast<unsigned>(item->count));
-                    renderer.draw_text(quantity, x + 3.0f, y + 20.0f, 0.21f);
+                    // Original stacks show their count, not a fabricated
+                    // x1 overlay on every one-item tool or piece of gear.
+                    if(item->count>1){
+                        std::snprintf(quantity, sizeof(quantity), "x%u",
+                                      static_cast<unsigned>(item->count));
+                        renderer.draw_text(quantity, x + 3.0f, y + 20.0f, 0.21f);
+                    }
                     if (item->condition > 0 && item->condition < 100) {
                         renderer.draw_solid_rect(x + 6.0f, y + 26.0f, 44.0f, 2.0f,
                                                  C2D_Color32(30, 30, 30, 255));
