@@ -46,6 +46,12 @@
 - All 21 files are protected by `tools/stage1/audit_multiplayer_scripts.py` for source hash, mirror parity and browser load-order inventory. The script decodes Unicode escapes statically and never evaluates the JS.
 - **Verdict:** the files **matter**, especially for icons, multiplayer menu styling, runtime compatibility, skins and world sync. They are **not a substitute for** the original single-player game code, and importing all of them as vanilla logic would make fidelity worse.
 
+## Implemented in the 3DS toolchain during this audit
+- `tools/stage1/audit_multiplayer_scripts.py` indexes the 21 root scripts, validates all 21 mirrored copies have identical contents, decodes escaped global symbols **without executing code**, and preserves the exact `index.html` module order in `data/stage1/mp_script_manifest.json`. It runs in the GitHub 3DS build.
+- Extended `tools/stage2/build_item_sprite_catalog.py` to read **all three exported tables** in `mp_itemtable.js`: `MDZItemTable` (already used for original item icons), `MDZPlayerDropTable` (multiplayer dropped-object sprites) and `MDZItemVariants` (variant to base-visual mapping). The extra two tables are kept **separate** from vanilla inventory and world spawning. Unresolved source sprite IDs are reported rather than guessed.
+- `tests/mp_item_reference_tests.cpp` validates the generated multiplayer item-reference IDs, and `tools/stage1/verify_all_graphics.py` verifies these extra tables separately so they never inflate the 329 vanilla item-image record count.
+- This does **not** mean native multiplayer is implemented or the source MiniDAYZ menu has been replaced. It creates accurate references for later source-equivalent code.
+
 ## Remaining implementation checks
 - Map original `Menu_Events` action IDs for each non-network button before adding Achievements/Unlocks/Options handlers.
 - Trace `mp_itemtable.js` item variants and drop IDs against current generated catalogs and original item actions.
