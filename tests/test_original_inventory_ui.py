@@ -22,13 +22,21 @@ for filename in (
 # gui_slot is the original backpack cell, not the bright cyan highlight
 # or a second full-size equipment card.
 assert "ui_art(minidayz::stage1::kOriginalSlotArt," in src
-assert "ui_art(minidayz::stage1::kOriginalSlotBackgroundArt," in src
-grid=src.split("// 5 x 3 source-sprite backpack cells",1)[1].split(
+# The original cyan gui_slot_bg is a drag selection graphic, not the
+# parchment base, so the new square cells deliberately do not use it.
+assert "kOriginalSlotBackgroundArt" not in src.split(
+    "// Original GUI 'gui_slot' is a 30x30 PIXEL square.",1)[1].split(
+    "const std::size_t page_count",1)[0]
+grid=src.split("// Original GUI 'gui_slot' is a 30x30 PIXEL square.",1)[1].split(
     "const std::size_t page_count",1)[0]
 assert "kOriginalInventoryCardArt" not in grid, (
     "Backpack slots must not be composed from full equipment cards")
-assert "if (selected)" in grid
+assert "if(selected || drag_target_slot_==index)" in grid
 assert "if(item->count>1)" in grid
+assert "minidayz::items::ui::kSlotSize" in src
+assert "minidayz::items::ui::kEquipment" in src
+assert "minidayz::items::ui::kActions" in src
+assert "minidayz::items::ui::kPageNavigation" in src
 # Touch down must not instantly unequip gear, or original item condition
 # and drop targets are lost before the release event.
 press=src.split("const int equipment_target = equipment_slot_at",1)[1].split(
