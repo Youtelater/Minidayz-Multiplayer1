@@ -2441,6 +2441,17 @@ public:
             sprite_drawn=renderer.draw_source_animation(source_skin_object,
                 skin_animation,player_.source_animation_frame(),
                 p.x,p.y,0.55f,0.55f,0.57f);
+        // If an optional survivor texture is missing from RomFS, use the
+        // game's ORIGINAL default survivor as a last-resort sprite. This
+        // keeps the player visible without substituting invented artwork;
+        // equipment overlays remain source-derived. Never replace the
+        // selected skin when its original animation loaded successfully.
+        if(p.alive && !sprite_drawn &&
+           source_skin_object!=minidayz::kSourcePlayerObject)
+            sprite_drawn=renderer.draw_source_animation(
+                minidayz::kSourcePlayerObject,skin_animation,
+                player_.source_animation_frame(),
+                p.x,p.y,0.55f,0.55f,0.57f);
         if (p.alive) {
             // Original item pickups and wearable actor overlays are NOT
             // interchangeable. Only draw original animation poses proven to
