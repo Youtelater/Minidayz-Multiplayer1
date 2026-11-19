@@ -387,7 +387,8 @@ public:
                     }
                 } else if(menu_page_==minidayz::menu::BootPage::options){
                     if((input.pressed & KEY_A) ||
-                        (tap && input.touch.py>=70 && input.touch.py<=117)){
+                        (tap && input.touch.px>=64 && input.touch.px<=256 &&
+                                input.touch.py>=70 && input.touch.py<=117)){
                         stage2_audio_.set_muted(!stage2_audio_.muted());
                         persist_menu_settings();
                         if(!stage2_audio_.muted() && world_ready_){
