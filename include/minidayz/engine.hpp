@@ -67,7 +67,8 @@ private:
     bool has_source_rule{};
     std::array<std::uint16_t,kScatterCells> cells{};
   };
-  std::array<ScatterCacheEntry,kScatterCacheEntries> scatter_cache_{};
+  // Stored on heap; never allocate ~26KB of terrain cache on the 3DS main stack.
+  std::vector<ScatterCacheEntry> scatter_cache_{};
   std::size_t next_scatter_cache_{};
   std::vector<DetailMap> detail_maps_{};
   bool detail_load_attempted_{}; bool detail_loaded_{};
