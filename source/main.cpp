@@ -1107,8 +1107,22 @@ public:
                         38.0f * std::clamp(exact_condition / 100.0f, 0.0f, 1.0f),
                         2.0f, C2D_Color32(177, 146, 79, 255));
                 } else {
-                    renderer.draw_text(equipment_labels[i],
-                                       x + 29.0f, y + 14.0f, 0.30f);
+                    // The original game shows equipment silhouettes on
+                    // parchment cards. Use only source PNG-backed icons.
+                    const auto& empty_icon =
+                        i == 0 ? minidayz::stage1::kOriginalHelmetPlaceholderArt
+                        : i == 1 ? minidayz::stage1::kOriginalOuterwearPlaceholderArt
+                        : i == 2 ? minidayz::stage1::kOriginalVestPlaceholderArt
+                        : i == 3 ? minidayz::stage1::kOriginalPantsPlaceholderArt
+                        : i == 5 ? minidayz::stage1::kOriginalBackpackPlaceholderArt
+                        : minidayz::stage1::kOriginalSlotArt;
+                    if(empty_icon.object==65535 ||
+                       !ui_art(empty_icon,x+5.0f,y+5.0f,25.0f,25.0f,0.82f))
+                        renderer.draw_text(equipment_labels[i],
+                                           x + 9.0f, y + 11.0f, 0.25f);
+                    else
+                        renderer.draw_text(equipment_labels[i],
+                                           x + 36.0f, y + 12.0f, 0.19f);
                 }
             }
             static constexpr const char* actions[] = {
