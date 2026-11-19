@@ -722,30 +722,31 @@ public:
                 }
             } else if (storage.found &&
                        input.touch.py >= 99 && input.touch.py < 219) {
-                const int col = input.touch.px < 160
-                    ? (input.touch.px - 8) / 30 : (input.touch.px - 166) / 30;
-                const int row = (input.touch.py - 99) / 40;
-                if (col >= 0 && col < 5 && row >= 0 && row < 3) {
-                    const std::size_t cell = static_cast<std::size_t>(row * 5 + col);
-                    if (input.touch.px >= 8 && input.touch.px < 158) {
-                        if (storage.stash)
-                            (void)stashes_.store_from_inventory(
+                const auto hit=minidayz::items::ui::storage_at(
+                    input.touch.px,input.touch.py);
+                if(hit.valid){
+                    const std::size_t cell=static_cast<std::size_t>(hit.local);
+                    bool moved=false;
+                    if(hit.carried){
+                        if(storage.stash)
+                            moved=stashes_.store_from_inventory(
                                 inventory_, inventory_page_ * kInventoryPageSize + cell,
                                 storage.index);
                         else
-                            (void)tents_.store_from_inventory(
+                            moved=tents_.store_from_inventory(
                                 inventory_, inventory_page_ * kInventoryPageSize + cell,
                                 storage.index);
-                    } else if (input.touch.px >= 166 && input.touch.px < 316) {
-                        if (storage.stash)
-                            (void)stashes_.take_to_inventory(
+                    }else{
+                        if(storage.stash)
+                            moved=stashes_.take_to_inventory(
                                 inventory_,storage.index,
                                 storage_page_ * kInventoryPageSize + cell);
                         else
-                            (void)tents_.take_to_inventory(
+                            moved=tents_.take_to_inventory(
                                 inventory_,storage.index,
                                 storage_page_ * kInventoryPageSize + cell);
                     }
+                    if(moved)stage2_audio_.play_item_pickup();
                 }
             }
         }
@@ -1794,15 +1795,21 @@ public:
                             const float x = static_cast<float>(
                                 (side == 0 ? 8 : 166) + col * 30);
                             const float y = static_cast<float>(99 + row * 40);
-                            renderer.draw_solid_rect(x, y, 28.0f, 37.0f,
-                                                     C2D_Color32(48, 57, 48, 255));
+                            // Original GUI slots are 30x30 squares, not
+                            // a green 28x37 replacement. Only the quantity
+                            // footer uses the space below each source icon.
+                            if(!ui_art(minidayz::stage1::kOriginalSlotArt,
+                                       x,y,28.0f,28.0f,0.30f))
+                                renderer.draw_solid_rect(x,y,28.0f,28.0f,
+                                    C2D_Color32(135,119,92,255),0.30f);
                             if (!item || item->empty()) continue;
                             (void)renderer.draw_item_icon(item->item_id,
                                 x + 14.0f, y + 15.0f, 24.0f, 24.0f);
                             char amount[12]{};
                             std::snprintf(amount, sizeof(amount), "%u",
                                           static_cast<unsigned>(item->count));
-                            renderer.draw_text(amount, x + 2.0f, y + 29.0f, 0.19f);
+                            if(item->count>1)
+                                renderer.draw_text(amount, x + 2.0f, y + 29.0f, 0.19f);
                         }
                     }
                 }
