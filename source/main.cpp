@@ -1264,6 +1264,45 @@ public:
                 const minidayz::menu::SourceMenuRecord* records,
                 std::size_t total,const char* title) noexcept {
                 renderer.draw_text(title,88.0f,10.0f,0.47f);
+                if(menu_list_index_>=total)return;
+                if(menu_detail_open_){
+                    // Every original description can now be read in full
+                    // instead of the previous two-line truncation.
+                    const auto& record=records[menu_list_index_];
+                    char heading[54]{};
+                    std::snprintf(heading,sizeof(heading),"%.42s",record.name);
+                    renderer.draw_text(heading,17.0f,34.0f,0.35f);
+                    const char* cursor=record.description;
+                    std::size_t wrapped_line=0;
+                    int displayed=0;
+                    while(*cursor && wrapped_line<menu_detail_scroll_+8){
+                        while(*cursor==' '||*cursor=='\\n'||*cursor=='\\r')
+                            ++cursor;
+                        if(!*cursor)break;
+                        char line[46]{};
+                        std::size_t count=0,break_at=0;
+                        while(cursor[count] && cursor[count]!='\\n' &&
+                              cursor[count]!='\\r' && count<43){
+                            if(cursor[count]==' ')break_at=count;
+                            ++count;
+                        }
+                        if(count==43 && cursor[count] && break_at>0)
+                            count=break_at;
+                        if(count==0){++cursor;continue;}
+                        std::memcpy(line,cursor,count);
+                        line[count]=0;
+                        if(wrapped_line>=menu_detail_scroll_ && displayed<8){
+                            renderer.draw_text(line,14.0f,
+                                61.0f+displayed*17.0f,0.28f);
+                            ++displayed;
+                        }
+                        cursor+=count;
+                        ++wrapped_line;
+                    }
+                    renderer.draw_text("UP/DOWN : SCROLL   A : LIST",
+                        47.0f,199.0f,0.25f);
+                    return;
+                }
                 const std::size_t offset=(menu_list_index_/4)*4;
                 for(std::size_t row=0;row<4;++row){
                     const auto index=offset+row;
@@ -1272,39 +1311,12 @@ public:
                         15,static_cast<int>(43+row*30),
                         305,static_cast<int>(71+row*30)};
                     wood(rect,index==menu_list_index_,true);
-                    // Localized, source-provided achievement/character name.
-                    char text[65]{};
-                    std::snprintf(text,sizeof(text),"%.45s",records[index].name);
-                    renderer.draw_text(text,25.0f,rect.y()+6.0f,0.31f);
+                    char name[65]{};
+                    std::snprintf(name,sizeof(name),"%.45s",records[index].name);
+                    renderer.draw_text(name,25.0f,rect.y()+6.0f,0.31f);
                 }
-                // Source descriptions are not native progression flags.
-                // Make their actual description readable without falsely
-                // marking an achievement completed or a survivor unlocked.
-                if(menu_list_index_<total){
-                    const char* description=records[menu_list_index_].description;
-                    const char* requirement=std::strstr(description,"Unlock Requirement:");
-                    if(requirement)description=requirement;
-                    int line=0;
-                    while(*description && line<2){
-                        while(*description==' ' || *description=='\\n')++description;
-                        if(!*description)break;
-                        char excerpt[46]{};
-                        std::size_t count=0,break_at=0;
-                        while(description[count] && description[count]!='\\n' &&
-                              count<40){
-                            if(description[count]==' ')break_at=count;
-                            ++count;
-                        }
-                        if(count==40 && description[count] && break_at>0)
-                            count=break_at;
-                        std::memcpy(excerpt,description,count);
-                        excerpt[count]=0;
-                        renderer.draw_text(excerpt,16.0f,
-                            172.0f+line*15.0f,0.25f);
-                        description+=count;
-                        ++line;
-                    }
-                }
+                renderer.draw_text("A / TOUCH : VIEW REQUIREMENTS",
+                    39.0f,180.0f,0.25f);
                 char page[32]{};
                 std::snprintf(page,sizeof(page),"%u / %u  L/R PAGE",
                     static_cast<unsigned>(menu_list_index_+1),
