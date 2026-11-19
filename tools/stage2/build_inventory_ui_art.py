@@ -12,6 +12,7 @@ names={
     "EquipmentCoat":"gui_inv_card_outerwear-sheet0.png",
     "EquipmentBackpack":"gui_inv_card_backpack-sheet0.png",
     "EquipmentSatchel":"gui_inv_card_kuabao-sheet0.png",
+    "EquipmentFirearm":"gui_firearm-sheet0.png",
     "Slot":"gui_slot-sheet0.png",
     "SlotBackground":"gui_slot_bg-sheet0.png",
     # Original source empty equipment-slot pictograms, NOT invented labels.
@@ -34,6 +35,7 @@ expected_dimensions={
     "EquipmentVest":(91,62),
     "EquipmentBackpack":(216,62),
     "EquipmentSatchel":(216,62),
+    "EquipmentFirearm":(167,55),
     "Slot":(30,30),
     "SlotBackground":(32,32),
 }
