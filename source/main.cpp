@@ -1103,8 +1103,10 @@ public:
             return renderer.draw_source_sprite_fitted(art.object,
                 art.animation, art.frame, x, y, w, h, depth);
         };
+        // Original inventory backdrop: 419x283. Preserve its aspect ratio
+        // as 320x216, rather than deforming it to the 320x240 display.
         if (!ui_art(minidayz::stage1::kOriginalInventoryBackgroundArt,
-                    0.0f, 0.0f, 320.0f, 240.0f, 0.05f)) {
+                    0.0f, 12.0f, 320.0f, 216.0f, 0.05f)) {
             // The fallback must be BEHIND every original inventory sprite,
             // not at the default .5f depth where it hides its own artwork.
             renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
