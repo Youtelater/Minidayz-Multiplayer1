@@ -849,7 +849,7 @@ public:
     void render_bottom(minidayz::Renderer& renderer) noexcept override {
         if (loading_world_) {
             renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
-                                     C2D_Color32(20, 25, 23, 255));
+                                     C2D_Color32(20, 25, 23, 255),0.01f);
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 320.0f, 240.0f, 0.05f);
             renderer.draw_text("GENERATING WORLD", 45.0f, 52.0f, 0.52f);
             static constexpr const char* steps[] = {
@@ -874,7 +874,7 @@ public:
             // match the button rectangles exactly on 320x240.
             renderer.reset_camera();
             renderer.draw_solid_rect(0.0f,0.0f,320.0f,240.0f,
-                                     C2D_Color32(20,25,23,255));
+                                     C2D_Color32(20,25,23,255),0.01f);
             (void)renderer.draw_menu_art(2,0.0f,0.0f,320.0f,240.0f,0.05f);
             renderer.draw_solid_rect(10.0f,8.0f,300.0f,37.0f,
                                      C2D_Color32(24,31,27,232));
@@ -920,7 +920,7 @@ public:
         }
         if (paused_) {
             renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
-                                     C2D_Color32(20, 25, 23, 255));
+                                     C2D_Color32(20, 25, 23, 255),0.01f);
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 320.0f, 240.0f, 0.05f);
             renderer.draw_text("PAUSED", 108.0f, 18.0f, 0.60f);
             constexpr float y[] = {52.0f, 109.0f, 164.0f};
@@ -940,7 +940,7 @@ public:
         }
         if (!player_.state().alive) {
             renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
-                                     C2D_Color32(18, 22, 21, 255));
+                                     C2D_Color32(18, 22, 21, 255),0.01f);
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 320.0f, 240.0f, 0.05f);
             renderer.draw_text("SURVIVAL ENDED", 66.0f, 26.0f, 0.51f);
             renderer.draw_solid_rect(18.0f, 87.0f, 284.0f, 53.0f,
@@ -1431,7 +1431,7 @@ public:
         if (loading_world_) {
             renderer.reset_camera();
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
-                                     C2D_Color32(24, 34, 29, 255));
+                                     C2D_Color32(24, 34, 29, 255),0.01f);
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 400.0f, 240.0f, 0.05f);
             if (!renderer.draw_menu_art(0, 42.0f, 36.0f, 316.0f, 112.0f))
                 renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
@@ -1441,7 +1441,7 @@ public:
         if (menu_active_) {
             renderer.reset_camera();
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
-                                     C2D_Color32(24, 34, 29, 255));
+                                     C2D_Color32(24, 34, 29, 255),0.01f);
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 400.0f, 240.0f, 0.05f);
             if (!renderer.draw_menu_art(0, 42.0f, 36.0f, 316.0f, 112.0f))
                 renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
@@ -1455,7 +1455,7 @@ public:
         if (!player_.state().alive) {
             renderer.reset_camera();
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
-                                     C2D_Color32(24, 20, 19, 255));
+                                     C2D_Color32(24, 20, 19, 255),0.01f);
             if (!renderer.draw_source_sprite_fitted(
                     minidayz::stage1::kOriginalDeathScreenArt.object,
                     minidayz::stage1::kOriginalDeathScreenArt.animation,
@@ -1482,7 +1482,7 @@ public:
         if (paused_) {
             renderer.reset_camera();
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
-                                     C2D_Color32(24, 34, 29, 255));
+                                     C2D_Color32(24, 34, 29, 255),0.01f);
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 400.0f, 240.0f, 0.05f);
             if (!renderer.draw_menu_art(0, 42.0f, 27.0f, 316.0f, 112.0f))
                 renderer.draw_text("MINI DAYZ", 76.0f, 68.0f, 1.05f);
