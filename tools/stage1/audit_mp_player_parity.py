@@ -31,7 +31,7 @@ assert set(slot_expr)==expected,sorted(set(slot_expr)^expected)
 slot_indices={name:(int(a)^int(b)) for name,expr in slot_expr.items()
               for a,b in [expr.split("^")]}
 assert len(set(slot_indices.values()))==len(slot_indices),slot_indices
-drops=dict(re.findall(r'"(firearm|melee|quick|backpack|vest|body|head|legs)":\{[^{}]*?"drop":"(Drop_[^"]+)"',object_body("_x4c865e")))
+drops=dict(re.findall(r'"(firearm|melee|quick|backpack|vest|body|head|legs)":\{"uid":.*?"drop":"(Drop_[^"]+)"',object_body("_x4c865e")))
 # The MP inventory uses named Construct inventory instance variables and
 # drop handlers. The native singleplayer port stores item IDs instead.
 assert drops=={"firearm":"Drop_firearm","melee":"Drop_melee",
