@@ -60,6 +60,6 @@ result={
  "checks":"MP categories and existing 3DS equipment separation verified; not emulator parity"
 }
 out.parent.mkdir(parents=True,exist_ok=True)
-out.write_text(json.dumps(result,indent=2,sort_keys=True)+"\\n",encoding="utf-8")
+out.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n",encoding="utf-8")
 print("PASS: MP player equipment references mapped to native 3DS categories")
 print("UNPORTED:",", ".join(unsupported))
