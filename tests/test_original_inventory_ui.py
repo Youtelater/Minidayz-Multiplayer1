@@ -55,6 +55,16 @@ assert "drag_moved_ && drag_target_slot_>=0" in src
 assert "selected_equipment_slot_=equipment_target" in src
 assert "if(source<5 || source==7)stage2_audio_.play_equipment_drop()" in src
 assert "gear_slot_for_card" in src
+# Equipment card 7 is the firearm UI position, but Weapon is native
+# EquipmentSlot 6. An unconverted cast makes guns impossible to equip.
+assert "const auto target = gear_slot_for_card(drag_target_equipment_slot_);" in src, (
+    "Stylus equipment drops must translate firearm card 7 to Weapon slot 6")
+assert "static_cast<minidayz::items::EquipmentSlot>(\n                    drag_target_equipment_slot_)" not in src
+# Item details for the selected firearm must not index a seven-element
+# equipment condition array using the UI card number 7.
+assert "equipment_.snapshot().conditions[gear_index_for_card(slot)]" in src, (
+    "Selected firearm details must read the weapon condition from slot 6")
+assert "equipment_.snapshot().conditions[static_cast<std::size_t>(slot)]" not in src
 assert "kOriginalInventoryCardArt" in src
 # World visuals stay on the TOP 400x240 display. Every inventory,
 # equipment, crafting, item details and storage card is rendered solely
