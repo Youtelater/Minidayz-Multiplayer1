@@ -1259,8 +1259,13 @@ public:
                 wood(audio_row,false,true);
                 renderer.draw_text(stage2_audio_.muted()?"SOUND : OFF":"SOUND : ON",
                     103.0f,87.0f,0.41f);
-                renderer.draw_text("A / TOUCH TO CHANGE",62.0f,137.0f,0.31f);
-                renderer.draw_text("SELECT IN GAME: FPS DISPLAY",25.0f,170.0f,0.27f);
+                renderer.draw_text("A / TOUCH TO CHANGE",62.0f,129.0f,0.31f);
+                // Original UI localization contains Stick position and
+                // Language. On 3DS the Circle Pad is physical and the
+                // existing single-player translations are English only.
+                renderer.draw_text("STICK : 3DS CIRCLE PAD",58.0f,152.0f,0.28f);
+                renderer.draw_text("LANGUAGE : ENGLISH",75.0f,173.0f,0.28f);
+                renderer.draw_text("SELECT IN GAME : FPS",69.0f,192.0f,0.26f);
                 back();
                 break;
             }
