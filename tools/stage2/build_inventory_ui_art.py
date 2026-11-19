@@ -14,6 +14,12 @@ names={
     "EquipmentSatchel":"gui_inv_card_kuabao-sheet0.png",
     "Slot":"gui_slot-sheet0.png",
     "SlotBackground":"gui_slot_bg-sheet0.png",
+    # Original source empty equipment-slot pictograms, NOT invented labels.
+    "HelmetPlaceholder":"gui_item_helmet-sheet0.png",
+    "OuterwearPlaceholder":"gui_item_outerwear-sheet0.png",
+    "VestPlaceholder":"gui_item_vest-sheet0.png",
+    "PantsPlaceholder":"gui_item_pants-sheet0.png",
+    "BackpackPlaceholder":"gui_item_backpack-sheet0.png",
     "DeathScreen":"dead_screen-sheet0.png",
     "RestartButton":"btn_restart-sheet0.png",
     "NightOverlay":"night_overlay-sheet0.png",
@@ -29,14 +35,17 @@ for i,obj in enumerate(objects):
             for name,source in names.items():
                 if Path(fr[0]).name==source:
                     found.setdefault(name,(i,ai,fi))
-missing=set(names)-set(found)-{"DeathScreen","RestartButton","NightOverlay","RainFade"}
+optional={"DeathScreen","RestartButton","NightOverlay","RainFade",
+          "HelmetPlaceholder","OuterwearPlaceholder","VestPlaceholder",
+          "PantsPlaceholder","BackpackPlaceholder"}
+missing=set(names)-set(found)-optional
 if missing:raise SystemExit(f"Original inventory art not in original Construct frames: {missing}")
 out=root/"include/minidayz/generated/inventory_ui_art.hpp"
 out.parent.mkdir(parents=True,exist_ok=True)
 lines=["#pragma once","#include <cstdint>","namespace minidayz::stage1 {",
        "struct OriginalUiArt {std::uint16_t object,animation;std::uint32_t frame;};"]
-for optional in ("DeathScreen","RestartButton","NightOverlay","RainFade"):
-    found.setdefault(optional,(65535,0,0))
+for missing_optional in optional:
+    found.setdefault(missing_optional,(65535,0,0))
 for name,(object_id,animation,frame) in found.items():
     lines.append(f"inline constexpr OriginalUiArt kOriginal{name}Art{{{object_id},{animation},{frame}}};")
 lines.append("} // namespace minidayz::stage1")
