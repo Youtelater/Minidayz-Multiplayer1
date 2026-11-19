@@ -826,7 +826,7 @@ public:
                     : equipment_target==6
                         ? inventory_.equipped_satchel()
                         : equipment_.equipped(
-                            static_cast<minidayz::items::EquipmentSlot>(equipment_target));
+                            gear_slot_for_card(equipment_target));
                 if(item_id!=0){
                     drag_equipped_source_slot_=equipment_target;
                     drag_target_equipment_slot_=equipment_target;
@@ -871,7 +871,7 @@ public:
             const int dy=input.touch.py-drag_start_y_;
             if(dx*dx+dy*dy>=36)drag_moved_=true;
             const int equipment_target = equipment_slot_at(input.touch.px, input.touch.py);
-            if (equipment_target >= 0 && equipment_target < 7) {
+            if (equipment_target >= 0 && equipment_target < 8) {
                 drag_target_equipment_slot_ = equipment_target;
                 drag_target_slot_ = -1;
             } else {
@@ -905,15 +905,15 @@ public:
                     if(moved)stage2_audio_.play_backpack_zip();
                 }else if(source==6 && destination<minidayz::items::kInventorySlotCount){
                     moved=inventory_.unequip_satchel_to_slot(destination);
-                }else if(source>=0 && source<5 && destination<inventory_.capacity()){
+                }else if((source>=0 && (source<5 || source==7)) && destination<inventory_.capacity()){
                     moved=equipment_.unequip_to_inventory(
-                        inventory_,static_cast<minidayz::items::EquipmentSlot>(source),
+                        inventory_,gear_slot_for_card(source),
                         destination);
                 }
                 if(moved){
                     selected_inventory_slot_=static_cast<int>(destination);
                     selected_equipment_slot_=-1;
-                    if(source<5)stage2_audio_.play_equipment_drop();
+                    if(source<5 || source==7)stage2_audio_.play_equipment_drop();
                 }
             } else if (drag_source_slot_ >= 0 && drag_target_equipment_slot_ == 5) {
                 const auto source_slot = static_cast<std::size_t>(drag_source_slot_);
@@ -1558,7 +1558,7 @@ public:
                 selected_id=slot==5 ? inventory_.equipped_backpack()
                     : slot==6 ? inventory_.equipped_satchel()
                     : equipment_.equipped(
-                        static_cast<minidayz::items::EquipmentSlot>(slot));
+                        gear_slot_for_card(slot));
             }
             if(selected_id!=0){
                 if(const char* name=minidayz::items::source_item_name(selected_id))
@@ -1644,7 +1644,7 @@ public:
                     i==5 ? inventory_.equipped_backpack()
                     : i==6 ? inventory_.equipped_satchel()
                     : equipment_.equipped(
-                        static_cast<minidayz::items::EquipmentSlot>(i));
+                        gear_slot_for_card(static_cast<int>(i)));
                 const auto condition=
                     i==5 ? inventory_.equipped_backpack_condition()
                     : i==6 ? inventory_.equipped_satchel_condition()
@@ -1932,7 +1932,7 @@ public:
                 item_id=slot==5 ? inventory_.equipped_backpack()
                     :slot==6 ? inventory_.equipped_satchel()
                     :equipment_.equipped(
-                        static_cast<minidayz::items::EquipmentSlot>(slot));
+                        gear_slot_for_card(slot));
                 const auto condition=slot==5
                     ?inventory_.equipped_backpack_condition()
                     :slot==6 ? inventory_.equipped_satchel_condition()
@@ -2505,6 +2505,16 @@ private:
 
     static int equipment_slot_at(int x, int y) noexcept {
         return minidayz::items::ui::equipment_at(x,y);
+    }
+    // UI cards 0-4 match the native armor/melee equipment indices.
+    // Card 7 is the original dedicated firearm category, whose legacy
+    // EquipmentSnapshot index is 6. Cards 5/6 are native bags, not armor.
+    static constexpr minidayz::items::EquipmentSlot gear_slot_for_card(int ui) noexcept {
+        return ui==7 ? minidayz::items::EquipmentSlot::weapon
+                     : static_cast<minidayz::items::EquipmentSlot>(ui);
+    }
+    static constexpr std::size_t gear_index_for_card(int ui) noexcept {
+        return static_cast<std::size_t>(gear_slot_for_card(ui));
     }
 
     std::size_t first_available_inventory_slot(std::uint16_t item_id,
