@@ -20,7 +20,12 @@ def load():
         if id_node is not None and name_node is not None:
             key=int(id_node.text)
             if key in strings:
-                raise SystemExit(f"Duplicate localization ID: {key}")
+                # The supplied root XML reuses IDs 451+ between old
+                # tutorial prompts and newer UI actions. These IDs are
+                # unrelated to the original 71..79/101..183 menu text.
+                if 71<=key<=183:
+                    raise SystemExit(f"Conflicting original menu localization ID: {key}")
+                continue
             strings[key]="".join(name_node.itertext()).strip()
     return strings
 
