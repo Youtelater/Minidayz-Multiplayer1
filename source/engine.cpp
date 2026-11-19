@@ -688,7 +688,7 @@ bool Renderer::draw_source_animation(std::uint16_t object,const char* animation_
  return false;
 }
 bool Renderer::draw_item_icon(std::uint16_t item_id,float center_x,float center_y,
-                              float max_width,float max_height) noexcept {
+                              float max_width,float max_height,float depth) noexcept {
  std::size_t first=0, last=items::kItemSpriteDefinitionCount;
  while(first<last) {
   const std::size_t middle=first+(last-first)/2;
@@ -720,7 +720,7 @@ bool Renderer::draw_item_icon(std::uint16_t item_id,float center_x,float center_
  if(max_width<=0.0f||max_height<=0.0f) return false;
  const float scale=std::min(max_width/frame->width,max_height/frame->height);
  return draw_source_sprite(object,frame->animation,frame->frame,
-                           center_x,center_y,scale,scale,0.2f);
+                           center_x,center_y,scale,scale,depth);
 }
 bool Engine::initialize() noexcept {
  gfxInitDefault();
