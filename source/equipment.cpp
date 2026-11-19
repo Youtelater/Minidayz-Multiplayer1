@@ -13,7 +13,9 @@ bool EquipmentSystem::source_slot_for_item(std::uint16_t id,
                                            EquipmentSlot& slot) noexcept {
     // The original Player_get_hit and Drop_* events identify helmet,
     // outerwear, vest and pants as separate protection slots. The original
-    // Hands activation category is the held-weapon slot.
+    // The source Inventory GUI has DIFFERENT cards for held melee tools
+    // and ranged firearms. Preserve the original two simultaneous slots;
+    // earlier native code incorrectly collapsed every gun into Hands.
     if ((id >= 133 && id <= 136) || (id >= 250 && id <= 277) ||
         id == 748 || id == 786 || id == 787) {
         slot = EquipmentSlot::head;
@@ -33,8 +35,16 @@ bool EquipmentSystem::source_slot_for_item(std::uint16_t id,
         slot = EquipmentSlot::pants;
         return true;
     }
-    if ((id >= 151 && id <= 216) || (id >= 230 && id <= 246) ||
+    // Exact source item categories from root l_eng_items.xml:
+    // firearms 151..199 and 230..246 (including Romero 77 Hatchet);
+    // the Flare Gun / launchers and alternate Romero occupy ranged.
+    if ((id >= 151 && id <= 199) || (id >= 230 && id <= 246) ||
         id == 103 || id == 107 || id == 108 || id == 785) {
+        slot = EquipmentSlot::weapon;
+        return true;
+    }
+    // Original melee/tools 200..216 (Pipe Wrench ... Torch).
+    if (id >= 200 && id <= 216) {
         slot = EquipmentSlot::hands;
         return true;
     }
@@ -85,12 +95,28 @@ bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
         normalized.item_ids[feet] = 0;
         normalized.conditions[feet] = 100;
     }
-    if (normalized.item_ids[weapon] != 0) {
-        if (normalized.item_ids[hands] != 0) return false;
-        normalized.item_ids[hands] = normalized.item_ids[weapon];
-        normalized.conditions[hands] = normalized.conditions[weapon];
-        normalized.item_ids[weapon] = 0;
-        normalized.conditions[weapon] = 100;
+    // Older 3DS v19 saves incorrectly held firearms in Hands, because
+    // their native GUI had no separate source weapon slot. Detect the
+    // actual source item category and migrate without deleting durability.
+    // Also migrate any provisional legacy melee item in reserved Weapon.
+    EquipmentSlot expected{};
+    if(normalized.item_ids[weapon] != 0 &&
+       source_slot_for_item(normalized.item_ids[weapon],expected) &&
+       expected == EquipmentSlot::hands){
+        if(normalized.item_ids[hands] != 0)return false;
+        normalized.item_ids[hands]=normalized.item_ids[weapon];
+        normalized.conditions[hands]=normalized.conditions[weapon];
+        normalized.item_ids[weapon]=0;
+        normalized.conditions[weapon]=100;
+    }
+    if(normalized.item_ids[hands] != 0 &&
+       source_slot_for_item(normalized.item_ids[hands],expected) &&
+       expected == EquipmentSlot::weapon){
+        if(normalized.item_ids[weapon] != 0)return false;
+        normalized.item_ids[weapon]=normalized.item_ids[hands];
+        normalized.conditions[weapon]=normalized.conditions[hands];
+        normalized.item_ids[hands]=0;
+        normalized.conditions[hands]=100;
     }
     for (std::size_t i = 0; i < normalized.item_ids.size(); ++i) {
         if (normalized.conditions[i] > 100) return false;
@@ -120,10 +146,18 @@ bool EquipmentSystem::restore_with_fraction(
             normalized.fractional_loss[feet];
         normalized.fractional_loss[feet] = 0;
     }
-    if (saved.item_ids[weapon] != 0) {
-        normalized.fractional_loss[static_cast<std::size_t>(EquipmentSlot::hands)] =
-            normalized.fractional_loss[weapon];
-        normalized.fractional_loss[weapon] = 0;
+    EquipmentSlot expected{};
+    if(saved.item_ids[weapon]!=0 &&
+       source_slot_for_item(saved.item_ids[weapon],expected) &&
+       expected==EquipmentSlot::hands){
+        normalized.fractional_loss[hands]=normalized.fractional_loss[weapon];
+        normalized.fractional_loss[weapon]=0;
+    }
+    if(saved.item_ids[hands]!=0 &&
+       source_slot_for_item(saved.item_ids[hands],expected) &&
+       expected==EquipmentSlot::weapon){
+        normalized.fractional_loss[weapon]=normalized.fractional_loss[hands];
+        normalized.fractional_loss[hands]=0;
     }
     for(std::size_t i=0;i<kEquipmentSlotCount;++i) {
         const auto fraction=normalized.fractional_loss[i];
