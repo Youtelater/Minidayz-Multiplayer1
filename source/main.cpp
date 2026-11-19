@@ -184,6 +184,10 @@ public:
             if (!world_.advance_source_generation()) {
                 loading_world_ = false;
                 generation_failed_ = true;
+                menu_active_ = true;
+                menu_page_ = minidayz::menu::BootPage::main;
+                menu_selection_ = minidayz::menu::default_selection(has_saved_game_);
+                boot_input_gate_.reset();
                 return;
             }
             if (world_.generation_complete()) {
@@ -197,6 +201,10 @@ public:
                     loading_world_ = false;
                     world_ready_ = false;
                     generation_failed_ = true;
+                    menu_active_ = true;
+                    menu_page_ = minidayz::menu::BootPage::main;
+                    menu_selection_ = minidayz::menu::default_selection(has_saved_game_);
+                    boot_input_gate_.reset();
                     return;
                 }
                 new_game_generation_ = false;
@@ -2477,7 +2485,12 @@ private:
         npc_ready_ = false;
         menu_active_ = true;
         loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_);
-        if (!loading_world_) generation_failed_ = true;
+        if (!loading_world_) {
+            generation_failed_ = true;
+            menu_page_ = minidayz::menu::BootPage::main;
+            menu_selection_ = minidayz::menu::default_selection(has_saved_game_);
+            boot_input_gate_.reset();
+        }
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
