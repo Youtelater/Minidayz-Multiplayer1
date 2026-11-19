@@ -85,6 +85,18 @@ int main() {
     east.move_x=1.0f;
     slow_frame.update_movement(east,0.10f,movement_rules);
     assert(std::fabs(slow_frame.state().x-10.0f)<0.001f);
+    // A slower 5 FPS emulator frame must advance the same real-world
+    // movement as four 50ms frames; never discard the excess 100ms.
+    PlayerState one_slow_state{};
+    one_slow_state.health=100.0f;
+    PlayerSystem one_slow(one_slow_state);
+    one_slow.update_movement(east,0.20f,movement_rules);
+    PlayerSystem four_fast(one_slow_state);
+    for(int i=0;i<4;++i)
+        four_fast.update_movement(east,0.05f,movement_rules);
+    assert(std::fabs(one_slow.state().x-20.0f)<0.001f);
+    assert(std::fabs(one_slow.state().x-four_fast.state().x)<0.001f);
+
 
     // The default player skin has idle down/up/right/left (0..3) and
     // run down/up/right/left (4..7); it has no dedicated death animation.
