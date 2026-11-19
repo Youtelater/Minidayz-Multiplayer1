@@ -740,10 +740,10 @@ void Engine::poll_input() noexcept {
  input_.circle=cp; input_.touch=tp; input_.touching=touching; previous_held_=held;
 }
 void Engine::update(float dt) noexcept {
- // At 10 FPS a 50ms clamp discards half of real time, halving
- // walking speed and every source-world timer. Allow a measured
- // 100ms frame to advance 100ms of simulation.
- delta_seconds_=std::clamp(dt,0.0f,0.10f);
+ // Track measured elapsed time during slower 3DS frames instead of
+ // discarding it. Limit only exceptional emulator pauses (250 ms).
+ // The player collision integrator sub-steps large movements.
+ delta_seconds_=std::clamp(dt,0.0f,0.25f);
  if(scene_) scene_->update(input_,delta_seconds_);
 }
 void Engine::render() noexcept {
