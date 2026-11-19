@@ -16,7 +16,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 19u;
+inline constexpr std::uint32_t kSaveVersion = 20u;
 // Preserve the original Construct wait when a craft is interrupted by autosave.
 struct PendingCraftSnapshot {
     std::uint16_t recipe_index{0xffffu};
@@ -54,6 +54,9 @@ struct SavedGame {
     PendingCraftSnapshot pending_craft{};
     // v19 persists the original CurrentLevel for multi-map terrain.
     std::uint8_t world_level{};
+    // v20 adds the MP handgun quick slot without altering the legacy
+    // EquipmentSnapshot or earlier binary save layouts.
+    minidayz::items::QuickPistolSnapshot quick_pistol{};
 };
 
 
