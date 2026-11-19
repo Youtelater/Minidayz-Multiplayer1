@@ -633,7 +633,10 @@ public:
                 drag_target_equipment_slot_ = -1;
                 const int target = inventory_slot_at(input.touch.px, input.touch.py,
                                                     inventory_page_);
-                if (target >= 0) drag_target_slot_ = target;
+                // Clear stale drag targets whenever the stylus leaves a
+                // valid cell. Otherwise releasing outside the backpack can
+                // move an item into a slot the player is no longer touching.
+                drag_target_slot_ = target;
             }
         }
         if (!crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ && touch_released) {
