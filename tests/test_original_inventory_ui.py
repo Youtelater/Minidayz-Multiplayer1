@@ -49,6 +49,9 @@ assert "unequip_to_inventory" in release
 assert "unequip_backpack_to_slot" in release
 assert "unequip_satchel_to_slot" in release
 assert "touch_released" in src
+# A stylus drag that returns to its starting cell is NOT a second tap:
+# otherwise a consumed medical item or food can activate accidentally.
+assert "tap_was_selected_ && !drag_moved_)" in src
 # Source equipment requires a genuine stylus drag into a visible storage cell.
 # A stationary touch selects worn gear for inspection, not auto-unequip.
 assert "drag_moved_ && drag_target_slot_>=0" in src
