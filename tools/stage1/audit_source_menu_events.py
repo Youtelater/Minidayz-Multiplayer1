@@ -43,6 +43,9 @@ menu=(ROOT/"include/minidayz/boot_menu.hpp").read_text(encoding="utf-8")
 assert "BootPage" in menu and "menu_detail_open_" in main
 assert "kSourceAchievementCount" in main and "kSourceUnlockCount" in main
 assert "restore_continue_from_disk()" in main
+# The disabled Continue row is painted NO SAVE but still has a touch box.
+# It must ignore the touch rather than raising a false generation error.
+assert "if(!has_saved_game_)break;" in main
 assert "menu_achieves_bg-sheet0.png" in main
 assert "options_menu-sheet0.png" in main
 assert "boot_input_gate_.update" in main
