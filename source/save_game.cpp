@@ -199,6 +199,27 @@ struct SavedGameV17 {
     minidayz::items::SourceRainTimerSnapshot source_rain{};
     minidayz::items::SourceLootTimerSnapshot source_loot{};
 };
+// v19 persisted CurrentLevel, before the MP quick-pistol slot was added.
+// Keep this exact original prefix and tail padding for older .sav migration.
+struct SavedGameV19 {
+    std::uint32_t magic{},version{},seed{};
+    minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
+    minidayz::items::GroundLootSnapshot ground_loot{};
+    minidayz::items::TentStorageSnapshot tents{};
+    minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
+    minidayz::items::SourcePerkSnapshot perks{};
+    minidayz::items::SatchelSnapshot satchel{};
+    minidayz::items::EquipmentFractionSnapshot equipment_fraction{};
+    minidayz::items::StashStorageSnapshot stashes{};
+    minidayz::items::SourceDayNightSnapshot source_time{};
+    minidayz::items::SourceRainTimerSnapshot source_rain{};
+    minidayz::items::SourceLootTimerSnapshot source_loot{};
+    PendingCraftSnapshot pending_craft{};
+    std::uint8_t world_level{};
+};
+
 // v18 persisted pending crafting but not the active source map level.
 struct SavedGameV18 {
     std::uint32_t magic{},version{},seed{};
@@ -529,6 +550,29 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.pending_craft = old.pending_craft;
             candidate.world_level = 0;
         }
+    } else if (header_ok && candidate.version == 19u) {
+        SavedGameV19 old{};
+        body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
+                  std::fread(&old, sizeof(old), 1, file) == 1;
+        if(body_ok){
+            candidate.seed=old.seed;
+            candidate.player=old.player;
+            candidate.inventory=old.inventory;
+            candidate.equipment=old.equipment;
+            candidate.ground_loot=old.ground_loot;
+            candidate.tents=old.tents;
+            candidate.pending_item_use=old.pending_item_use;
+            candidate.perks=old.perks;
+            candidate.satchel=old.satchel;
+            candidate.equipment_fraction=old.equipment_fraction;
+            candidate.stashes=old.stashes;
+            candidate.source_time=old.source_time;
+            candidate.source_rain=old.source_rain;
+            candidate.source_loot=old.source_loot;
+            candidate.pending_craft=old.pending_craft;
+            candidate.world_level=old.world_level;
+            candidate.quick_pistol={};
+        }
     } else if (header_ok && candidate.version == kSaveVersion) {
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
@@ -580,6 +624,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
         !inventory_validation.restore_with_satchel(candidate.inventory, candidate.satchel) ||
         !equipment_validation.restore_with_fraction(
             candidate.equipment, candidate.equipment_fraction) ||
+        !equipment_validation.restore_quick_pistol(candidate.quick_pistol) ||
         !ground_loot_validation.restore(candidate.ground_loot) ||
         !tent_validation.restore(candidate.tents) ||
         !stash_validation.restore(candidate.stashes) ||
@@ -622,6 +667,7 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     save.satchel = inventory.satchel_snapshot();
     save.equipment = equipment.snapshot();
     save.equipment_fraction = equipment.fraction_snapshot();
+    save.quick_pistol = equipment.quick_pistol_snapshot();
     save.ground_loot = ground_loot.snapshot();
     save.tents = tents.snapshot();
     save.stashes = stashes ? stashes->snapshot() : minidayz::items::StashStorageSnapshot{};
@@ -656,6 +702,7 @@ bool write_saved_game_to_paths(std::uint32_t seed,
         !inventory_validation.restore_with_satchel(save.inventory, save.satchel) ||
         !equipment_validation.restore_with_fraction(
             save.equipment, save.equipment_fraction) ||
+        !equipment_validation.restore_quick_pistol(save.quick_pistol) ||
         !ground_validation.restore(save.ground_loot) ||
         !tent_validation.restore(save.tents) ||
         !stash_validation.restore(save.stashes) ||
