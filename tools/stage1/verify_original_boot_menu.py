@@ -44,15 +44,24 @@ assert "bool menu_active_{true};" in main, "Scene must start on boot menu"
 constructor = main.split("explicit WorldPreviewScene(", 1)[1].split(
     "bool write_scene_save()", 1)[0]
 assert "begin_world_generation(" not in constructor, "Boot must not autostart world generation"
-assert "minidayz::menu::button_action(" in main
-assert "minidayz::menu::touch_action(" in main
+assert "minidayz::menu::main_entry_at(" in main
+assert "minidayz::menu::move_selection(" in main
 assert "if (menu_active_) {" in main
 assert "draw_menu_art(0," in main, "Original game logo must be on top screen"
 assert "kContinueButton" in main and "kNewGameButton" in main
-assert "kContinueButton{18, 58, 302, 106}" in menu
-assert "kNewGameButton{18, 115, 302, 163}" in menu
-assert "kSkinPrevious{18, 174, 155, 207}" in menu
-assert "kSkinNext{165, 174, 302, 207}" in menu
+assert "kContinueButton=kMenuRows[0]" in menu
+assert "kNewGameButton=kMenuRows[1]" in menu
+assert "kAchievementsButton=kMenuRows[2]" in menu
+assert "kUnlocksButton=kMenuRows[3]" in menu
+assert "kOptionsButton=kMenuRows[4]" in menu
+assert "kSkinPrevious{18, 145, 154, 191}" in menu
+assert "kSkinNext{166, 145, 302, 191}" in menu
+assert "kCharacterButton{13, 210, 152, 239}" in menu
+assert "kMultiplayerButton{167, 210, 307, 239}" in menu
+assert "menu_selection_" in main and "menu_page_" in main
+assert "kMainLabels[i]" in main and "move_selection(" in main
+assert "stage2_audio_.set_muted" in main
+assert "NOT YET PORTED TO 3DS" in main, "Incomplete features must be honest"
 assert "skin_touch_action(" in main and "advance_skin(" in main
 assert "menu_bitmap_font.hpp" in engine and "ui_font_glyph" in engine
 assert "if(index==1 && depth<=0.5f)depth=0.75f" in engine, "Wooden button depth must be in front"
