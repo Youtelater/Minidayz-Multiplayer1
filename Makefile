@@ -159,6 +159,7 @@ stage1-assets:
 	@test -s $(ROMFS)/gfx/main_menu_logo_sheet0.t3x || { echo 'ERROR: original menu logo missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/menu_btn_wood_sheet0.t3x || { echo 'ERROR: original menu buttons missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/tiledbgmenu_city_up.t3x || { echo 'ERROR: original menu background missing'; exit 1; }
+	@python3 tools/stage1/build_menu_localization.py
 	@python3 tools/stage2/build_item_sprite_catalog.py
 	@python3 tools/stage2/build_inventory_ui_art.py
 	@python3 tools/stage2/build_item_source_catalog.py
