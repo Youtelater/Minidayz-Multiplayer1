@@ -70,3 +70,9 @@ For each row, record: source event UID/file and branch conditions; C++ function 
 - **Native integration:** `Y` or the `MAP` touchscreen label opens a map on the **320x240 bottom screen**. It reads the live generated `WorldGrid` and world bounds, displays source road Array codes 12/13/14, source POI categories, a live `X` at the player position, and uses the original minimap background/marker/player artwork when available. `Y`, `B` or bottom touch closes it.
 - **Not identical yet:** This is a source-data-backed map preview, **not** a verified translation of all original minimap discovery/fog-of-war, panning, zoom, labels, world markers, touch gestures and event timing. These behaviors must be traced from the original Construct `MiniMap_legend` and GUI event groups before parity sign-off.
 - **Build coverage:** `tests/source_map_overlay_tests.cpp` checks road/POI codes and world-to-map position; the 3DS build workflow runs the native test.
+
+## November 19, 2026 — Source inventory graphics correction
+
+Verified original Construct GUI sprite frame dimensions and corrected the native UI's major geometry mismatch: original 30×30 `gui_slot` art is no longer stretched to 56×29, original jacket/vest and backpack/satchel card proportions are preserved, and equipment/slots share source-aware touch hitboxes. Source frame dimensions are checked by `tools/stage2/build_inventory_ui_art.py`, with native touch/source tests on GitHub Actions. See `docs/STAGE2_INVENTORY_SOURCE_AUDIT.md` for exact source UIDs, sizes and remaining behavior gaps.
+
+**Fidelity status:** The inventory visual assets and 3DS touch geometry have been corrected and regression-tested; this is not yet a complete original interaction/event translation or emulator-verified pixel/animation match.
