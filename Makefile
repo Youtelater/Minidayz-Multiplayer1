@@ -128,6 +128,7 @@ stage1-assets:
 	@python3 tools/stage1/build_player_skin_catalog.py
 	@python3 tools/stage1/build_player_spawn_source.py
 	@python3 tools/stage1/build_player_equipment_visuals.py
+	@python3 tools/stage1/build_mp_quick_pistol_catalog.py
 	@python3 tests/test_original_player_skins.py
 	@python3 tools/stage1/build_ground_floor.py
 	@python3 tools/stage1/build_environment_tilemaps.py
