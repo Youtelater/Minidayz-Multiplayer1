@@ -29,6 +29,19 @@ int main() {
     assert(advance_skin(19,20,SkinAction::next)==0);
     assert(advance_skin(8,20,SkinAction::none)==8);
     assert(advance_skin(8,0,SkinAction::next)==0);
+    // An emulator's startup A/X press must NOT skip the boot menu.
+    StartInputGate gate{};
+    for(int frame=0;frame<40;++frame)
+        assert(!gate.update(0.05f,frame<25));
+    assert(gate.armed);
+    assert(gate.update(0.05f,false));
+    gate.reset();
+    for(int frame=0;frame<40;++frame)
+        assert(!gate.update(0.05f,true));
+    assert(!gate.armed);
+    assert(!gate.update(0.05f,false));
+    assert(gate.armed);
+    assert(gate.update(0.05f,true));
     assert(button_action(false,false,false)==BootAction::none);
     assert(button_action(true,false,false)==BootAction::new_game);
     assert(button_action(true,false,true)==BootAction::continue_game);
