@@ -1607,6 +1607,7 @@ public:
                 const int slot=selected_equipment_slot_;
                 selected_id=slot==5 ? inventory_.equipped_backpack()
                     : slot==6 ? inventory_.equipped_satchel()
+                    : slot==8 ? equipment_.quick_pistol()
                     : equipment_.equipped(
                         gear_slot_for_card(slot));
             }
@@ -1657,7 +1658,7 @@ public:
         // image proportions and shows its original item sprite/condition.
         if (!storage_open_ && !crafting_open_ && !perks_open_ && !details_open_) {
             static constexpr const char* equipment_labels[] = {
-                "HELM", "COAT", "VEST", "PANTS", "HAND", "PACK", "SATCH", "GUN"
+                "HELM", "COAT", "VEST", "PANTS", "HAND", "PACK", "SATCH", "GUN", "QUICK"
             };
             for (std::size_t i = 0; i < minidayz::items::ui::kEquipment.size(); ++i) {
                 // Actual original frame dimensions, not stretched equal cards:
@@ -1711,11 +1712,13 @@ public:
                 const auto item_id=
                     i==5 ? inventory_.equipped_backpack()
                     : i==6 ? inventory_.equipped_satchel()
+                    : i==8 ? equipment_.quick_pistol()
                     : equipment_.equipped(
                         gear_slot_for_card(static_cast<int>(i)));
                 const auto condition=
                     i==5 ? inventory_.equipped_backpack_condition()
                     : i==6 ? inventory_.equipped_satchel_condition()
+                    : i==8 ? equipment_.quick_pistol_snapshot().condition
                     : equipment_.snapshot().conditions[gear_index_for_card(static_cast<int>(i))];
                 const float icon_size=i==1||i==2?34.0f:
                     i==0||i==3?31.0f:i==7?42.0f:26.0f;
@@ -1730,9 +1733,11 @@ public:
                     else
                         (void)renderer.draw_item_icon(item_id,
                             icon_x,icon_y,icon_size,icon_size,0.86f);
-                    const auto fraction=(i<5 || i==7)
-                        ? equipment_.fraction_snapshot().fractional_loss[
-                            gear_index_for_card(static_cast<int>(i))]:0u;
+                    const auto fraction=i==8
+                        ? equipment_.quick_pistol_snapshot().fractional_loss
+                        : (i<5 || i==7)
+                            ? equipment_.fraction_snapshot().fractional_loss[
+                                gear_index_for_card(static_cast<int>(i))]:0u;
                     const float exact_condition=static_cast<float>(condition)-
                         static_cast<float>(fraction)/100.0f;
                     char durability[16]{};
@@ -2008,15 +2013,20 @@ public:
                 const int slot=selected_equipment_slot_;
                 item_id=slot==5 ? inventory_.equipped_backpack()
                     :slot==6 ? inventory_.equipped_satchel()
+                    :slot==8 ? equipment_.quick_pistol()
                     :equipment_.equipped(
                         gear_slot_for_card(slot));
                 const auto condition=slot==5
                     ?inventory_.equipped_backpack_condition()
                     :slot==6 ? inventory_.equipped_satchel_condition()
+                    :slot==8 ? equipment_.quick_pistol_snapshot().condition
                     :equipment_.snapshot().conditions[gear_index_for_card(slot)];
-                const auto fraction=slot<5
-                    ?equipment_.fraction_snapshot().fractional_loss[static_cast<std::size_t>(slot)]
-                    :0u;
+                const auto fraction=slot==8
+                    ?equipment_.quick_pistol_snapshot().fractional_loss
+                    :slot<5 || slot==7
+                        ?equipment_.fraction_snapshot().fractional_loss[
+                            gear_index_for_card(slot)]
+                        :0u;
                 exact_hundredths=static_cast<unsigned>(condition)*100u-
                     static_cast<unsigned>(fraction);
             }
@@ -2453,11 +2463,13 @@ public:
         // An armed survivor uses the ORIGINAL player's held-weapon stance
         // when available, not an ordinary empty-hands idle pose. This works
         // for all 20 skins and chooses only authentic Construct animations.
-        const auto held_item=equipment_.equipped(active_held_slot_)!=0
-            ?equipment_.equipped(active_held_slot_)
-            :equipment_.equipped(minidayz::items::EquipmentSlot::weapon)!=0
-                ?equipment_.equipped(minidayz::items::EquipmentSlot::weapon)
-                :equipment_.equipped(minidayz::items::EquipmentSlot::hands);
+        const auto held_item=(active_quick_pistol_ && equipment_.quick_pistol()!=0)
+            ? equipment_.quick_pistol()
+            : equipment_.equipped(active_held_slot_)!=0
+                ?equipment_.equipped(active_held_slot_)
+                : equipment_.equipped(minidayz::items::EquipmentSlot::weapon)!=0
+                    ?equipment_.equipped(minidayz::items::EquipmentSlot::weapon)
+                    : equipment_.equipped(minidayz::items::EquipmentSlot::hands);
         const auto* held_visual=minidayz::stage1::original_equipment_visual(
             held_item);
         const auto* weapon_pose=minidayz::stage1::original_equipment_pose(
