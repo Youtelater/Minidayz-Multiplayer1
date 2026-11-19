@@ -161,6 +161,14 @@ jobs:
           make clean
           make
 
+      - name: Verify all original and multiplayer item visual reference tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/mp_item_reference_tests.cpp -o /tmp/minidayz_mp_item_reference
+          /tmp/minidayz_mp_item_reference
+
       - name: Verify map roads, source locations and player X marker
         shell: bash
         run: |
