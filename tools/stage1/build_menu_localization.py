@@ -39,7 +39,7 @@ def build():
             raise SystemExit(f"Missing original achievement localization {identifier}/{description_id}")
         achievements.append((identifier,strings[identifier],strings[description_id]))
     unlocks=[]
-    for identifier in range(71,80):
+    for identifier in list(range(71,80))+[140,141,142]:
         if identifier not in strings:
             raise SystemExit(f"Missing original locked-character localization {identifier}")
         complete=strings[identifier]
@@ -55,18 +55,33 @@ def build():
     ]
     for i,n,d in achievements:
         lines.append(f"  {{{i},{json.dumps(n,ensure_ascii=False)},{json.dumps(d,ensure_ascii=False)}}},")
+    weapon_ids=[392,393,394,416,418,420]
+    weapons=[]
+    for identifier in weapon_ids:
+        if identifier not in strings:
+            raise SystemExit(f"Missing original weapon unlock localization {identifier}")
+        complete=strings[identifier]
+        weapons.append((identifier,complete.splitlines()[0],complete))
     lines += [
         "};",
-        "// From root l_eng_ui.xml, locked survivor descriptions IDs 71..79.",
+        "// From root l_eng_ui.xml, survivor unlock IDs 71..79, 140..142.",
         f"inline constexpr std::size_t kSourceUnlockCount={len(unlocks)};",
         "inline constexpr SourceMenuRecord kSourceUnlocks[] = {"
     ]
     for i,n,d in unlocks:
         lines.append(f"  {{{i},{json.dumps(n,ensure_ascii=False)},{json.dumps(d,ensure_ascii=False)}}},")
+    lines += [
+        "};",
+        "// From root l_eng_ui.xml, original weapon unlock requirement IDs.",
+        f"inline constexpr std::size_t kSourceWeaponUnlockCount={len(weapons)};",
+        "inline constexpr SourceMenuRecord kSourceWeaponUnlocks[] = {",
+    ]
+    for i,n,d in weapons:
+        lines.append(f"  {{{i},{json.dumps(n,ensure_ascii=False)},{json.dumps(d,ensure_ascii=False)}}},")
     lines += ["};","} // namespace minidayz::menu",""]
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
     OUTPUT.write_text("\n".join(lines),encoding="utf-8")
-    print(f"PASS: source menu records {len(achievements)} achievements and {len(unlocks)} character unlocks")
+    print(f"PASS: source menu records {len(achievements)} achievements, {len(unlocks)} character unlocks and {len(weapons)} weapon unlocks")
 
 if __name__=="__main__":
     build()
