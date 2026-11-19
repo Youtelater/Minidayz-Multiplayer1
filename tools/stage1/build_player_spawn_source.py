@@ -41,7 +41,14 @@ def main():
                 action[0]!=193 or action[1]!=47):continue
             if action[3] in (9846853259707544,641409757696071):
                 found[action[3]]=(e[4],e[5],action[5])
-    assert set(found)=={9846853259707544,641409757696071},found.keys()
+    if set(found)!={9846853259707544,641409757696071}:
+        all_player_setpos=[]
+        for group,e in nodes(source):
+            if "Start events" not in group:continue
+            for action in e[6]:
+                if isinstance(action,list) and len(action)>=6 and action[0]==193 and action[1]==47:
+                    all_player_setpos.append((e[4],action[3]))
+        raise AssertionError(("Missing source start positions",all_player_setpos,found.keys()))
     uid,conditions,params=found[9846853259707544]
     assert uid==9183183159438440
     guards=[c[-1] for c in conditions if isinstance(c,list)
