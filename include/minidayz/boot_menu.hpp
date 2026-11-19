@@ -21,12 +21,56 @@ struct TouchBounds {
     }
 };
 
-inline constexpr TouchBounds kContinueButton{18, 58, 302, 106};
-inline constexpr TouchBounds kNewGameButton{18, 115, 302, 163};
-// The old skin selector stole the lower part of New Game's hitbox.
-// Keep every menu action on an independent visible touch row.
-inline constexpr TouchBounds kSkinPrevious{18, 174, 155, 207};
-inline constexpr TouchBounds kSkinNext{165, 174, 302, 207};
+// The original Menu_Events has five visible primary choices:
+// Continue / New game / Achievements / Unlocks / Options.
+// These 320x240 hitboxes are screen adaptations, but share geometry with
+// the renderer and physical D-Pad selection.
+enum class BootPage : std::uint8_t {
+    main, character, achievements, unlocks, options, multiplayer
+};
+enum class MenuEntry : std::uint8_t {
+    continue_game, new_game, achievements, unlocks, options, none
+};
+inline constexpr TouchBounds kMenuRows[5] = {
+    {38, 35, 282, 65},
+    {38, 70, 282, 100},
+    {38, 105, 282, 135},
+    {38, 140, 282, 170},
+    {38, 175, 282, 205}
+};
+inline constexpr TouchBounds kContinueButton=kMenuRows[0];
+inline constexpr TouchBounds kNewGameButton=kMenuRows[1];
+inline constexpr TouchBounds kAchievementsButton=kMenuRows[2];
+inline constexpr TouchBounds kUnlocksButton=kMenuRows[3];
+inline constexpr TouchBounds kOptionsButton=kMenuRows[4];
+inline constexpr TouchBounds kCharacterButton{13, 210, 152, 239};
+inline constexpr TouchBounds kMultiplayerButton{167, 210, 307, 239};
+// Dedicated character-select screen: no overlap with New Game.
+inline constexpr TouchBounds kSkinPrevious{18, 145, 154, 191};
+inline constexpr TouchBounds kSkinNext{166, 145, 302, 191};
+inline constexpr TouchBounds kSubpageBack{15, 211, 305, 239};
+
+constexpr MenuEntry main_entry_at(int x,int y) noexcept {
+    for(std::size_t i=0;i<5;++i)
+        if(kMenuRows[i].contains(x,y))
+            return static_cast<MenuEntry>(i);
+    return MenuEntry::none;
+}
+constexpr MenuEntry move_selection(MenuEntry current,int direction,
+                                    bool has_save) noexcept {
+    int idx=current==MenuEntry::none?0:static_cast<int>(current);
+    for(int step=0;step<5;++step){
+        idx=(idx+(direction<0?4:1))%5;
+        if(has_save||idx!=0)return static_cast<MenuEntry>(idx);
+    }
+    return MenuEntry::new_game;
+}
+constexpr MenuEntry default_selection(bool has_save) noexcept {
+    return has_save?MenuEntry::continue_game:MenuEntry::new_game;
+}
+inline constexpr const char* kMainLabels[5]={
+    "CONTINUE","NEW GAME","ACHIEVEMENTS","UNLOCKS","OPTIONS"
+};
 
 enum class SkinAction : std::int8_t { none, previous, next };
 constexpr SkinAction skin_touch_action(int px,int py) noexcept {
