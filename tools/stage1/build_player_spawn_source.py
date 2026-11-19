@@ -39,9 +39,9 @@ def main():
         for action in e[6]:
             if (not isinstance(action,list) or len(action)<6 or
                 action[0]!=193 or action[1]!=47):continue
-            if action[3] in (9846853259707544,641409757696071):
+            if action[3] in (9846853259707545,641409757696071):
                 found[action[3]]=(e[4],e[5],action[5])
-    if set(found)!={9846853259707544,641409757696071}:
+    if set(found)!={9846853259707545,641409757696071}:
         all_player_setpos=[]
         for group,e in nodes(source):
             if "Start events" not in group:continue
@@ -49,8 +49,8 @@ def main():
                 if isinstance(action,list) and len(action)>=6 and action[0]==193 and action[1]==47:
                     all_player_setpos.append((e[4],action[3]))
         raise AssertionError(("Missing source start positions",all_player_setpos,found.keys()))
-    uid,conditions,params=found[9846853259707544]
-    assert uid==9183183159438440
+    uid,conditions,params=found[9846853259707545]
+    assert uid==9183183159438441
     guards=[c[-1] for c in conditions if isinstance(c,list)
             and c[0]==-1 and len(c)>9 and isinstance(c[-1],list)]
     assert all(any([11,name] in params for params in guards)
@@ -69,7 +69,7 @@ def main():
     assert params==[[0,[19,95,[[0,1000],[0,16500]]]],[0,[0,373]]],params
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
     OUTPUT.write_text("""#pragma once
-// Exact original Construct Start events: 9183183159438440 and 980530989134876.
+// Exact original Construct Start events: 9183183159438441 and 980530989134876.
 namespace minidayz::stage1 {
 inline constexpr float kNormalPlayerStartX=600.0f;
 inline constexpr float kNormalPlayerStartYBase=1500.0f;
@@ -82,7 +82,7 @@ inline constexpr float kSnowPlayerStartY=373.0f;
 }
 """,encoding="utf-8")
     print("Verified original Start events SetPosition player spawn actions "
-          "9846853259707544 and 641409757696071")
+          "9846853259707545 and 641409757696071")
 
 if __name__=="__main__":
     main()
