@@ -2025,58 +2025,37 @@ private:
         begin_world_generation();
     }
 
-    // Original Game_events / Start events, unsaved-game branch:
-    // event UID 9183183159438441, action UID 9846853259707545:
-    // PlayerBase SetPosition(600,
-    //   1500 + (LayoutName=="Map" ? random(LayoutHeight-5000) : -500)).
-    // Level 4 override UID 980530989134876 places the player on the
-    // northern edge: random(1000,16500), 373.
-    // Never select a random settlement or road POI as a player spawn.
+    // Original Construct Game_events "Start events":
+    // PlayerBase SetPosition UID 9846853259707545: (600,
+    // 1500 + random(LayoutHeight-5000)) on Map.
+    // CurrentLevel==4 overrides with UID 641409757696071:
+    // (random(1000,16500),373).
+    // Never retry, snap to a road, or shift the position on collision:
+    // those extra rules changed the original starting position.
     bool place_new_player_on_generated_map() noexcept {
         const auto& bounds=world_.bounds();
         if(!(bounds.width>0.0f && bounds.height>0.0f))return false;
         std::mt19937 rng(world_seed_ ^ 0x73506177u);
         const bool snow=world_level_==
             minidayz::stage1::kSnowPlayerStartLevel;
-        const float y_max=std::max(0.0f,bounds.height-
+        const float range=std::max(0.0f,bounds.height-
             minidayz::stage1::kNormalPlayerStartLayoutMargin);
-        std::uniform_real_distribution<float> random_normal_y(0.0f,y_max);
+        std::uniform_real_distribution<float> random_normal_y(0.0f,range);
         std::uniform_real_distribution<float> random_snow_x(
             minidayz::stage1::kSnowPlayerStartXMin,
             minidayz::stage1::kSnowPlayerStartXMax);
-        // The source randomly chooses the Y position; retry only when a
-        // chosen position overlaps a source solid on a native collision map.
-        // Small local correction cannot teleport the player into a town.
-        constexpr float local_offsets[]={0.0f,24.0f,-24.0f,48.0f,-48.0f,
-                                         72.0f,-72.0f,96.0f,-96.0f};
-        for(int attempt=0;attempt<96;++attempt){
-            const float original_x=snow?random_snow_x(rng):
-                minidayz::stage1::kNormalPlayerStartX;
-            const float original_y=snow?
-                minidayz::stage1::kSnowPlayerStartY:
-                minidayz::stage1::kNormalPlayerStartYBase+random_normal_y(rng);
-            for(float offset:local_offsets) {
-                const float px=snow?original_x+offset:original_x;
-                const float py=snow?original_y:original_y+offset;
-                if(px<16.0f||py<16.0f||
-                   px>bounds.width-16.0f||py>bounds.height-16.0f)
-                    continue;
-                if(blocked(this,px,py)||
-                   blocked(this,px-6.0f,py-8.0f)||
-                   blocked(this,px+6.0f,py-8.0f)||
-                   blocked(this,px-6.0f,py+8.0f)||
-                   blocked(this,px+6.0f,py+8.0f))
-                    continue;
-                auto state=travel_generation_?player_.state():
-                    make_initial_state();
-                state.x=px;state.y=py;
-                player_=minidayz::PlayerSystem(state);
-                player_.set_source_skin(
-                    minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
-                return true;
-            }
-        }
-        return false;
+        const float px=snow?random_snow_x(rng):
+            minidayz::stage1::kNormalPlayerStartX;
+        const float py=snow?minidayz::stage1::kSnowPlayerStartY:
+            minidayz::stage1::kNormalPlayerStartYBase+random_normal_y(rng);
+        if(!std::isfinite(px)||!std::isfinite(py))return false;
+        auto state=travel_generation_?player_.state():make_initial_state();
+        state.x=px;
+        state.y=py;
+        player_=minidayz::PlayerSystem(state);
+        player_.set_source_skin(
+            minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
+        return true;
     }
 
     void begin_world_generation() noexcept {
