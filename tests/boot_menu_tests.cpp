@@ -31,8 +31,11 @@ int main() {
     assert(advance_skin(8,0,SkinAction::next)==0);
     // An emulator's startup A/X press must NOT skip the boot menu.
     StartInputGate gate{};
-    for(int frame=0;frame<40;++frame)
-        assert(!gate.update(0.05f,frame<25));
+    for(int frame=0;frame<25;++frame)
+        assert(!gate.update(0.05f,true));
+    assert(!gate.armed);
+    // The neutral frame arms the menu but never activates a button itself.
+    assert(!gate.update(0.05f,false));
     assert(gate.armed);
     assert(gate.update(0.05f,false));
     gate.reset();
