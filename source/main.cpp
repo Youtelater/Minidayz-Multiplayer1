@@ -285,7 +285,15 @@ public:
                 if((input.pressed & KEY_B) ||
                     (tap && minidayz::menu::kSubpageBack.contains(
                         input.touch.px,input.touch.py))){
-                    go_main();
+                    if(menu_detail_open_ &&
+                       (menu_page_==minidayz::menu::BootPage::achievements ||
+                        menu_page_==minidayz::menu::BootPage::unlocks)){
+                        menu_detail_open_=false;
+                        menu_detail_scroll_=0;
+                    }else{
+                        menu_detail_open_=false;
+                        go_main();
+                    }
                     return;
                 }
                 if(menu_page_==minidayz::menu::BootPage::character){
@@ -327,6 +335,20 @@ public:
                     }
                 } else if(menu_page_==minidayz::menu::BootPage::achievements ||
                           menu_page_==minidayz::menu::BootPage::unlocks){
+                    if(menu_detail_open_){
+                        if((input.pressed & (KEY_DUP|KEY_L)) && menu_detail_scroll_>0)
+                            --menu_detail_scroll_;
+                        if((input.pressed & (KEY_DDOWN|KEY_R)) && menu_detail_scroll_<32)
+                            ++menu_detail_scroll_;
+                        if(tap && input.touch.py>=40 && input.touch.py<206)
+                            menu_detail_scroll_=std::min<std::size_t>(32,
+                                menu_detail_scroll_+1);
+                        if(input.pressed & KEY_A){
+                            menu_detail_open_=false;
+                            menu_detail_scroll_=0;
+                        }
+                        return;
+                    }
                     const auto count=menu_page_==minidayz::menu::BootPage::achievements
                         ?minidayz::menu::kSourceAchievementCount
                         :minidayz::menu::kSourceUnlockCount;
@@ -341,8 +363,15 @@ public:
                     if(tap && input.touch.py>=43 && input.touch.py<163){
                         const auto row=(input.touch.py-43)/30;
                         const auto offset=(menu_list_index_/4)*4;
-                        if(offset+static_cast<std::size_t>(row)<count)
+                        if(offset+static_cast<std::size_t>(row)<count){
                             menu_list_index_=offset+static_cast<std::size_t>(row);
+                            menu_detail_open_=true;
+                            menu_detail_scroll_=0;
+                        }
+                    }
+                    if(input.pressed & KEY_A){
+                        menu_detail_open_=true;
+                        menu_detail_scroll_=0;
                     }
                 } else if(menu_page_==minidayz::menu::BootPage::options){
                     if((input.pressed & KEY_A) ||
@@ -407,10 +436,12 @@ public:
                 menu_page_=minidayz::menu::BootPage::difficulty;
                 break;
             case minidayz::menu::MenuEntry::achievements:
+                menu_detail_open_=false;
                 menu_list_index_=0;
                 menu_page_=minidayz::menu::BootPage::achievements;
                 break;
             case minidayz::menu::MenuEntry::unlocks:
+                menu_detail_open_=false;
                 menu_list_index_=0;
                 menu_page_=minidayz::menu::BootPage::unlocks;
                 break;
@@ -2659,6 +2690,8 @@ private:
     minidayz::SurvivalDifficulty selected_difficulty_{minidayz::SurvivalDifficulty::regular};
     std::size_t difficulty_index_{1};
     std::size_t menu_list_index_{};
+    bool menu_detail_open_{};
+    std::size_t menu_detail_scroll_{};
     bool paused_{};
     bool death_saved_{};
     bool pause_save_feedback_{};
