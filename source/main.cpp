@@ -15,6 +15,7 @@
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/inventory.hpp"
+#include "minidayz/inventory_touch_layout.hpp"
 #include "minidayz/equipment.hpp"
 #include "minidayz/item_use.hpp"
 #include "minidayz/ground_loot.hpp"
@@ -527,8 +528,10 @@ public:
             details_open_ = !details_open_;
         }
         if (!crafting_open_ && !storage_open_ && !perks_open_ && touch_pressed &&
-            input.touch.py >= 114 && input.touch.py < 127) {
-            const int action = input.touch.px / 64;
+            minidayz::items::ui::kActions.contains(
+                input.touch.px,input.touch.py)) {
+            const int action = minidayz::items::ui::action_at(
+                input.touch.px,input.touch.py);
             if (action == 3) {
                 (void)ground_loot_.pickup_nearest(
                     inventory_, player_.state().x, player_.state().y, 36.0f);
@@ -593,7 +596,8 @@ public:
                 selected_inventory_slot_=-1;
             }
             // Page through larger backpacks without changing the 5 x 3 grid.
-            if (input.touch.py >= 223) {
+            if (minidayz::items::ui::kPageNavigation.contains(
+                    input.touch.px,input.touch.py)) {
                 const std::size_t page_count =
                     (inventory_.capacity() + kInventoryPageSize - 1) /
                     kInventoryPageSize;
@@ -2042,18 +2046,11 @@ private:
         return perks && perks->award_experience(amount);
     }
 
-    static constexpr std::size_t kInventoryPageSize = 15;
+    static constexpr std::size_t kInventoryPageSize = minidayz::items::ui::kPageSize;
     static constexpr std::size_t kCraftPageSize = 3;
 
     static int equipment_slot_at(int x, int y) noexcept {
-        // Original parchment cards reflow to four 76x36 cards per row
-        // on the 320x240 touchscreen, instead of seven 43px blank boxes.
-        if (y < 40 || y >= 114 || x < 6 || x >= 314) return -1;
-        const int row = (y - 40) / 38;
-        const int col = (x - 6) / 77;
-        const int index = row * 4 + col;
-        return row >= 0 && row < 2 && col >= 0 && col < 4 &&
-               index < 7 ? index : -1;
+        return minidayz::items::ui::equipment_at(x,y);
     }
 
     std::size_t first_available_inventory_slot(std::uint16_t item_id,
@@ -2092,12 +2089,7 @@ private:
     }
 
     static int inventory_slot_at(int x, int y, std::size_t page) noexcept {
-        if (x < 10 || x >= 310 || y < 130 || y >= 223) return -1;
-        const int col = (x - 10) / 60;
-        const int row = (y - 130) / 31;
-        return col >= 0 && col < 5 && row >= 0 && row < 3
-            ? static_cast<int>(page * kInventoryPageSize) + row * 5 + col
-            : -1;
+        return minidayz::items::ui::inventory_at(x,y,page);
     }
 
     bool near_source_bridge_exit() const noexcept {
