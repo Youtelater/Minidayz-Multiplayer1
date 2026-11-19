@@ -1,5 +1,6 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/boot_menu.hpp"
+#include "minidayz/menu_preferences.hpp"
 #include "minidayz/generated/menu_source_catalog.hpp"
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
@@ -75,6 +76,13 @@ public:
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
         menu_selection_=minidayz::menu::default_selection(has_saved_game_);
+        minidayz::menu::MenuPreferences stored{};
+        if(minidayz::menu::load_menu_preferences(stored)){
+            selected_skin_=stored.skin_index;
+            difficulty_index_=stored.difficulty;
+            selected_difficulty_=static_cast<minidayz::SurvivalDifficulty>(stored.difficulty);
+            stage2_audio_.set_muted(stored.muted!=0);
+        }
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
         if (restored && !inventory_.restore_with_satchel(restored->inventory, restored->satchel))
@@ -107,8 +115,7 @@ public:
         // Temporary preview movement tuning only. Original source movement
         // values are not guessed; they will replace these when the movement
         // event/ACE trace is complete.
-        preview_rules_ = minidayz::source_survival_rules(
-            minidayz::SurvivalDifficulty::regular);
+        preview_rules_ = minidayz::source_survival_rules(selected_difficulty_);
         // Game_events/Animations Set AltMove MaxSpeed source action
         // 156884066447061 uses base value 100 before clothing modifiers.
         // Old 72/108 numbers were invented preview speed values.
@@ -129,6 +136,14 @@ public:
         source_temperature_initialized_ = false;
         last_source_warmth_ = equipment_.temperature_offset();
         last_source_snowborn_level_ = perks_.level(minidayz::items::SourcePerk::snowborn);
+    }
+
+    void persist_menu_settings() noexcept {
+        minidayz::menu::MenuPreferences prefs{};
+        prefs.skin_index=static_cast<std::uint8_t>(selected_skin_);
+        prefs.difficulty=static_cast<std::uint8_t>(difficulty_index_);
+        prefs.muted=stage2_audio_.muted()?1u:0u;
+        (void)minidayz::menu::save_menu_preferences(prefs);
     }
 
     bool write_scene_save() noexcept {
@@ -225,6 +240,7 @@ public:
                         selected_skin_=minidayz::menu::advance_skin(
                             selected_skin_,minidayz::stage1::kOriginalPlayerSkinCount,
                             action);
+                        persist_menu_settings();
                     };
                     if(input.pressed & KEY_L)
                         choose_skin(minidayz::menu::SkinAction::previous);
@@ -253,6 +269,7 @@ public:
                         preview_rules_.collision_half_height=7.0f;
                         preview_rules_.min_temperature=-10.0f;
                         preview_rules_.max_temperature=10.0f;
+                        persist_menu_settings();
                         start_new_game();
                     }
                 } else if(menu_page_==minidayz::menu::BootPage::achievements ||
@@ -278,6 +295,7 @@ public:
                     if((input.pressed & KEY_A) ||
                         (tap && input.touch.py>=70 && input.touch.py<=117)){
                         stage2_audio_.set_muted(!stage2_audio_.muted());
+                        persist_menu_settings();
                         if(!stage2_audio_.muted() && world_ready_){
                             stage2_audio_.set_environment_ambience(
                                 !day_night_.day_mode(),world_level_==4);
@@ -303,6 +321,7 @@ public:
                 selected_skin_=minidayz::menu::advance_skin(
                     selected_skin_,minidayz::stage1::kOriginalPlayerSkinCount,
                     minidayz::menu::SkinAction::next);
+            if(input.pressed & (KEY_L|KEY_R))persist_menu_settings();
             if(input.pressed & KEY_X)
                 menu_page_=minidayz::menu::BootPage::character;
             if(input.pressed & KEY_Y)
