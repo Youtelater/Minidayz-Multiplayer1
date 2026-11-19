@@ -40,6 +40,35 @@ def main() -> None:
             raise SystemExit(f"Duplicate item sprite mapping: {item_id}")
         entries[item_id] = object_name
 
+    # The same supplied MP source also includes two additional tables:
+    # MDZPlayerDropTable (ground drop sprite for multiplayer survivors)
+    # and MDZItemVariants (variant object name -> base artwork object).
+    # Preserve them as explicit reference-only data, never silently alter
+    # single-player loot/starting items or invent ID mappings.
+    def read_mp_object_table(table_name: str) -> dict[int, str]:
+        matched = re.search(
+            r'window\["' + re.escape(table_name) + r'"\]\s*=\s*\{([^}]*)\}',
+            source)
+        if matched is None:
+            raise SystemExit(f"Missing multiplayer object table {table_name}")
+        parsed: dict[int, str] = {}
+        for entry in re.finditer(r'(\d+)\s*:\s*("[^"]*")', matched.group(1)):
+            key = int(entry.group(1))
+            if key in parsed:
+                raise SystemExit(f"Duplicate {table_name} ID: {key}")
+            parsed[key] = json.loads(entry.group(2))
+        if not parsed:
+            raise SystemExit(f"Empty {table_name}")
+        return parsed
+
+    drop_entries = read_mp_object_table("MDZPlayerDropTable")
+    variant_match = re.search(r'window\["MDZItemVariants"\]\s*=\s*\{([^}]*)\}', source)
+    if variant_match is None:
+        raise SystemExit("Missing MDZItemVariants mapping")
+    variant_entries: dict[str, str] = {}
+    for match in re.finditer(r'("[^"]+")\s*:\s*("[^"]+")',variant_match.group(1)):
+        variant_entries[json.loads(match.group(1))] = json.loads(match.group(2))
+
     project_text = PROJECT.read_text(encoding="utf-8-sig")
     project_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", project_text)
     project = json.loads(project_text)
@@ -66,6 +95,28 @@ def main() -> None:
             raise SystemExit(f"Construct object index out of range: {object_index}")
         rows.append((item_id, object_index))
 
+    drop_rows: list[tuple[int, int]] = []
+    unresolved_drops: list[tuple[int,str]] = []
+    for identifier, name in sorted(drop_entries.items()):
+        index = object_indices.get(name)
+        if index is None:
+            unresolved_drops.append((identifier,name))
+        else:
+            drop_rows.append((identifier,index))
+    variant_rows: list[tuple[int,int]] = []
+    unresolved_variants: list[tuple[str,str]] = []
+    for name, base in sorted(variant_entries.items()):
+        object_index=object_indices.get(name)
+        base_index=object_indices.get(base)
+        if object_index is None or base_index is None:
+            unresolved_variants.append((name,base))
+        else:
+            variant_rows.append((object_index,base_index))
+    if not drop_rows:
+        raise SystemExit("None of the supplied multiplayer player-drop sprites resolve")
+    if not variant_rows:
+        raise SystemExit("None of the supplied multiplayer variant sprites resolve")
+
     if not rows:
         raise SystemExit("No original item sprites resolved; refusing to generate an empty catalog")
 
@@ -77,6 +128,20 @@ def main() -> None:
         "inline constexpr ItemSpriteDefinition kItemSpriteDefinitions[] = {",
     ]
     lines.extend(f"    {{{item_id}, {object_index}}}," for item_id, object_index in rows)
+    lines += ["};"]
+    lines += [
+        "// Multiplayer add-on references only; do not change source single-player spawn.",
+        f"inline constexpr std::size_t kMpPlayerDropSpriteCount = {len(drop_rows)};",
+        "inline constexpr ItemSpriteDefinition kMpPlayerDropSpriteDefinitions[] = {",
+    ]
+    lines.extend(f"    {{{item_id}, {object_index}}}," for item_id, object_index in drop_rows)
+    lines += [
+        "};",
+        "struct SourceSpriteVariant { std::uint16_t object, base_object; };",
+        f"inline constexpr std::size_t kMpSpriteVariantCount = {len(variant_rows)};",
+        "inline constexpr SourceSpriteVariant kMpSpriteVariants[] = {",
+    ]
+    lines.extend(f"    {{{object_index}, {base_index}}}," for object_index, base_index in variant_rows)
     lines += ["};", "} // namespace minidayz::items", ""]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
@@ -86,6 +151,12 @@ def main() -> None:
         print(f"Unresolved original mappings: {len(missing)} (left without an icon)")
         for item_id, name in missing[:20]:
             print(f"  item {item_id}: {name}")
+    print(f"Multiplayer reference: {len(drop_rows)}/{len(drop_entries)} player-drop mappings, "
+          f"{len(variant_rows)}/{len(variant_entries)} sprite variant mappings")
+    if unresolved_drops:
+        print(f"Unresolved multiplayer player drops (not guessed): {unresolved_drops[:12]}")
+    if unresolved_variants:
+        print(f"Unresolved multiplayer variants (not guessed): {unresolved_variants[:12]}")
 
 
 if __name__ == "__main__":
