@@ -1193,9 +1193,16 @@ public:
                     : i == 5 ? minidayz::stage1::kOriginalEquipmentBackpackArt
                     : i == 6 ? minidayz::stage1::kOriginalEquipmentSatchelArt
                     : minidayz::stage1::kOriginalInventoryCardArt;
-                if (!ui_art(frame, x, y, 76.0f, 36.0f))
+                if (!ui_art(frame, x, y, 76.0f, 36.0f,0.24f))
                     renderer.draw_solid_rect(x, y, 76.0f, 36.0f,
-                                             C2D_Color32(125, 111, 84, 255));
+                                             C2D_Color32(125, 111, 84, 255),0.24f);
+                if(drag_equipped_source_slot_==static_cast<int>(i)){
+                    // Show the original card being dragged; highlight only
+                    // this source slot and never replace all inventory tiles.
+                    const auto border=C2D_Color32(229,185,83,255);
+                    renderer.draw_solid_rect(x,y,76.0f,2.0f,border,0.71f);
+                    renderer.draw_solid_rect(x,y+34.0f,76.0f,2.0f,border,0.71f);
+                }
                 const auto item_id =
                     i == 5 ? inventory_.equipped_backpack()
                     : i == 6 ? inventory_.equipped_satchel()
@@ -2173,6 +2180,10 @@ private:
         details_open_ = false;
         tap_was_selected_ = false;
         selected_inventory_slot_ = -1;
+        drag_source_slot_=-1;
+        drag_equipped_source_slot_=-1;
+        drag_target_slot_=-1;
+        drag_target_equipment_slot_=-1;
         save_elapsed_ = 0.0f;
         new_game_generation_ = true;
         death_saved_ = false;
