@@ -76,6 +76,16 @@ int main() {
     assert(moving.state().x == 0.0f && moving.state().y > 0.0f);
     assert(moving.state().animation == PlayerAnimation::walk);
 
+    // 10 FPS must still advance 100 ms of real time, not the 50 ms
+    // used by the old preview clamp (which halved player speed).
+    PlayerState slow_frame_state{};
+    slow_frame_state.health=100.0f;
+    PlayerSystem slow_frame(slow_frame_state);
+    PlayerInput east{};
+    east.move_x=1.0f;
+    slow_frame.update_movement(east,0.10f,movement_rules);
+    assert(std::fabs(slow_frame.state().x-10.0f)<0.001f);
+
     // The default player skin has idle down/up/right/left (0..3) and
     // run down/up/right/left (4..7); it has no dedicated death animation.
     PlayerState animation_state{};
