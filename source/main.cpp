@@ -2021,7 +2021,7 @@ private:
     }
 
     // Original Game_events / Start events, unsaved-game branch:
-    // event UID 9183183159438440, action UID 9846853259707544:
+    // event UID 9183183159438441, action UID 9846853259707545:
     // PlayerBase SetPosition(600,
     //   1500 + (LayoutName=="Map" ? random(LayoutHeight-5000) : -500)).
     // Level 4 override UID 980530989134876 places the player on the
