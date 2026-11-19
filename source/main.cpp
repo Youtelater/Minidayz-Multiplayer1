@@ -755,7 +755,12 @@ public:
         if (!crafting_open_ && !storage_open_ && !perks_open_ && touch_pressed &&
             input.touch.py >= 25 && input.touch.py < 38) {
             details_open_ = !details_open_;
+            details_scroll_=0;
         }
+        if(details_open_ && touch_pressed &&
+           input.touch.px>=8 && input.touch.px<312 &&
+           input.touch.py>=94 && input.touch.py<220)
+            details_scroll_+=3;
         if (!crafting_open_ && !storage_open_ && !perks_open_ && touch_pressed &&
             minidayz::items::ui::kActions.contains(
                 input.touch.px,input.touch.py)) {
@@ -826,6 +831,7 @@ public:
                     drag_equipped_source_slot_=equipment_target;
                     drag_target_equipment_slot_=equipment_target;
                     selected_equipment_slot_=equipment_target;
+                    details_scroll_=0;
                 }else selected_equipment_slot_=-1;
                 selected_inventory_slot_=-1;
             }
@@ -851,6 +857,7 @@ public:
                     tap_was_selected_ = item && !item->empty() &&
                         selected_inventory_slot_ == slot;
                     selected_inventory_slot_ = item && !item->empty() ? slot : -1;
+                    details_scroll_=0;
                     if (selected_inventory_slot_ >= 0) {
                         drag_source_slot_ = slot;
                         drag_target_slot_ = slot;
@@ -1950,7 +1957,8 @@ public:
                     // Simple bounded word-wrapping for the original XML text.
                     // Do not substitute guessed descriptions for missing rows.
                     const char* pos = description;
-                    for (int line = 0; line < 6 && *pos; ++line) {
+                    unsigned content_lines=0;
+                    for (std::size_t line = 0; line < 64 && *pos; ++line) {
                         char buffer[58]{};
                         std::size_t length = 0;
                         const char* next = pos;
@@ -1965,11 +1973,14 @@ public:
                         }
                         std::memcpy(buffer, pos, length);
                         buffer[length] = '\0';
-                        renderer.draw_text(buffer, 16.0f,
-                            125.0f + static_cast<float>(line) * 14.0f, 0.24f);
+                        if(line>=details_scroll_ && line<details_scroll_+6)
+                            renderer.draw_text(buffer,16.0f,
+                                125.0f+static_cast<float>(line-details_scroll_)*14.0f,0.24f);
+                        ++content_lines;
                         pos = next;
                         while (*pos == ' ' || *pos == '\n') ++pos;
                     }
+                    if(details_scroll_>=content_lines)details_scroll_=0;
                 } else {
                     renderer.draw_text("NO ORIGINAL DESCRIPTION IN ROOT XML",
                                        16.0f, 134.0f, 0.23f);
@@ -1978,8 +1989,8 @@ public:
                 renderer.draw_text("SELECT AN ITEM, THEN OPEN DETAILS",
                                    16.0f, 130.0f, 0.26f);
             }
-            renderer.draw_text("TAP ITEM NAME ABOVE TO CLOSE",
-                               14.0f, 205.0f, 0.20f);
+            renderer.draw_text("TAP TEXT TO SCROLL - TAP NAME TO CLOSE",
+                               14.0f, 205.0f, 0.18f);
             renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                      C2D_Color32(54, 68, 55, 255));
             renderer.draw_text("ORIGINAL ITEM DESCRIPTION", 35.0f, 226.0f, 0.24f);
@@ -2613,6 +2624,7 @@ private:
         crafting_open_ = false;
         perks_open_ = false;
         details_open_ = false;
+        details_scroll_=0;
         tap_was_selected_ = false;
         selected_inventory_slot_ = -1;
         selected_equipment_slot_=-1;
@@ -2830,6 +2842,7 @@ private:
     bool storage_open_{};
     bool perks_open_{};
     bool details_open_{};
+    std::size_t details_scroll_{};
     bool map_open_{};
 };
 
