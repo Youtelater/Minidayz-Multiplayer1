@@ -141,6 +141,7 @@ bool EquipmentSystem::restore_with_fraction(
     // outerwear/hands by restore(), so relocate their exact wear too.
     const auto feet = static_cast<std::size_t>(EquipmentSlot::feet);
     const auto weapon = static_cast<std::size_t>(EquipmentSlot::weapon);
+    const auto hands = static_cast<std::size_t>(EquipmentSlot::hands);
     if (saved.item_ids[feet] != 0) {
         normalized.fractional_loss[static_cast<std::size_t>(EquipmentSlot::outerwear)] =
             normalized.fractional_loss[feet];
