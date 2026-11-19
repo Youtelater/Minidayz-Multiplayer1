@@ -950,7 +950,7 @@ public:
             day_night_.day_mode() != last_source_day_mode_) {
             float source_temperature = 0.0f;
             if (minidayz::items::source_weather_temperature_with_snowborn(
-                    minidayz::SurvivalDifficulty::regular,
+                    selected_difficulty_,
                     rain_timer_.active()
                         ? minidayz::items::SourceColdPhase::rain
                         : day_night_.day_mode()
