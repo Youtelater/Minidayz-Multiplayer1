@@ -746,6 +746,7 @@ void Engine::update(float dt) noexcept {
  // Track measured elapsed time during slower 3DS frames instead of
  // discarding it. Limit only exceptional emulator pauses (250 ms).
  // The player collision integrator sub-steps large movements.
+ measured_frame_seconds_=std::max(0.0f,dt);
  delta_seconds_=std::clamp(dt,0.0f,0.25f);
  if(scene_) scene_->update(input_,delta_seconds_);
 }
@@ -760,9 +761,9 @@ void Engine::render() noexcept {
   // sheets; frame time distinguishes CPU/GPU slowdown from move speed.
   renderer_.reset_camera();
   char metrics[96]{};
-  const float fps=delta_seconds_>0.0f?1.0f/delta_seconds_:0.0f;
+  const float fps=measured_frame_seconds_>0.0f?1.0f/measured_frame_seconds_:0.0f;
   std::snprintf(metrics,sizeof(metrics),"FPS %.1f  DT %.0fms  TEX LOADS %lu",
-    static_cast<double>(fps),static_cast<double>(delta_seconds_*1000.0f),
+    static_cast<double>(fps),static_cast<double>(measured_frame_seconds_*1000.0f),
     static_cast<unsigned long>(renderer_.sprite_cache_misses()));
   renderer_.draw_solid_rect(0.0f,0.0f,400.0f,17.0f,
                             C2D_Color32(14,18,15,238),0.88f);
