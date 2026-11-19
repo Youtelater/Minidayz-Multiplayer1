@@ -56,7 +56,10 @@ assert "tap_was_selected_ && !drag_moved_)" in src
 # A stationary touch selects worn gear for inspection, not auto-unequip.
 assert "drag_moved_ && drag_target_slot_>=0" in src
 assert "selected_equipment_slot_=equipment_target" in src
-assert "if(source<5 || source==7)stage2_audio_.play_equipment_drop()" in src
+assert "if(source<5 || source==7 || source==8)" in src
+assert "equip_quick_pistol_from_inventory" in src
+assert "unequip_quick_pistol_to_inventory" in src
+assert "active_quick_pistol_" in src
 assert "gear_slot_for_card" in src
 # Equipment card 7 is the firearm UI position, but Weapon is native
 # EquipmentSlot 6. An unconverted cast makes guns impossible to equip.
