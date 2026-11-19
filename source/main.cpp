@@ -1099,10 +1099,36 @@ public:
                         renderer.draw_text(equipment_labels[i],
                                            x + 34.0f, y + 8.0f, 0.19f);
                     }
+                    // Original parchment cards show the actual item
+                    // Heat and Armor properties, not only its condition.
+                    // Values come from source item definitions; vests do
+                    // not contribute to the original warmth expression.
+                    minidayz::items::SourceItemProtection effects{};
+                    if(i<4 && minidayz::items::source_item_protection(
+                            item_id,effects)){
+                        const float armor=i==0?effects.helmet:
+                            i==1?effects.outerwear:
+                            i==2?effects.vest:effects.pants;
+                        const float warmth=i==2?0.0f:effects.warmth;
+                        char properties[36]{};
+                        if(warmth!=0.0f && armor!=0.0f)
+                            std::snprintf(properties,sizeof(properties),
+                                "H%+.0f A%+.0f",
+                                static_cast<double>(warmth),
+                                static_cast<double>(armor));
+                        else if(warmth!=0.0f)
+                            std::snprintf(properties,sizeof(properties),
+                                "HEAT %+.0f",static_cast<double>(warmth));
+                        else if(armor!=0.0f)
+                            std::snprintf(properties,sizeof(properties),
+                                "ARMOR %+.0f",static_cast<double>(armor));
+                        if(properties[0])
+                            renderer.draw_text(properties,x+34.0f,y+17.0f,0.16f);
+                    }
                     char durability[16]{};
                     std::snprintf(durability, sizeof(durability), "%.0f%%",
                                   static_cast<double>(exact_condition));
-                    renderer.draw_text(durability, x + 34.0f, y + 21.0f, 0.22f);
+                    renderer.draw_text(durability, x + 34.0f, y + 25.0f, 0.18f);
                     renderer.draw_solid_rect(x + 34.0f, y + 32.0f,
                                              38.0f, 2.0f,
                                              C2D_Color32(44, 40, 30, 255));
