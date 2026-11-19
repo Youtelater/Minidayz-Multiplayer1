@@ -1366,10 +1366,10 @@ public:
                 break;
             }
             if(generation_failed_){
-                renderer.draw_solid_rect(6.0f,206.0f,308.0f,20.0f,
+                renderer.draw_solid_rect(6.0f,3.0f,308.0f,25.0f,
                     C2D_Color32(86,27,21,245),0.89f);
-                renderer.draw_text("WORLD GENERATION FAILED - RETRY NEW GAME",
-                    15.0f,209.0f,0.24f);
+                renderer.draw_text("WORLD LOAD FAILED - CHOOSE NEW GAME",
+                    18.0f,8.0f,0.25f);
             }
             return;
         }
