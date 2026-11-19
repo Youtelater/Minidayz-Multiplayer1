@@ -75,6 +75,7 @@ void Renderer::shutdown() noexcept {
  top_=bottom_=nullptr; initialized_=false;
 }
 void Renderer::begin_frame() noexcept {
+ sprite_cache_misses_=0;
  C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
  C2D_TargetClear(top_,C2D_Color32(12,16,18,255));
  C2D_TargetClear(bottom_,C2D_Color32(18,22,24,255));
@@ -199,6 +200,7 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
   if(sprite_cache_[i].sheet[0]&&std::strcmp(sprite_cache_[i].sheet,selected->sheet)==0){slot=i;break;}
  }
  if(slot==kMaxSheets){
+  ++sprite_cache_misses_;
   slot=next_sprite_cache_++%kMaxSheets;
   unload_sheet(slot);
   char path[128];
@@ -738,6 +740,7 @@ void Engine::poll_input() noexcept {
  hidCircleRead(&cp); if(touching) hidTouchRead(&tp);
  input_.held=held; input_.pressed=held&~previous_held_; input_.released=previous_held_&~held;
  input_.circle=cp; input_.touch=tp; input_.touching=touching; previous_held_=held;
+ if(input_.pressed & KEY_SELECT) performance_overlay_=!performance_overlay_;
 }
 void Engine::update(float dt) noexcept {
  // Track measured elapsed time during slower 3DS frames instead of
@@ -751,6 +754,20 @@ void Engine::render() noexcept {
  renderer_.begin_frame();
  renderer_.begin_screen(GFX_TOP);
  if(scene_) scene_->render(renderer_);
+ if(performance_overlay_){
+  // SELECT toggles real emulator frame-time + asset reload diagnostics.
+  // A high reload count identifies thrashing of the 32 resident sprite
+  // sheets; frame time distinguishes CPU/GPU slowdown from move speed.
+  renderer_.reset_camera();
+  char metrics[96]{};
+  const float fps=delta_seconds_>0.0f?1.0f/delta_seconds_:0.0f;
+  std::snprintf(metrics,sizeof(metrics),"FPS %.1f  DT %.0fms  TEX LOADS %lu",
+    static_cast<double>(fps),static_cast<double>(delta_seconds_*1000.0f),
+    static_cast<unsigned long>(renderer_.sprite_cache_misses()));
+  renderer_.draw_solid_rect(0.0f,0.0f,400.0f,17.0f,
+                            C2D_Color32(14,18,15,238),0.88f);
+  renderer_.draw_text(metrics,4.0f,2.0f,0.37f);
+ }
  // The bottom screen is reserved for diagnostics and touch UI; never
  // redraw the top-screen world here.
  renderer_.reset_camera();
