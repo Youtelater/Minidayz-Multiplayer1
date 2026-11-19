@@ -169,6 +169,14 @@ jobs:
             tests/mp_item_reference_tests.cpp -o /tmp/minidayz_mp_item_reference
           /tmp/minidayz_mp_item_reference
 
+      - name: Verify persistent 3DS survivor, difficulty and sound menu settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/menu_preferences_tests.cpp -o /tmp/minidayz_menu_settings
+          /tmp/minidayz_menu_settings
+
       - name: Verify original menu achievements and character unlock text
         shell: bash
         run: |
