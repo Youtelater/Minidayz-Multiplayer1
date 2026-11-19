@@ -99,20 +99,27 @@ bool EquipmentSystem::restore(const EquipmentSnapshot& saved) noexcept {
     // their native GUI had no separate source weapon slot. Detect the
     // actual source item category and migrate without deleting durability.
     // Also migrate any provisional legacy melee item in reserved Weapon.
-    EquipmentSlot expected{};
-    if(normalized.item_ids[weapon] != 0 &&
-       source_slot_for_item(normalized.item_ids[weapon],expected) &&
-       expected == EquipmentSlot::hands){
-        if(normalized.item_ids[hands] != 0)return false;
+    // Older native saves may have both legacy categories reversed. If
+    // both items have valid source categories, migrate the pair atomically
+    // rather than rejecting the save or silently dropping either item.
+    EquipmentSlot weapon_type{},hands_type{};
+    const bool weapon_is_melee=normalized.item_ids[weapon]!=0 &&
+        source_slot_for_item(normalized.item_ids[weapon],weapon_type) &&
+        weapon_type==EquipmentSlot::hands;
+    const bool hands_is_rifle=normalized.item_ids[hands]!=0 &&
+        source_slot_for_item(normalized.item_ids[hands],hands_type) &&
+        hands_type==EquipmentSlot::weapon;
+    if(weapon_is_melee && hands_is_rifle){
+        std::swap(normalized.item_ids[weapon],normalized.item_ids[hands]);
+        std::swap(normalized.conditions[weapon],normalized.conditions[hands]);
+    }else if(weapon_is_melee){
+        if(normalized.item_ids[hands]!=0)return false;
         normalized.item_ids[hands]=normalized.item_ids[weapon];
         normalized.conditions[hands]=normalized.conditions[weapon];
         normalized.item_ids[weapon]=0;
         normalized.conditions[weapon]=100;
-    }
-    if(normalized.item_ids[hands] != 0 &&
-       source_slot_for_item(normalized.item_ids[hands],expected) &&
-       expected == EquipmentSlot::weapon){
-        if(normalized.item_ids[weapon] != 0)return false;
+    }else if(hands_is_rifle){
+        if(normalized.item_ids[weapon]!=0)return false;
         normalized.item_ids[weapon]=normalized.item_ids[hands];
         normalized.conditions[weapon]=normalized.conditions[hands];
         normalized.item_ids[hands]=0;
@@ -147,16 +154,20 @@ bool EquipmentSystem::restore_with_fraction(
             normalized.fractional_loss[feet];
         normalized.fractional_loss[feet] = 0;
     }
-    EquipmentSlot expected{};
-    if(saved.item_ids[weapon]!=0 &&
-       source_slot_for_item(saved.item_ids[weapon],expected) &&
-       expected==EquipmentSlot::hands){
+    EquipmentSlot weapon_type{},hands_type{};
+    const bool weapon_is_melee=saved.item_ids[weapon]!=0 &&
+        source_slot_for_item(saved.item_ids[weapon],weapon_type) &&
+        weapon_type==EquipmentSlot::hands;
+    const bool hands_is_rifle=saved.item_ids[hands]!=0 &&
+        source_slot_for_item(saved.item_ids[hands],hands_type) &&
+        hands_type==EquipmentSlot::weapon;
+    if(weapon_is_melee && hands_is_rifle){
+        std::swap(normalized.fractional_loss[weapon],
+                  normalized.fractional_loss[hands]);
+    }else if(weapon_is_melee){
         normalized.fractional_loss[hands]=normalized.fractional_loss[weapon];
         normalized.fractional_loss[weapon]=0;
-    }
-    if(saved.item_ids[hands]!=0 &&
-       source_slot_for_item(saved.item_ids[hands],expected) &&
-       expected==EquipmentSlot::weapon){
+    }else if(hands_is_rifle){
         normalized.fractional_loss[weapon]=normalized.fractional_loss[hands];
         normalized.fractional_loss[hands]=0;
     }
