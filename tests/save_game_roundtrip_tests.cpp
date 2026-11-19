@@ -771,19 +771,20 @@ int main() {
     assert(stash_loaded.take_to_inventory(stash_inventory,0,0));
     assert(stash_inventory.count(26)==2);
 
-    // Equipment wear stays exact across equipping, native saves and
+    // Original firearm wear stays exact in its separate rifle equipment
+    // slot across equipping, native saves and
     // unequipping back to an inventory slot.
     InventorySystem held_inv;
     EquipmentSystem held_equipment;
     assert(held_inv.add(244, 1, 0, 100));
-    assert(held_equipment.equip_from_inventory(held_inv, 0, EquipmentSlot::hands));
-    assert(held_equipment.apply_verified_wear_action(EquipmentSlot::hands,
+    assert(held_equipment.equip_from_inventory(held_inv, 0, EquipmentSlot::weapon));
+    assert(held_equipment.apply_verified_wear_action(EquipmentSlot::weapon,
         6904772320561696ULL, 875054325568454ULL, 744011060201717ULL,
         true, false));
     assert(held_equipment.snapshot().conditions[
-        static_cast<std::size_t>(EquipmentSlot::hands)] == 100);
+        static_cast<std::size_t>(EquipmentSlot::weapon)] == 100);
     assert(held_equipment.fraction_snapshot().fractional_loss[
-        static_cast<std::size_t>(EquipmentSlot::hands)] == 25);
+        static_cast<std::size_t>(EquipmentSlot::weapon)] == 25);
     assert(write_saved_game_to_paths(96, player, held_inv,
                                     held_equipment, ground, tents, kFile, kTemp));
     assert(load_saved_game_from_path(restored, kFile));
@@ -792,9 +793,9 @@ int main() {
     assert(loaded_held.restore_with_fraction(
         restored.equipment,restored.equipment_fraction));
     assert(loaded_held.fraction_snapshot().fractional_loss[
-        static_cast<std::size_t>(EquipmentSlot::hands)] == 25);
+        static_cast<std::size_t>(EquipmentSlot::weapon)] == 25);
     InventorySystem unequipped{};
-    assert(loaded_held.unequip_to_inventory(unequipped,EquipmentSlot::hands,0));
+    assert(loaded_held.unequip_to_inventory(unequipped,EquipmentSlot::weapon,0));
     assert(unequipped.slot(0)->item_id == 244);
     assert(unequipped.slot(0)->fractional_loss == 25);
 
