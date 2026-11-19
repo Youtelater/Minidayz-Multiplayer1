@@ -21,7 +21,12 @@ for event in events:
     if not isinstance(event,list) or len(event)<8 or event[0]!=0:
         continue
     for cond in event[5]:
-        if not isinstance(cond,list) or len(cond)<10 or cond[0]!=-1 or cond[1]!=38:
+        if not isinstance(cond,list) or len(cond)<10:
+            continue
+        # Most source menu sections are Construct comment groups (-1/38).
+        # The Language section is a localStorage trigger (422/226), not
+        # a comment group, but it is still the original language handler.
+        if (cond[0],cond[1]) not in {(-1,38),(422,226)}:
             continue
         for parameter in cond[-1]:
             if isinstance(parameter,list) and len(parameter)>1 and isinstance(parameter[1],list):
