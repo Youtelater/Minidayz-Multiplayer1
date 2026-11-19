@@ -41,4 +41,26 @@ int main(){
     assert(action_at(160,160)==-1);
     assert(kPageNavigation.contains(12,230));
     assert(!kPageNavigation.contains(30,215));
+    // Dual-column tent/stash uses 28x37 source-icon cells in a 30x40 grid;
+    // taps in gutters or outside the visible storage pane must do nothing.
+    for(int side=0;side<2;++side){
+        for(int row=0;row<3;++row){
+            for(int col=0;col<5;++col){
+                const int left=(side==0?8:166)+col*30;
+                const int top=99+row*40;
+                const auto hit=storage_at(left+14,top+16);
+                assert(hit.valid);
+                assert(hit.carried==(side==0));
+                assert(hit.local==row*5+col);
+                assert(!storage_at(left+29,top+16).valid);
+                assert(!storage_at(left+14,top+38).valid);
+            }
+        }
+    }
+    assert(!storage_at(0,110).valid);
+    assert(!storage_at(159,110).valid);
+    assert(!storage_at(164,110).valid);
+    assert(!storage_at(316,110).valid);
+    assert(!storage_at(8,98).valid);
+    assert(!storage_at(8,219).valid);
 }
