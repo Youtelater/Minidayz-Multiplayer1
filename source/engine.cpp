@@ -240,6 +240,11 @@ bool Renderer::draw_menu_art(std::size_t index,float x,float y,float width,float
   "romfs:/gfx/tiledbgmenu_city_up.t3x"
  };
  if(index>=3||width<=0.0f||height<=0.0f) return false;
+ // Citro2D's smaller depth is nearer the camera. The old .7 wood art
+ // was ALWAYS behind the .5 solid-color button, leaving featureless
+ // rectangles instead of actual MiniDAYZ menu buttons. Draw between
+ // the .5 panel and the .4 text on EVERY screen.
+ if(index==1 && depth>=0.5f)depth=0.45f;
  if(!menu_sheets_[index]) menu_sheets_[index]=C2D_SpriteSheetLoad(paths[index]);
  if(!menu_sheets_[index]||C2D_SpriteSheetCount(menu_sheets_[index])==0) return false;
  C2D_Sprite sprite{};
