@@ -4,6 +4,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
+#include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
@@ -34,6 +35,7 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
+#include <vector>
 #include <cstdio>
 #include <cstring>
 #include <tuple>
@@ -169,6 +171,7 @@ public:
                 loading_world_ = false;
                 world_ready_ = true;
                 collision_index_.rebuild(world_);
+                visibility_index_.rebuild(world_);
                 npc_ready_ = npcs_.initialize(world_);
                 if (new_game_generation_ && !place_new_player_on_generated_map()) {
                     // Do not start a new run at a hard-coded, blocked map edge.
@@ -1573,7 +1576,9 @@ public:
                 ? static_cast<std::uint16_t>(
                       source_map - minidayz::stage1::kLayoutTable)
                 : 0;
-            for (std::size_t i = 0; i < world_.placement_count(); ++i) {
+            visibility_index_.query(camera_x,camera_y,view_w,view_h,
+                                    visible_world_placements_);
+            for (const auto i : visible_world_placements_) {
                 const auto* placement = world_.placement(i);
                 if (!placement || placement->layer >= 44) continue;
                 // The original Map layers 44+ contain Rain/NVG/night,
@@ -2164,6 +2169,8 @@ private:
     minidayz::WorldSystem world_{};
     minidayz::terrain::SolidTerrain terrain_collision_{};
     minidayz::terrain::SourceObstacleIndex collision_index_{};
+    minidayz::terrain::VisibleSourcePlacementIndex visibility_index_{};
+    std::vector<std::uint32_t> visible_world_placements_{};
     minidayz::NpcSystem npcs_{};
     std::uint32_t world_seed_{};
     std::uint8_t world_level_{};
