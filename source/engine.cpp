@@ -81,7 +81,12 @@ void Renderer::begin_frame() noexcept {
 }
 void Renderer::begin_screen(gfxScreen_t screen) noexcept {
  C2D_SceneBegin(screen==GFX_TOP?top_:bottom_);
- C2D_ViewReset(); C2D_ViewTranslate(-camera_x_,-camera_y_);
+ C2D_ViewReset();
+ // Only the 400x240 TOP screen scrolls with the world. Previously the
+ // 320x240 touch menu/inventory inherited the survivor's world camera,
+ // moving every button and label thousands of pixels off-screen.
+ if(screen==GFX_TOP)
+     C2D_ViewTranslate(-camera_x_,-camera_y_);
 }
 void Renderer::end_frame() noexcept { C3D_FrameEnd(0); }
 void Renderer::load_debug_overlay(std::uint64_t frame,float delta,const InputState& input,bool scene_active) noexcept {
