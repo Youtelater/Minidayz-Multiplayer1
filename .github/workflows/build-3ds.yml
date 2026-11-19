@@ -66,6 +66,14 @@ jobs:
           set -euo pipefail
           python3 tests/test_original_inventory_ui.py
 
+      - name: Verify exact inventory card proportions and touchscreen slot hits
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/inventory_touch_layout_tests.cpp -o /tmp/minidayz_inventory_ui_test
+          /tmp/minidayz_inventory_ui_test
+
       - name: Verify original spawning and low-FPS performance regressions
         shell: bash
         run: |
