@@ -1632,17 +1632,16 @@ public:
                     : i==2 ? minidayz::stage1::kOriginalEquipmentVestArt
                     : i==5 ? minidayz::stage1::kOriginalEquipmentBackpackArt
                     : i==6 ? minidayz::stage1::kOriginalEquipmentSatchelArt
-                    : i==7 ? minidayz::stage1::kOriginalEquipmentFirearmArt
                     : minidayz::stage1::kOriginalInventoryCardArt;
                 // The original held weapon is in its own slot. The source
                 // inventory-card image is square, so never stretch it 56x34.
                 if(i==7){
-                    // Original gui_firearm is 167x55. Construct rotates it
-                    // ninety degrees for the portrait rifle equipment card.
-                    const float scale=std::min(w/55.0f,h/167.0f);
-                    if(!renderer.draw_source_sprite(art.object,art.animation,
-                         art.frame,x+w*0.5f,y+h*0.5f,scale,scale,
-                         0.24f,1.5707963268f))
+                    // gui_firearm is NOT a card background: Construct
+                    // uses its 32 varying-size frames for actual guns.
+                    // The slot remains source parchment while the exact
+                    // selected weapon icon is rotated in foreground below.
+                    if(!ui_art(minidayz::stage1::kOriginalInventoryCardArt,
+                               x,y,w,h,0.24f))
                         renderer.draw_solid_rect(x,y,w,h,
                             C2D_Color32(146,130,99,255),0.24f);
                 }else if(i==4 || i==3){
