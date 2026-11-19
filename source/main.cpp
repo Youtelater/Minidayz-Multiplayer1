@@ -1546,69 +1546,65 @@ public:
             renderer.draw_text("CRAFT", 132.0f, 226.0f, 0.29f);
             return;
         }
-        // 5 x 3 source-sprite backpack cells on the 3DS touch screen.
-        const int page_start = static_cast<int>(inventory_page_ * kInventoryPageSize);
-        for (int row = 0; row < 3; ++row) {
-            for (int col = 0; col < 5; ++col) {
-                const int index = page_start + row * 5 + col;
-                const float x = 10.0f + col * 60.0f;
-                const float y = 130.0f + row * 31.0f;
-                const bool selected = index == selected_inventory_slot_;
-                const bool restricted = index >= 0 &&
-                    inventory_.is_exclusive_satchel_slot(
-                        static_cast<std::size_t>(index));
-                // The original project has *distinct* GUI sprites for
-                // inventory cards and item slots. The old renderer drew
-                // 15 equipment cards here, distorting the entire backpack.
-                // Draw the source gui_slot art for each backpack cell;
-                // gui_slot_bg is the cyan highlight and is never a default
-                // background for all slots.
-                if (!ui_art(minidayz::stage1::kOriginalSlotArt,
-                            x, y, 56.0f, 29.0f, 0.30f))
-                    renderer.draw_solid_rect(x, y, 56.0f, 29.0f,
-                        C2D_Color32(154, 142, 116, 255),0.30f);
-                if (selected) {
-                    (void)ui_art(minidayz::stage1::kOriginalSlotBackgroundArt,
-                                 x,y,56.0f,29.0f,0.32f);
-                    const u32 accent = C2D_Color32(224, 187, 87, 255);
-                    renderer.draw_solid_rect(x, y, 56.0f, 2.0f, accent);
-                    renderer.draw_solid_rect(x, y + 27.0f, 56.0f, 2.0f, accent);
-                    renderer.draw_solid_rect(x, y, 2.0f, 29.0f, accent);
-                    renderer.draw_solid_rect(x + 54.0f, y, 2.0f, 29.0f, accent);
-                }
-                if (restricted) {
-                    renderer.draw_solid_rect(x, y + 23.0f, 56.0f, 6.0f,
-                        C2D_Color32(86, 112, 103, 190));
-                }
-                if (restricted) {
-                    const auto satchel_id = inventory_.equipped_satchel();
-                    const char* label =
-                        (satchel_id == 459 || satchel_id == 753)
-                            ? "ARMY" : "MED";
-                    renderer.draw_text(label, x + 4.0f, y + 2.0f, 0.19f);
-                }
-                const auto* item = inventory_.slot(static_cast<std::size_t>(index));
-                if (item && !item->empty()) {
-                    // Use the exact item ID -> Construct object mapping from
-                    // the original game's MDZItemTable.
-                    (void)renderer.draw_item_icon(item->item_id,
-                        x + 28.0f, y + 12.0f, 29.0f, 19.0f);
-                    char quantity[8]{};
-                    // Original stacks show their count, not a fabricated
-                    // x1 overlay on every one-item tool or piece of gear.
-                    if(item->count>1){
-                        std::snprintf(quantity, sizeof(quantity), "x%u",
-                                      static_cast<unsigned>(item->count));
-                        renderer.draw_text(quantity, x + 3.0f, y + 20.0f, 0.21f);
-                    }
-                    if (item->condition > 0 && item->condition < 100) {
-                        renderer.draw_solid_rect(x + 6.0f, y + 26.0f, 44.0f, 2.0f,
-                                                 C2D_Color32(30, 30, 30, 255));
-                        renderer.draw_solid_rect(x + 6.0f, y + 26.0f,
-                            44.0f * static_cast<float>(item->condition) / 100.0f, 2.0f,
-                            C2D_Color32(190, 170, 85, 255));
-                    }
-                }
+        // Original GUI 'gui_slot' is a 30x30 PIXEL square. Keep that
+        // aspect ratio instead of deforming it into the previous 56x29
+        // cyan-looking grid. A 3DS-compatible 8x2 arrangement gives 15
+        // actual inventory cells per page (one unused space at the end).
+        const int page_start=static_cast<int>(inventory_page_*kInventoryPageSize);
+        for(int local=0;local<minidayz::items::ui::kPageSize;++local) {
+            const int index=page_start+local;
+            if(index<0 || static_cast<std::size_t>(index)>=inventory_.capacity())
+                continue;
+            const int row=local/minidayz::items::ui::kColumns;
+            const int col=local%minidayz::items::ui::kColumns;
+            const float x=static_cast<float>(
+                minidayz::items::ui::kSlotX+
+                col*minidayz::items::ui::kSlotStepX);
+            const float y=static_cast<float>(
+                minidayz::items::ui::kSlotY+
+                row*minidayz::items::ui::kSlotStepY);
+            const float size=static_cast<float>(minidayz::items::ui::kSlotSize);
+            const bool selected=index==selected_inventory_slot_;
+            const bool restricted=inventory_.is_exclusive_satchel_slot(
+                static_cast<std::size_t>(index));
+            // Only this real original asset is the persistent slot frame.
+            // gui_slot_bg is a bright cyan drag-selection texture; NEVER
+            // use it as the default background of every inventory item.
+            if(!ui_art(minidayz::stage1::kOriginalSlotArt,
+                       x,y,size,size,0.30f))
+                renderer.draw_solid_rect(x,y,size,size,
+                    C2D_Color32(135,119,92,255),0.30f);
+            if(selected || drag_target_slot_==index) {
+                const u32 gold=C2D_Color32(229,190,96,255);
+                renderer.draw_solid_rect(x,y,size,2.0f,gold,0.92f);
+                renderer.draw_solid_rect(x,y+size-2.0f,size,2.0f,gold,0.92f);
+                renderer.draw_solid_rect(x,y,2.0f,size,gold,0.92f);
+                renderer.draw_solid_rect(x+size-2.0f,y,2.0f,size,gold,0.92f);
+            }
+            if(restricted){
+                const auto satchel=inventory_.equipped_satchel();
+                renderer.draw_text(satchel==459||satchel==753?"ARMY":"MED",
+                                   x+3.0f,y+2.0f,0.14f);
+            }
+            const auto* item=inventory_.slot(static_cast<std::size_t>(index));
+            if(!item||item->empty())continue;
+            // Item-ID to source Construct object comes from MDZItemTable.
+            (void)renderer.draw_item_icon(item->item_id,
+                x+size*0.5f,y+size*0.5f,27.0f,27.0f,0.86f);
+            if(item->count>1){
+                char amount[10]{};
+                std::snprintf(amount,sizeof(amount),"%u",
+                    static_cast<unsigned>(item->count));
+                renderer.draw_text(amount,x+16.0f,y+21.0f,0.20f);
+            }
+            const float condition=static_cast<float>(item->condition)-
+                static_cast<float>(item->fractional_loss)/100.0f;
+            if(condition>0.0f && condition<100.0f){
+                renderer.draw_solid_rect(x+2.0f,y+size-3.0f,
+                    size-4.0f,2.0f,C2D_Color32(31,33,27,255),0.94f);
+                renderer.draw_solid_rect(x+2.0f,y+size-3.0f,
+                    (size-4.0f)*condition/100.0f,2.0f,
+                    C2D_Color32(199,165,86,255),0.95f);
             }
         }
         const std::size_t page_count =
@@ -1617,11 +1613,11 @@ public:
         std::snprintf(page_label, sizeof(page_label), "<  BACKPACK  %u/%u  >",
             static_cast<unsigned>(inventory_page_ + 1),
             static_cast<unsigned>(page_count));
-        renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
-                                 C2D_Color32(54, 68, 55, 255));
-        renderer.draw_text("TOUCH ACTIONS ABOVE", 14.0f, 226.0f, 0.18f);
-        renderer.draw_text("CRAFT", 132.0f, 226.0f, 0.30f);
-        renderer.draw_text(page_label, 213.0f, 226.0f, 0.23f);
+        renderer.draw_solid_rect(10.0f,225.0f,300.0f,13.0f,
+                                 C2D_Color32(74,66,50,255),0.61f);
+        renderer.draw_text("PAGE <",14.0f,226.0f,0.25f);
+        renderer.draw_text("CRAFT",132.0f,226.0f,0.30f);
+        renderer.draw_text(page_label,213.0f,226.0f,0.23f);
         if(near_source_bridge_exit()){
             renderer.draw_solid_rect(18.0f, 104.0f, 284.0f, 21.0f,
                                      C2D_Color32(39, 63, 46, 230));
