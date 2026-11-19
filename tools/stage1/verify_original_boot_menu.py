@@ -48,7 +48,7 @@ assert "minidayz::menu::main_entry_at(" in main
 assert "minidayz::menu::move_selection(" in main
 assert "if (menu_active_) {" in main
 assert "draw_menu_art(0," in main, "Original game logo must be on top screen"
-assert "kContinueButton" in main and "kNewGameButton" in main
+assert "kMenuRows[i]" in main and "kMainLabels[i]" in main
 assert "kContinueButton=kMenuRows[0]" in menu
 assert "kNewGameButton=kMenuRows[1]" in menu
 assert "kAchievementsButton=kMenuRows[2]" in menu
