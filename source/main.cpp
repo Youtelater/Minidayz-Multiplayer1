@@ -872,6 +872,8 @@ public:
         }
         if (!crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ &&
             input.touching && (drag_source_slot_>=0 || drag_equipped_source_slot_>=0)) {
+            drag_touch_x_=input.touch.px;
+            drag_touch_y_=input.touch.py;
             const int dx=input.touch.px-drag_start_x_;
             const int dy=input.touch.py-drag_start_y_;
             if(dx*dx+dy*dy>=36)drag_moved_=true;
@@ -2095,6 +2097,29 @@ public:
                     C2D_Color32(199,165,86,255),0.95f);
             }
         }
+        // Source item sprite follows the stylus during an actual drag,
+        // while the underlying original parchment slots remain visible.
+        // Draw only on the lower touchscreen; world player art on TOP
+        // must never be redrawn as a UI drag ghost.
+        if(drag_moved_ && (drag_source_slot_>=0 ||
+                           drag_equipped_source_slot_>=0)){
+            std::uint16_t moving_id=0;
+            if(drag_source_slot_>=0){
+                const auto* moving=inventory_.slot(
+                    static_cast<std::size_t>(drag_source_slot_));
+                if(moving && !moving->empty())moving_id=moving->item_id;
+            }else{
+                const int ui_slot=drag_equipped_source_slot_;
+                moving_id=ui_slot==5?inventory_.equipped_backpack()
+                    :ui_slot==6?inventory_.equipped_satchel()
+                    :equipment_.equipped(gear_slot_for_card(ui_slot));
+            }
+            if(moving_id!=0)
+                (void)renderer.draw_item_icon(moving_id,
+                    static_cast<float>(drag_touch_x_),
+                    static_cast<float>(drag_touch_y_),
+                    27.0f,27.0f,0.98f);
+        }
         const std::size_t page_count =
             (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize;
         char page_label[24]{};
@@ -2880,6 +2905,8 @@ private:
         minidayz::items::EquipmentSlot::hands};
     int drag_start_x_{};
     int drag_start_y_{};
+    int drag_touch_x_{};
+    int drag_touch_y_{};
     bool drag_moved_{};
     int drag_target_slot_{-1};
     int drag_target_equipment_slot_{-1};
