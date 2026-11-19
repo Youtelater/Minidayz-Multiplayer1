@@ -60,6 +60,12 @@ jobs:
             tests/boot_menu_tests.cpp -o /tmp/minidayz_boot_menu_tests
           /tmp/minidayz_boot_menu_tests
 
+      - name: Verify emulator-correct menu and world depth layering
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_3ds_screen_depth.py
+
       - name: Verify source terrain surfaces used by original footsteps
         shell: bash
         run: |
