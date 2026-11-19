@@ -2,6 +2,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/crafting.hpp"
 #include <array>
+#include <cstddef>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -219,6 +220,11 @@ struct SavedGameV19 {
     PendingCraftSnapshot pending_craft{};
     std::uint8_t world_level{};
 };
+static_assert(offsetof(SavedGameV19,world_level)==
+              offsetof(SavedGame,world_level),
+              "v19 world level offset changed; do not corrupt existing saves");
+static_assert(sizeof(SavedGameV19)<sizeof(SavedGame),
+              "v20 must extend rather than overwrite the v19 save layout");
 
 // v18 persisted pending crafting but not the active source map level.
 struct SavedGameV18 {
