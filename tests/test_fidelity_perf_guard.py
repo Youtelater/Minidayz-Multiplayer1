@@ -22,6 +22,14 @@ assert "blocked(this," not in spawn and "local_offsets" not in spawn
 assert "for(int attempt" not in spawn and "state.x=px;" in spawn
 assert "delta_seconds_=std::clamp(dt,0.0f,0.25f);" in engine
 assert "clamp(delta_seconds, 0.0f, 0.25f)" in player
+# The renderer tries the real selected survivor first; only a missing
+# source sprite may fall back to the original player_skin_def_2 object.
+# Never silently replace healthy selected skins with the default.
+assert "source_skin_object!=minidayz::kSourcePlayerObject" in main
+assert "if(p.alive && !sprite_drawn &&" in main
+assert "minidayz::kSourcePlayerObject,skin_animation," in main
+assert main.index("source_skin_object,\n                skin_animation") < main.index(
+    "minidayz::kSourcePlayerObject,skin_animation,")
 assert "std::min(value, 0.25f)" in npc
 assert "sprite_cache_misses_" in engine
 assert "KEY_SELECT" in engine and "measured_frame_seconds_" in engine
