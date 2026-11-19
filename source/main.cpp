@@ -1393,13 +1393,24 @@ public:
             }
             case BootPage::character:{
                 renderer.draw_text("CHOOSE SURVIVOR",75.0f,13.0f,0.58f);
-                renderer.draw_solid_rect(39.0f,56.0f,242.0f,72.0f,
+                renderer.draw_solid_rect(39.0f,46.0f,242.0f,91.0f,
                     C2D_Color32(35,37,31,225),0.31f);
                 char info[96]{};
                 std::snprintf(info,sizeof(info),"SURVIVOR %u / %u",
                     static_cast<unsigned>(selected_skin_+1),
                     static_cast<unsigned>(minidayz::stage1::kOriginalPlayerSkinCount));
-                renderer.draw_text(info,101.0f,79.0f,0.36f);
+                renderer.draw_text(info,101.0f,53.0f,0.36f);
+                // Show the actual ORIGINAL survivor art on the character
+                // menu, rather than a text-only preview or fake silhouette.
+                // The same source skin selection is used in the world renderer.
+                const auto preview_skin=
+                    minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object;
+                if(!renderer.draw_source_animation(preview_skin,"idle_down",0,
+                        160.0f,104.0f,1.20f,1.20f,0.59f) &&
+                   preview_skin!=minidayz::kSourcePlayerObject)
+                    (void)renderer.draw_source_animation(
+                        minidayz::kSourcePlayerObject,"idle_down",0,
+                        160.0f,104.0f,1.20f,1.20f,0.59f);
                 wood(minidayz::menu::kSkinPrevious,false,true);
                 wood(minidayz::menu::kSkinNext,false,true);
                 renderer.draw_text("< PREVIOUS",32.0f,163.0f,0.33f);
