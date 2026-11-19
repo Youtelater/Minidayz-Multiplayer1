@@ -141,6 +141,14 @@ jobs:
           make clean
           make
 
+      - name: Verify map roads, source locations and player X marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_map_overlay_tests.cpp -o /tmp/minidayz_map_tests
+          /tmp/minidayz_map_tests
+
       - name: Verify original wearable and held-weapon character poses
         shell: bash
         run: |
