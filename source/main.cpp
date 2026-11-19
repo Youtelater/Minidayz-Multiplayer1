@@ -2,6 +2,7 @@
 #include "minidayz/boot_menu.hpp"
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/source_map_overlay.hpp"
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
 #include "minidayz/terrain_visible_index.hpp"
@@ -304,6 +305,19 @@ public:
         }
         pause_save_feedback_ = false;
         pause_save_attempted_ = false;
+        // 3DS Y opens a world map without replacing the source inventory.
+        // B/Y or a lower-screen close tap returns to the backpack.
+        // This screen is an adaptation of the original minimap/map display,
+        // and MUST be compared to its Construct MiniMap_legend/GUI events.
+        if(input.pressed & KEY_Y) map_open_=!map_open_;
+        if(map_open_) {
+            const bool tap=input.touching && !touch_down_;
+            touch_down_=input.touching;
+            if((input.pressed & KEY_B) ||
+               (tap && input.touch.py>=207))
+                map_open_=false;
+            return;
+        }
         // The original map has bridge elements which connect its later
         // procedurally generated worlds. On a 3DS, A near a source bridge
         // platform initiates travel without interfering with inventory use.
@@ -856,6 +870,73 @@ public:
         }
     }
 
+    void render_source_map(minidayz::Renderer& renderer) noexcept {
+        renderer.reset_camera();
+        const auto& grid=world_.grid();
+        const auto& bounds=world_.bounds();
+        renderer.draw_solid_rect(0.0f,0.0f,320.0f,240.0f,
+            C2D_Color32(34,37,30,255),0.01f);
+        // Use supplied original minimap GUI art where available. Never
+        // substitute the inventory's cyan drag/drop selection image.
+        (void)renderer.draw_original_image("minimap_tile-sheet0.png",
+            7.0f,28.0f,306.0f,178.0f,0.05f);
+        renderer.draw_solid_rect(7.0f,28.0f,306.0f,178.0f,
+            C2D_Color32(41,53,41,238),0.11f);
+        renderer.draw_text("WORLD MAP",107.0f,4.0f,0.55f);
+        if(grid.width()==0 || grid.height()==0 ||
+           !(bounds.width>0.0f&&bounds.height>0.0f)){
+            renderer.draw_text("MAP NOT GENERATED",54.0f,103.0f,0.36f);
+            return;
+        }
+        // The source Map-generation Array encodes road segments 12/13/14
+        // and settlements with the original POI IDs. Show those cells
+        // rather than inventing buildings or revealing ungenerated places.
+        const minidayz::map_overlay::MapRect area{12.0f,32.0f,296.0f,170.0f};
+        const float cw=area.width/static_cast<float>(grid.width());
+        const float ch=area.height/static_cast<float>(grid.height());
+        for(int y=0;y<grid.height();++y){
+            for(int x=0;x<grid.width();++x){
+                using minidayz::map_overlay::CellKind;
+                const auto kind=minidayz::map_overlay::cell_kind(grid.at(x,y));
+                const float xx=area.x+x*cw, yy=area.y+y*ch;
+                const float roadw=std::max(1.0f,cw*0.34f);
+                const float roadh=std::max(1.0f,ch*0.34f);
+                const auto road_color=C2D_Color32(155,151,127,255);
+                if(kind==CellKind::road_horizontal ||
+                   kind==CellKind::road_crossing)
+                    renderer.draw_solid_rect(xx,yy+(ch-roadh)*0.5f,
+                        cw,roadh,road_color,0.35f);
+                if(kind==CellKind::road_vertical ||
+                   kind==CellKind::road_crossing)
+                    renderer.draw_solid_rect(xx+(cw-roadw)*0.5f,yy,
+                        roadw,ch,road_color,0.36f);
+                if(minidayz::map_overlay::is_location(kind)){
+                    const float size=std::max(3.0f,std::min(cw,ch)*0.8f);
+                    const auto color=kind==CellKind::military
+                        ? C2D_Color32(122,158,109,255)
+                        :kind==CellKind::hospital
+                            ? C2D_Color32(210,185,146,255)
+                            : C2D_Color32(218,204,158,255);
+                    renderer.draw_solid_rect(xx+(cw-size)*0.5f,
+                        yy+(ch-size)*0.5f,size,size,color,0.52f);
+                }
+            }
+        }
+        const auto point=minidayz::map_overlay::player_point(
+            player_.state().x,player_.state().y,bounds,area);
+        // Original minimap_player artwork accompanies the X used to show
+        // the player's precise world position on the rendered map.
+        (void)renderer.draw_original_image("minimap_player-sheet0.png",
+            point.x-6.0f,point.y-6.0f,12.0f,12.0f,0.77f);
+        renderer.draw_text("X",point.x-4.0f,point.y-9.0f,0.43f);
+        renderer.draw_text("ROADS     LOCATIONS     X = YOU",
+                           15.0f,207.0f,0.28f);
+        renderer.draw_solid_rect(9.0f,222.0f,302.0f,16.0f,
+            C2D_Color32(76,66,47,255),0.61f);
+        renderer.draw_text("Y / B / TOUCH: BACK TO INVENTORY",
+                           17.0f,224.0f,0.27f);
+    }
+
     void render_bottom(minidayz::Renderer& renderer) noexcept override {
         if (loading_world_) {
             renderer.draw_solid_rect(0.0f, 0.0f, 320.0f, 240.0f,
@@ -967,6 +1048,10 @@ public:
             (void)renderer.draw_menu_art(1, 18.0f, 153.0f, 284.0f, 54.0f);
             renderer.draw_text("MAIN MENU", 91.0f, 172.0f, 0.49f);
             renderer.draw_text("X: RESTART  Y: MENU", 63.0f, 219.0f, 0.29f);
+            return;
+        }
+        if(map_open_) {
+            render_source_map(renderer);
             return;
         }
         // Native 3DS inventory: use the actual Construct GUI frames
@@ -2233,6 +2318,7 @@ private:
     bool storage_open_{};
     bool perks_open_{};
     bool details_open_{};
+    bool map_open_{};
 };
 
 } // namespace
