@@ -47,9 +47,21 @@ assert "EquipmentSlot::weapon" in cpp and "EquipmentSlot::hands" in cpp
 assert "const auto target = gear_slot_for_card(drag_target_equipment_slot_);" in cpp
 assert "source_animation_index()" in engine
 assert "draw_equipped_layer(held_item,true" in cpp
-# MP quick/pistol is an extra multiplayer slot, not automatically the native
-# weapon slot. Do not claim that it already works or silently collapse it.
-unsupported=["quick/pistol separate MP inventory slot"]
+# MP's separate quick slot is now explicitly implemented in native
+# EquipmentSystem, saved as an independent v20 snapshot (not a rifle alias).
+equipment=(ROOT/"source/equipment.cpp").read_text(encoding="utf-8")
+save=(ROOT/"source/save_game.cpp").read_text(encoding="utf-8")
+mp_kit=(ROOT/"mp_kit.js").read_text(encoding="utf-8-sig")
+assert '"quick":' in mp and '"Drop_pistol"' in mp
+assert '"key":"pistol"' in re.sub(r"\\u([0-9a-fA-F]{4})",
+    lambda m:chr(int(m.group(1),16)),mp_kit)
+assert "equip_quick_pistol_from_inventory" in equipment
+assert "unequip_quick_pistol_to_inventory" in equipment
+assert "equip_quick_pistol_from_inventory" in cpp
+assert "quick_pistol_snapshot" in cpp
+assert "candidate.quick_pistol" in save and "save.quick_pistol" in save
+assert "SavedGameV19" in save
+unsupported=["multiplayer network replication (not part of single-player 3DS)"]
 result={
  "source":"root mp_players.js",
  "role":"multiplayer Construct player overlay (source comparison only)",
