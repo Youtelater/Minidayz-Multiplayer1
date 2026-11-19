@@ -438,7 +438,10 @@ public:
             }
             switch(chosen){
             case minidayz::menu::MenuEntry::continue_game:
-                if(has_saved_game_ && restore_continue_from_disk())
+                // The disabled NO SAVE row must never report a failed world
+                // generation when pressed directly on the touchscreen.
+                if(!has_saved_game_)break;
+                if(restore_continue_from_disk())
                     begin_world_generation();
                 else
                     generation_failed_=true;
