@@ -74,6 +74,12 @@ jobs:
             tests/inventory_touch_layout_tests.cpp -o /tmp/minidayz_inventory_ui_test
           /tmp/minidayz_inventory_ui_test
 
+      - name: Audit all root multiplayer source scripts and browser load order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/audit_multiplayer_scripts.py
+
       - name: Verify original spawning and low-FPS performance regressions
         shell: bash
         run: |
