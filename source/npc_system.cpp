@@ -9,7 +9,9 @@ namespace minidayz {
 namespace {
 float clamp_delta(float value) noexcept {
     if (!std::isfinite(value) || value <= 0.0f) return 0.0f;
-    return std::min(value, 0.05f);
+    // Keep autonomous actors on the same measured simulation clock as the
+    // survivor when 3DS rendering takes more than 50 ms per frame.
+    return std::min(value, 0.25f);
 }
 std::uint32_t next_random(std::uint32_t& state) noexcept {
     if (state == 0) state = 0x9e3779b9u;
