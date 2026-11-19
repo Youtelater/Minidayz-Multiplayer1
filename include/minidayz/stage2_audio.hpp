@@ -12,6 +12,8 @@ namespace minidayz {
 class Stage2Audio {
 public:
     bool initialize() noexcept;
+    void set_muted(bool value) noexcept;
+    bool muted() const noexcept { return muted_; }
     void play_crafting() noexcept;
     void play_item_drop() noexcept;
     void play_equipment_drop() noexcept;
@@ -44,6 +46,7 @@ private:
     // for the entire native playback, not just the play() stack frame.
     std::array<ndspWaveBuf,kClipCount> waves_{};
     bool ndsp_ready_{};
+    bool muted_{};
     unsigned drop_serial_{};
     unsigned gear_drop_serial_{};
     unsigned pickup_serial_{};
