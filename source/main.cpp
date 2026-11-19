@@ -1142,6 +1142,20 @@ public:
             (void)renderer.draw_menu_art(2,0.0f,0.0f,320.0f,240.0f,0.05f);
             renderer.draw_solid_rect(0.0f,0.0f,320.0f,240.0f,
                 C2D_Color32(12,15,13,160),0.16f);
+            // Reuse original menu subpage artwork wherever available.
+            // Original PNG names resolve through the committed source atlas.
+            if(menu_page_==minidayz::menu::BootPage::achievements ||
+               menu_page_==minidayz::menu::BootPage::unlocks){
+                (void)renderer.draw_original_image(
+                    "menu_achieves_bg-sheet0.png",
+                    0.0f,23.0f,320.0f,189.0f,0.19f);
+            }else if(menu_page_==minidayz::menu::BootPage::options){
+                (void)renderer.draw_original_image(
+                    "options_menu-sheet0.png",
+                    13.0f,45.0f,294.0f,150.0f,0.19f);
+                renderer.draw_solid_rect(13.0f,45.0f,294.0f,150.0f,
+                    C2D_Color32(14,19,17,165),0.21f);
+            }
             const auto wood=[&](const minidayz::menu::TouchBounds& box,
                                 bool selected,bool enabled) noexcept {
                 renderer.draw_solid_rect(box.x(),box.y(),
@@ -1302,6 +1316,12 @@ public:
                 renderer.draw_text("NOT YET PORTED TO 3DS",52.0f,117.0f,0.31f);
                 back();
                 break;
+            }
+            if(generation_failed_){
+                renderer.draw_solid_rect(6.0f,206.0f,308.0f,20.0f,
+                    C2D_Color32(86,27,21,245),0.89f);
+                renderer.draw_text("WORLD GENERATION FAILED - RETRY NEW GAME",
+                    15.0f,209.0f,0.24f);
             }
             return;
         }
