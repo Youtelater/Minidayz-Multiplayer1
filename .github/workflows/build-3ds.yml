@@ -15,6 +15,20 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # The checked-in data/stage1 snapshot came from an older game export.
+      # Regenerate source world tables from the authoritative root Construct
+      # data before ANY native world tests or .3dsx compilation. This also
+      # replaces old object sizes, collision-related animation references,
+      # NPC location events and forest-scatter branches in this build.
+      - name: Rebuild world data from authoritative original Construct source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
+          python3 tools/stage1/extract_location_templates.py
+          python3 tools/stage1/extract_npc_spawn_calls.py
+          python3 tools/stage1/build_procedural_environment.py
+
       # Reuse generated 3DS textures and sprite atlases across workflow runs.
       # Content hashes invalidate the cache only when source art or its converter changes.
       - name: Restore graphics cache
