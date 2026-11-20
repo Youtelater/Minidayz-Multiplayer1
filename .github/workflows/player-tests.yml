@@ -36,6 +36,10 @@ jobs:
           python3 tools/stage1/extract_location_templates.py
           python3 tools/stage1/extract_npc_spawn_calls.py
 
+      - name: Verify source-derived world sprite extents
+        run: |
+          python3 tools/stage1/build_world_source_extents.py --check
+
       - name: Verify original MP world-seed random sequence
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
