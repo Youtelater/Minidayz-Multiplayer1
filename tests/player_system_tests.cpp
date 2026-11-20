@@ -1,10 +1,12 @@
 #include "minidayz/player.hpp"
+#include "minidayz/generated/stage1_data.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 
 #include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <cstdint>
+#include <initializer_list>
 #include <cmath>
 #include <limits>
 
