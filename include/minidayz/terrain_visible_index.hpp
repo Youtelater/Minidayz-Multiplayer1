@@ -1,6 +1,7 @@
 #pragma once
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
+#include "minidayz/generated/world_source_extents.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -47,8 +48,17 @@ public:
             const float sprite_h=std::max(std::max(0.0f,p->height),
                                          std::max(0.0f,object->height));
             const float scale=std::max(1.0f,std::fabs(p->scale_x));
+            // Generated world instances commonly have 0x0 dimensions;
+            // ObjectDef itself also has zero size in the original export.
+            // A fixed 30px broadphase then clips trees, houses and roofs
+            // before their actual hotspots reach the camera boundary.
+            // Use the most distant original frame corner across ALL sprite
+            // animations, so changing the frame cannot lose visibility.
+            const float source_radius=p->object<stage1::kWorldSourceExtentCount
+                ? static_cast<float>(stage1::kWorldSourceMaxRadius[p->object])
+                : 0.0f;
             const float extent=std::max(30.0f,
-                std::hypot(sprite_w,sprite_h)*scale);
+                std::max(std::hypot(sprite_w,sprite_h),source_radius)*scale);
             const int x0=std::clamp(static_cast<int>(
                 std::floor((p->x-extent)/kCellSize)),0,cols_-1);
             const int x1=std::clamp(static_cast<int>(
