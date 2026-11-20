@@ -295,6 +295,34 @@ void test_every_source_level_quota() {
     }
 }
 
+// Test the complete five-phase New Game pipeline on EVERY source world.
+// Previous quota-only tests could pass while location/event generation on
+// later maps failed and returned the user to the boot menu.
+void test_full_generation_all_source_maps() {
+    for(std::uint8_t level=0;level<6;++level) {
+        minidayz::WorldSystem world;
+        const auto seed=0x526f6164u+static_cast<std::uint32_t>(level)*173u;
+        assert(world.begin_source_generation(seed,"Map",level));
+        std::uint8_t advanced=0;
+        while(!world.generation_complete() && advanced<6) {
+            assert(world.advance_source_generation());
+            ++advanced;
+        }
+        assert(world.generation_complete());
+        assert(advanced==5);
+        assert(world.generation_level()==level);
+        assert(world.source_location_spawn_count()>0);
+        assert(world.placement_count()>1250);
+        assert(world.feature_count(minidayz::WorldFeatureKind::Building)>103);
+        assert(world.grid().height()==(level>=4?33:16));
+        assert(world.map_marker_count()==
+            static_cast<std::size_t>(world.grid().width())*world.grid().height());
+        // Each generated world must carry both its original environmental
+        // features and runtime spawn points, not only the static Map layout.
+        assert(world.feature_count(minidayz::WorldFeatureKind::SpawnPoint)>0);
+    }
+}
+
 void test_level_four_split_grid() {
     minidayz::WorldSystem world;
     assert(world.initialize(0x1234u));
@@ -327,6 +355,7 @@ int main() {
     test_new_game_generates_visible_original_world();
     test_level_four_split_grid();
     test_every_source_level_quota();
+    test_full_generation_all_source_maps();
     std::puts("World source regression tests passed.");
     return 0;
 }
