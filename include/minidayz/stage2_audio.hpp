@@ -14,7 +14,8 @@ public:
     bool initialize() noexcept;
     void set_muted(bool value) noexcept;
     bool muted() const noexcept { return muted_; }
-    bool audio_ready() const noexcept { return ndsp_ready_; }
+    bool audio_ready() const noexcept { return ndsp_ready_ || csnd_ready_; }
+    bool using_csnd() const noexcept { return csnd_ready_; }
     bool ambience_loaded() const noexcept { return clips_[12].pcm != nullptr; }
     void play_crafting() noexcept;
     void play_item_drop() noexcept;
@@ -43,12 +44,16 @@ private:
     static constexpr std::size_t kClipCount = 13;
     bool load_wav(const char* path, Clip& destination) noexcept;
     void play(std::size_t clip) noexcept;
+    void stop_voice(std::size_t clip) noexcept;
+    void set_ambient_gain(float gain) noexcept;
     std::array<Clip,kClipCount> clips_{};
     // Independent NDSP voices prevent a pickup/drop from cutting off an
     // in-progress crafting or zipper sound. Wave buffers must stay alive
     // for the entire native playback, not just the play() stack frame.
     std::array<ndspWaveBuf,kClipCount> waves_{};
     bool ndsp_ready_{};
+    bool csnd_ready_{};
+    std::array<int,kClipCount> csnd_channels_{};
     bool muted_{};
     unsigned drop_serial_{};
     unsigned gear_drop_serial_{};
