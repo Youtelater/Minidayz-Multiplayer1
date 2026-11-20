@@ -193,6 +193,12 @@ jobs:
           make clean
           make
 
+      - name: Verify exact original sprite frame mappings in generated T3X atlases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/verify_sprite_catalog_frames.py
+
       - name: Audit all 1854 original PNGs against Construct frames and T3X
         shell: bash
         run: |
@@ -205,6 +211,7 @@ jobs:
         with:
           name: minidayz-source-graphics-audit
           path: |
+            data/graphics_review/source_frame_validation.json
             data/graphics_review/source_frame_audit.json
             data/graphics_review/source_frame_audit.csv
             data/graphics_review/SOURCE_FRAME_AUDIT.md
