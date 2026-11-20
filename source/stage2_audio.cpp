@@ -144,6 +144,7 @@ void Stage2Audio::set_muted(bool value) noexcept {
             waves_[voice]={};
         }
         ambient_variant_=-1;
+        menu_ambience_=false;
         weather_sample_variant_=-1;
     }
 }
@@ -244,10 +245,35 @@ void Stage2Audio::play_item_pickup() noexcept {
     play(voice);
 }
 
+void Stage2Audio::start_menu_ambience() noexcept {
+    // Original Menu_Events/Menu_init event 9948355272197826:
+    // play ambient looping at -10 dB. Reuse the gameplay day-ambience
+    // sample and NDSP voice so a menu->daytime game transition is seamless.
+    if (!ndsp_ready_ || muted_) return;
+    set_environment_ambience(false,false);
+    if (ambient_variant_!=0 || !clips_[12].pcm || menu_ambience_) return;
+    float mix[12]{};
+    constexpr float kOriginalMenuGain = 0.31622777f; // 10^(-10/20)
+    mix[0]=kOriginalMenuGain;
+    mix[1]=kOriginalMenuGain;
+    ndspChnSetMix(12,mix);
+    menu_ambience_=true;
+}
+
 void Stage2Audio::set_environment_ambience(bool night,bool winter) noexcept {
-    if (!ndsp_ready_) return;
+    if (!ndsp_ready_ || muted_) return;
     const int wanted=(winter ? 2 : 0) + (night ? 1 : 0);
-    if (ambient_variant_==wanted) return;
+    if (ambient_variant_==wanted) {
+        if (menu_ambience_) {
+            // Restore gameplay gain without restarting the shared loop.
+            float mix[12]{};
+            mix[0]=1.0f;
+            mix[1]=1.0f;
+            ndspChnSetMix(12,mix);
+            menu_ambience_=false;
+        }
+        return;
+    }
     stop_environment_ambience();
     // Original day, night and winter loops. Original ground_lvl5 is snowy;
     // later-world autumn artwork does not use the winter sound variants.
@@ -275,6 +301,7 @@ void Stage2Audio::stop_environment_ambience() noexcept {
     clips_[12]={};
     waves_[12]={};
     ambient_variant_=-1;
+    menu_ambience_=false;
     // Rain has its own NDSP voice and independent buffer lifetime. Changing
     // day/night ambience must not invalidate the active weather sample.
 }
@@ -329,6 +356,7 @@ void Stage2Audio::shutdown() noexcept {
     loaded_step_surfaces_={{-1,-1,-1,-1}};
     loaded_pickup_variant_=-1;
     ambient_variant_=-1;
+    menu_ambience_=false;
     weather_sample_variant_=-1;
 }
 }
