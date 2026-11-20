@@ -4,6 +4,7 @@
 #include "minidayz/generated/menu_source_catalog.hpp"
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_map_overlay.hpp"
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -173,6 +174,7 @@ public:
         pending_craft_seconds_=restored->pending_craft.seconds_remaining;
         crafting_feedback_=pending_craft_recipe_<minidayz::items::kSourceCraftRecipeCount
             ?CraftFeedback::pending:CraftFeedback::none;
+        continue_world_visual_state_=true;
         new_game_generation_=false;
         travel_generation_=false;
         source_temperature_initialized_=false;
@@ -200,10 +202,17 @@ public:
             craft.recipe_index = static_cast<std::uint16_t>(pending_craft_recipe_);
             craft.seconds_remaining = pending_craft_seconds_;
         }
-        return write_saved_game(world_seed_, player_.state(), inventory_,
+        if (!write_saved_game(world_seed_, player_.state(), inventory_,
             equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_,
             &stashes_, &day_night_, &rain_timer_, &loot_timer_, &craft,
-            world_level_);
+            world_level_)) return false;
+        // The existing v20 survivor save remains backward-compatible.
+        // Persist changed original object frames separately, with the same
+        // seed/level and a checksum. Do not report Save success unless
+        // world state is recorded too.
+        return minidayz::persistence::write_world_visual_state(
+            world_,world_level_,"sdmc:/3ds/Minidayz/world_visual.sav",
+            "sdmc:/3ds/Minidayz/world_visual.tmp");
     }
 
     void on_enter() noexcept override {
@@ -241,6 +250,14 @@ public:
             if (world_.generation_complete()) {
                 loading_world_ = false;
                 world_ready_ = true;
+                if (continue_world_visual_state_) {
+                    // Legacy saves may have no sidecar. A missing/stale file
+                    // never bypasses original generation or alters the seed.
+                    (void)minidayz::persistence::read_world_visual_state(
+                        world_,world_level_,
+                        "sdmc:/3ds/Minidayz/world_visual.sav");
+                    continue_world_visual_state_=false;
+                }
                 collision_index_.rebuild(world_);
                 visibility_index_.rebuild(world_);
                 npc_ready_ = npcs_.initialize(world_);
@@ -2774,6 +2791,7 @@ private:
 
     void start_next_source_map() noexcept {
         if(world_level_>=5)return;
+        continue_world_visual_state_=false;
         // A new map is a new Construct world generation, not simply a
         // background texture swap. Preserve survivor condition and items.
         // The source bridge artwork remains the travel landmark on 3DS.
@@ -2798,6 +2816,7 @@ private:
     }
 
     void start_new_game() noexcept {
+        continue_world_visual_state_=false;
         world_seed_ = make_new_world_seed();
         stage2_audio_.stop_environment_ambience();
         stage2_audio_.stop_rain_loop();
@@ -2988,6 +3007,7 @@ private:
     std::uint32_t world_seed_{};
     std::uint8_t world_level_{};
     bool travel_generation_{};
+    bool continue_world_visual_state_{};
     float save_elapsed_{};
     float footstep_elapsed_{};
     bool world_ready_{};
