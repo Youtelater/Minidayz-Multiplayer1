@@ -12,8 +12,9 @@ def entries(p):
     def visit(arr,sheet,parents=()):
         for index,e in enumerate(arr):
             if isinstance(e,list) and e and e[0]==0:
-                out[(sheet,parents+(index,))]={"uid":e[4],"head":e[:7],"children":[x[4] for x in e[7] if isinstance(x,list) and len(x)>4 and x[0]==0]}
-                visit(e[7],sheet,parents+(index,))
+                children=e[7] if len(e)>7 and isinstance(e[7],list) else []
+                out[(sheet,parents+(index,))]={"uid":e[4],"head":e[:7],"children":[x[4] for x in children if isinstance(x,list) and len(x)>4 and x[0]==0]}
+                visit(children,sheet,parents+(index,))
     for s in p[6]:visit(s[1],s[0])
     return out
 ea=entries(a);eb=entries(b)
