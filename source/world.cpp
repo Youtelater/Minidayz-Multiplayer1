@@ -1,12 +1,14 @@
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
+#include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/location_event_runtime.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <random>
+#include <tuple>
 
 namespace minidayz {
 namespace {
@@ -746,6 +748,31 @@ const WorldFeature* WorldSystem::feature(std::size_t i) const noexcept {
 std::size_t WorldSystem::feature_count(WorldFeatureKind kind) const noexcept {
     return static_cast<std::size_t>(std::count_if(features_.begin(),features_.end(),
         [kind](const WorldFeature& item){return item.kind==kind;}));
+}
+
+bool WorldSystem::set_placement_sprite_state(
+    std::size_t index, std::uint16_t animation, std::uint32_t frame,
+    float opacity) noexcept {
+    if (index >= placements_.size() || !std::isfinite(opacity) ||
+        opacity < 0.0f || opacity > 1.0f) return false;
+    auto& placement = placements_[index];
+    const auto key = std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
+        placement.object, animation, frame};
+    const auto* begin = stage1::kSpriteFrames;
+    const auto* end = begin + stage1::kSpriteFrameCount;
+    const auto* found = std::lower_bound(begin,end,key,
+        [](const stage1::SpriteFrameDef& source,const auto& wanted) {
+            return std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
+                source.object,source.animation,source.frame} < wanted;
+        });
+    // No silent fallback to frame zero. Unmapped states must be audited.
+    if (found == end || found->object != placement.object ||
+        found->animation != animation || found->frame != frame)
+        return false;
+    placement.source_animation = animation;
+    placement.source_frame = frame;
+    placement.opacity = opacity;
+    return true;
 }
 
 const WorldPlacement* WorldSystem::placement(std::size_t i) const noexcept {
