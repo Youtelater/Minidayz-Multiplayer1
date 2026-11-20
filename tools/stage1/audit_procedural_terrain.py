@@ -15,7 +15,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "data/stage1/construct_project_parsed.json"
+SOURCE = ROOT / "data.deobfuscated.js"
 DEST = ROOT / "data/stage1/original_terrain_paint_events.json"
 # Four environment objects plus the seven original per-level ground objects.
 # The Construct runtime can paint BOTH sets with SetTile actions; excluding
