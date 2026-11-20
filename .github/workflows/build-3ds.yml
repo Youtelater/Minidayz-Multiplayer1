@@ -182,6 +182,12 @@ jobs:
             tests/terrain_tiling_tests.cpp -o /tmp/minidayz_terrain_tiling_tests
           /tmp/minidayz_terrain_tiling_tests
 
+      - name: Verify every original source sprite extent matches world visibility table
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/build_world_source_extents.py --check
+
       - name: Enforce original-coordinate terrain render contract
         shell: bash
         run: |
