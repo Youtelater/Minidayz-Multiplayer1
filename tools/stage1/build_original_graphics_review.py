@@ -81,6 +81,10 @@ def main() -> None:
                 raise RuntimeError(f"Cannot decode original PNG {f}: {exc}") from exc
             counts[category(f.name)] = counts.get(category(f.name),0)+1
             label=f.name.replace("-sheet0.png","").replace(".png","")
+            # Pillow 9's bitmap font cannot draw Cyrillic source filenames.
+            # Preserve the real Unicode name in CSV; use a safe label only
+            # on the tiny preview thumbnail.
+            label=label.encode("ascii","replace").decode("ascii")
             painter.text((x+4,y+CELL_H-20),f"{i:04d} {label[:12]}",font=font,fill="#f1efdc")
         output=DEST/f"contact_{page:02d}.jpg"
         canvas.save(output, quality=78,optimize=True)
