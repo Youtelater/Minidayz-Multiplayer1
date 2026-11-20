@@ -17,12 +17,22 @@ public:
     bool audio_ready() const noexcept { return ndsp_ready_ || csnd_ready_; }
     bool using_csnd() const noexcept { return csnd_ready_; }
     bool ambience_loaded() const noexcept { return clips_[12].pcm != nullptr; }
+    // Poll the hardware/emulator channel separately from the IPC request
+    // result. Some older emulators acknowledge CSND writes without mixing
+    // any audio into their output.
+    void poll_ambience_playback() noexcept;
     const char* ambience_status() const noexcept {
         if (!audio_ready()) return "AUDIO DEVICE : UNAVAILABLE";
         if (!ambience_loaded()) return "AMBIENCE WAV : NOT LOADED";
         if (!ambient_play_attempted_) return "AMBIENCE : NOT STARTED";
         if (!ambient_play_ok_) return "AMBIENCE : PLAY ERROR";
-        return csnd_ready_ ? "CSND : PLAY REQUEST OK" : "NDSP : PLAY REQUEST OK";
+        if (csnd_ready_) {
+            if (ambient_csnd_state_==1) return "CSND : CHANNEL ACTIVE";
+            if (ambient_csnd_state_==0) return "CSND : CHANNEL IDLE";
+            if (ambient_csnd_state_==-2) return "CSND : STATE UNSUPPORTED";
+            return "CSND : CHECKING CHANNEL";
+        }
+        return "NDSP : PLAY REQUEST OK";
     }
     void play_crafting() noexcept;
     void play_item_drop() noexcept;
@@ -72,6 +82,8 @@ private:
     bool menu_ambience_{};
     bool ambient_play_attempted_{};
     bool ambient_play_ok_{};
+    int ambient_csnd_state_{-1};
+    unsigned csnd_status_frame_counter_{};
     int weather_sample_variant_{-1};
 };
 
