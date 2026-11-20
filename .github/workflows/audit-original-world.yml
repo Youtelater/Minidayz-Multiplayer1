@@ -1,0 +1,44 @@
+name: Audit original MiniDAYZ world source
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/audit_original_world_exhaustive.py'
+      - '.github/workflows/audit-original-world.yml'
+      - 'data.deobfuscated.js'
+  workflow_dispatch:
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check extractor syntax
+        run: python -m py_compile tools/stage1/audit_original_world_exhaustive.py
+      - name: Build complete audit from root original
+        run: python tools/stage1/audit_original_world_exhaustive.py --out audit-output/world
+      - name: Check original provenance and event coverage
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('audit-output/world/summary.json').read_text())
+          assert s['events']>0, 'Original event export was empty'
+          assert s['conditions']>0 and s['actions']>0
+          print('SOURCE:',s['source'])
+          print('EVENTS:',s['events'])
+          print('SNAPSHOT_SAME_PROJECT:',s['provenance'].get('same_project_as_cached_snapshot'))
+          print('SOURCE_SHA256:',s['provenance']['source_sha256'])
+          print('AUDIO_ACTIONS:',s['audio_actions'])
+          print('VISUAL_STATE_ACTIONS:',s['visual_state_actions'])
+          PY
+      - name: Publish extracted evidence as download
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-world-source-exhaustive-traces
+          path: audit-output/world/
+          retention-days: 90
