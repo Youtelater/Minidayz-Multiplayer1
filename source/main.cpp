@@ -1111,9 +1111,16 @@ public:
                     !world_.bounds().contains({placement->x, placement->y}))
                     continue;
                 std::uint16_t category = 0;
+                // Editor-authored source markers keep their original UID.
+                // Runtime-created marker 218 has no editor UID; the
+                // original location event sets its instance variable 0.
+                // Use that actual source category instead of dropping every
+                // generated marker (which disabled loot across most towns).
                 if (!minidayz::items::source_authored_map_loot_marker(
-                        placement->source_uid, category))
-                    continue;
+                        placement->source_uid, category)) {
+                    category = placement->source_loot_category;
+                    if (category != 15) continue;
+                }
                 minidayz::items::OriginalTimedLootMarker marker{};
                 marker.x = placement->x;
                 marker.y = placement->y;
