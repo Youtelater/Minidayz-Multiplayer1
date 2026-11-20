@@ -6,6 +6,7 @@ on:
       - 'tools/stage1/audit_original_world_exhaustive.py'
       - 'tools/stage1/build_world_implementation_matrix.py'
       - 'tools/stage1/compare_original_to_cached.py'
+      - 'tools/stage1/audit_original_world_priority.py'
       - '.github/workflows/audit-original-world.yml'
       - 'data.deobfuscated.js'
   workflow_dispatch:
@@ -27,6 +28,8 @@ jobs:
         run: python tools/stage1/build_world_implementation_matrix.py --in-dir audit-output/world
       - name: Compare root original against old extracted snapshot
         run: python tools/stage1/compare_original_to_cached.py
+      - name: Extract exact original tree, door, house and loot event chains
+        run: python tools/stage1/audit_original_world_priority.py
       - name: Check original provenance and event coverage
         run: |
           python - <<'PY'
