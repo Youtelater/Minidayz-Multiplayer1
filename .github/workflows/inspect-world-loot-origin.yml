@@ -1,0 +1,18 @@
+name: Inspect root-original world loot marker creation
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/inspect_world_loot_origin.py'
+      - '.github/workflows/inspect-world-loot-origin.yml'
+  workflow_dispatch:
+jobs:
+  inspect-loot-marker-events:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Trace original create_map_location and LOOT_respawn source
+        run: python3 tools/stage1/inspect_world_loot_origin.py
