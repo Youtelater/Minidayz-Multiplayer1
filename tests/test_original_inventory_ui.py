@@ -19,9 +19,10 @@ for filename in (
 ):
     assert filename in builder, f"Missing original inventory art mapping: {filename}"
     assert (R/"assets/gfx"/filename).exists(), f"Missing original root PNG: {filename}"
-# gui_slot is the original backpack cell, not the bright cyan highlight
-# or a second full-size equipment card.
-assert "ui_art(minidayz::stage1::kOriginalSlotArt," in src
+# The original gui_slot sprite SHEET contains item icons (the first is a
+# soda can), NOT an empty slot texture. Never paint it on empty cells.
+assert "kOriginalSlotArt" not in src
+assert "renderer.draw_item_icon(item->item_id," in src
 # The original cyan gui_slot_bg is a drag selection graphic, not the
 # parchment base, so the new square cells deliberately do not use it.
 assert "kOriginalSlotBackgroundArt" not in src.split(
@@ -79,7 +80,7 @@ top=src.split("    void render(minidayz::Renderer& renderer) noexcept override {
     "\nprivate:\n",1)[0]
 bottom=src.split("    void render_bottom(minidayz::Renderer& renderer) noexcept override {",1)[1].split(
     "    void render(minidayz::Renderer& renderer) noexcept override {",1)[0]
-assert "kOriginalSlotArt" in bottom
+assert "kOriginalSlotArt" not in bottom
 assert "kOriginalEquipmentBackpackArt" in bottom
 assert "kOriginalEquipmentSatchelArt" in bottom
 assert "if (crafting_open_)" in bottom
@@ -98,10 +99,11 @@ assert "drag_touch_y_=input.touch.py" in src
 assert "if(drag_moved_ && (drag_source_slot_>=0 ||" in src
 assert "27.0f,27.0f,0.98f" in src, "Original item must follow touchscreen drag in foreground"
 assert "stage2_audio_.play_item_pickup();" in src
-# Tent/stash cells must use original source gui_slot and exact lower-screen
-# input bounds, excluding gutters and touches outside the visible 30 cells.
+# Tent/stash cells must not display a soda can in empty cells; real items
+# render only when their inventory slot is populated.
 storage=src.split("        if (storage_open_) {\n            // The tent item",1)[1].split("        if (crafting_open_) {",1)[0]
-assert "kOriginalSlotArt" in storage
+assert "kOriginalSlotArt" not in storage
+assert "if (!item || item->empty()) continue;" in storage
 assert "storage_at(" in src
 assert "ui::kEquipment" in src
 # Original artwork must not vanish under its own fallback panel.
