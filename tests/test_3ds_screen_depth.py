@@ -18,7 +18,7 @@ for label,code in (
     ("original road over floor","C2D_SpriteSetDepth(&sprite,0.10f)"),
     ("floor title background","0.0f, 0.0f, 400.0f, 240.0f, 0.05f"),
     ("inventory under HUD","0.0f, 0.0f, 320.0f, 240.0f, 0.05f"),
-    ("player over ground","p.x,p.y,0.55f,0.55f,0.57f"),
+    ("player over ground at source size","p.x,p.y,1.0f,1.0f,0.57f"),
     ("world placements ordered forward","0.15f + 0.0125f * static_cast<float>(placement->layer)"),
     ("launcher input neutral gate","boot_input_gate_.update(dt,menu_controls_held)"),
 ):
