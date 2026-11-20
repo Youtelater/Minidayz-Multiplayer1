@@ -86,6 +86,18 @@ def main():
             "The exact sound parameters, dynamic item expressions and child event conditions remain preserved as raw JSON.",
             "Do not claim semantic parity until the original runtime ACE IDs are interpreted and gameplay verified."]
     (OUT/"priority_world_original_events.md").write_text("\n".join(lines)+"\n")
+    # Bounded original event traces for human review in audit CI logs.
+    for h in hits:
+        if h["label"] not in ("tree_207_hit", "tree_207_fall",
+                              "door_open", "door_close", "house_transparency_group"):
+            continue
+        print("SOURCE_CHAIN",json.dumps({
+            "label":h["label"],"path":h["sheet"]+":"+".".join(map(str,h["path"])),
+            "parents":h["parent_uids"],
+            "conditions":h["conditions"][:5],
+            "actions":h["actions"][:10],
+            "child_uids":h["child_event_uids"][:12]
+        },separators=(",",":"),ensure_ascii=False)[:4000])
     print(json.dumps({"priority_events_found":len(hits),"missing":missing,
                       "item_name_count":len(item_names),"item_sprite_map_count":len(mappings),
                       "tree_drop_labels":{str(i):item_names.get(i) for i in (37,38,50)}},indent=2))
