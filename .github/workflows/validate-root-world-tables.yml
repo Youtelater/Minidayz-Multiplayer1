@@ -1,0 +1,45 @@
+name: Validate root-original 3DS world tables
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data.deobfuscated.js'
+      - 'tools/stage1/extract_location_templates.py'
+      - 'tools/stage1/build_procedural_environment.py'
+      - '.github/workflows/validate-root-world-tables.yml'
+  workflow_dispatch:
+jobs:
+  verify-root-world-tables:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate locations and world event tables from root original
+        run: python3 tools/stage1/extract_location_templates.py
+      - name: Generate procedural ground scatter from root original
+        run: python3 tools/stage1/build_procedural_environment.py
+      - name: Validate source table signatures and counts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("include/minidayz/generated")
+          names=("location_template_source.hpp","location_event_source.hpp",
+            "location_array_operation_source.hpp","location_spawn_source.hpp",
+            "terrain_scatter_source.hpp")
+          for name in names:
+              s=(p/name).read_text()
+              assert "kLocation" in s or "kTerrainScatter" in s, name
+              print(name, len(s), "bytes")
+          PY
+      - name: Upload root-source world tables
+        uses: actions/upload-artifact@v4
+        with:
+          name: root-original-world-generated-tables
+          path: |
+            include/minidayz/generated/location_template_source.hpp
+            include/minidayz/generated/location_event_source.hpp
+            include/minidayz/generated/location_array_operation_source.hpp
+            include/minidayz/generated/location_spawn_source.hpp
+            include/minidayz/generated/terrain_scatter_source.hpp
