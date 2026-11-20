@@ -54,6 +54,10 @@ struct WorldPlacement {
     std::uint8_t image_point{};
     // Original Construct Set animation frame actions on created world sprites.
     std::uint32_t source_frame{};
+    // Dynamic animation/frame selected by the original Construct events.
+    // Separate from object identity: different instances may have different
+    // door, foliage or damage states without changing the original atlas.
+    std::uint16_t source_animation{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
@@ -141,6 +145,13 @@ public:
     std::size_t feature_count(WorldFeatureKind kind) const noexcept;
 
     const WorldPlacement* placement(std::size_t index) const noexcept;
+    // Apply an event-resolved original sprite frame to ONE existing instance.
+    // Reject nonexistent atlas frames rather than drawing a guessed image.
+    // Does not itself infer the triggering event, audio, collision or drops.
+    bool set_placement_sprite_state(std::size_t index,
+                                    std::uint16_t animation,
+                                    std::uint32_t frame,
+                                    float opacity) noexcept;
     std::size_t placement_count() const noexcept { return placements_.size(); }
     std::size_t source_location_spawn_count() const noexcept { return source_location_spawn_count_; }
     const WorldGrid& grid() const noexcept { return grid_; }
