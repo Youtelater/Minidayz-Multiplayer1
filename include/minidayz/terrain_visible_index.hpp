@@ -28,7 +28,11 @@ public:
             layout-stage1::kLayoutTable);
         for(std::size_t i=0;i<world.placement_count();++i){
             const auto* p=world.placement(i);
-            if(!p||p->layer==32||p->layer>=44||p->opacity<=0.0f)
+            // Include currently transparent source instances: original Construct
+            // events can reveal an initially hidden roof/interior/object.
+            // The draw loop still skips opacity <= 0; broadphase must not
+            // permanently exclude sprites whose visibility can change.
+            if(!p||p->layer==32||p->layer>=44)
                 continue;
             const auto* object=stage1::find_object(p->object);
             if(!object||object->type!=18)continue;
