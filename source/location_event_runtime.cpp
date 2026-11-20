@@ -308,6 +308,18 @@ bool SourceLocationEventRuntime::execute_action(
         if (auto* spawn = self.last_spawn(216)) spawn->frame = self.zed_frame_;
         return true;
     }
+    if (action.object_index == 218 && action.command_id == 88) {
+        // Root source LOOT_respawn uses the Construct Sprite "Set instance
+        // variable" action, the same command as NPC sprite object 216.
+        // Preserve the actual value set by its creation event; never
+        // manufacture category-15 markers or spawn probabilities.
+        if (action.parameter_count != 2) return false;
+        const int index = static_cast<int>(p[0].as_number());
+        if (index < 0 || index >= 16) return false;
+        if (auto* spawn = self.last_spawn(218))
+            spawn->instance_variables[static_cast<std::size_t>(index)] = p[1];
+        return true;
+    }
     if (action.object_index == 216 && action.command_id == 88) {
         if (action.parameter_count != 2) return false;
         const int index = static_cast<int>(p[0].as_number());
