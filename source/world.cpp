@@ -500,6 +500,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
         });
         // Authored instance UIDs are already unique in the original layout.
         placements_.back().runtime_uid = src.uid;
+        placements_.back().instance_id = static_cast<std::uint64_t>(placements_.size());
         const auto* layer = stage1::find_layer(index, src.layer);
         WorldFeatureKind kind{};
         if (!layer || !classify_source_layer(layer->name, kind)) continue;
@@ -638,6 +639,7 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
         });
         auto& placed = placements_.back();
         placed.runtime_uid = runtime_id;
+        placed.instance_id = static_cast<std::uint64_t>(placements_.size());
         // Construct Sprite Set Instance Variable command 88 is executed
         // by the source location runtime. Only expose original loot
         // category 15 when the original object 218 has received it.
@@ -739,6 +741,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, rule.image_point
         });
         placements_.back().runtime_uid = runtime_id;
+        placements_.back().instance_id = static_cast<std::uint64_t>(placements_.size());
 
         WorldFeatureKind kind{};
         if (classify_source_layer(rule.layer_name, kind)) {
@@ -789,9 +792,17 @@ const WorldPlacement* WorldSystem::placement(std::size_t i) const noexcept {
     return i < placements_.size() ? &placements_[i] : nullptr;
 }
 
+const WorldPlacement* WorldSystem::placement_by_id(
+    std::uint32_t id) const noexcept {
+    if (id == 0 || static_cast<std::size_t>(id)>placements_.size()) return nullptr;
+    const auto& object = placements_[static_cast<std::size_t>(id)-1];
+    return object.instance_id==id ? &object : nullptr;
+}
+
 const WorldPlacement* WorldSystem::placement_by_instance_id(
     std::uint64_t id) const noexcept {
-    if (id == 0 || id > placements_.size()) return nullptr;
+    if (id == 0 || id > placements_.size() ||
+        id > static_cast<std::uint64_t>(UINT32_MAX)) return nullptr;
     return placement_by_id(static_cast<std::uint32_t>(id));
 }
 
