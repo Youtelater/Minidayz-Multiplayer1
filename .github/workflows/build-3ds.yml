@@ -45,6 +45,20 @@ jobs:
             dkp-pacman -S --noconfirm 3ds-dev 3ds-portlibs
           fi
 
+      - name: Inspect every original graphics PNG and build visual contact sheets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/build_original_graphics_review.py --print-b64 12
+
+      - name: Upload original graphics visual contact sheets and full index
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minidayz-original-gfx-visual-review
+          path: data/graphics_review/
+          if-no-files-found: error
+
       - name: Test Construct expression evaluator
         run: |
           g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude source/construct_expression.cpp tests/construct_expression_tests.cpp -o /tmp/construct_expression_tests
