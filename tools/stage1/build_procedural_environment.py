@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract source Construct ground_enviroment SetTile scatter rules.
+"""Extract root-original Construct ground_enviroment SetTile scatter rules.
 
 The original Game_events create_map_location function calls Tilemap(230)
 Set tile at with floor(random(min,max)), choose(weighted IDs), and Repeat.
@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
-PROJECT=ROOT/"data/stage1/construct_project_parsed.json"
+PROJECT=ROOT/"data.deobfuscated.js"
 OUT=ROOT/"include/minidayz/generated/terrain_scatter_source.hpp"
 
 def events(nodes,parents=()):
