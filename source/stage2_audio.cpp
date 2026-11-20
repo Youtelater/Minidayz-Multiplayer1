@@ -273,6 +273,38 @@ void Stage2Audio::play_crafting() noexcept {
     play(0);
 }
 
+void Stage2Audio::play_original_world_sound(OriginalWorldSound cue) noexcept {
+    // The original source chooses chop1..4, treefall_02/03, and door
+    // wood/metal sounds in separate event branches. The caller must
+    // evaluate that event before choosing this actual recorded WAV.
+    if (muted_ || !audio_ready()) return;
+    constexpr const char* files[]{
+        "romfs:/wav/chop.wav",
+        "romfs:/wav/chop2.wav",
+        "romfs:/wav/chop3.wav",
+        "romfs:/wav/chop4.wav",
+        "romfs:/wav/treefall_02.wav",
+        "romfs:/wav/treefall_03.wav",
+        "romfs:/wav/open_door.wav",
+        "romfs:/wav/close_door.wav",
+        "romfs:/wav/open_door_metal.wav",
+        "romfs:/wav/close_door_metal.wav"
+    };
+    const auto index=static_cast<std::size_t>(cue);
+    if (index>=sizeof(files)/sizeof(files[0])) return;
+    constexpr std::size_t voice=13;
+    if (loaded_world_cue_!=static_cast<int>(index)) {
+        stop_voice(voice);
+        if(clips_[voice].pcm)linearFree(clips_[voice].pcm);
+        clips_[voice]={};
+        waves_[voice]={};
+        loaded_world_cue_=-1;
+        if(!load_wav(files[index],clips_[voice]))return;
+        loaded_world_cue_=static_cast<int>(index);
+    }
+    play(voice);
+}
+
 void Stage2Audio::play_item_drop() noexcept {
     // Original source chooses between drop1 and drop2. Alternate the two
     // existing clips without inventing a replacement sound.
@@ -455,5 +487,6 @@ void Stage2Audio::shutdown() noexcept {
     ambient_csnd_state_=-1;
     csnd_status_frame_counter_=0;
     weather_sample_variant_=-1;
+    loaded_world_cue_=-1;
 }
 }
