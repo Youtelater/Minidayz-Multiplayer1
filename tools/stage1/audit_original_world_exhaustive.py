@@ -39,8 +39,8 @@ def main():
     defs=defaultdict(list);call_sites=defaultdict(list)
     out=args.out
     with (out/"all_original_event_traces.jsonl").open("w",encoding="utf-8") as f:
-        def visit(events,sheet,anc,paths):
-            for e in events:
+        def visit(events,sheet,anc,paths,indices):
+            for ordinal,e in enumerate(events):
                 if not isinstance(e,list) or not e:continue
                 if e[0]!=0:stats["non_event_entries"]+=1;continue
                 uid=e[4];ids[uid]+=1
@@ -50,7 +50,8 @@ def main():
                 children=e[7] if len(e)>7 and isinstance(e[7],list) else []
                 stats["events"]+=1;stats["conditions"]+=len(cond);stats["actions"]+=len(acts);by_sheet[sheet]+=1
                 if gp:groups.append([sheet,gp,uid,"|".join(map(str,anc)),"|".join(group_path),len(children)])
-                row={"sheet":sheet,"uid":uid,"parent_uids":anc,"groups":group_path,
+                row={"sheet":sheet,"uid":uid,"source_event_path":indices+[ordinal],
+                     "parent_uids":anc,"groups":group_path,
                      "flags":e[1:4],"conditions":cond,"actions":acts,
                      "children":[x[4] for x in children if isinstance(x,list) and x and x[0]==0]}
                 f.write(json.dumps(row,ensure_ascii=False,separators=(",",":"))+"\n")
@@ -67,8 +68,8 @@ def main():
                         sounds.append([sheet,uid,"|".join(group_path),a[1],"|".join(name_literals),js])
                     if a[1] in (72,132,137,163) and a[0]!=-1:
                         visual.append([sheet,uid,"|".join(group_path),a[0],a[1],js])
-                visit(children,sheet,anc+[uid],group_path)
-        for sheet in p[6]:visit(sheet[1],sheet[0],[],[])
+                visit(children,sheet,anc+[uid],group_path,indices+[ordinal])
+        for sheet in p[6]:visit(sheet[1],sheet[0],[],[],[])
     csvout(out/"group_declarations.csv",["sheet","name","uid","ancestor_uids","path","direct_children"],groups)
     csvout(out/"function_calls.csv",["sheet","event_uid","group_path","name_literal","full_action_json"],calls)
     csvout(out/"function_resolution.csv",["name_literal","definition_uids","call_uids","matched_definition"],
@@ -79,6 +80,7 @@ def main():
              "object_types":len(p[3]),"layouts":len(p[5]),"sheets":len(p[6]),
              "events":stats["events"],"conditions":stats["conditions"],"actions":stats["actions"],
              "event_uids_with_duplicates":[k for k,v in ids.items() if v>1][:100],
+             "duplicate_uid_count":sum(1 for v in ids.values() if v>1),
              "sheet_events":dict(by_sheet),"group_declarations":len(groups),
              "function_calls":len(calls),"audio_actions":len(sounds),"visual_state_actions":len(visual),
              "function_names_called":len(call_sites),
