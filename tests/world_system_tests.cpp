@@ -337,6 +337,13 @@ void test_full_generation_all_source_maps() {
         }
         std::printf("SOURCE VEGETATION level=%u generated_trees=%zu total_trees=%zu placements=%zu\\n",
             static_cast<unsigned>(level),generated_trees,all_trees,world.placement_count());
+        // The source branches for wilderness markers 1/10 and 2/8 are
+        // OR blocks, not disabled AND blocks. Level zero's original
+        // 16-plant Repeat loops must yield considerably more than the
+        // 220 trees observed when all OR events were skipped.
+        if(level==0)assert(generated_trees>350);
+        assert(all_trees>=generated_trees);
+        assert(generated_trees>0);
     }
 }
 
