@@ -29,7 +29,12 @@ assert 'if(map.layer>=44)continue;' in engine
 assert 'draw_original_ground_floor(' in main
 assert 'draw_original_environment_tilemaps(' in main
 assert 'draw_source_procedural_environment(' in main
-assert 'draw_source_sprite(placement->object, 0, placement->source_frame' in main
+# Each instance may be in a different original Construct animation (e.g.
+# closed/open doors and damaged/standing trees). Do not regress to always
+# drawing animation 0 just to satisfy the old static-render contract.
+assert 'draw_source_sprite(placement->object,' in main
+assert 'placement->source_animation, placement->source_frame' in main
+assert 'sprite->animation==placement->source_animation' in main
 assert 'px, py, sx, sy, layer_depth' in main
 assert 'source_sprite_in_view(' in main
 assert 'original_map_detail_230.t3x' in scatter
