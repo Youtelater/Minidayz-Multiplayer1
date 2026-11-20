@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <initializer_list>
+#include <unordered_set>
 
 namespace {
 
@@ -51,6 +52,40 @@ void test_source_world_instance_animation_state() {
                                             original_tree.source_frame,
                                             original_tree.opacity));
     assert(world.placement(tree)->source_frame==original_tree.source_frame);
+}
+
+// The original Construct UID on generated objects is an *event* UID, not
+// a runtime instance identity: one tree-creation event can create thousands
+// of distinct trees. Persisting by event UID would corrupt other objects.
+void test_generated_object_instance_ids() {
+    constexpr std::uint32_t seed=0x4d445a33u;
+    minidayz::WorldSystem first, second;
+    assert(first.generate_from_source(seed,"Map",0));
+    assert(second.generate_from_source(seed,"Map",0));
+    assert(first.placement_count()==second.placement_count());
+    std::unordered_set<std::uint64_t> ids;
+    std::size_t generated=0,trees=0;
+    for(std::size_t i=0;i<first.placement_count();++i) {
+        const auto* a=first.placement(i);
+        const auto* b=second.placement(i);
+        assert(a && b && a->instance_id!=0);
+        assert(a->instance_id==b->instance_id);
+        // Original static instances keep their source instance UIDs.
+        if(!(a->instance_id & (1ULL<<63))) {
+            assert(a->instance_id==a->source_uid);
+            continue;
+        }
+        assert(ids.insert(a->instance_id).second);
+        assert(first.placement_by_instance_id(a->instance_id)==a);
+        ++generated;
+        if(a->layer==43)++trees;
+    }
+    assert(generated>1000);
+    assert(trees>1000);
+    assert(!first.placement_by_instance_id(0));
+    assert(!first.placement_by_instance_id(~std::uint64_t{0}));
+    assert(first.placement_by_instance_id(second.placement(
+        second.placement_count()-1)->instance_id)!=nullptr);
 }
 
 void test_grid_semantics() {
@@ -411,6 +446,7 @@ void test_level_four_split_grid() {
 int main() {
     test_grid_semantics();
     test_source_world_instance_animation_state();
+    test_generated_object_instance_ids();
     test_source_profiles();
     test_original_map_layout_and_descriptors();
     test_seed_reproducibility();
