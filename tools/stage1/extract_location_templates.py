@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Extract the original generate_location dispatch branches into a C++ source index.
+"""Extract the root-original generate_location branches into C++ source tables.
 
 The emitted records preserve Construct event UIDs, marker-code conditions, and
-counts of the original Array write / System create actions. This is an index of
+counts of the original Array write / System create actions. Never read the\nstale cached construct_project_parsed.json: the root source has changed. This is an index of
 the source event tree, not an execution of those actions; command semantics
 must be decoded before templates can be instantiated in the native world.
 """
@@ -10,7 +10,7 @@ import json
 import re
 from pathlib import Path
 
-SOURCE = Path("data/stage1/construct_project_parsed.json")
+SOURCE = Path("data.deobfuscated.js")
 OUTPUT = Path("include/minidayz/generated/location_template_source.hpp")
 FUNCTION_NAME = "generate_location"
 FUNCTION_UID = 5017992314331459
