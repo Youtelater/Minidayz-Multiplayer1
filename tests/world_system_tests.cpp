@@ -324,6 +324,19 @@ void test_full_generation_all_source_maps() {
         // Each generated world must carry both its original environmental
         // features and runtime spawn points, not only the static Map layout.
         assert(world.feature_count(minidayz::WorldFeatureKind::SpawnPoint)>0);
+        // Source vegetation must be generated from the original
+        // create_map_element var1=1 tree branches, not only the 47
+        // hand-authored Trees-layer instances.
+        std::size_t generated_trees=0;
+        std::size_t all_trees=0;
+        for(std::size_t i=0;i<world.placement_count();++i){
+            const auto* p=world.placement(i);
+            if(!p || p->layer!=43)continue;
+            ++all_trees;
+            if(p->source_uid!=0)++generated_trees;
+        }
+        std::printf("SOURCE VEGETATION level=%u generated_trees=%zu total_trees=%zu placements=%zu\\n",
+            static_cast<unsigned>(level),generated_trees,all_trees,world.placement_count());
     }
 }
 
