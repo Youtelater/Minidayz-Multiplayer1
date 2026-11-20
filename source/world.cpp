@@ -498,8 +498,20 @@ bool WorldSystem::load_source_layout(std::string_view name) {
             src.layer, src.object, src.uid, src.x, src.y, src.z, src.w, src.h,
             src.angle, src.opacity, src.scale_x, src.ox, src.oy
         });
-        // Authored instance UIDs are already unique in the original layout.
-        placements_.back().runtime_uid = src.uid;
+        // Keep Construct's original UID as evidence, but never assume it
+        // uniquely identifies a runtime object. The source export repeats
+        // some authored UIDs. Give duplicates an index-namespaced ID just
+        // as we do for procedural creations, without rewriting source_uid.
+        std::uint64_t runtime_id = src.uid;
+        const auto already_assigned = std::find_if(
+            placements_.begin(), placements_.end()-1,
+            [runtime_id](const WorldPlacement& p) {
+                return p.runtime_uid == runtime_id;
+            });
+        if (runtime_id == 0 || already_assigned != placements_.end()-1)
+            runtime_id = (std::uint64_t{1} << 63) |
+                static_cast<std::uint64_t>(placements_.size());
+        placements_.back().runtime_uid = runtime_id;
         placements_.back().instance_id = static_cast<std::uint64_t>(placements_.size());
         const auto* layer = stage1::find_layer(index, src.layer);
         WorldFeatureKind kind{};
