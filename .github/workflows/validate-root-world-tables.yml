@@ -6,6 +6,7 @@ on:
       - 'data.deobfuscated.js'
       - 'tools/stage1/extract_location_templates.py'
       - 'tools/stage1/build_procedural_environment.py'
+      - 'tools/stage1/extract_npc_spawn_calls.py'
       - '.github/workflows/validate-root-world-tables.yml'
   workflow_dispatch:
 jobs:
@@ -35,6 +36,8 @@ jobs:
               assert "kLocation" in s or "kTerrainScatter" in s, name
               print(name, len(s), "bytes")
           PY
+      - name: Generate root original NPC event definitions used by location interpreter
+        run: python3 tools/stage1/extract_npc_spawn_calls.py
       - name: Native world generation regression against regenerated root tables
         run: |
           g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
