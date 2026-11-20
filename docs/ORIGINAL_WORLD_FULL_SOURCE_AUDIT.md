@@ -55,6 +55,12 @@ The priority extractor located **405** English item names and **383** numeric-to
 
 **Additional original files inspected:** see [Additional Original Files — World Reference](ADDITIONAL_ORIGINAL_FILES_WORLD_REFERENCE.md) for `bunker_json`, `spawn_npc_arrays.txt`, original offline resource lists, extended item descriptions, log/UI text, lighting extensions, MP world-state/structures/interactions, and files intentionally excluded pending provenance. These findings complement the Construct event trace; they do not override root-original game rules.
 
+## Runtime world-spawn evidence: missing loot markers
+
+The [root-source marker trace](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44837840624) identified a crucial distinction: Construct event UID **324990412232250**, under `create_map_element`, uses object **854** create-object actions to create **object 218** on layer `zed_resp` at image points 1, 2 and 8, sets instance variable 0 to **9, 19 and 9**, and invokes `Trigger_spawn` for the first two. These are not category-15 Map loot markers. It is incorrect to treat any arbitrary object 218 as loot purely because it is object 218.
+
+Root-regenerated native world tests produced **zero in-bounds object-218 markers** (and zero category-15 markers) for two new-world seeds. This is still a world-generation parity gap. The currently implemented `source_world_loot_category` helper guards the original timed loot logic correctly if a valid runtime category-15 marker is present, but **does not itself create one**. Before claiming items spawn, decode original marker generation, parent conditions and `Trigger_spawn`/loot dispatch separately; tests must demonstrate marker creation and actual item drops. Do not invent marker probabilities or use the authoring-palette negative-Y instances as playable loot.
+
 ## 1. Source-of-truth and inventory
 
 | Input | Use | Evidence |
