@@ -1,0 +1,157 @@
+# MiniDAYZ 3DS — original world and interaction source inventory
+
+**Audit date:** 2026-11-20  
+**Target:** the root original MiniDAYZ Construct export (version **1.6.0** according to the extracted source manifest), not a reinterpretation or simplified clone.  
+**Scope of this pass:** original game data and dependency analysis **only**. No native gameplay features are marked complete by this document; no source PNGs, sound files, runtime gameplay C++, or build logic are changed.
+
+## 1. Source-of-truth and inventory
+
+| Input | Use | Evidence |
+|---|---|---|
+| `data.deobfuscated.js` | Original Construct object, layout, event, condition, action and variable definitions | Root deobfuscated project; its indexed/reassembled snapshot is in `data/stage1/source_snapshot/part_000..019.jsonpart` |
+| `c2runtime.js` | Construct command/expression/runtime semantics, picking, collisions, animation, randomness, layers, timed events | Resolve numeric action/condition identifiers against actual runtime; **do not guess them** |
+| `data/stage1/stage1_manifest.json`, `event_groups.csv`, `animations.csv`, `image_refs.csv`, `instances.csv`, `audio_resources.csv` | Reproducible indexes generated from original source | Assist search, but retain original event UIDs and source expressions as evidence |
+| `assets/gfx/` | Primary original PNGs, including multi-frame sheets | **1,854** PNG paths in repository tree at audit time; conversion alone is not use |
+| `media/` | Original audio media | **510** media paths in repository tree; extracted `audio_resources.csv` lists **489** resource records; reconcile duplicates, encoding and unmatched media explicitly |
+| `mp_itemtable.js`, `l_eng_items.xml`, `l_eng_new.xml`, `l_eng_ui.xml`, `l_eng_log.xml` | Source item IDs, icons, drop/item cross-reference, labels and feedback | Do not invent drops, rare items, loot counts, or dialogue |
+| Root `mp_*.js` | **Multiplayer extension** object/world/door/bush/prop replication and synchronization | Consult for eventual multiplayer parity, **not** to override the root Construct single-player mechanics |
+| `docs/STAGE1_MAP_GENERATION_AUDIT.md`, `docs/STAGE1_WORLD_SYSTEM_AUDIT.md`, `docs/STAGE2_LOOT_RESPAWN_STATUS.md`, `docs/original-world-state-audit.md` | Existing research and known blockers | Prior audit statements are evidence leads, not a substitute for the original events |
+
+**Do not substitute** files from `Minidayz-Multiplayer-main/` or unverified `romfs/` output for the authoritative originals. Keep root PNGs/media unchanged.
+
+**Source size/complexity:** **1,429** object types, **8** layouts, **360** layers, **5,256** editor-placed instances, **6,338** animations and **14,505** Construct frame references. Six event sheets contain **22,343** nested event nodes and **1,017** variable declarations according to the extracted manifest. The main `Map` layout is **36,850×20,000** source units with **69** layers; `TD` is a separate layout of the same size; `Tutorial` is **8,300×2,000**. These are **source-coordinate** values, not 3DS screen pixels.
+
+## 2. Original world creation — required event/function chains
+
+The original `Game_events` > `Map generation` group is UID **6835885414231505** (**3,062** event nodes including nested groups). Its explicitly indexed children include `Bunker_generate` (**443**), `Bridge level` (**63**), `Z_spawners` (**54**), `MiniMap_legend` (**7**) and `Location loader` (**1,660**). These must not be implemented as unrelated visual generators.
+
+**Source function entry points, confirmed by original function-name conditions:**
+
+| Source function | Event UID | Required work / interactions |
+|---|---:|---|
+| `generate_array_locations` | `6938246402369311` | Normal map grid, per-level POI quotas, valid neighborhoods, random call ordering |
+| `generate_array_locations_TD` | `138340901669044` | Alternate TD/challenge generation; do not conflate with normal map |
+| `generate_array_roads_1` | `921061167763666`, `218522443826106` | Road geometry, connected segments |
+| `generate_array_roads_2` | `484111970403648` | Additional vertical road paths/intersections |
+| `generate_array_tomap` | `1694439930581699` | Source cell markers and marker variations |
+| `generate_mapgen_toelements` | `7785053978136909` | Convert map choices into actual element-generation events |
+| `generate_location` | `5017992314331459` | All **62** original location-template branches and their nested elements |
+| `create_map_location` | `8627807469654645` | Build a playable location, elements, **active loot-marker objects**, initial spawn triggers |
+| `create_map_element` | `7736925111997576` | Exact world instance, layer, frame, transform, object state, obstacle/spawn relationships |
+| `erase_map_location` / `erase_map_element` | `4737519930673551` / `185349761267888` | Removal/reload lifecycle and loot/interaction cleanup |
+| `Reload_locations` | `4959923607871348` | Dynamic location lifecycle; distinguish other start/reload call sites |
+| `generate_helicrashes` | `924737797383123` | Wreck generation and effects; locate event-specific loot/interaction rules |
+| `generate_bunker_entrance` | `659670773379791` | Bunker entry position/object configuration |
+| `generate_minimap` | `6302523114231127` | Original markers, reveal/legend, other map display effects |
+| `Load_bridge_element` / `Load_bridge_level` | `188790626923654` / `482054460208135` | Bridge pieces, level transitions, obstacle and NPC behaviors |
+| `Bunker_spawn` / `Bunker_generate` | `531259728150068` / `305470436850518` | Bunker floor/wall/object and enemy-placement sequence |
+
+Additional map facts already indexed from original events: normal grid **16×16**; higher level maps use a split **16×33** path. Location marker source codes include villages **9**, military **5**, cities **6**, hospitals **11**, fire stations **15** and chaoshi **103**; road codes **12/13/14**. The `Map` layout includes **44** `zed_resp` editor markers, **33** `LOOT_respawn` editor markers, and a tourist-point marker. A separate `create_map_location` runtime path creates active loot markers; **the 15 negative-Y authoring palette object-218 markers must not be treated as playable loot spawn points**.
+
+**Open source questions requiring exact event-level resolution:** original Construct random expression and call order (native `std::mt19937` repeatability is not original RNG parity); every template's Array writes/conditions; concrete sprite creation and layer sorting; source tile transforms; level-specific density including missing trees; location unload/reload; which map objects are genuinely solid; placement interactions with roads, interiors, objects, loot and NPCs. Do not solve sparse forests with guessed density multipliers.
+
+## 3. World objects, visual states and physics
+
+| Source subsystem | Verified source facts / references | Full behavior to trace and eventually implement |
+|---|---|---|
+| Terrain | `Map` layers `bg`, `snow`, `sand`, `swamp`, `asphalt`, `ground_enviroment`, `Water`; generation events above | Terrain variants and transitions, map edges, water/path boundaries, surface collision and sound, changes under weather or level conditions |
+| Trees | Original object IDs **184**, **207**, **209**, **576**, **577**, **581**, with two `Default` frames each; object **210** has four | Species, distribution, spawn placement, per-instance health, damage, standing/falling frames, collisions, tree-fall audio, resulting drops, persistence |
+| Tree 207 hit/fall | `Hitting_obstacles` UID **5836740205504893**; hit event **8754965976446553** and falling child **2738244684146745** | Hit conditions, variable-0 decrement, one of `chop/chop2/chop3/chop4`; on source threshold set frame 1, `treefall_02/03`, `Spawn_drop` IDs **38,38,50**, tutorial updates |
+| Tree 209 hit/fall | Hit **5386206472407495**, falling child **7838407830495979** | Analogous source-gated state change; drops IDs **38,38,50,37**. Do not assume unconditional keypress chopping or that IDs equate to guessed items |
+| Bushes | Berry bush object **296** contains `red/yellow/blue/black` animations with two frames each | Original ripeness/color, collection conditions, animation after harvest, inventory reward, respawn timer and `bushsearch` sound **only if** corresponding event calls it |
+| Other obstacles | Fence object **319** has five frames; `Hitting_obstacles` (**101** nodes), `Range_destroy` (**21**), `Range_less_power` (**3**) | Object-specific hits, destruction, replacement frames/objects, physics, damage, projectiles, dropped components |
+| Exterior/interior pairs | **321→302**, **322→311**, **323→312**, **324→313**, **333→306**; exterior `b_city_house_1..4`, `b_piano_house` and matching `*_int` art | Source-authored house variants, furniture/walls, doorway/walkable geometry, relation of roof to interior and shadows, loot/container anchors |
+| Buildings' visibility | `Buildings and obstacles` group **7400581213142699** (**172** nodes); `House_transparenting` **5249390718058362** (**27**); `Obstacles_transparenting` **3584382019737158** (**5**); `Big_Obstacles_transparenting` **9701541155229296** (**8**) | Exact overlap/distance checks; per-object opacity, changing layer such as `Buildings_bg`, ordering before/after player; don't implement a global hide-all-roofs rule |
+| Normal doors | Object **349** with two-frame animations including `white`, `ga_brown`, `ga_blue`, `brown1/2/3`, `city/2/3`, `shtab`, `firestation/2`; `Doors_auto` group UID **5688415260272274** (**11**) | Inherited player-distance conditions; open UID **6061166023614368** sets frame 1 and `open_door`/`open_door_metal`; close UID **243854400993751** sets frame 0, updates shadow and `close_door`/`close_door_metal`. Verify collision, reachability, delay and persistence |
+| Bunker doors | Object **787**, three-frame `Default`, two-frame `open`; bunker event group above | Bunker-specific door/level changes; possible `bunker_door` cue must be proven from relevant event before coupling |
+| Barricades/buildable objects | `Barberwire&Barricades` group **63** nodes; `Building mode` **82** and child `building` **8** | Placement restrictions, resource consumption, protection, hit/destroy states, collision, render layers, saving |
+| Wrecks and environmental objects | `generate_helicrashes`, `Envir_effects` **12**, fences/road props/vehicles in original location events | Correct world props and graphical states, wreck/site triggers, original loot and audio as event-defined |
+| Camera and sorting | Source layers `Buildings_shadows`, `Buildings_base`, `items_on_ground`, `Buildings_base_top`, `Buildings_bg`, `Buildings`, `Forests`, `Trees`, `static_cars` and `Vehicle Layering` (**19** nodes) | Original depth/order, dynamic layering, player/equipment visibility, large-sprite screen visibility, sprite hot spots and collision polygons |
+
+**Important:** the original source has explicit `House_transparenting` logic with object-1049 actions that alter opacity and move the sprite to `Buildings_bg`; the precise per-house condition ancestry must still be decoded before implementing behavior. Roof logic is **not** just a manual transparency toggle inferred from its art.
+
+## 4. World spawning, loot, interaction rewards and lifecycle
+
+These are world mechanics, not merely inventory UI:
+
+| Event group or source function | Source evidence | Required linked behavior |
+|---|---|---|
+| `Spawn parameters` | UID **7587383775021469**, **1,025** nodes | All original spawn categories and fallback paths; distinguish source flags, placement constraints, and object types |
+| `LOOT Respawn` | UID **3772264929481614**, **254** nodes | Actual in-world markers, initial spawn, timed respawn and ground-item persistence |
+| `Check_loot` / `Global_respawn` | **2026232979865106** / **388188595587361** | Source **1,480-second** timer, Map-only and onBridge guard, source pool selection |
+| `Trigger_spawn` | **7952760861768009** and source timed trigger UID **234332254075458** | Object-218 marker category **15**, distance **>1000** from player, original branch-specific restrictions/weighted item IDs |
+| `Spawn_drop` | UID **5418835019314848** | Correct original item ID/type, quantity/quality, location, sprite, spawn collision and pickup rules |
+| `Picking player items` / `Picking inventory items` | **251** / **91** nested nodes | Ground-vs-container-vs-equipped semantics, nearby detection, valid pickup, capacity, sounds and feedback |
+| `Droppin items` / `Pickpile` | **275** / **243** nodes | Drop position, player drop rules, pile merging, later retrieval, despawn/save interactions |
+| `Merged pick and interact` / `loot_checker2` | **330** / **39** nodes | Choosing between a world interaction and nearby item pickup, whether action is permitted, interactions near doors/loot |
+| `Gardening` / `Stash` | **5** nodes each | Growth conditions, planted/resource object states, stash containers and inventory capacity; no guessed yield rules |
+| `Airdrop` | UID **906276471810627**, **110** nodes, `Airdrop_fall` UID **191760526050343** | Site spawning, descent/arrival visuals/audio, loot pools, pickup and persistence |
+| `Quests` | **284** nodes; `Generate_quest_item` **619369878587524**; `Quest_spawn_reward_box` **908646050311334** | Quest-generated world objects, item targets, rewards and state |
+| `Sleeping` | **93** nodes; `Sleep_menu_open`, `GotoSleep`, `Count_sleep_hours` original functions | Valid resting places, time passage, NPC/world/weather/loot consequences |
+| `Building mode` | **82** nodes | Craft/place/destroy structures and environmental effects rather than a UI-only button |
+
+**Confirmed current dependency blocker from `docs/STAGE2_LOOT_RESPAWN_STATUS.md`:** native timed loot logic exists, but native world generation does not yet create the source's active object-218 loot markers by running `create_map_location`. Without those markers, the native game has no verified recurring in-world loot despite passing isolated loot tests. Fix location creation **before** claiming item spawning is complete. This audit does not change runtime behavior.
+
+## 5. Living world: entities, events and environment
+
+Source groups that depend directly on world creation:
+
+- **Zombies/NPCs:** `Z_spawners` (54 nodes), `NPCs` (**3,640**), `NPC_manager` (**218**), `Zombies` (**715**), `Zeds_common` (**260**), `Spawn_NPC` UID **180375540292947**. Also source branches for normal/buried/army/fast zombies, army shooters, screamer, tank, jumper; these need distinct spawn conditions, AI, damage, animation and audio.
+- **Human bots:** `Bots` (**1,306**), team/bandit/veteran/friend groups, `Bot Manager` (**151**), camps (`Spawn_team_camp`, `Spawn_bandit_camp`), visibility/noise/drops. Location generation and obstacle collision are prerequisites.
+- **Wildlife:** `Animals` UID **4386688713565123** (**195**), with `Crow`, `Wolf`, `Deer`, `Rabbit`, `Chicken`, `Dog`. Animal-specific spawning, noise, detection, attack/flee, relevant drops and audio need event-by-event tracing; source group names establish **presence**, not every specific effect.
+- **Combat affecting world:** `Damage dealing` (**769**), `Bullets_dmg_deal` (**500**), `Player damaging` (**110**), `Beartrap&Mine` (**13**), `Molotov_damage` (**39**), `Wolf_dmg_deal` (**29**), `Hitting_obstacles` (**101**) and ranged-destruction groups. Must modify world objects and NPC states, not only player health bars.
+- **Vehicles:** `Drivable vehicles` (**319**), `Vehicle collisions` (**93**), `Vehicles UI` (**113**), `Vehicle Layering` (**19**). Native world needs valid car spawn, directional movement, collision/crash, engine/start/stop cues, fuel/repair rules where evidenced.
+- **Weather/lighting:** `Time cyles and weather` UID **8304628341044256** (**96**), `Day&Night` (**13**), `Rain` (**13**), `night_force_texture` (**5**), `Light parameters` (**8**), `Light WEBgl` (**1**), `Fireplace params` (**5**), `Envir_effects` (**12**). Cross-link rain and temperature with visibility/audio/player stats, fire effects and day progression.
+- **Other world events:** `HeliEvents` (**42**), `Final_day` (**25**), `Airdrop` (**110**), `Level_change` (**12**), `Bridge level` (**63**), `Tutorial_map` (**261**), `Tutorial_encounter` (**102**), alternate mode `seed TD` (**155**) and challenge seed branches.
+
+These systems must be researched alongside environment code, **not excluded because they appear under NPC, inventory, combat or UI group names**.
+
+## 6. All effects from an interaction: original audio, graphic, item, collision and save
+
+Original audio filenames directly present in the indexed resource inventory include:
+
+- Trees/foliage: `chop`, `chop2`, `chop3`, `chop4`, `treefall_02`, `treefall_03`, `bushsearch`, `wood_1..4`.
+- Structures: `open_door`, `close_door`, `open_door_metal`, `close_door_metal`, `bunker_door`.
+- Ambient/weather: `ambient`, `rain_loop`, `rainroof`, `fireplace_loop`, `bunker_ambient`, `forest_run_1..4`.
+- Items: `drop1/2`, `geardrop1/2`, `gearpick`, `pick1/2`, `crafting`.
+- Vehicles: `car_door_open/close`, `car_engine_start/idle/stop_uaz`, corresponding `volga` cues, `car_crash_1..3`, `car_crash_wood`, `car_explode`.
+
+**Resource existence is NOT proof of the trigger**: tree and normal-door audio calls above have been traced to named events; the other cues still need associated original event UIDs, sound parameters, priorities/loops and conditions. Some audio resources have both OGG and M4A versions; distinguish formats from distinct sound effects.
+
+For **each** world interaction, record a source-grounded chain:
+
+`original event UID + inherited conditions → affected instance UID / variables → animation/frame/opacity/layer → collision/obstacle → original sound + trigger/volume → spawned/dropped item ID and quantity → NPC/player/quest implications → timing, re-trigger, save/load, multiplayer replication if applicable`.
+
+If any of these are absent in the original, document **not applicable** with evidence; **never add a made-up sound, item or interaction**.
+
+## 7. Specific missing pieces / source research backlog
+
+Source-grounded research priorities, ordered by dependency:
+
+1. **World generation parity:** decode **all** event conditions/actions/expressions in `generate_array_locations`, roads, `generate_array_tomap`, `generate_location`, `create_map_location`, `create_map_element`. Derive source RNG sequencing, terrain and vegetation selection/density, all location templates, all world layers and precise source spatial transforms.
+2. **World-object manifest:** produce a row per original object and instance with sprite file, every frame rectangle/hotspot/animation, layer and initial visibility, collision polygons, selectable interactions and original spawn path. Separate editorial palette content, inactive source assets, and playable runtime entities.
+3. **Buildings end-to-end:** exterior/interior pairing, house transparency/obstacle transparency/opacity, player-inside rule, furniture, destructibles, all normal and bunker doors, audio, collision, generated loot markers.
+4. **Flora/obstacles end-to-end:** every tree/berry bush/fence/stone/etc. with source hit/harvest conditions, drop IDs, sound, frames, collision and per-instance state. Audit sparse source-tree generation without arbitrary numerical fixes.
+5. **Real loot world:** translate marker creation/categories and source initial + timed `Trigger_spawn` event branches into a physical world-spawn manifest; map all items/pickups/piles/storage/airdrop/quests. Check rarity and guard conditions per location.
+6. **NPC/wildlife/world simulation:** world spawn positions, AI and noise, day/night, weather, lighting, physics/damage, world-driven quest events, vehicle wrecks and moving vehicles.
+7. **Persistence/events:** loading and unloading locations, deterministic instance identities, destroyed/harvested/open/closed state, saved loot, plant growth and respawn timing, bridge/level changes.
+8. **Audio event matrix:** each world action to exact cue trigger, audio format/volume/loop, stereo/mono compatibility and 3DS reproduction.
+9. **Graphics/accounting:** reconcile **every** original PNG and original sprite-frame reference with its actual use/event/state, not just T3X conversion. Distinguish source-unused graphics rather than inventing use.
+10. **Source-parity tests:** screenshot scenarios and deterministic harnesses per seed/mode, tree-density histograms near spawn, generated POI/road graphs, house-entry/door scenarios, source drop IDs, loot marker count, original audio event history, save/reload, Azahar and physical 3DS.
+
+**Known runtime problems to retain as unverified:** sparse vegetation, absence of proven complete roof/interior transitions, non-connected door and tree event chains, missing active generated loot markers, incomplete original random-call parity, and unproven end-to-end persistence. Never infer completion from a CI green checkmark.
+
+## 8. Source-audit acceptance gate before writing more gameplay
+
+Each proposed world feature needs a traceability record with:
+
+- Exact original file and event UID; full ancestor/child condition sequence;
+- Source object IDs, variable IDs, animation/frame data and asset filenames;
+- Timing, RNG/order, spawn/drop item IDs and quantity, collision/visibility/layer change, original audio event;
+- Native C++ owner file and state representation **after** implementation (none required for this source-only audit);
+- Deterministic regression scenario and visual/audio comparison in Azahar;
+- Real 3DS hardware acceptance where relevant.
+
+An event group name is evidence of a system's existence, **not** an exhaustive reconstruction of its rules. This document inventories all major discovered world-related domains and dependencies but is **not** a certified exhaustive event-by-event decoding of 22,343 nodes. That deeper exhaustive machine-readable trace is itself required before claiming 100% parity.
+
+**Result of this pass:** detailed original-source world/interactions research saved. No changes to gameplay, original assets, or tests were made as part of this document.
