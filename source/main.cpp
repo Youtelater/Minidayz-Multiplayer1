@@ -2391,7 +2391,7 @@ public:
                 const float authored_sx = placement->scale_x != 0.0f
                     ? placement->scale_x : 1.0f;
                 const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
-                    placement->object,0,placement->source_frame};
+                    placement->object,placement->source_animation,placement->source_frame};
                 const auto* begin=minidayz::stage1::kSpriteFrames;
                 const auto* end=begin+minidayz::stage1::kSpriteFrameCount;
                 const auto* sprite=std::lower_bound(begin,end,key,
@@ -2402,7 +2402,8 @@ public:
                     });
                 const bool source_frame_valid =
                     sprite!=end && sprite->object==placement->object &&
-                    sprite->animation==0 && sprite->frame==placement->source_frame;
+                    sprite->animation==placement->source_animation &&
+                    sprite->frame==placement->source_frame;
                 const float sx=source_frame_valid && sprite->width>0.0f &&
                         placement->width>0.0f
                     ? std::copysign(placement->width/sprite->width,authored_sx)
@@ -2423,7 +2424,8 @@ public:
                 const float layer_depth = std::clamp(
                     0.15f + 0.0125f * static_cast<float>(placement->layer),
                     0.15f, 0.80f);
-                if (!renderer.draw_source_sprite(placement->object, 0, placement->source_frame,
+                if (!renderer.draw_source_sprite(placement->object,
+                        placement->source_animation, placement->source_frame,
                         px, py, sx, sy, layer_depth,
                         placement->angle * 0.01745329251994329577f,
                         placement->opacity)) {
