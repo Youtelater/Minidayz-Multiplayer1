@@ -1,6 +1,7 @@
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/world_visual_save.hpp"
+#include "minidayz/source_world_event_effects.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -212,6 +213,59 @@ void test_original_world_visual_file_roundtrip() {
     std::remove(path);
     std::remove(temp);
     std::remove(corrupt);
+}
+
+void test_source_event_tree_fall_and_door_transition() {
+    constexpr auto seed=0x4d444159u;
+    minidayz::WorldSystem world;
+    assert(world.generate_from_source(seed,"Map",0));
+    std::size_t tree=world.placement_count();
+    std::size_t door=world.placement_count();
+    for(std::size_t i=0;i<world.placement_count();++i) {
+        const auto* p=world.placement(i);
+        if(!p)continue;
+        if(tree==world.placement_count() && p->object==207 &&
+           p->source_animation==0 && p->source_frame==0)tree=i;
+        if(door==world.placement_count() && p->object==349 &&
+           p->source_frame==0)door=i;
+        if(tree<world.placement_count() && door<world.placement_count())break;
+    }
+    assert(tree<world.placement_count());
+    const auto* p=world.placement(tree);
+    const auto uid=p->runtime_uid;
+    std::array<minidayz::WorldPoint,4> positions{};
+    for(std::size_t i=0;i<positions.size();++i)
+        positions[i]={p->x+static_cast<float>(i*3),p->y+44.0f};
+    minidayz::items::GroundLootSystem loot;
+    using minidayz::world_source::apply_verified_tree_fall;
+    constexpr auto fall=2738244684146745ULL;
+    assert(!apply_verified_tree_fall(world,uid,123,positions,loot));
+    assert(loot.count()==0);
+    assert(apply_verified_tree_fall(world,uid,fall,positions,loot));
+    assert(world.placement(tree)->source_frame==1);
+    assert(loot.count()==3);
+    assert(loot.entry(0)->item.item_id==38);
+    assert(loot.entry(1)->item.item_id==38);
+    assert(loot.entry(2)->item.item_id==50);
+    assert(!apply_verified_tree_fall(world,uid,fall,positions,loot));
+    assert(loot.count()==3);
+    // No unrelated tree is permitted to change from this one event.
+    for(std::size_t i=tree+1;i<world.placement_count();++i) {
+        const auto* other=world.placement(i);
+        if(other && other->object==207) {
+            assert(other->source_frame==0);break;
+        }
+    }
+    if(door<world.placement_count()) {
+        const auto did=world.placement(door)->runtime_uid;
+        using minidayz::world_source::apply_verified_door_frame;
+        assert(!apply_verified_door_frame(world,did,fall));
+        assert(apply_verified_door_frame(world,did,6061166023614368ULL));
+        assert(world.placement(door)->source_frame==1);
+        assert(!apply_verified_door_frame(world,did,6061166023614368ULL));
+        assert(apply_verified_door_frame(world,did,243854400993751ULL));
+        assert(world.placement(door)->source_frame==0);
+    }
 }
 
 void test_grid_semantics() {
@@ -589,6 +643,7 @@ int main() {
     test_grid_semantics();
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
+    test_source_event_tree_fall_and_door_transition();
     test_original_world_visual_file_roundtrip();
     test_source_tree_fall_item_table();
     test_generated_object_instance_ids();
