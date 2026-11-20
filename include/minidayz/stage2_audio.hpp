@@ -14,6 +14,8 @@ public:
     bool initialize() noexcept;
     void set_muted(bool value) noexcept;
     bool muted() const noexcept { return muted_; }
+    bool audio_ready() const noexcept { return ndsp_ready_; }
+    bool ambience_loaded() const noexcept { return clips_[12].pcm != nullptr; }
     void play_crafting() noexcept;
     void play_item_drop() noexcept;
     void play_equipment_drop() noexcept;
