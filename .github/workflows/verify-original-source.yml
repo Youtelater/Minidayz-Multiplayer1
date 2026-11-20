@@ -1,0 +1,20 @@
+name: Verify original Construct source equivalence
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data.js'
+      - 'data.deobfuscated.js'
+      - 'tools/stage1/verify_original_source_equivalence.py'
+      - '.github/workflows/verify-original-source.yml'
+  workflow_dispatch:
+
+jobs:
+  compare-original-sources:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full source files
+        uses: actions/checkout@v4
+      - name: Compare parsed Construct projects, ignoring formatting
+        run: python3 tools/stage1/verify_original_source_equivalence.py
