@@ -1,0 +1,18 @@
+name: Trace root MiniDAYZ house visibility rules
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/trace_original_house_rules.py'
+      - '.github/workflows/trace-original-house-rules.yml'
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Trace exact original roof transparency conditions and actions
+        run: python3 tools/stage1/trace_original_house_rules.py
