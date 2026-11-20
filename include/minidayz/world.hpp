@@ -179,6 +179,7 @@ private:
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
     std::size_t source_location_spawn_count_{};
+    std::uint64_t next_generated_instance_id_{1};
     std::uint8_t generation_phase_{};
     std::uint8_t generation_level_{};
     bool generation_is_map_{};
