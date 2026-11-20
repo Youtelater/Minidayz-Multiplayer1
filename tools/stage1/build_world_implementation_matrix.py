@@ -83,6 +83,7 @@ def main():
         raise SystemExit("Run audit_original_world_exhaustive.py first")
     source_summary = json.loads((args.in_dir / "summary.json").read_text())
     events = []
+    conditions_by_source_path = {}
     definitions = defaultdict(list)
     calls = defaultdict(list)
     count_by_category = Counter()
@@ -97,6 +98,22 @@ def main():
         uid = e["uid"]
         by_uid[uid].append(path)
         all_conditions = e["conditions"]
+        # Parent nodes have already been emitted by the depth-first source
+        # trace. Preserve their exact condition expressions, including event
+        # modifiers; an action's own conditions alone are insufficient.
+        event_indices = e["source_event_path"]
+        ancestor_paths = [
+            e["sheet"] + ":" + ".".join(map(str, event_indices[:n]))
+            for n in range(1, len(event_indices))
+        ]
+        inherited = [
+            {"path": parent, "conditions": conditions_by_source_path[parent]["conditions"],
+             "flags": conditions_by_source_path[parent]["flags"]}
+            for parent in ancestor_paths if parent in conditions_by_source_path
+        ]
+        conditions_by_source_path[path] = {
+            "conditions": all_conditions, "flags": e["flags"]
+        }
         all_actions = e["actions"]
         objects = sorted({x[0] for x in all_conditions + all_actions
                           if isinstance(x, list) and x and isinstance(x[0], int)
@@ -153,6 +170,8 @@ def main():
                 "categories": "|".join(cats),
                 "groups": "/".join(e["groups"]),
                 "ancestor_uids": "|".join(map(str, e["parent_uids"])),
+                "event_flags_json": json.dumps(e["flags"], ensure_ascii=False),
+                "inherited_condition_chain_json": json.dumps(inherited, ensure_ascii=False, separators=(",", ":")),
                 "condition_count": len(all_conditions),
                 "action_count": len(all_actions),
                 "object_ids": "|".join(map(str, objects)),
@@ -177,7 +196,8 @@ def main():
             })
     tocsv(args.in_dir / "world_event_matrix.csv",
           ["source_event_path", "source_event_uid", "categories", "groups",
-           "ancestor_uids", "condition_count", "action_count", "object_ids",
+           "ancestor_uids", "event_flags_json", "inherited_condition_chain_json",
+           "condition_count", "action_count", "object_ids",
            "source_audio_literals", "function_calls", "conditions_json", "actions_json"], events)
     tocsv(args.in_dir / "world_function_edges.csv",
           ["call_source_path", "called_literal", "definition_count",
@@ -232,7 +252,7 @@ def main():
         "## Machine-readable outputs",
         "",
         "- \`all_original_event_traces.jsonl\`: all source events, exact condition/action arrays, group ancestors and unique source paths.",
-        "- \`world_event_matrix.csv\`: world/cross-cutting events including inherited group labels and exact JSON conditions/actions.",
+        "- \`world_event_matrix.csv\`: source-authored event flags, every inherited parent condition, and original action arrays.",
         "- \`world_function_edges.csv\`: call sites, literal function names, and matched definition paths.",
         "- \`world_action_effect_candidates.csv\`: event-target action signatures, not inferred gameplay effects.",
         "- \`world_object_command_inventory.csv\`: exact condition/action command frequency for every referenced original object.",
