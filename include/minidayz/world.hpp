@@ -61,6 +61,7 @@ struct WorldPlacement {
     // Original LOOT_respawn instance variable 0, when a source event
     // actually creates and configures a category marker.
     std::uint16_t source_loot_category{};
+    std::uint64_t runtime_uid{};
     // One-based, deterministic index within this world generation.
     // Fast lookup for local interactions; runtime_uid is the globally
     // distinguished original/static or generated world object identity.
@@ -153,6 +154,7 @@ public:
 
     const WorldPlacement* placement(std::size_t index) const noexcept;
     const WorldPlacement* placement_by_instance_id(std::uint64_t id) const noexcept;
+    const WorldPlacement* placement_by_id(std::uint32_t id) const noexcept;
     // Apply an event-resolved original sprite frame to ONE existing instance.
     // Reject nonexistent atlas frames rather than drawing a guessed image.
     // Does not itself infer the triggering event, audio, collision or drops.
