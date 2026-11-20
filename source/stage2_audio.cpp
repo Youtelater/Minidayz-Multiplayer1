@@ -81,31 +81,41 @@ bool Stage2Audio::load_wav(const char* path, Clip& destination) noexcept {
     void* audio = linearAlloc(output_bytes);
     if (!audio) { std::fclose(file); return false; }
     bool loaded = false;
-    if (bits == 16 && !csnd_ready_) {
+    if (bits == 16 && out_channels == channels) {
         loaded = std::fread(audio, 1, data_bytes, file) == data_bytes;
     } else {
-        auto* raw = static_cast<unsigned char*>(std::malloc(data_bytes));
-        if (raw) {
-            if (std::fread(raw, 1, data_bytes, file) == data_bytes) {
-                auto* output = static_cast<std::int16_t*>(audio);
-                for (std::size_t i=0;i<frames;++i) {
-                    const auto sample=[&](std::size_t ch) noexcept -> int {
-                        const std::size_t at=i*block_align + ch*(bits/8);
-                        return bits==8 ? (static_cast<int>(raw[at])-128)*256
-                            : static_cast<int>(static_cast<std::int16_t>(le16(raw+at)));
-                    };
-                    if (out_channels==1) {
-                        const int left=sample(0);
-                        output[i]=static_cast<std::int16_t>(
-                            channels==2 ? (left+sample(1))/2 : left);
-                    } else {
-                        for(std::size_t ch=0;ch<channels;++ch)
-                            output[i*channels+ch]=static_cast<std::int16_t>(sample(ch));
-                    }
-                }
-                loaded = true;
+        // Never allocate a second multi-megabyte copy of ambient.wav.
+        // Read small complete-frame blocks and decode directly into the
+        // DMA-accessible final buffer. This also supports 8-bit PCM WAVs.
+        unsigned char raw[4096]{};
+        const std::size_t frames_per_block=sizeof(raw)/block_align;
+        auto* output=static_cast<std::int16_t*>(audio);
+        std::size_t done=0;
+        loaded=frames_per_block!=0;
+        while (loaded && done<frames) {
+            const std::size_t count=(frames-done<frames_per_block)
+                ?frames-done:frames_per_block;
+            const std::size_t nbytes=count*block_align;
+            if (std::fread(raw,1,nbytes,file)!=nbytes) {
+                loaded=false;
+                break;
             }
-            std::free(raw);
+            for(std::size_t i=0;i<count;++i) {
+                const auto sample=[&](std::size_t ch) noexcept -> int {
+                    const std::size_t at=i*block_align+ch*(bits/8);
+                    return bits==8 ? (static_cast<int>(raw[at])-128)*256
+                        : static_cast<int>(static_cast<std::int16_t>(le16(raw+at)));
+                };
+                if (out_channels==1) {
+                    const int left=sample(0);
+                    output[done+i]=static_cast<std::int16_t>(
+                        channels==2 ? (left+sample(1))/2 : left);
+                } else {
+                    for(std::size_t ch=0;ch<channels;++ch)
+                        output[(done+i)*channels+ch]=static_cast<std::int16_t>(sample(ch));
+                }
+            }
+            done+=count;
         }
     }
     std::fclose(file);
@@ -204,6 +214,10 @@ void Stage2Audio::play(std::size_t which) noexcept {
     if (muted_ || !audio_ready() || which>=kClipCount) return;
     const auto& clip=clips_[which];
     if (!clip.pcm || clip.frames==0) return;
+    if (which==12) {
+        ambient_play_attempted_=false;
+        ambient_play_ok_=false;
+    }
     stop_voice(which);
     if (csnd_ready_) {
         const int channel=csnd_channels_[which];
@@ -211,8 +225,12 @@ void Stage2Audio::play(std::size_t which) noexcept {
         const u32 flags=SOUND_FORMAT_16BIT|SOUND_LINEAR_INTERP|
             ((which==6 || which==12)?SOUND_REPEAT:SOUND_ONE_SHOT);
         const float gain=(which==12 && menu_ambience_)?0.31622777f:1.0f;
-        (void)csndPlaySound(channel,flags,clip.sample_rate,gain,0.0f,
-            clip.pcm,clip.pcm,static_cast<u32>(clip.bytes));
+        const Result result=csndPlaySound(channel,flags,clip.sample_rate,
+            gain,0.0f,clip.pcm,clip.pcm,static_cast<u32>(clip.bytes));
+        if(which==12) {
+            ambient_play_attempted_=true;
+            ambient_play_ok_=R_SUCCEEDED(result);
+        }
         return;
     }
     const int channel = static_cast<int>(which);
@@ -229,6 +247,10 @@ void Stage2Audio::play(std::size_t which) noexcept {
     wave.nsamples=clip.frames;
     wave.looping=(which==6 || which==12);
     ndspChnWaveBufAdd(channel,&wave);
+    if (which==12) {
+        ambient_play_attempted_=true;
+        ambient_play_ok_=true;
+    }
 }
 
 void Stage2Audio::play_crafting() noexcept {
@@ -340,7 +362,11 @@ void Stage2Audio::set_environment_ambience(bool night,bool winter) noexcept {
     // Do not hammer the SD/RomFS with a multi-megabyte WAV load every
     // frame if this optional ambience cannot fit in 3DS linear memory.
     ambient_variant_=wanted;
-    if (!load_wav(path,clips_[12])) return;
+    if (!load_wav(path,clips_[12])) {
+        // Keep variant as attempted to avoid retrying multi-MB loads each
+        // frame, but report the missing buffer on the Options screen.
+        return;
+    }
     play(12);
 }
 
@@ -351,6 +377,8 @@ void Stage2Audio::stop_environment_ambience() noexcept {
     waves_[12]={};
     ambient_variant_=-1;
     menu_ambience_=false;
+    ambient_play_attempted_=false;
+    ambient_play_ok_=false;
     // Rain has its own NDSP voice and independent buffer lifetime. Changing
     // day/night ambience must not invalidate the active weather sample.
 }
@@ -404,6 +432,8 @@ void Stage2Audio::shutdown() noexcept {
     loaded_pickup_variant_=-1;
     ambient_variant_=-1;
     menu_ambience_=false;
+    ambient_play_attempted_=false;
+    ambient_play_ok_=false;
     weather_sample_variant_=-1;
 }
 }
