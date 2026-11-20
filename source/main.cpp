@@ -1507,14 +1507,8 @@ public:
                 wood(audio_row,false,true);
                 renderer.draw_text(stage2_audio_.muted()?"SOUND : OFF":"SOUND : ON",
                     103.0f,87.0f,0.41f);
-                renderer.draw_text(!stage2_audio_.audio_ready()
-                    ?"AUDIO : UNAVAILABLE"
-                    :!stage2_audio_.ambience_loaded()
-                        ?"WAV : NOT LOADED"
-                        :stage2_audio_.using_csnd()
-                            ?"AUDIO : CSND FALLBACK"
-                            :"AUDIO : NDSP READY",
-                    63.0f,195.0f,0.25f);
+                renderer.draw_text(stage2_audio_.ambience_status(),
+                    40.0f,195.0f,0.23f);
                 renderer.draw_text("A / TOUCH TO CHANGE",62.0f,129.0f,0.31f);
                 // Original UI localization contains Stick position and
                 // Language. On 3DS the Circle Pad is physical and the
