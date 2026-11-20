@@ -76,4 +76,22 @@ inline bool source_authored_map_loot_marker(
     }
     return false;
 }
+// Source-authored markers are identified by their fixed Construct instance
+// UIDs. New markers have no editor UID: only the ORIGINAL Set instance
+// variable 0 action (captured by the native location interpreter) may
+// assign category 15. Never infer a spawn merely from sprite object 218.
+inline bool source_world_loot_category(
+    std::uint16_t object_id, std::uint64_t source_uid,
+    std::uint16_t runtime_instance_category,
+    std::uint16_t& out_category) noexcept {
+    if (object_id != 218) return false;
+    if (source_authored_map_loot_marker(source_uid, out_category))
+        return true;
+    if (runtime_instance_category == 15) {
+        out_category = 15;
+        return true;
+    }
+    return false;
+}
+
 } // namespace minidayz::items
