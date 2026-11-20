@@ -1,6 +1,7 @@
 #include "minidayz/location_event_runtime.hpp"
 #include "minidayz/generated/location_event_source.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <string_view>
 
@@ -323,6 +324,19 @@ bool SourceLocationEventRuntime::execute_action(
             spawn->width = p[0].as_number();
             spawn->height = p[1].as_number();
         }
+        return true;
+    }
+    if (action.object_index == 915 && action.command_id == 53) {
+        // Original Map generation destroys the previous temporary 915
+        // scenery marker before conditionally creating a replacement.
+        // Construct Destroy without a selected instance is a valid no-op.
+        if (action.parameter_count != 0) return false;
+        self.spawns_.erase(
+            std::remove_if(self.spawns_.begin(), self.spawns_.end(),
+                [](const SourceLocationSpawn& spawn) { return spawn.object == 915; }),
+            self.spawns_.end());
+        self.spawn_start_index_ = self.spawns_.size();
+        self.last_spawn_index_ = static_cast<std::size_t>(-1);
         return true;
     }
     if (action.object_index == 915 && action.command_id == 47) {
