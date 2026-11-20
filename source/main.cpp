@@ -216,8 +216,9 @@ public:
         // Audio is optional. RomFS is already mounted by Engine::initialize;
         // DSP failure must never prevent inventory or crafting gameplay.
         (void)stage2_audio_.initialize();
-        // World audio must not start over the boot menu. Its initial
-        // environment loops are enabled after generation finishes.
+        // Original Menu_Events starts ambient on entering the main menu.
+        // Playback uses the same day-loop channel as gameplay, at -10 dB.
+        stage2_audio_.start_menu_ambience();
     }
 
     void on_exit() noexcept override {
@@ -267,6 +268,8 @@ public:
             return;
         }
         if (menu_active_) {
+            // Restore original menu ambience after returning from gameplay.
+            stage2_audio_.start_menu_ambience();
             // Ignore a stale launcher/overlay A/X press until all boot
             // controls have been released; a new press is then required.
             const bool menu_controls_held=
@@ -393,7 +396,9 @@ public:
                                 input.touch.py>=70 && input.touch.py<=117)){
                         stage2_audio_.set_muted(!stage2_audio_.muted());
                         persist_menu_settings();
-                        if(!stage2_audio_.muted() && world_ready_){
+                        if(!stage2_audio_.muted() && menu_active_){
+                            stage2_audio_.start_menu_ambience();
+                        }else if(!stage2_audio_.muted() && world_ready_){
                             stage2_audio_.set_environment_ambience(
                                 !day_night_.day_mode(),world_level_==4);
                             if(rain_timer_.active())
