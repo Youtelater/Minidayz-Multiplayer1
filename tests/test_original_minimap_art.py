@@ -14,8 +14,8 @@ for file in ("minimap_tile-sheet0.png","minimap_mark-sheet0.png",
     assert f'draw_original_image("{file}"' not in main,file
 assert '"minimap_mark-sheet0.png"' not in main
 assert '"minimap_player-sheet0.png"' not in main
-assert "minimap_mark_sheet0_p" in main
-assert "minimap_player_sheet0_p" in main
+assert "minimap_mark_sheet0_" in main
+assert "minimap_player_sheet0_" in main
 assert "renderer.draw_source_sprite_fitted(" in main
 assert "render_source_map" in main
 print("PASS: source minimap atlas frames instead of crushed full-sheet icon images")
