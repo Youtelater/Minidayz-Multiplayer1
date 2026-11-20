@@ -391,6 +391,11 @@ public:
                         menu_detail_scroll_=0;
                     }
                 } else if(menu_page_==minidayz::menu::BootPage::options){
+                    stage2_audio_.poll_ambience_playback();
+                    // Independent short original pickup sound test: distinguishes
+                    // a quiet ambient loop from muted emulator CSND output.
+                    if(input.pressed & KEY_X)
+                        stage2_audio_.play_item_pickup();
                     if((input.pressed & KEY_A) ||
                         (tap && input.touch.px>=64 && input.touch.px<=256 &&
                                 input.touch.py>=70 && input.touch.py<=117)){
@@ -1509,7 +1514,7 @@ public:
                     103.0f,87.0f,0.41f);
                 renderer.draw_text(stage2_audio_.ambience_status(),
                     40.0f,195.0f,0.23f);
-                renderer.draw_text("A / TOUCH TO CHANGE",62.0f,129.0f,0.31f);
+                renderer.draw_text("A : SOUND    X : TEST",59.0f,129.0f,0.31f);
                 // Original UI localization contains Stick position and
                 // Language. On 3DS the Circle Pad is physical and the
                 // existing single-player translations are English only.
