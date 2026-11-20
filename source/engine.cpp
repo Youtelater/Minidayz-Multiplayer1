@@ -237,6 +237,10 @@ bool Renderer::draw_original_image(const char* original_png,float x,float y,
      return std::strcmp(asset.png,name)<0;
     });
  if(selected==end||std::strcmp(selected->png,original_png)!=0)return false;
+ // Never draw an entire Construct sprite sheet or tilemap as a single sprite.
+ // Use the source animation/frame reference instead. This rejects the exact
+ // kind of image mixup that previously produced striped UI and false items.
+ if(selected->is_source_atlas)return false;
  std::size_t slot=kMaxSheets;
  for(std::size_t i=0;i<kMaxSheets;++i){
   if(sheets_[i]&&sprite_cache_[i].sheet[0]&&
