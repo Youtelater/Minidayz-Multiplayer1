@@ -1677,12 +1677,13 @@ public:
                 // The original held weapon is in its own slot. The source
                 // inventory-card image is square, so never stretch it 56x34.
                 if(i==8){
-                    // MP quick pistol uses the original gui_slot image, in a
-                    // compact separate card below the rifle card.
-                    if(!ui_art(minidayz::stage1::kOriginalSlotArt,
-                               x+11.0f,y+1.0f,30.0f,30.0f,0.24f))
+                    // gui_slot is an ITEM ICON ATLAS: its first frame is a
+                    // soda can, NOT an empty slot. Use the genuine original
+                    // inventory card image for the separate pistol cell.
+                    if(!ui_art(minidayz::stage1::kOriginalInventoryCardArt,
+                               x,y,w,h,0.24f))
                         renderer.draw_solid_rect(x,y,w,h,
-                            C2D_Color32(146,130,99,255),0.24f);
+                            C2D_Color32(54,46,35,255),0.24f);
                 }else if(i==7){
                     // gui_firearm is NOT a card background: Construct
                     // uses its 32 varying-size frames for actual guns.
@@ -1696,7 +1697,7 @@ public:
                     renderer.draw_solid_rect(x,y,w,h,
                         C2D_Color32(131,118,91,255),0.24f);
                     if(i==4)
-                        (void)ui_art(minidayz::stage1::kOriginalSlotArt,
+                        (void)ui_art(minidayz::stage1::kOriginalInventoryCardArt,
                                      x+11.0f,y+2.0f,30.0f,30.0f,0.27f);
                     else
                         (void)ui_art(art,x+12.0f,y+1.0f,32.0f,32.0f,0.27f);
@@ -1794,8 +1795,10 @@ public:
                         : i==2 ? minidayz::stage1::kOriginalVestPlaceholderArt
                         : i==3 ? minidayz::stage1::kOriginalPantsPlaceholderArt
                         : i==5 ? minidayz::stage1::kOriginalBackpackPlaceholderArt
-                        : minidayz::stage1::kOriginalSlotArt;
-                    if(empty_icon.object!=65535)
+                        : minidayz::stage1::kOriginalInventoryCardArt;
+                    // Empty melee, firearm and quick slots must not render
+                    // the soda can first frame from gui_slot's icon atlas.
+                    if(i!=4 && i!=7 && i!=8 && empty_icon.object!=65535)
                         (void)ui_art(empty_icon,icon_x-icon_size*0.5f,
                             icon_y-icon_size*0.5f,icon_size,icon_size,0.82f);
                     if(i!=0&&i!=3)
@@ -1895,13 +1898,12 @@ public:
                             const float x = static_cast<float>(
                                 (side == 0 ? 8 : 166) + col * 30);
                             const float y = static_cast<float>(99 + row * 40);
-                            // Original GUI slots are 30x30 squares, not
-                            // a green 28x37 replacement. Only the quantity
-                            // footer uses the space below each source icon.
-                            if(!ui_art(minidayz::stage1::kOriginalSlotArt,
-                                       x,y,28.0f,28.0f,0.30f))
-                                renderer.draw_solid_rect(x,y,28.0f,28.0f,
-                                    C2D_Color32(135,119,92,255),0.30f);
+                            // The source gui_slot-sheet0.png contains ICONS
+                            // (soda, tools, weapons), not an empty-slot frame.
+                            // Paint an empty wooden cell; render a real item
+                            // sprite ONLY if the storage contains an item.
+                            renderer.draw_solid_rect(x,y,28.0f,28.0f,
+                                C2D_Color32(37,31,26,220),0.30f);
                             if (!item || item->empty()) continue;
                             (void)renderer.draw_item_icon(item->item_id,
                                 x + 14.0f, y + 15.0f, 24.0f, 24.0f);
@@ -2116,13 +2118,13 @@ public:
             const bool selected=index==selected_inventory_slot_;
             const bool restricted=inventory_.is_exclusive_satchel_slot(
                 static_cast<std::size_t>(index));
-            // Only this real original asset is the persistent slot frame.
-            // gui_slot_bg is a bright cyan drag-selection texture; NEVER
-            // use it as the default background of every inventory item.
-            if(!ui_art(minidayz::stage1::kOriginalSlotArt,
-                       x,y,size,size,0.30f))
-                renderer.draw_solid_rect(x,y,size,size,
-                    C2D_Color32(135,119,92,255),0.30f);
+            // The original gui_inventory background already has wooden
+            // slot dividers. gui_slot-sheet0.png is an ITEM ICON ATLAS,
+            // whose first frame is a can. Painting that frame in EVERY
+            // empty slot caused the sixteen identical cans in Manic Emu.
+            // Keep the original panel visible, draw only actual owned items.
+            renderer.draw_solid_rect(x,y,size,size,
+                C2D_Color32(31,28,25,70),0.30f);
             if(selected || drag_target_slot_==index) {
                 const u32 gold=C2D_Color32(229,190,96,255);
                 renderer.draw_solid_rect(x,y,size,2.0f,gold,0.92f);
