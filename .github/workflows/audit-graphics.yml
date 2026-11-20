@@ -1,0 +1,42 @@
+name: Audit Original Graphics and Sprite Sheets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/gfx/**'
+      - 'romfs/gfx/**'
+      - 'data.deobfuscated.js'
+      - 'mp_*.js'
+      - 'source/**'
+      - 'include/minidayz/**'
+      - 'tools/stage1/audit_original_graphics_frames.py'
+      - '.github/workflows/audit-graphics.yml'
+  workflow_dispatch:
+
+jobs:
+  source-graphics-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install original PNG audit dependencies
+        run: |
+          python3 -m pip install --user Pillow
+      - name: Parse original Construct game source
+        run: |
+          python3 tools/stage1/reassemble_snapshot.py
+          python3 tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
+      - name: Audit all source PNG frames and converted textures
+        run: |
+          python3 tools/stage1/audit_original_graphics_frames.py
+          cat data/graphics_review/SOURCE_FRAME_AUDIT.md
+      - name: Upload source frame audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-graphics-source-frame-audit
+          path: |
+            data/graphics_review/source_frame_audit.json
+            data/graphics_review/source_frame_audit.csv
+            data/graphics_review/SOURCE_FRAME_AUDIT.md
+          if-no-files-found: warn
