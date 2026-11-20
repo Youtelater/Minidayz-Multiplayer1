@@ -271,7 +271,7 @@ bool Renderer::draw_menu_art(std::size_t index,float x,float y,float width,float
  // Original assets/gfx menu sprites, already converted into romfs/gfx.
  static constexpr const char* paths[]={
   "romfs:/gfx/main_menu_logo_sheet0.t3x",
-  "romfs:/gfx/menu_btn_wood_sheet0.t3x",
+  "romfs:/gfx/menu_btn_wood_single.t3x",
   "romfs:/gfx/tiledbgmenu_city_up.t3x"
  };
  if(index>=3||width<=0.0f||height<=0.0f) return false;
