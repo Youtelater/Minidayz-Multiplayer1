@@ -191,7 +191,10 @@ def main() -> int:
                         scale = min(1.0, 1024.0 / max(w, h))
                         if scale < 1.0:
                             packed_size = (max(1, round(w * scale)), max(1, round(h * scale)))
-                            frame_image = frame_image.resize(packed_size, Image.Resampling.LANCZOS)
+                            # Preserve source pixel-art texels when a frame exceeds
+                            # the 3DS 1024px texture limit. LANCZOS creates
+                            # colors absent from the original MiniDAYZ art.
+                            frame_image = frame_image.resize(packed_size, Image.Resampling.NEAREST)
                         frame_image.save(crop, format="PNG")
                         entries.append(crop.name)
                 manifest = page_dir / "atlas.t3s"
