@@ -6,6 +6,31 @@
 **Target:** the root original MiniDAYZ Construct export (version **1.6.0** according to the extracted source manifest), not a reinterpretation or simplified clone.  
 **Scope of this pass:** original game data and dependency analysis **only**. No native gameplay features are marked complete by this document; no source PNGs, sound files, runtime gameplay C++, or build logic are changed.
 
+## Source-only extraction checkpoint — 2026-11-20
+
+**Source comparison:** `data.js` and `data.deobfuscated.js` parse as identical project values (the [source-equivalence CI workflow](../.github/workflows/verify-original-source.yml) passed). The root deobfuscated file is still the audit input because its format is more useful for inspection.
+
+**Important different comparison:** `data/stage1/source_snapshot/` is an **older cached extraction** and is *not* equivalent to the root original. The separately verified snapshot diff includes **1,622 changed event bodies, 311 changed object definitions, 6 changed layouts, and 0 changed audio resource records**. Existing cached indexes, generated source tables, and old audit event references therefore require **root-source revalidation** before implementation.
+
+**Full source coverage and durable extraction tools:**
+
+- `tools/stage1/audit_original_world_exhaustive.py` reads **every event from the root original**, preserving exact nested source event paths (and UIDs, which can be duplicated), condition/action arrays, original animation/frame references, object placements, audio actions, function calls, and original asset accounting.
+- `tools/stage1/build_world_implementation_matrix.py` classifies source event groups across world generation, terrain, buildings/doors, loot, entities, vehicles, weather, and progression. It produces `world_event_matrix.csv`, `world_function_edges.csv`, `world_action_effect_candidates.csv`, `world_object_command_inventory.csv`, and a world coverage summary. Each row retains original expressions rather than guessed semantics.
+- `.github/workflows/audit-original-world.yml` runs both extractors in CI and uploads the exhaustive report as **`original-world-source-exhaustive-traces`**, including `WORLD_IMPLEMENTATION_MATRIX.md` and original PNG/frame catalogs. Download the latest artifact from the [source audit Actions workflow](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/workflows/audit-original-world.yml). The artifact expires according to GitHub retention (currently configured to 90 days); the scripts and this guidance stay in the repository.
+- The existing source-audit workflow already completed successfully for the exhaustive syntax extractor; the new matrix step must separately pass CI before its output is considered verified.
+
+**What “finished auditing” can and cannot mean:** The extractors can account for **all syntactic events**, source functions, frame references and raw commands. They do **not** prove an implementation-specification-level translation of each of those events into fully understood runtime behavior. Interpreting Construct numeric ACE commands and plugin functions, inherited picking semantics, exact RNG call order, source-reachable image states, and interactive verification still requires source-driven work. We must not claim every door, tree, sound or loot rule is decoded merely because its source event is indexed.
+
+**Implementation entry gates, in dependency order:**
+
+1. Revalidate **all** map-generation functions, location templates, vegetation distribution, and road/POI spawn against the root-source event matrix; discard stale cached event parameters.
+2. Trace root `create_map_element` and `create_map_location` conditions to concrete instances, layers, loot-marker categories, exact frames, and collision/visibility state.
+3. For house/door interaction paths, resolve ancestor conditions and actions for roof opacity/layer, open/close frames, sound cues, dynamic collision and inside/outside handling.
+4. For tree/bush destruction and harvest, resolve damage threshold, frame state, source drop item ID, spawn offsets, sound, collision and persistence.
+5. Link original loot markers and source item tables to actual ground items, containers, timeouts and regeneration.
+6. Trace world-linked NPCs/animals, weather, vehicles, roads/bridges, quest/world events and world-state persistence.
+7. Compare original and native generation output and world interactions on matching map seeds; run Azahar and real-console tests. A completed **source audit** is not a completed **world implementation**.
+
 ## 1. Source-of-truth and inventory
 
 | Input | Use | Evidence |
