@@ -49,10 +49,10 @@ def main():
             {"field": index,
              "value": value if index != 7 else
                 {"animation_count": len(value) if isinstance(value, list) else None}}
-            for index, value in enumerate(record[:9])
+            for index, value in enumerate(record)
         ]
     (OUT/"priority_world_object_defaults.json").write_text(
-        json.dumps(source_objects, ensure_ascii=False, indent=2)+"\\n",encoding="utf-8")
+        json.dumps(source_objects, ensure_ascii=False, indent=2)+"\n",encoding="utf-8")
     print("ROOT_ORIGINAL_TREE_OBJECTS:", {
         key: [(field["field"],str(field["value"])[:150]) for field in row]
         for key,row in source_objects.items() if key in ("207","209")
