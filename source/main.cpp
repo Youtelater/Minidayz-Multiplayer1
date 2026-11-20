@@ -2382,9 +2382,13 @@ public:
                 // survivor rendering below, not a permanent source Map image.
                 if (placement->layer == 32 || placement->opacity <= 0.0f)
                     continue;
+                // Use the original Construct instance position and frame
+                // coordinates. Width and height may be scaled differently:
+                // a single scale_x for both axes distorted buildings,
+                // foliage, vehicles and authored world decorations.
                 const float px = placement->x;
                 const float py = placement->y;
-                const float sx = placement->scale_x != 0.0f
+                const float authored_sx = placement->scale_x != 0.0f
                     ? placement->scale_x : 1.0f;
                 const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
                     placement->object,0,placement->source_frame};
@@ -2396,11 +2400,20 @@ public:
                         return std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
                             item.object,item.animation,item.frame}<wanted;
                     });
-                if (sprite!=end && sprite->object==placement->object &&
-                    sprite->animation==0 && sprite->frame==placement->source_frame) {
+                const bool source_frame_valid =
+                    sprite!=end && sprite->object==placement->object &&
+                    sprite->animation==0 && sprite->frame==placement->source_frame;
+                const float sx=source_frame_valid && sprite->width>0.0f &&
+                        placement->width>0.0f
+                    ? std::copysign(placement->width/sprite->width,authored_sx)
+                    : authored_sx;
+                const float sy=source_frame_valid && sprite->height>0.0f &&
+                        placement->height>0.0f
+                    ? placement->height/sprite->height : std::fabs(authored_sx);
+                if (source_frame_valid) {
                     if (!minidayz::terrain::source_sprite_in_view(
                         px,py,sprite->width,sprite->height,
-                        sprite->origin_x,sprite->origin_y,sx,sx,
+                        sprite->origin_x,sprite->origin_y,sx,sy,
                         placement->angle*0.01745329251994329577f,
                         camera_x,camera_y,view_w,view_h)) continue;
                 } // Keep unknown frame dimensions visible for diagnostics.
@@ -2411,7 +2424,7 @@ public:
                     0.15f + 0.0125f * static_cast<float>(placement->layer),
                     0.15f, 0.80f);
                 if (!renderer.draw_source_sprite(placement->object, 0, placement->source_frame,
-                        px, py, sx, sx, layer_depth,
+                        px, py, sx, sy, layer_depth,
                         placement->angle * 0.01745329251994329577f,
                         placement->opacity)) {
                     // Original art was not loaded: do not draw a fake object.
