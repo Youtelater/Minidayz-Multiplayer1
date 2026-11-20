@@ -182,6 +182,12 @@ jobs:
             tests/terrain_tiling_tests.cpp -o /tmp/minidayz_terrain_tiling_tests
           /tmp/minidayz_terrain_tiling_tests
 
+      - name: Enforce original-coordinate terrain render contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_world_terrain_render_contract.py
+
       - name: Compile 3DS Executable
         shell: bash
         run: |
