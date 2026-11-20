@@ -23,7 +23,7 @@ STAMP = ROOT / "romfs/gfx/menu_btn_wood_single.sha256"
 def first_source_frame():
     if not PARSED.is_file():
         raise SystemExit("Missing parsed original Construct data for menu sprite")
-    cleaned = re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-",
+    cleaned = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-",
                      PARSED.read_text(encoding="utf-8-sig"))
     objects = json.loads(cleaned)["project"][3]
     for object_id, obj in enumerate(objects):
@@ -67,7 +67,7 @@ def main():
         result=subprocess.run(["tex3ds","-o",str(OUT),str(frame)],check=False)
         if result.returncode!=0 or not OUT.is_file() or OUT.stat().st_size<32:
             raise SystemExit("Failed converting original source wood button frame")
-    STAMP.write_text(digest+"\\n",encoding="ascii")
+    STAMP.write_text(digest+"\n",encoding="ascii")
     print("Extracted exact original Construct wooden button frame",
           frame_id,"rectangle",(x,y,w,h),"without atlas stripes")
 
