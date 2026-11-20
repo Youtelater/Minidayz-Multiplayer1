@@ -101,7 +101,8 @@ require("draw_source_sprite_fitted" in game and
         "gui_inventory-sheet0.png" in ui_builder,
         "Bottom-screen inventory uses source image mapping")
 require("draw_menu_art" in game and "draw_menu_art" in renderer and
-        "menu_btn_wood_sheet0.t3x" in renderer,
+        "menu_btn_wood_single.t3x" in renderer and
+        "build_menu_button_frame.py" in makefile,
         "Boot menu uses converted original image names")
 require("tools/stage1/validate_stage1.py" in makefile and
         "tools/stage2/build_item_source_catalog.py" in makefile,
