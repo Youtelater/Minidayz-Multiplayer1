@@ -58,6 +58,11 @@ bool execute_node(std::size_t node_index, int inherited_loop_index,
 
     int repeat_count = 1;
     bool repeated = false;
+    bool any_or_condition_matched = false;
+    // Construct event[2] marks an OR block. The original source has
+    // wilderness branches "marker = 1 OR marker = 10" and
+    // "marker = 2 OR marker = 8". Evaluating both as AND silently
+    // eliminates almost all of the original tree-planting loops.
     for (std::size_t i = 0; i < node.condition_count; ++i) {
         const auto& condition =
             stage1::kLocationEventConditionSource[node.first_condition + i];
@@ -77,7 +82,12 @@ bool execute_node(std::size_t node_index, int inherited_loop_index,
                                           previous_sibling_matched,
                                           condition_matched,
                                           requested_repeat_count)) return false;
-        if (!condition_matched) return true;
+        if (node.or_block) {
+            any_or_condition_matched |= condition_matched;
+            if (!condition_matched) continue;
+        } else if (!condition_matched) {
+            return true;
+        }
 
         if (condition.object_index == -1 && condition.command_id == 123) {
             repeated = true;
@@ -86,6 +96,8 @@ bool execute_node(std::size_t node_index, int inherited_loop_index,
         }
     }
 
+    if (node.or_block && node.condition_count > 0 &&
+        !any_or_condition_matched) return true;
     node_matched = true;
     const int iterations = repeated ? repeat_count : 1;
     for (int iteration = 0; iteration < iterations; ++iteration) {
