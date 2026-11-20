@@ -20,6 +20,7 @@ public:
     void play_backpack_zip() noexcept;
     void play_item_pickup() noexcept;
     void play_footstep(terrain::FootstepSurface surface) noexcept;
+    void start_menu_ambience() noexcept;
     void set_environment_ambience(bool night,bool winter=false) noexcept;
     void stop_environment_ambience() noexcept;
     void start_rain_loop(bool blizzard=false) noexcept;
@@ -54,6 +55,7 @@ private:
     std::array<int,4> loaded_step_surfaces_{{-1,-1,-1,-1}};
     int loaded_pickup_variant_{-1};
     int ambient_variant_{-1};
+    bool menu_ambience_{};
     int weather_sample_variant_{-1};
 };
 
