@@ -1508,18 +1508,20 @@ public:
                 renderer.draw_text(stage2_audio_.muted()?"SOUND : OFF":"SOUND : ON",
                     103.0f,87.0f,0.41f);
                 renderer.draw_text(!stage2_audio_.audio_ready()
-                    ?"AUDIO DEVICE : UNAVAILABLE"
+                    ?"AUDIO : UNAVAILABLE"
                     :!stage2_audio_.ambience_loaded()
-                        ?"AMBIENCE : NOT LOADED"
-                        :"AMBIENCE : LOADED",
-                    45.0f,193.0f,0.27f);
+                        ?"WAV : NOT LOADED"
+                        :stage2_audio_.using_csnd()
+                            ?"AUDIO : CSND FALLBACK"
+                            :"AUDIO : NDSP READY",
+                    63.0f,195.0f,0.25f);
                 renderer.draw_text("A / TOUCH TO CHANGE",62.0f,129.0f,0.31f);
                 // Original UI localization contains Stick position and
                 // Language. On 3DS the Circle Pad is physical and the
                 // existing single-player translations are English only.
                 renderer.draw_text("STICK : 3DS CIRCLE PAD",58.0f,152.0f,0.28f);
                 renderer.draw_text("LANGUAGE : ENGLISH",75.0f,173.0f,0.28f);
-                renderer.draw_text("SELECT IN GAME : FPS",69.0f,192.0f,0.26f);
+                // Audio status now owns this line; no overlapping FPS label.
                 back();
                 break;
             }
