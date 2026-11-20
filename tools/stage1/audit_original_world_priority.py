@@ -39,6 +39,24 @@ def main():
             if re.fullmatch(r"t\d+",decoded):mappings[int(m[1])]=decoded
         except ValueError:continue
     OUT.mkdir(parents=True,exist_ok=True)
+    # Store original object-type construction data, not only event actions.
+    # For trees this includes default instance variables (hit endurance);
+    # inspecting event actions alone cannot establish an initial value.
+    source_objects = {}
+    for object_id in (184, 207, 209, 210, 576, 577, 581, 348, 349):
+        record = p[3][object_id]
+        source_objects[str(object_id)] = [
+            {"field": index,
+             "value": value if index != 7 else
+                {"animation_count": len(value) if isinstance(value, list) else None}}
+            for index, value in enumerate(record[:9])
+        ]
+    (OUT/"priority_world_object_defaults.json").write_text(
+        json.dumps(source_objects, ensure_ascii=False, indent=2)+"\\n",encoding="utf-8")
+    print("ROOT_ORIGINAL_TREE_OBJECTS:", {
+        key: [(field["field"],str(field["value"])[:150]) for field in row]
+        for key,row in source_objects.items() if key in ("207","209")
+    })
     with (OUT/"original_item_id_reference.csv").open("w",encoding="utf-8",newline="") as f:
         w=csv.writer(f);w.writerow(["item_id","source_english_name","mp_itemtable_sprite","construct_object_id"])
         for item_id in sorted(set(item_names)|set(mappings)):
