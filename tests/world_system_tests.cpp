@@ -73,7 +73,14 @@ void test_generated_object_instance_ids() {
         assert(first.placement_by_id(static_cast<std::uint32_t>(i+1))==a);
         assert(first.placement_by_instance_id(i+1)==a);
         assert(a->runtime_uid!=0);
-        assert(runtime_ids.insert(a->runtime_uid).second);
+        if (!runtime_ids.insert(a->runtime_uid).second) {
+            std::fprintf(stderr,
+                "DUPLICATE WORLD UID: index=%zu runtime=%llu source=%llu layer=%u object=%u\\n",
+                i, static_cast<unsigned long long>(a->runtime_uid),
+                static_cast<unsigned long long>(a->source_uid),
+                static_cast<unsigned>(a->layer), static_cast<unsigned>(a->object));
+            assert(false && "Each world object must have a unique runtime UID");
+        }
         if(a->runtime_uid & (1ULL<<63)) {
             ++generated;
             if(a->layer==43)++trees;
