@@ -343,6 +343,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     map_markers_.clear();
     features_.clear();
     placements_.clear();
+    next_generated_instance_id_ = 1;
     source_location_spawn_count_ = 0;
     generation_phase_ = 0;
     generation_level_ = 0;
@@ -488,6 +489,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     map_markers_.clear();
     features_.clear();
     placements_.clear();
+    next_generated_instance_id_ = 1;
     placements_.reserve(range.size);
     features_.reserve(range.size + stage1::kBunkerSpawnSourceCount +
                       stage1::kBridgeElementSourceCount);
@@ -498,6 +500,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
             src.layer, src.object, src.uid, src.x, src.y, src.z, src.w, src.h,
             src.angle, src.opacity, src.scale_x, src.ox, src.oy
         });
+        placements_.back().instance_id = src.uid;
         const auto* layer = stage1::find_layer(index, src.layer);
         WorldFeatureKind kind{};
         if (!layer || !classify_source_layer(layer->name, kind)) continue;
@@ -632,6 +635,8 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             object_width, object_height, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0,
             static_cast<std::uint32_t>(std::max(0, spawn.frame))
         });
+        placements_.back().instance_id =
+            (1ULL << 63) | next_generated_instance_id_++;
         WorldFeatureKind kind{};
         if (const auto* source_layer = stage1::find_layer(layout_index, layer);
             source_layer && classify_source_layer(source_layer->name, kind)) {
@@ -685,6 +690,7 @@ void WorldSystem::reset() noexcept {
     map_markers_.clear();
     features_.clear();
     placements_.clear();
+    next_generated_instance_id_ = 1;
     source_location_spawn_count_ = 0;
     generation_phase_ = 0;
     generation_level_ = 0;
@@ -720,6 +726,8 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             layer, rule.object, rule.uid, position.x, position.y, 0.0f,
             0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, rule.image_point
         });
+        placements_.back().instance_id =
+            (1ULL << 63) | next_generated_instance_id_++;
 
         WorldFeatureKind kind{};
         if (classify_source_layer(rule.layer_name, kind)) {
@@ -768,6 +776,14 @@ bool WorldSystem::set_placement_sprite_state(
 
 const WorldPlacement* WorldSystem::placement(std::size_t i) const noexcept {
     return i < placements_.size() ? &placements_[i] : nullptr;
+}
+
+const WorldPlacement* WorldSystem::placement_by_instance_id(
+    std::uint64_t id) const noexcept {
+    if (id == 0) return nullptr;
+    const auto it=std::find_if(placements_.begin(),placements_.end(),
+        [id](const WorldPlacement& p){return p.instance_id==id;});
+    return it==placements_.end()?nullptr:&*it;
 }
 
 } // namespace minidayz
