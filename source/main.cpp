@@ -1116,11 +1116,10 @@ public:
                 // original location event sets its instance variable 0.
                 // Use that actual source category instead of dropping every
                 // generated marker (which disabled loot across most towns).
-                if (!minidayz::items::source_authored_map_loot_marker(
-                        placement->source_uid, category)) {
-                    category = placement->source_loot_category;
-                    if (category != 15) continue;
-                }
+                if (!minidayz::items::source_world_loot_category(
+                        placement->object, placement->source_uid,
+                        placement->source_loot_category, category))
+                    continue;
                 minidayz::items::OriginalTimedLootMarker marker{};
                 marker.x = placement->x;
                 marker.y = placement->y;
