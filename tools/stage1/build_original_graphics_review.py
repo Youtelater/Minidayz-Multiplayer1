@@ -91,17 +91,18 @@ def main() -> None:
                          "has_transparency","png_bytes","contact_page","contact_sheet"])
         writer.writerows(rows)
     with (DEST/"README.txt").open("w",encoding="utf-8") as fh:
-        fh.write(f"Original MiniDAYZ graphics review: {len(files)} PNG images, {len(sheets)} contact sheets.\\n")
-        fh.write("Every thumbnail is sampled from assets/gfx unchanged; index CSV lists the exact filename and pixel size.\\n")
-        fh.write("Use these contact sheets ONLY for comparison; they are not game textures.\\n")
+        fh.write(f"Original MiniDAYZ graphics review: {len(files)} PNG images, {len(sheets)} contact sheets.\n")
+        fh.write("Every thumbnail is sampled from assets/gfx unchanged; index CSV lists the exact filename and pixel size.\n")
+        fh.write("Use these contact sheets ONLY for comparison; they are not game textures.\n")
         for key,count in sorted(counts.items()):
-            fh.write(f"{key}: {count} images\\n")
+            fh.write(f"{key}: {count} images\n")
     print(f"ORIGINAL GFX VISUAL AUDIT: {len(files)} images decoded, {len(sheets)} contact sheets.")
     print("CATEGORIES:",dict(sorted(counts.items())))
     for page in range(min(args.print_b64,len(sheets))):
         content=base64.b64encode(sheets[page].read_bytes()).decode("ascii")
         print(f"BEGIN_CONTACT_SHEET_{page:02d}")
-        print(content)
+        for offset in range(0,len(content),4096):
+            print(content[offset:offset+4096])
         print(f"END_CONTACT_SHEET_{page:02d}")
 if __name__ == "__main__":
     main()
