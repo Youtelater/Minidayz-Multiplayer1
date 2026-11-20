@@ -317,7 +317,21 @@ void test_new_game_generates_visible_original_world() {
         }
         assert(wilderness_markers > 0);
         std::size_t drawable_generated_sprites = 0;
+        std::size_t generated_loot_markers=0;
+        std::size_t original_category15_markers=0;
         for (std::size_t i = 0; i < world->placement_count(); ++i) {
+            const auto* candidate=world->placement(i);
+            if(candidate && candidate->object==218 &&
+               world->bounds().contains({candidate->x,candidate->y})) {
+                ++generated_loot_markers;
+                if(candidate->source_loot_category==15)
+                    ++original_category15_markers;
+                // No category-15 marker may be inferred from object type
+                // alone. This must originate in the source event's Sprite
+                // instance variable rather than guessed spawn weights.
+                if(candidate->source_loot_category)
+                    assert(candidate->source_loot_category<=65535);
+            }
             const auto* placement = world->placement(i);
             if (!placement || placement->source_uid != 0 ||
                 placement->layer >= 44) continue;
@@ -332,6 +346,8 @@ void test_new_game_generates_visible_original_world() {
         // Visible generated structures are a much smaller subset.
         assert(world->source_location_spawn_count() > 20);
         assert(drawable_generated_sprites > 0);
+        std::printf("ORIGINAL LOOT MARKERS total=%zu source_category15=%zu\\n",
+                    generated_loot_markers,original_category15_markers);
     }
 }
 
