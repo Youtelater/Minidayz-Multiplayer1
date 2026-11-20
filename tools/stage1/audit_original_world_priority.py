@@ -63,7 +63,7 @@ def main():
             label=mappings.get(item_id,"")
             w.writerow([item_id,item_names.get(item_id,""),label,int(label[1:]) if label.startswith("t") else ""])
     hits=[]
-    def traverse(events,sheet,anc=(),path=()):
+    def traverse(events,sheet,anc=(),path=(),parent_nodes=()):
         for i,e in enumerate(events):
             if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
             uid=e[4];this=path+(i,)
@@ -75,10 +75,12 @@ def main():
                        and len(a)>5 and a[0]==189 and a[1]==69 and "Spawn_drop" in strings(a[5:])]
                 changes=[a for a in actions if isinstance(a,list) and len(a)>1 and a[1] in (72,137,163)]
                 hits.append({"label":WORLD_UIDS[uid],"sheet":sheet,"uid":uid,"path":this,
-                             "parent_uids":anc,"conditions":e[5],"actions":actions,
+                             "parent_uids":anc,
+                             "parent_events":[{"uid":p[4],"conditions":p[5],"actions":p[6]} for p in parent_nodes],
+                             "conditions":e[5],"actions":actions,
                              "sounds":sounds,"drop_actions":drops,"visual_changes":changes,
                              "child_event_uids":[x[4] for x in e[7] if isinstance(x,list) and len(x)>4 and x[0]==0]})
-            traverse(e[7],sheet,anc+(uid,),this)
+            traverse(e[7],sheet,anc+(uid,),this,parent_nodes+(e,))
     for s in p[6]:traverse(s[1],s[0])
     (OUT/"priority_world_original_events.json").write_text(json.dumps(hits,ensure_ascii=False,indent=2)+"\n")
     lines=["# Priority original world event chains","",
@@ -111,7 +113,8 @@ def main():
             continue
         print("SOURCE_CHAIN",json.dumps({
             "label":h["label"],"path":h["sheet"]+":"+".".join(map(str,h["path"])),
-            "parents":h["parent_uids"],
+            "parents":[{"uid":p["uid"],"conditions":p["conditions"][:4],
+                        "actions":p["actions"][:4]} for p in h["parent_events"][-4:]],
             "conditions":h["conditions"][:5],
             "actions":h["actions"][:10],
             "child_uids":h["child_event_uids"][:12]
