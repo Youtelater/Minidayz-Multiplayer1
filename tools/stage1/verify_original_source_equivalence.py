@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-FIXED_SPACED_NEGATIVE = re.compile(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)")
+FIXED_SPACED_NEGATIVE = re.compile(r"(?<![A-Za-z0-9_.])-\s+(?=\d)")
 
 
 def load(path):
