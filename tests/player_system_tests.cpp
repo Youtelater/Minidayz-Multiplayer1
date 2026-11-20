@@ -186,6 +186,47 @@ int main() {
     turning.set_source_skin(65535); // Invalid object cannot replace skin.
     assert(turning.source_skin()==999);
 
+    // Every original selectable survivor must resolve eight REAL animation
+    // indices from its own Construct object, never guessed 0..7 offsets.
+    // These IDs come from the source-verified skin catalog, not PNG guesses.
+    for (const std::uint16_t skin : {
+             679, 826, 743, 1262, 745, 742, 680, 748, 750, 998,
+             997, 825, 811, 749, 1009, 999, 741, 996, 746, 747}) {
+        PlayerState visual_state{};
+        visual_state.health=100.0f;
+        PlayerSystem visual(visual_state);
+        visual.set_source_skin(skin);
+        assert(visual.source_skin()==skin);
+        for (const auto facing : {PlayerFacing::down,PlayerFacing::up,
+                                  PlayerFacing::right,PlayerFacing::left}) {
+            const char* direction="down";
+            switch(facing) {
+            case PlayerFacing::down: direction="down"; break;
+            case PlayerFacing::up: direction="up"; break;
+            case PlayerFacing::right: direction="right"; break;
+            case PlayerFacing::left: direction="left"; break;
+            }
+            for (const auto mode : {PlayerAnimation::idle,PlayerAnimation::walk,
+                                    PlayerAnimation::run}) {
+                char name[24]{};
+                std::snprintf(name,sizeof(name),"%s_%s",
+                    mode==PlayerAnimation::idle?"idle":"run",direction);
+                int expected=-1;
+                int index=0;
+                for (const auto& original:stage1::kAnimations) {
+                    if (original.object!=skin) continue;
+                    if (std::strcmp(original.name,name)==0 && original.frames>0)
+                        expected=index;
+                    ++index;
+                }
+                assert(expected>=0);
+                visual.state_for_setup().facing=facing;
+                visual.state_for_setup().animation=mode;
+                assert(visual.source_animation_index()==expected);
+            }
+        }
+    }
+
     // The original sprite hotspot and rotation determine which source
     // building pixels physically block the player.
     using minidayz::terrain::source_solid_sprite_contains;
