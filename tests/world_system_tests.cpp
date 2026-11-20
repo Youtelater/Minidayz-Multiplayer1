@@ -373,7 +373,12 @@ void test_full_generation_all_source_maps() {
         // OR blocks, not disabled AND blocks. Level zero's original
         // 16-plant Repeat loops must yield considerably more than the
         // 220 trees observed when all OR events were skipped.
-        if(level==0)assert(generated_trees>350);
+        // Root-original regenerated world tables yielded 1,676, 1,715,
+        // 1,641, 1,591, 4,117 and 4,327 source Trees-layer placements
+        // for these six fixed seeds in CI. These are REGRESSION guardrails,
+        // not invented in-game spawn-density constants. A stale source cache
+        // formerly produced only a few hundred trees and large empty areas.
+        assert(generated_trees >= (level >= 4 ? 3500u : 1000u));
         assert(all_trees>=generated_trees);
         assert(generated_trees>0);
     }
