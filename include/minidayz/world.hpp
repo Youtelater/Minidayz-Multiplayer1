@@ -58,6 +58,10 @@ struct WorldPlacement {
     // Separate from object identity: different instances may have different
     // door, foliage or damage states without changing the original atlas.
     std::uint16_t source_animation{};
+    // An object instance has an identity distinct from its Construct event
+    // UID. Generated objects share event UIDs but must retain independent
+    // door/tree/container states for interactions and saving.
+    std::uint64_t instance_id{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
@@ -145,6 +149,7 @@ public:
     std::size_t feature_count(WorldFeatureKind kind) const noexcept;
 
     const WorldPlacement* placement(std::size_t index) const noexcept;
+    const WorldPlacement* placement_by_instance_id(std::uint64_t id) const noexcept;
     // Apply an event-resolved original sprite frame to ONE existing instance.
     // Reject nonexistent atlas frames rather than drawing a guessed image.
     // Does not itself infer the triggering event, audio, collision or drops.
