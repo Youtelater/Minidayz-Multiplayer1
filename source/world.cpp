@@ -500,7 +500,6 @@ bool WorldSystem::load_source_layout(std::string_view name) {
         });
         // Authored instance UIDs are already unique in the original layout.
         placements_.back().runtime_uid = src.uid;
-        placements_.back().instance_id = static_cast<std::uint32_t>(placements_.size());
         const auto* layer = stage1::find_layer(index, src.layer);
         WorldFeatureKind kind{};
         if (!layer || !classify_source_layer(layer->name, kind)) continue;
@@ -649,7 +648,6 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
                 placed.source_loot_category =
                     static_cast<std::uint16_t>(c);
         }
-        placements_.back().instance_id = static_cast<std::uint32_t>(placements_.size());
         WorldFeatureKind kind{};
         if (const auto* source_layer = stage1::find_layer(layout_index, layer);
             source_layer && classify_source_layer(source_layer->name, kind)) {
@@ -741,7 +739,6 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, rule.image_point
         });
         placements_.back().runtime_uid = runtime_id;
-        placements_.back().instance_id = static_cast<std::uint32_t>(placements_.size());
 
         WorldFeatureKind kind{};
         if (classify_source_layer(rule.layer_name, kind)) {
@@ -790,14 +787,6 @@ bool WorldSystem::set_placement_sprite_state(
 
 const WorldPlacement* WorldSystem::placement(std::size_t i) const noexcept {
     return i < placements_.size() ? &placements_[i] : nullptr;
-}
-
-const WorldPlacement* WorldSystem::placement_by_id(std::uint32_t id) const noexcept {
-    // IDs are generated in placement order, starting at one. Unlike source_uid,
-    // they are unique for each world instance created by repeating source events.
-    if (id == 0 || id > placements_.size()) return nullptr;
-    const auto& result = placements_[static_cast<std::size_t>(id - 1)];
-    return result.instance_id == id ? &result : nullptr;
 }
 
 const WorldPlacement* WorldSystem::placement_by_instance_id(
