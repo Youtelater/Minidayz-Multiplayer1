@@ -307,7 +307,7 @@ void Stage2Audio::start_menu_ambience() noexcept {
     // Original Menu_Events/Menu_init event 9948355272197826:
     // play ambient looping at -10 dB. Reuse the gameplay day-ambience
     // sample and NDSP voice so a menu->daytime game transition is seamless.
-    if (!ndsp_ready_ || muted_ || (ambient_variant_==0 && menu_ambience_)) return;
+    if (!audio_ready() || muted_ || (ambient_variant_==0 && menu_ambience_)) return;
     set_environment_ambience(false,false);
     if (ambient_variant_!=0 || !clips_[12].pcm) return;
     constexpr float kOriginalMenuGain = 0.31622777f; // 10^(-10/20)
@@ -316,7 +316,7 @@ void Stage2Audio::start_menu_ambience() noexcept {
 }
 
 void Stage2Audio::set_environment_ambience(bool night,bool winter) noexcept {
-    if (!ndsp_ready_ || muted_) return;
+    if (!audio_ready() || muted_) return;
     const int wanted=(winter ? 2 : 0) + (night ? 1 : 0);
     if (ambient_variant_==wanted) {
         if (menu_ambience_) {
@@ -345,9 +345,7 @@ void Stage2Audio::set_environment_ambience(bool night,bool winter) noexcept {
 }
 
 void Stage2Audio::stop_environment_ambience() noexcept {
-    if (ndsp_ready_) {
-        stop_voice(12);
-    }
+    if (audio_ready()) stop_voice(12);
     if (clips_[12].pcm) linearFree(clips_[12].pcm);
     clips_[12]={};
     waves_[12]={};
@@ -375,9 +373,7 @@ void Stage2Audio::start_rain_loop(bool blizzard) noexcept {
 void Stage2Audio::stop_rain_loop() noexcept {
     // Stop the dedicated rain voice without interrupting crafting,
     // footsteps, backpacks or equipment audio on other channels.
-    if (ndsp_ready_) {
-        stop_voice(6);
-    }
+    if (audio_ready()) stop_voice(6);
     if (clips_[6].pcm) linearFree(clips_[6].pcm);
     clips_[6]={};
     waves_[6]={};
