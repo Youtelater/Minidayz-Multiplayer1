@@ -500,6 +500,8 @@ bool WorldSystem::load_source_layout(std::string_view name) {
             src.layer, src.object, src.uid, src.x, src.y, src.z, src.w, src.h,
             src.angle, src.opacity, src.scale_x, src.ox, src.oy
         });
+        // Authored instance UIDs are already unique in the original layout.
+        placements_.back().runtime_uid = src.uid;
         placements_.back().instance_id = static_cast<std::uint32_t>(placements_.size());
         placements_.back().instance_id = src.uid;
         const auto* layer = stage1::find_layer(index, src.layer);
@@ -631,11 +633,25 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             }
         }
 
+        const auto runtime_id = (std::uint64_t{1} << 63) |
+            (static_cast<std::uint64_t>(placements_.size()) + 1);
         placements_.push_back({
             layer, spawn.object, 0, position.x, position.y, 0.0f,
             object_width, object_height, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0,
             static_cast<std::uint32_t>(std::max(0, spawn.frame))
         });
+        auto& placed = placements_.back();
+        placed.runtime_uid = runtime_id;
+        // Construct Sprite Set Instance Variable command 88 is executed
+        // by the source location runtime. Only expose original loot
+        // category 15 when the original object 218 has received it.
+        if (spawn.object == 218) {
+            const double c = spawn.instance_variables[0].as_number();
+            if (std::isfinite(c) && c >= 1.0 && c <= 65535.0 &&
+                std::floor(c) == c)
+                placed.source_loot_category =
+                    static_cast<std::uint16_t>(c);
+        }
         placements_.back().instance_id = static_cast<std::uint32_t>(placements_.size());
         placements_.back().instance_id =
             (1ULL << 63) | next_generated_instance_id_++;
@@ -724,10 +740,13 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         const std::uint16_t layer = find_layer_index_by_name(layout_index, rule.layer_name);
         if (layer == 0xffff) continue;
 
+        const auto runtime_id = (std::uint64_t{1} << 63) |
+            (static_cast<std::uint64_t>(placements_.size()) + 1);
         placements_.push_back({
             layer, rule.object, rule.uid, position.x, position.y, 0.0f,
             0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, rule.image_point
         });
+        placements_.back().runtime_uid = runtime_id;
         placements_.back().instance_id = static_cast<std::uint32_t>(placements_.size());
         placements_.back().instance_id =
             (1ULL << 63) | next_generated_instance_id_++;
