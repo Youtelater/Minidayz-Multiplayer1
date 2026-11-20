@@ -2440,6 +2440,8 @@ public:
                 loot->x, loot->y, 18.0f, 18.0f, 0.54f);
         }
 
+        // Keep original pixel-art proportions. The previous arbitrary 0.55x
+        // shrink made the survivor and zombies tiny in the 3DS viewport.
         if (npc_ready_) {
             for (std::size_t i = 0; i < npcs_.count(); ++i) {
                 const auto* npc = npcs_.actor(i);
@@ -2449,13 +2451,13 @@ public:
                     continue;
                 if (!renderer.draw_source_sprite(npc->source_object,
                         npc->animation_index, npc->animation_frame,
-                        npc->x, npc->y, 0.55f, 0.55f))
+                        npc->x, npc->y, 1.0f, 1.0f))
                     renderer.draw_solid_rect(npc->x - 5.0f, npc->y - 5.0f,
                         10.0f, 12.0f, C2D_Color32(130, 145, 78, 255));
                 // The original NPC is composed from a skin sprite and a
                 // separate eyes sprite pinned to the same position.
                 (void)renderer.draw_source_sprite(npc->eyes_object, 0, 0,
-                    npc->x, npc->y, 0.55f, 0.55f);
+                    npc->x, npc->y, 1.0f, 1.0f);
             }
         }
 
@@ -2495,12 +2497,12 @@ public:
                           weapon_pose,skin_direction);
             sprite_drawn=renderer.draw_source_animation(source_skin_object,
                 armed_animation,player_.source_animation_frame(),
-                p.x,p.y,0.55f,0.55f,0.57f);
+                p.x,p.y,1.0f,1.0f,0.57f);
         }
         if(p.alive && !sprite_drawn)
             sprite_drawn=renderer.draw_source_animation(source_skin_object,
                 skin_animation,player_.source_animation_frame(),
-                p.x,p.y,0.55f,0.55f,0.57f);
+                p.x,p.y,1.0f,1.0f,0.57f);
         // If an optional survivor texture is missing from RomFS, use the
         // game's ORIGINAL default survivor as a last-resort sprite. This
         // keeps the player visible without substituting invented artwork;
@@ -2511,7 +2513,7 @@ public:
             sprite_drawn=renderer.draw_source_animation(
                 minidayz::kSourcePlayerObject,skin_animation,
                 player_.source_animation_frame(),
-                p.x,p.y,0.55f,0.55f,0.57f);
+                p.x,p.y,1.0f,1.0f,0.57f);
         if (p.alive) {
             // Original item pickups and wearable actor overlays are NOT
             // interchangeable. Only draw original animation poses proven to
@@ -2528,7 +2530,7 @@ public:
                 char name[32]{};
                 std::snprintf(name,sizeof(name),"%s_%s",prefix,skin_direction);
                 (void)renderer.draw_source_animation(visual->object,name,
-                    player_.source_animation_frame(),p.x,p.y,0.55f,0.55f,depth);
+                    player_.source_animation_frame(),p.x,p.y,1.0f,1.0f,depth);
             };
             // Source-authored equipment back-to-front. The originals use
             // separate layers on top of the chosen character base skin.
