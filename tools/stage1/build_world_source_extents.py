@@ -17,7 +17,7 @@ DEST = ROOT / "include/minidayz/generated/world_source_extents.hpp"
 
 def generate(source):
     raw = source.read_text(encoding="utf-8-sig")
-    raw = re.sub(r'(?<![A-Za-z0-9_.])-\\s+(?=\\d)', '-', raw)
+    raw = re.sub(r'(?<![A-Za-z0-9_.])-\s+(?=\d)', '-', raw)
     objects = json.loads(raw)["project"][3]
     radii = []
     for obj in objects:
@@ -50,7 +50,7 @@ def generate(source):
     for i in range(0,len(radii),20):
         output.append("    "+", ".join(map(str,radii[i:i+20]))+",")
     output.extend(["};","} // namespace minidayz::stage1",""])
-    return "\\n".join(output).replace("\\n","\n")
+    return "\n".join(output)
 
 def main():
     p=argparse.ArgumentParser()
