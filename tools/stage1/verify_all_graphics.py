@@ -59,8 +59,11 @@ def check() -> None:
     if not match or int(match.group(1)) != len(source):
         raise SystemExit("Original runtime image catalog count mismatch")
     for original in source:
-        row = "  {" + json.dumps(original.as_posix(), ensure_ascii=False) + "," + json.dumps(mapped_name(original).as_posix(), ensure_ascii=False) + "},"
-        if row not in full_catalog:
+        # Each original catalog row now carries its source-derived
+        # 'is_source_atlas' guard. Verify the exact filenames AND that
+        # explicit boolean; older two-column rows are not valid anymore.
+        prefix = "  {" + json.dumps(original.as_posix(), ensure_ascii=False) + "," + json.dumps(mapped_name(original).as_posix(), ensure_ascii=False) + ","
+        if prefix + "true}," not in full_catalog and prefix + "false}," not in full_catalog:
             raise SystemExit(f"Original image runtime mapping missing: {original}")
     if not SPRITES.is_file() or not ITEMS.is_file():
         raise SystemExit("Missing generated Construct sprite or item mappings")
