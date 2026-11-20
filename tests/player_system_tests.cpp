@@ -2,6 +2,9 @@
 #include "minidayz/terrain_source_collision.hpp"
 
 #include <cassert>
+#include <cstdio>
+#include <cstring>
+#include <cstdint>
 #include <cmath>
 #include <limits>
 
