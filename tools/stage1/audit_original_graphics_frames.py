@@ -77,6 +77,19 @@ def main() -> None:
                       p.suffix.casefold()==".png"), key=lambda p:p.relative_to(GFX).as_posix())
     assert originals,"Original assets/gfx contains no PNGs"
     duplicate_names=Counter(p.name.casefold() for p in originals)
+    # The atlas validator independently checks source offsets and alpha
+    # padding for frames that extend beyond their original sheet. Only
+    # downgrade these warnings once its successful output is available.
+    verified_padding=set()
+    proof=OUT/"source_frame_validation.json"
+    if proof.is_file():
+        evidence=json.loads(proof.read_text(encoding="utf-8"))
+        if evidence.get("status")=="source_mapping_verified":
+            verified_padding={
+                (canonical(row["source"]),tuple(row["rectangle"]))
+                for row in evidence.get("padding_frames",[])
+            }
+    padding_verified=[]
     problems=[]
     records=[]
     for p in originals:
@@ -97,7 +110,16 @@ def main() -> None:
             elif x<0 or y<0 or x+w>width or y+h>height:
                 clipped.append([x,y,w,h])
         if invalid:problems.append({"png":str(relative),"issue":"frame_outside_image","rectangles":invalid})
-        if clipped:problems.append({"png":str(relative),"issue":"source_frame_extends_beyond_image","rectangles":clipped})
+        if clipped:
+            proven=[rect for rect in clipped if (basename,tuple(rect)) in verified_padding]
+            unresolved=[rect for rect in clipped if (basename,tuple(rect)) not in verified_padding]
+            if proven:
+                padding_verified.append({"png":str(relative),"rectangles":proven,
+                                         "status":"transparent_padding_verified"})
+            if unresolved:
+                problems.append({"png":str(relative),
+                                 "issue":"source_frame_extends_beyond_image",
+                                 "rectangles":unresolved})
         if not dest.is_file() or dest.stat().st_size==0:
             problems.append({"png":str(relative),"issue":"missing_or_empty_t3x",
                              "expected":str(dest.relative_to(ROOT))})
@@ -144,9 +166,12 @@ def main() -> None:
             "converted_t3x_present":sum(r["t3x_present"] for r in records),
             "source_references_missing_png":len(missing_source),
             "risk_records":len(problems),
+            "source_padding_images_verified":len(padding_verified),
+            "source_padding_rectangles_verified":sum(len(x["rectangles"]) for x in padding_verified),
             "direct_mp_js_png_names":len(mp_direct),
         },
         "problems":problems,
+        "verified_transparent_padding":padding_verified,
         "images":records,
     }
     OUT.mkdir(parents=True,exist_ok=True)
@@ -168,6 +193,7 @@ def main() -> None:
         f"- PNGs with nonempty converted T3X: **{report['summary']['converted_t3x_present']}**",
         f"- Original Construct frame references: **{report['summary']['source_animation_frame_references']}**",
         f"- Missing source PNG references: **{len(missing_source)}**",
+        f"- Source PNGs with verified transparent frame padding: **{len(padding_verified)}**",
         "",
         "## Source-evidenced image categories",
         "",
@@ -176,6 +202,9 @@ def main() -> None:
     lines += [f"| {key} | {value} |" for key,value in sorted(all_categories.items())]
     lines += ["","## Likely incorrect whole-image rendering",""]
     lines += [f"- `{p['png']}`: {p['frame_rect_count']} source rectangles" for p in high] or ["- None found by exact static-call search."]
+    lines += ["","## Verified original off-sheet frame padding",""]
+    lines += [f"- `{p['png']}`: transparent padding validated for {len(p['rectangles'])} source rectangle(s)"
+              for p in padding_verified] or ["- No padding validation report was available."]
     lines += ["","## High-priority unresolved issues",""]
     for p in problems[:60]:
         lines.append(f"- `{p['png']}`: {p['issue']}")
