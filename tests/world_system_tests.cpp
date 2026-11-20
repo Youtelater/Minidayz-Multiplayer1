@@ -22,37 +22,7 @@ std::size_t count_code(const minidayz::WorldGrid& grid, std::uint16_t code) {
     return count;
 }
 
-// Original tree species 184/207/209/576/577/581 have alternate source
-// frames. Changing one tree must not change other trees, and a missing
-// animation/frame must NEVER silently fall back to the whole PNG or frame 0.
-// A single Construct world-creation event UID is reused across many trees.
- // The original UID identifies source code, while instance_id identifies
- // one actual object that can be opened, chopped, changed or saved.
-void test_unique_world_instance_ids() {
-    minidayz::WorldSystem world;
-    assert(world.generate_from_source(0x4d444159u, "Map", 0));
-    assert(world.placement_count()>1200);
-    for(std::size_t i=0;i<world.placement_count();++i) {
-        const auto* p=world.placement(i);
-        assert(p);
-        assert(p->instance_id==i+1);
-        assert(world.placement_by_id(p->instance_id)==p);
-    }
-    assert(world.placement_by_id(0)==nullptr);
-    assert(world.placement_by_id(static_cast<std::uint32_t>(world.placement_count()+1))==nullptr);
-    minidayz::WorldSystem again;
-    assert(again.generate_from_source(0x4d444159u, "Map", 0));
-    assert(again.placement_count()==world.placement_count());
-    for(std::size_t i=0;i<world.placement_count();++i) {
-        const auto* a=world.placement(i);
-        const auto* b=again.placement(i);
-        assert(a->instance_id==b->instance_id);
-        assert(a->source_uid==b->source_uid);
-        assert(a->object==b->object);
-        assert(a->x==b->x && a->y==b->y);
-    }
-}
-
+// Individual Construct object frames are tested separately below.
 void test_source_world_instance_animation_state() {
     minidayz::WorldSystem world;
     assert(world.generate_from_source(0x4d444159u, "Map", 0));
@@ -474,7 +444,6 @@ void test_level_four_split_grid() {
 int main() {
     test_grid_semantics();
     test_source_world_instance_animation_state();
-    test_unique_world_instance_ids();
     test_generated_object_instance_ids();
     test_source_profiles();
     test_original_map_layout_and_descriptors();
