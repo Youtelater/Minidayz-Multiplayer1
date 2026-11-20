@@ -72,6 +72,23 @@ def main():
                 if left>=right or top>=bottom:
                     raise SystemExit(f"No visible source pixels: {source} {rect}")
                 if left!=x or top!=y or right!=x+w or bottom!=y+h:
+                    # Independently validate the required RGBA extraction:
+                    # existing pixels must occupy their original offsets,
+                    # while out-of-sheet space must remain transparent.
+                    source_rgba=image.convert("RGBA")
+                    expected_pixels=source_rgba.crop((left,top,right,bottom))
+                    extracted=Image.new("RGBA",(w,h),(0,0,0,0))
+                    extracted.paste(expected_pixels,(left-x,top-y))
+                    if extracted.crop((left-x,top-y,right-x,bottom-y)).tobytes()!=expected_pixels.tobytes():
+                        raise SystemExit(f"Pixel-offset mismatch in padded source frame: {source} {rect}")
+                    if (left-x)>0 and extracted.getpixel((0,0))[3]!=0:
+                        raise SystemExit(f"Nontransparent left padding: {source} {rect}")
+                    if (top-y)>0 and extracted.getpixel((0,0))[3]!=0:
+                        raise SystemExit(f"Nontransparent top padding: {source} {rect}")
+                    if (x+w-right)>0 and extracted.getpixel((w-1,h-1))[3]!=0:
+                        raise SystemExit(f"Nontransparent right padding: {source} {rect}")
+                    if (y+h-bottom)>0 and extracted.getpixel((w-1,h-1))[3]!=0:
+                        raise SystemExit(f"Nontransparent bottom padding: {source} {rect}")
                     transparent_padding.append({
                         "source":source,"rectangle":rect,
                         "original_png_size":[image.width,image.height],
