@@ -13,14 +13,23 @@ float finite_or_zero(float value) noexcept {
     return std::isfinite(value) ? value : 0.0f;
 }
 
-std::uint32_t facing_offset(PlayerFacing facing) noexcept {
+const char* source_facing_name(PlayerFacing facing) noexcept {
     switch (facing) {
-    case PlayerFacing::down: return 0;
-    case PlayerFacing::up: return 1;
-    case PlayerFacing::right: return 2;
-    case PlayerFacing::left: return 3;
+    case PlayerFacing::down: return "down";
+    case PlayerFacing::up: return "up";
+    case PlayerFacing::right: return "right";
+    case PlayerFacing::left: return "left";
     }
-    return 0;
+    return "down";
+}
+
+bool has_source_animation(std::uint16_t object, const char* name) noexcept {
+    for (const auto& animation : stage1::kAnimations) {
+        if (animation.object == object &&
+            animation.frames > 0 && std::strcmp(animation.name, name) == 0)
+            return true;
+    }
+    return false;
 }
 
 } // namespace
@@ -111,13 +120,16 @@ void PlayerSystem::update_life_state() noexcept {
 
 void PlayerSystem::set_source_skin(std::uint16_t object) noexcept {
     if (source_skin_object_ == object) return;
-    bool has_idle=false,has_run=false;
-    for (const auto& anim:stage1::kAnimations) {
-        if (anim.object != object) continue;
-        if (std::strcmp(anim.name,"idle_down")==0 && anim.frames>0) has_idle=true;
-        if (std::strcmp(anim.name,"run_down")==0 && anim.frames>0) has_run=true;
+    // The original player skins must have all 8 directions, not just
+    // idle_down and run_down. Otherwise a selected skin can silently
+    // disappear when the survivor turns.
+    for (const char* direction : {"down", "up", "right", "left"}) {
+        char name[24]{};
+        std::snprintf(name, sizeof(name), "idle_%s", direction);
+        if (!has_source_animation(object, name)) return;
+        std::snprintf(name, sizeof(name), "run_%s", direction);
+        if (!has_source_animation(object, name)) return;
     }
-    if (!has_idle || !has_run) return;
     source_skin_object_=object;
     state_.animation_elapsed=0.0f;
     state_.animation_frame=0;
@@ -125,11 +137,22 @@ void PlayerSystem::set_source_skin(std::uint16_t object) noexcept {
 
 std::uint16_t PlayerSystem::source_animation_index() const noexcept {
     if (!state_.alive || state_.animation == PlayerAnimation::dead) return 0;
-    const std::uint16_t direction = static_cast<std::uint16_t>(facing_offset(state_.facing));
-    if (state_.animation == PlayerAnimation::idle) return direction;
-    // The extracted player actor has idle_* and run_* animations but no
-    // walk_* animation. Both movement speeds therefore use the source run pose.
-    return static_cast<std::uint16_t>(4 + direction);
+    // Original animation indices belong to EACH Construct sprite object.
+    // Do not assume idle=0..3 and run=4..7 for every selectable survivor.
+    // The original actor has no walk_*: both walking and running select
+    // its original run_* animation.
+    char wanted[24]{};
+    std::snprintf(wanted, sizeof(wanted), "%s_%s",
+        state_.animation == PlayerAnimation::idle ? "idle" : "run",
+        source_facing_name(state_.facing));
+    std::uint16_t index=0;
+    for (const auto& animation : stage1::kAnimations) {
+        if (animation.object != source_skin_object_) continue;
+        if (animation.frames > 0 && std::strcmp(animation.name, wanted) == 0)
+            return index;
+        ++index;
+    }
+    return 0;
 }
 
 void PlayerSystem::advance_animation(float delta_seconds) noexcept {
@@ -142,13 +165,7 @@ void PlayerSystem::advance_animation(float delta_seconds) noexcept {
 
     // The selected original skin defines the correct source animation speed,
     // loop setting and frame count. Do not assume every survivor has 4 frames.
-    const char* direction="down";
-    switch (state_.facing) {
-    case PlayerFacing::down: direction="down"; break;
-    case PlayerFacing::up: direction="up"; break;
-    case PlayerFacing::left: direction="left"; break;
-    case PlayerFacing::right: direction="right"; break;
-    }
+    const char* direction=source_facing_name(state_.facing);
     char name[24]{};
     const char* prefix=state_.animation==PlayerAnimation::idle?"idle":"run";
     std::snprintf(name,sizeof(name),"%s_%s",prefix,direction);
