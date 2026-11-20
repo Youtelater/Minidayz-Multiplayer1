@@ -7,6 +7,11 @@
 
 namespace minidayz {
 
+enum class OriginalWorldSound : std::uint8_t {
+    chop1, chop2, chop3, chop4, treefall02, treefall03,
+    doorOpen, doorClose, doorMetalOpen, doorMetalClose
+};
+
 // The original Construct drop actions choose drop1/drop2; successful
 // crafting uses crafting.wav. All samples come from repository romfs/wav.
 class Stage2Audio {
@@ -39,6 +44,9 @@ public:
     void play_equipment_drop() noexcept;
     void play_backpack_zip() noexcept;
     void play_item_pickup() noexcept;
+    // Play the exact source-selected event sound, on a dedicated world voice.
+    // The event executor must choose the cue only after original conditions.
+    void play_original_world_sound(OriginalWorldSound cue) noexcept;
     void play_footstep(terrain::FootstepSurface surface) noexcept;
     void start_menu_ambience() noexcept;
     void set_environment_ambience(bool night,bool winter=false) noexcept;
@@ -58,7 +66,7 @@ private:
         std::uint32_t sample_rate{};
         std::uint16_t channels{};
     };
-    static constexpr std::size_t kClipCount = 13;
+    static constexpr std::size_t kClipCount = 14;
     bool load_wav(const char* path, Clip& destination) noexcept;
     void play(std::size_t clip) noexcept;
     void stop_voice(std::size_t clip) noexcept;
@@ -85,6 +93,7 @@ private:
     int ambient_csnd_state_{-1};
     unsigned csnd_status_frame_counter_{};
     int weather_sample_variant_{-1};
+    int loaded_world_cue_{-1};
 };
 
 } // namespace minidayz
