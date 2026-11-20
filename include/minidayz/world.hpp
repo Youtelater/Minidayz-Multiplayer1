@@ -58,6 +58,13 @@ struct WorldPlacement {
     // Separate from object identity: different instances may have different
     // door, foliage or damage states without changing the original atlas.
     std::uint16_t source_animation{};
+    // Source UID is the Construct authoring/event UID (not unique for
+    // repeated generated instances). Runtime UID uniquely identifies this
+    // occurrence so changing/saving one tree or door never changes all.
+    std::uint64_t runtime_uid{};
+    // Original LOOT_respawn instance variable 0, when a source event
+    // actually creates and configures a category marker.
+    std::uint16_t source_loot_category{};
     // An object instance has an identity distinct from its Construct event
     // UID. Generated objects share event UIDs but must retain independent
     // door/tree/container states for interactions and saving.
