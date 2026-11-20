@@ -193,6 +193,23 @@ jobs:
           make clean
           make
 
+      - name: Audit all 1854 original PNGs against Construct frames and T3X
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/audit_original_graphics_frames.py
+
+      - name: Upload source-verified full graphics audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minidayz-source-graphics-audit
+          path: |
+            data/graphics_review/source_frame_audit.json
+            data/graphics_review/source_frame_audit.csv
+            data/graphics_review/SOURCE_FRAME_AUDIT.md
+          if-no-files-found: warn
+
       - name: Verify all original and multiplayer item visual reference tables
         shell: bash
         run: |
