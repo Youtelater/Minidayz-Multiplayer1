@@ -38,7 +38,15 @@ for original_name, converted in original_menu.items():
     assert (ROOT / "assets/gfx" / original_name).is_file(), original_name
     atlas = ROOT / "romfs/gfx" / converted
     assert atlas.is_file() and atlas.stat().st_size > 32, converted
-    assert f"romfs:/gfx/{converted}" in engine, converted
+    if original_name != "menu_btn_wood-sheet0.png":
+        assert f"romfs:/gfx/{converted}" in engine, converted
+    else:
+        # menu_btn_wood-sheet0.png is an atlas of MULTIPLE colored button
+        # states. Drawing it whole made rainbow-striped buttons in Manic Emu.
+        single = ROOT/"romfs/gfx/menu_btn_wood_single.t3x"
+        assert single.is_file() and single.stat().st_size>32
+        assert "romfs:/gfx/menu_btn_wood_single.t3x" in engine
+        assert "romfs:/gfx/menu_btn_wood_sheet0.t3x" not in engine
 
 for filename in ("menu_achieves_bg-sheet0.png","options_menu-sheet0.png"):
     assert filename in authored, f"Not in ROOT original Construct images: {filename}"
