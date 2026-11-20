@@ -21,6 +21,38 @@ std::size_t count_code(const minidayz::WorldGrid& grid, std::uint16_t code) {
     return count;
 }
 
+// Original tree species 184/207/209/576/577/581 have alternate source
+// frames. Changing one tree must not change other trees, and a missing
+// animation/frame must NEVER silently fall back to the whole PNG or frame 0.
+void test_source_world_instance_animation_state() {
+    minidayz::WorldSystem world;
+    assert(world.generate_from_source(0x4d444159u, "Map", 0));
+    std::size_t tree=world.placement_count(), other=tree;
+    for(std::size_t i=0;i<world.placement_count();++i) {
+        const auto* p=world.placement(i);
+        if(!p || p->layer!=43 || p->object!=207)continue;
+        if(tree==world.placement_count())tree=i;
+        else {other=i;break;}
+    }
+    assert(tree<world.placement_count());
+    assert(other<world.placement_count());
+    const auto original_other=*world.placement(other);
+    const auto original_tree=*world.placement(tree);
+    assert(world.set_placement_sprite_state(tree,0,1,1.0f));
+    assert(world.placement(tree)->source_animation==0);
+    assert(world.placement(tree)->source_frame==1);
+    assert(world.placement(other)->source_frame==original_other.source_frame);
+    assert(world.placement(other)->source_animation==original_other.source_animation);
+    assert(!world.set_placement_sprite_state(tree,65535,999,1.0f));
+    assert(!world.set_placement_sprite_state(tree,0,9999,1.0f));
+    assert(!world.set_placement_sprite_state(tree,0,0,2.0f));
+    assert(world.placement(tree)->source_frame==1);
+    assert(world.set_placement_sprite_state(tree,original_tree.source_animation,
+                                            original_tree.source_frame,
+                                            original_tree.opacity));
+    assert(world.placement(tree)->source_frame==original_tree.source_frame);
+}
+
 void test_grid_semantics() {
     minidayz::WorldGrid grid;
     assert(grid.resize(4, 4));
@@ -373,6 +405,7 @@ void test_level_four_split_grid() {
 
 int main() {
     test_grid_semantics();
+    test_source_world_instance_animation_state();
     test_source_profiles();
     test_original_map_layout_and_descriptors();
     test_seed_reproducibility();
