@@ -15,6 +15,24 @@ Source of truth: root `data.deobfuscated.js` (Construct project, mirrored in `da
 | Bushes / other mutable objects | Berry bush object **296** has color animations (`red`, `yellow`, `blue`, `black`), each with 2 frames. Fence obstacle **319** has 5 frames. | Audit collectible/harvested and destroyed states rather than treating flora and fences as immutable sprites. |
 | Roads | Existing tile metadata/flags in `include/minidayz/terrain_source_tile_flags.hpp` and original location generation. | Preserve original source tile IDs, flips/rotation, transitions, and construction ordering. |
 
+## Verified coupled original event effects — never port visuals alone
+
+The original Construct `Game_events` event chains demonstrate why world interactions
+require a coordinated state transition, audio, loot and physics system:
+
+- **Tree 207 hit:** event `8754965976446553` checks projectile/hit conditions, subtracts one from instance variable 0, and chooses one of the source sound cues `chop`, `chop2`, `chop3`, `chop4`. Its child `2738244684146745` tests the resulting variable, sets **frame 1**, plays `treefall_02` or `treefall_03`, and calls `Spawn_drop` for original item IDs **38, 38, 50**. It also updates the source tutorial state. Do not reinterpret this as unconditional A-button chopping: the source ancestors gate the hit.
+- **Tree 209 hit:** analogous event `5386206472407495` and child `7838407830495979` set frame 1, play the same falling sound alternatives and invoke `Spawn_drop` for original item IDs **38, 38, 50, 37**.
+- **Automatic doors (object 349):** event `6061166023614368` sets **frame 1** and plays `open_door` or `open_door_metal` according to the current animation; event `243854400993751` sets **frame 0**, adjusts related door-shadow state and plays `close_door` or `close_door_metal`. Both depend on inherited player-distance and door-frame conditions. Do not attach the sound to every door sprite draw.
+
+These are original event records, **not yet completed 3DS interactions**. A reliable native event dispatcher must preserve ancestor conditions, per-instance variables, sprite states, item IDs/quantities, audio choice and collision/obstacle changes together.
+
+### World-rendering fixes already integrated
+
+- Native `WorldPlacement` now carries an independent `source_animation` and `source_frame`; `WorldSystem::set_placement_sprite_state` validates transitions against original Construct animation definitions instead of guessing frame numbers.
+- Source renderer now reads that per-instance animation instead of hardcoding animation zero.
+- Original object-frame hotspot extents (all 1,429 source object IDs) are compiled into `world_source_extents.hpp` and used in the broadphase to keep large trees/buildings visible near 512-pixel bin edges. The source is reproducible through `tools/stage1/build_world_source_extents.py`.
+- Initially invisible sprites remain indexable for a later original event that reveals them. This fixes a rendering prerequisite; **the actual event dispatcher, loot effects and per-world persistence remain unfinished**.
+
 ## Native 3DS findings (main branch, inspected 2026-11-20)
 
 - `source/main.cpp` draws static `WorldPlacement` sprites via `renderer.draw_source_sprite(placement->object, 0, placement->source_frame, ...)` (around lines 2360–2430). It does **not** read mutable tree-chopped/door-open/house-entered sprite state for these placements.
