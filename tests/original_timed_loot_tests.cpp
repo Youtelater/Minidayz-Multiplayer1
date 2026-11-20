@@ -60,5 +60,21 @@ int main() {
         assert(category == original.category);
     }
     assert(!source_authored_map_loot_marker(UINT64_MAX, category));
+    // The Construct source does not permit arbitrary objects to
+    // masquerade as LOOT_respawn. Generated markers need their actual
+    // source-assigned Sprite instance variable 0 == 15.
+    category=0;
+    assert(!source_world_loot_category(207,0,15,category));
+    assert(category==0);
+    assert(!source_world_loot_category(218,0,0,category));
+    assert(!source_world_loot_category(218,0,14,category));
+    assert(source_world_loot_category(218,0,15,category));
+    assert(category==15);
+    assert(!source_world_loot_category(218,0,16,category));
+    for (const auto& original : kOriginalMapLootMarkers) {
+        std::uint16_t authored=0;
+        assert(source_world_loot_category(218,original.source_uid,0,authored));
+        assert(authored==original.category);
+    }
     return 0;
 }
