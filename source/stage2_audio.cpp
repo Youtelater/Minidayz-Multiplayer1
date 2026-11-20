@@ -170,6 +170,20 @@ bool Stage2Audio::initialize() noexcept {
     return true;
 }
 
+void Stage2Audio::poll_ambience_playback() noexcept {
+    if (!csnd_ready_ || !ambient_play_attempted_ || !ambient_play_ok_)
+        return;
+    // Only query every 30 UI frames, not every rendering call: each query
+    // executes a synchronous CSND service command.
+    if (++csnd_status_frame_counter_ < 30) return;
+    csnd_status_frame_counter_=0;
+    const int channel=csnd_channels_[12];
+    if (channel<0) { ambient_csnd_state_=-2; return; }
+    u8 playing=0;
+    const Result result=csndIsPlaying(static_cast<u32>(channel),&playing);
+    ambient_csnd_state_=R_FAILED(result) ? -2 : (playing ? 1 : 0);
+}
+
 void Stage2Audio::set_muted(bool value) noexcept {
     if(muted_==value)return;
     muted_=value;
@@ -217,6 +231,8 @@ void Stage2Audio::play(std::size_t which) noexcept {
     if (which==12) {
         ambient_play_attempted_=false;
         ambient_play_ok_=false;
+        ambient_csnd_state_=-1;
+        csnd_status_frame_counter_=0;
     }
     stop_voice(which);
     if (csnd_ready_) {
@@ -379,6 +395,8 @@ void Stage2Audio::stop_environment_ambience() noexcept {
     menu_ambience_=false;
     ambient_play_attempted_=false;
     ambient_play_ok_=false;
+    ambient_csnd_state_=-1;
+    csnd_status_frame_counter_=0;
     // Rain has its own NDSP voice and independent buffer lifetime. Changing
     // day/night ambience must not invalidate the active weather sample.
 }
@@ -434,6 +452,8 @@ void Stage2Audio::shutdown() noexcept {
     menu_ambience_=false;
     ambient_play_attempted_=false;
     ambient_play_ok_=false;
+    ambient_csnd_state_=-1;
+    csnd_status_frame_counter_=0;
     weather_sample_variant_=-1;
 }
 }
