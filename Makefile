@@ -125,6 +125,7 @@ stage1-assets:
 	@python3 tools/stage1/validate_stage1.py
 	@python3 tests/test_original_image_names.py
 	@python3 tools/stage1/build_sprite_catalog.py
+	@python3 tools/stage1/build_menu_button_frame.py
 	@python3 tools/stage1/build_player_skin_catalog.py
 	@python3 tools/stage1/build_player_spawn_source.py
 	@python3 tools/stage1/build_player_equipment_visuals.py
@@ -159,6 +160,7 @@ stage1-assets:
 	@test -s $(ROMFS)/gfx/original_map_base_ground_lvl3.t3x || { echo 'ERROR: original level 3 ground texture missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/main_menu_logo_sheet0.t3x || { echo 'ERROR: original menu logo missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/menu_btn_wood_sheet0.t3x || { echo 'ERROR: original menu buttons missing'; exit 1; }
+	@test -s $(ROMFS)/gfx/menu_btn_wood_single.t3x || { echo 'ERROR: cropped original menu button missing'; exit 1; }
 	@test -s $(ROMFS)/gfx/tiledbgmenu_city_up.t3x || { echo 'ERROR: original menu background missing'; exit 1; }
 	@python3 tools/stage1/build_menu_localization.py
 	@python3 tools/stage2/build_item_sprite_catalog.py
