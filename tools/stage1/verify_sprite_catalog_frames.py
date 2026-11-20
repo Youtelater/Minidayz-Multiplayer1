@@ -98,7 +98,11 @@ def main():
         for page in range((len(rects)+MAX_FRAMES_PER_ATLAS-1)//MAX_FRAMES_PER_ATLAS):
             name=f"{ident(source)}_p{page:03d}.t3x"
             texture=OUT/name
-            if not texture.is_file() or texture.stat().st_size<32:
+            # Tex3DS/LZ11 produces very small VALID T3X archives for
+            # tiny transparent single-frame sprites. Requiring 32 bytes
+            # incorrectly rejects some original source image pages even
+            # though tex3ds succeeded and the 3DS build packaged them.
+            if not texture.is_file() or texture.stat().st_size==0:
                 missing.append(name)
             else:
                 verified_pages.add(name)
