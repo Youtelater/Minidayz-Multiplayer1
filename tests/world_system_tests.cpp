@@ -312,6 +312,10 @@ void test_full_generation_all_source_maps() {
         assert(advanced==5);
         assert(world.generation_level()==level);
         assert(world.source_location_spawn_count()>0);
+        // Verify the road Array actually contains painted corridors;
+        // successful location/POI counts alone did not catch missing roads.
+        assert(count_code(world.grid(),12)+count_code(world.grid(),13)+
+               count_code(world.grid(),14)>0);
         assert(world.placement_count()>1250);
         assert(world.feature_count(minidayz::WorldFeatureKind::Building)>103);
         assert(world.grid().height()==(level>=4?33:16));
