@@ -143,7 +143,12 @@ bool Stage2Audio::initialize() noexcept {
         for (int ch=0;ch<CSND_NUM_CHANNELS && next<static_cast<int>(kClipCount);++ch)
             if (csndChannels & (1u<<ch))
                 csnd_channels_[static_cast<std::size_t>(next++)]=ch;
-        if (next<static_cast<int>(kClipCount)) {
+        // The original 13 voices are mandatory for existing menu,
+        // crafting, rain and environment sounds. The new effects voice
+        // is optional on CSND implementations that expose fewer than 14
+        // usable channels: do not regress all audio merely because the
+        // additional world-effects voice is unavailable.
+        if (next<13) {
             shutdown();
             return false;
         }
