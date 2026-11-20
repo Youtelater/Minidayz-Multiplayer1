@@ -74,46 +74,72 @@ bool Stage2Audio::load_wav(const char* path, Clip& destination) noexcept {
         return false;
     }
     const auto frames = data_bytes / block_align;
-    const auto output_bytes = static_cast<std::size_t>(frames) * channels * 2;
+    // CSND accepts PCM16 mono; downmix stereo source WAV in memory, leaving
+    // both the original media/ and committed romfs/wav/ files unchanged.
+    const std::uint16_t out_channels = csnd_ready_ ? 1u : channels;
+    const auto output_bytes = static_cast<std::size_t>(frames) * out_channels * 2;
     void* audio = linearAlloc(output_bytes);
-    if (!audio) {
-        std::fclose(file);
-        return false;
-    }
+    if (!audio) { std::fclose(file); return false; }
     bool loaded = false;
-    if (bits == 16) {
+    if (bits == 16 && !csnd_ready_) {
         loaded = std::fread(audio, 1, data_bytes, file) == data_bytes;
     } else {
         auto* raw = static_cast<unsigned char*>(std::malloc(data_bytes));
         if (raw) {
             if (std::fread(raw, 1, data_bytes, file) == data_bytes) {
                 auto* output = static_cast<std::int16_t*>(audio);
-                for (std::size_t i = 0; i < data_bytes; ++i)
-                    output[i] = static_cast<std::int16_t>(
-                        (static_cast<int>(raw[i]) - 128) * 256);
+                for (std::size_t i=0;i<frames;++i) {
+                    const auto sample=[&](std::size_t ch) noexcept -> int {
+                        const std::size_t at=i*block_align + ch*(bits/8);
+                        return bits==8 ? (static_cast<int>(raw[at])-128)*256
+                            : static_cast<int>(static_cast<std::int16_t>(le16(raw+at)));
+                    };
+                    if (out_channels==1) {
+                        const int left=sample(0);
+                        output[i]=static_cast<std::int16_t>(
+                            channels==2 ? (left+sample(1))/2 : left);
+                    } else {
+                        for(std::size_t ch=0;ch<channels;++ch)
+                            output[i*channels+ch]=static_cast<std::int16_t>(sample(ch));
+                    }
+                }
                 loaded = true;
             }
             std::free(raw);
         }
     }
     std::fclose(file);
-    if (!loaded) {
-        linearFree(audio);
-        return false;
-    }
+    if (!loaded) { linearFree(audio); return false; }
     destination.pcm = audio;
     destination.bytes = output_bytes;
     destination.frames = frames;
     destination.sample_rate = rate;
-    destination.channels = channels;
+    destination.channels = out_channels;
     DSP_FlushDataCache(destination.pcm,destination.bytes);
     return true;
 }
 
 bool Stage2Audio::initialize() noexcept {
-    if (ndsp_ready_) return true;
-    if (R_FAILED(ndspInit())) return false;
-    ndsp_ready_ = true;
+    if (ndsp_ready_ || csnd_ready_) return true;
+    if (R_SUCCEEDED(ndspInit())) {
+        ndsp_ready_ = true;
+    } else if (R_SUCCEEDED(csndInit())) {
+        // libctru NDSP needs a DSP component that may be absent from
+        // emulator/homebrew SD storage. CSND works without dspfirm.cdc.
+        // Assign distinct available CSND hardware channels per clip.
+        csnd_ready_ = true;
+        csnd_channels_.fill(-1);
+        int next=0;
+        for (int ch=0;ch<CSND_NUM_CHANNELS && next<static_cast<int>(kClipCount);++ch)
+            if (csndChannels & (1u<<ch))
+                csnd_channels_[static_cast<std::size_t>(next++)]=ch;
+        if (next<static_cast<int>(kClipCount)) {
+            shutdown();
+            return false;
+        }
+    } else {
+        return false;
+    }
     constexpr const char* paths[6] = {
         "romfs:/wav/crafting.wav",
         "romfs:/wav/drop1.wav",
@@ -137,25 +163,59 @@ bool Stage2Audio::initialize() noexcept {
 void Stage2Audio::set_muted(bool value) noexcept {
     if(muted_==value)return;
     muted_=value;
-    if(muted_ && ndsp_ready_) {
-        for(std::size_t voice=0;voice<kClipCount;++voice) {
-            ndspChnWaveBufClear(static_cast<int>(voice));
-            ndspChnReset(static_cast<int>(voice));
-            waves_[voice]={};
-        }
+    if(muted_ && audio_ready()) {
+        for(std::size_t voice=0;voice<kClipCount;++voice)
+            stop_voice(voice);
         ambient_variant_=-1;
         menu_ambience_=false;
         weather_sample_variant_=-1;
     }
 }
 
+void Stage2Audio::stop_voice(std::size_t which) noexcept {
+    if (which>=kClipCount) return;
+    if (ndsp_ready_) {
+        ndspChnWaveBufClear(static_cast<int>(which));
+        ndspChnReset(static_cast<int>(which));
+        waves_[which]={};
+    } else if (csnd_ready_ && csnd_channels_[which]>=0) {
+        CSND_SetPlayStateR(static_cast<u32>(csnd_channels_[which]),0);
+        (void)csndExecCmds(true);
+    }
+}
+
+void Stage2Audio::set_ambient_gain(float gain) noexcept {
+    if (csnd_ready_) {
+        const int channel=csnd_channels_[12];
+        if(channel>=0) {
+            const u32 volume=CSND_VOL(gain,0.0f);
+            CSND_SetVol(static_cast<u32>(channel),volume,volume);
+            (void)csndExecCmds(true);
+        }
+    } else if (ndsp_ready_) {
+        float mix[12]{};
+        mix[0]=gain;
+        mix[1]=gain;
+        ndspChnSetMix(12,mix);
+    }
+}
+
 void Stage2Audio::play(std::size_t which) noexcept {
-    if (muted_ || !ndsp_ready_ || which>=kClipCount) return;
+    if (muted_ || !audio_ready() || which>=kClipCount) return;
     const auto& clip=clips_[which];
     if (!clip.pcm || clip.frames==0) return;
+    stop_voice(which);
+    if (csnd_ready_) {
+        const int channel=csnd_channels_[which];
+        if (channel<0) return;
+        const u32 flags=SOUND_FORMAT_16BIT|SOUND_LINEAR_INTERP|
+            ((which==6 || which==12)?SOUND_REPEAT:SOUND_ONE_SHOT);
+        const float gain=(which==12 && menu_ambience_)?0.31622777f:1.0f;
+        (void)csndPlaySound(channel,flags,clip.sample_rate,gain,0.0f,
+            clip.pcm,clip.pcm,static_cast<u32>(clip.bytes));
+        return;
+    }
     const int channel = static_cast<int>(which);
-    ndspChnWaveBufClear(channel);
-    ndspChnReset(channel);
     ndspChnSetRate(channel, static_cast<float>(clip.sample_rate));
     ndspChnSetFormat(channel, clip.channels==1
         ? NDSP_FORMAT_MONO_PCM16 : NDSP_FORMAT_STEREO_PCM16);
@@ -193,7 +253,7 @@ void Stage2Audio::play_backpack_zip() noexcept {
 }
 
 void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
-    if (muted_ || !ndsp_ready_) return;
+    if (muted_ || !audio_ready()) return;
     // Original WAV sets are grouped by terrain in the Construct source.
     // Each NDSP footstep voice retains its own variant until the surface
     // actually changes, avoiding WAV reloads on every step.
@@ -211,8 +271,7 @@ void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
     const unsigned source_variant=variant+1u;
     const auto surface_id=static_cast<int>(surface);
     if (loaded_step_surfaces_[variant]!=surface_id) {
-        ndspChnWaveBufClear(static_cast<int>(voice));
-        ndspChnReset(static_cast<int>(voice));
+        stop_voice(voice);
         if (clips_[voice].pcm) linearFree(clips_[voice].pcm);
         clips_[voice]={};
         waves_[voice]={};
@@ -227,14 +286,13 @@ void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
 }
 
 void Stage2Audio::play_item_pickup() noexcept {
-    if (muted_ || !ndsp_ready_) return;
+    if (muted_ || !audio_ready()) return;
     const int variant=static_cast<int>(pickup_serial_++ & 1u);
     constexpr const char* paths[2]={"romfs:/wav/pick1.wav",
                                     "romfs:/wav/pick2.wav"};
     constexpr std::size_t voice=11;
     if (loaded_pickup_variant_!=variant) {
-        ndspChnWaveBufClear(static_cast<int>(voice));
-        ndspChnReset(static_cast<int>(voice));
+        stop_voice(voice);
         if (clips_[voice].pcm) linearFree(clips_[voice].pcm);
         clips_[voice]={};
         waves_[voice]={};
@@ -252,11 +310,8 @@ void Stage2Audio::start_menu_ambience() noexcept {
     if (!ndsp_ready_ || muted_ || (ambient_variant_==0 && menu_ambience_)) return;
     set_environment_ambience(false,false);
     if (ambient_variant_!=0 || !clips_[12].pcm) return;
-    float mix[12]{};
     constexpr float kOriginalMenuGain = 0.31622777f; // 10^(-10/20)
-    mix[0]=kOriginalMenuGain;
-    mix[1]=kOriginalMenuGain;
-    ndspChnSetMix(12,mix);
+    set_ambient_gain(kOriginalMenuGain);
     menu_ambience_=true;
 }
 
@@ -266,10 +321,7 @@ void Stage2Audio::set_environment_ambience(bool night,bool winter) noexcept {
     if (ambient_variant_==wanted) {
         if (menu_ambience_) {
             // Restore gameplay gain without restarting the shared loop.
-            float mix[12]{};
-            mix[0]=1.0f;
-            mix[1]=1.0f;
-            ndspChnSetMix(12,mix);
+            set_ambient_gain(1.0f);
             menu_ambience_=false;
         }
         return;
@@ -294,8 +346,7 @@ void Stage2Audio::set_environment_ambience(bool night,bool winter) noexcept {
 
 void Stage2Audio::stop_environment_ambience() noexcept {
     if (ndsp_ready_) {
-        ndspChnWaveBufClear(12);
-        ndspChnReset(12);
+        stop_voice(12);
     }
     if (clips_[12].pcm) linearFree(clips_[12].pcm);
     clips_[12]={};
@@ -307,7 +358,7 @@ void Stage2Audio::stop_environment_ambience() noexcept {
 }
 
 void Stage2Audio::start_rain_loop(bool blizzard) noexcept {
-    if (!ndsp_ready_) return;
+    if (!audio_ready()) return;
     const int wanted=blizzard ? 1 : 0;
     if (weather_sample_variant_!=wanted) {
         stop_rain_loop();
@@ -325,8 +376,7 @@ void Stage2Audio::stop_rain_loop() noexcept {
     // Stop the dedicated rain voice without interrupting crafting,
     // footsteps, backpacks or equipment audio on other channels.
     if (ndsp_ready_) {
-        ndspChnWaveBufClear(6);
-        ndspChnReset(6);
+        stop_voice(6);
     }
     if (clips_[6].pcm) linearFree(clips_[6].pcm);
     clips_[6]={};
@@ -336,13 +386,14 @@ void Stage2Audio::stop_rain_loop() noexcept {
 
 void Stage2Audio::shutdown() noexcept {
     if (ndsp_ready_) {
-        for (std::size_t i=0;i<kClipCount;++i) {
-            const int channel=static_cast<int>(i);
-            ndspChnWaveBufClear(channel);
-            ndspChnReset(channel);
-        }
+        for (std::size_t i=0;i<kClipCount;++i) stop_voice(i);
         ndspExit();
         ndsp_ready_ = false;
+    }
+    if (csnd_ready_) {
+        for (std::size_t i=0;i<kClipCount;++i) stop_voice(i);
+        csndExit();
+        csnd_ready_ = false;
     }
     for (auto& clip:clips_) {
         if (clip.pcm) linearFree(clip.pcm);
