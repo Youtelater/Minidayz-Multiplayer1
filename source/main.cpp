@@ -1194,10 +1194,9 @@ public:
         const auto& bounds=world_.bounds();
         renderer.draw_solid_rect(0.0f,0.0f,320.0f,240.0f,
             C2D_Color32(34,37,30,255),0.01f);
-        // Use supplied original minimap GUI art where available. Never
-        // substitute the inventory's cyan drag/drop selection image.
-        (void)renderer.draw_original_image("minimap_tile-sheet0.png",
-            7.0f,28.0f,306.0f,178.0f,0.05f);
+        // minimap_tile-sheet0.png is a multiple-frame SOURCE TILE ATLAS,
+        // not a full 306x178 background. Never stretch the entire sheet
+        // behind the map. The original map codes provide the roads below.
         renderer.draw_solid_rect(7.0f,28.0f,306.0f,178.0f,
             C2D_Color32(41,53,41,238),0.11f);
         renderer.draw_text("WORLD MAP",107.0f,4.0f,0.55f);
@@ -1237,22 +1236,45 @@ public:
                             : C2D_Color32(218,204,158,255);
                     renderer.draw_solid_rect(xx+(cw-size)*0.5f,
                         yy+(ch-size)*0.5f,size,size,color,0.52f);
-                    // The source project includes an actual minimap
-                    // location marker; keep its icon instead of replacing
-                    // every settlement with a fabricated map symbol.
-                    (void)renderer.draw_original_image(
-                        "minimap_mark-sheet0.png",
-                        xx+(cw-size)*0.5f,yy+(ch-size)*0.5f,
-                        size,size,0.57f);
+                    // minimap_mark is an atlas of multiple different icons.
+                    // Find one actual source frame in the sprite catalog
+                    // instead of shrinking EVERY atlas icon into each POI.
+                    static const auto* mark_frame=[]() noexcept {
+                        const auto* begin=minidayz::stage1::kSpriteFrames;
+                        const auto* end=begin+minidayz::stage1::kSpriteFrameCount;
+                        for(auto* f=begin;f!=end;++f)
+                            if(std::strncmp(f->sheet,
+                                  "minimap_mark_sheet0_p",21)==0)return f;
+                        return end;
+                    }();
+                    if(mark_frame!=minidayz::stage1::kSpriteFrames+
+                                     minidayz::stage1::kSpriteFrameCount)
+                        (void)renderer.draw_source_sprite_fitted(
+                            mark_frame->object,mark_frame->animation,
+                            mark_frame->frame,
+                            xx+(cw-size)*0.5f,yy+(ch-size)*0.5f,
+                            size,size,0.57f);
                 }
             }
         }
         const auto point=minidayz::map_overlay::player_point(
             player_.state().x,player_.state().y,bounds,area);
-        // Original minimap_player artwork accompanies the X used to show
-        // the player's precise world position on the rendered map.
-        (void)renderer.draw_original_image("minimap_player-sheet0.png",
-            point.x-6.0f,point.y-6.0f,12.0f,12.0f,0.77f);
+        // The player marker is also a sprite atlas, not one full-size
+        // bitmap. Render its real Construct animation frame.
+        static const auto* player_mark_frame=[]() noexcept {
+            const auto* begin=minidayz::stage1::kSpriteFrames;
+            const auto* end=begin+minidayz::stage1::kSpriteFrameCount;
+            for(auto* f=begin;f!=end;++f)
+                if(std::strncmp(f->sheet,"minimap_player_sheet0_p",23)==0)
+                    return f;
+            return end;
+        }();
+        if(player_mark_frame!=minidayz::stage1::kSpriteFrames+
+                             minidayz::stage1::kSpriteFrameCount)
+            (void)renderer.draw_source_sprite_fitted(
+                player_mark_frame->object,player_mark_frame->animation,
+                player_mark_frame->frame,
+                point.x-6.0f,point.y-6.0f,12.0f,12.0f,0.77f);
         renderer.draw_text("X",point.x-4.0f,point.y-9.0f,0.43f);
         renderer.draw_text("ROADS     LOCATIONS     X = YOU",
                            15.0f,207.0f,0.28f);
