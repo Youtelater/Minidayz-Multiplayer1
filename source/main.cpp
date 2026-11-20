@@ -1244,7 +1244,7 @@ public:
                         const auto* end=begin+minidayz::stage1::kSpriteFrameCount;
                         for(auto* f=begin;f!=end;++f)
                             if(std::strncmp(f->sheet,
-                                  "minimap_mark_sheet0_p",21)==0)return f;
+                                  "minimap_mark_sheet0_",20)==0)return f;
                         return end;
                     }();
                     if(mark_frame!=minidayz::stage1::kSpriteFrames+
@@ -1265,7 +1265,7 @@ public:
             const auto* begin=minidayz::stage1::kSpriteFrames;
             const auto* end=begin+minidayz::stage1::kSpriteFrameCount;
             for(auto* f=begin;f!=end;++f)
-                if(std::strncmp(f->sheet,"minimap_player_sheet0_p",23)==0)
+                if(std::strncmp(f->sheet,"minimap_player_sheet0_",22)==0)
                     return f;
             return end;
         }();
