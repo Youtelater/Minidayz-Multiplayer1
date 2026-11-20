@@ -490,7 +490,18 @@ bool Renderer::draw_original_environment_tilemaps(
    for(const auto object:kOriginalObjects)
     if(map.object_id==object)object_valid=true;
    if(!object_valid){valid=false;break;}
-   map.cells.resize(static_cast<std::size_t>(map.columns)*map.rows);
+   const std::size_t cell_count =
+       static_cast<std::size_t>(map.columns)*map.rows;
+   // The source Map's layer 44+ contains offscreen overlays, triggers and
+   // hidden tilemap instances. The world renderer never draws these.
+   // Skip their packed cells *before* allocating, rather than reserving
+   // hundreds of thousands of invisible cells on original 3DS hardware.
+   if(map.layer>=44){
+    if(std::fseek(file,static_cast<long>(cell_count*sizeof(std::uint32_t)),
+                  SEEK_CUR)!=0){valid=false;break;}
+    continue;
+   }
+   map.cells.resize(cell_count);
    if(std::fread(map.cells.data(),sizeof(std::uint32_t),
                  map.cells.size(),file)!=map.cells.size()){
     valid=false;break;
