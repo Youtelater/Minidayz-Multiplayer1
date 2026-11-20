@@ -91,6 +91,36 @@ void test_original_map_layout_and_descriptors() {
         assert(viewport[i-1]!=viewport[i]);
     for(const auto index:viewport)assert(world.placement(index));
 
+    // Generated source buildings have no serialized instance size: their
+    // original sprite atlas provides their actual render bounds. A sprite
+    // crossing a 512px visibility-bin boundary must remain visible even
+    // when the instance's own width/height are zero.
+    std::size_t verified_zero_size_crossings=0;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* p=world.placement(i);
+        if(!p || p->width!=0.0f || p->height!=0.0f ||
+           p->layer==32 || p->layer>=44 || p->opacity<=0.0f)continue;
+        const auto* obj=minidayz::stage1::find_object(p->object);
+        if(!obj || obj->type!=18)continue;
+        float source_extent=0.0f;
+        for(const auto& sprite:minidayz::stage1::kSpriteFrames)
+            if(sprite.object==p->object)
+                source_extent=std::max(source_extent,
+                    std::hypot(sprite.width,sprite.height));
+        if(source_extent<70.0f)continue;
+        const float boundary=(std::floor(p->x/512.0f)+1.0f)*512.0f;
+        const float dx=boundary-p->x;
+        if(dx<=0.0f || dx>=source_extent ||
+           boundary+2.0f>=world.bounds().width)continue;
+        std::vector<std::uint32_t> cross_bin{};
+        visibility.query(boundary+1.0f,p->y,1.0f,1.0f,cross_bin);
+        assert(std::binary_search(cross_bin.begin(),cross_bin.end(),
+                    static_cast<std::uint32_t>(i)));
+        ++verified_zero_size_crossings;
+        if(verified_zero_size_crossings>=3)break;
+    }
+    assert(verified_zero_size_crossings>0);
+
     // Likewise, player corner-collision queries must never scan every
     // building in the original 36,850x20,000 world.
     minidayz::terrain::SourceObstacleIndex collision{};
