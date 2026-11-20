@@ -1,5 +1,6 @@
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
 #include "minidayz/npc_system.hpp"
@@ -23,6 +24,24 @@ std::size_t count_code(const minidayz::WorldGrid& grid, std::uint16_t code) {
 }
 
 // Individual Construct object frames are tested separately below.
+void test_source_tree_fall_item_table() {
+    using namespace minidayz::world_source;
+    constexpr std::uint16_t objects[]={184,207,209,576,577,581};
+    constexpr std::uint16_t expected_count[]={2,3,4,2,3,4};
+    constexpr std::uint16_t items[][4]={
+        {50,50,0,0}, {38,38,50,0}, {38,38,50,37},
+        {50,50,0,0}, {50,50,38,0}, {50,50,38,38}
+    };
+    for(std::size_t i=0;i<6;++i) {
+        const auto* r=tree_fall_rule(objects[i]);
+        assert(r && r->count==expected_count[i]);
+        assert(r->fall_frame==1 && r->fall_animation==0);
+        assert(r->event_uid!=0);
+        for(std::size_t j=0;j<4;++j)assert(r->drop_item_ids[j]==items[i][j]);
+    }
+    assert(tree_fall_rule(349)==nullptr); // Doors do not drop tree resources.
+}
+
 void test_source_world_instance_animation_state() {
     minidayz::WorldSystem world;
     assert(world.generate_from_source(0x4d444159u, "Map", 0));
@@ -470,6 +489,7 @@ void test_level_four_split_grid() {
 int main() {
     test_grid_semantics();
     test_source_world_instance_animation_state();
+    test_source_tree_fall_item_table();
     test_generated_object_instance_ids();
     test_source_profiles();
     test_original_map_layout_and_descriptors();
