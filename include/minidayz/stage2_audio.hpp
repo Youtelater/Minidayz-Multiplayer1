@@ -17,6 +17,13 @@ public:
     bool audio_ready() const noexcept { return ndsp_ready_ || csnd_ready_; }
     bool using_csnd() const noexcept { return csnd_ready_; }
     bool ambience_loaded() const noexcept { return clips_[12].pcm != nullptr; }
+    const char* ambience_status() const noexcept {
+        if (!audio_ready()) return "AUDIO DEVICE : UNAVAILABLE";
+        if (!ambience_loaded()) return "AMBIENCE WAV : NOT LOADED";
+        if (!ambient_play_attempted_) return "AMBIENCE : NOT STARTED";
+        if (!ambient_play_ok_) return "AMBIENCE : PLAY ERROR";
+        return csnd_ready_ ? "CSND : PLAY REQUEST OK" : "NDSP : PLAY REQUEST OK";
+    }
     void play_crafting() noexcept;
     void play_item_drop() noexcept;
     void play_equipment_drop() noexcept;
@@ -63,6 +70,8 @@ private:
     int loaded_pickup_variant_{-1};
     int ambient_variant_{-1};
     bool menu_ambience_{};
+    bool ambient_play_attempted_{};
+    bool ambient_play_ok_{};
     int weather_sample_variant_{-1};
 };
 
