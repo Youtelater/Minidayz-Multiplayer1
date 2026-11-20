@@ -343,6 +343,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     map_markers_.clear();
     features_.clear();
     placements_.clear();
+    original_sprite_states_.clear();
     source_location_spawn_count_ = 0;
     generation_phase_ = 0;
     generation_level_ = 0;
@@ -381,6 +382,16 @@ bool WorldSystem::advance_source_generation() {
         return false;
     }
     ++generation_phase_;
+    if (generation_phase_ == 6) {
+        // Save the generated baseline for change-only snapshots. This runs
+        // after ALL source location/bunker/bridge creation has completed.
+        original_sprite_states_.clear();
+        original_sprite_states_.reserve(placements_.size());
+        for (const auto& p : placements_)
+            original_sprite_states_.push_back({
+                p.runtime_uid,p.object,p.source_animation,
+                p.source_frame,p.opacity});
+    }
     return true;
 }
 
@@ -488,6 +499,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     map_markers_.clear();
     features_.clear();
     placements_.clear();
+    original_sprite_states_.clear();
     placements_.reserve(range.size);
     features_.reserve(range.size + stage1::kBunkerSpawnSourceCount +
                       stage1::kBridgeElementSourceCount);
@@ -715,6 +727,7 @@ void WorldSystem::reset() noexcept {
     map_markers_.clear();
     features_.clear();
     placements_.clear();
+    original_sprite_states_.clear();
     source_location_spawn_count_ = 0;
     generation_phase_ = 0;
     generation_level_ = 0;
@@ -797,6 +810,72 @@ bool WorldSystem::set_placement_sprite_state(
     placement.source_animation = animation;
     placement.source_frame = frame;
     placement.opacity = opacity;
+    return true;
+}
+
+std::vector<WorldSpriteState> WorldSystem::capture_sprite_states() const {
+    std::vector<WorldSpriteState> result;
+    // Until generation has completed there is no stable authored baseline.
+    if (!generation_complete() ||
+        original_sprite_states_.size() != placements_.size()) return result;
+    for (std::size_t i=0;i<placements_.size();++i) {
+        const auto& p=placements_[i];
+        const auto& base=original_sprite_states_[i];
+        if (p.source_animation==base.animation &&
+            p.source_frame==base.frame && p.opacity==base.opacity) continue;
+        result.push_back({p.runtime_uid,p.object,p.source_animation,
+                          p.source_frame,p.opacity});
+    }
+    return result;
+}
+
+bool WorldSystem::set_sprite_state_by_runtime_uid(
+    std::uint64_t uid, std::uint16_t animation,
+    std::uint32_t frame, float opacity) noexcept {
+    if (!generation_complete() || uid==0) return false;
+    for (std::size_t i=0;i<placements_.size();++i)
+        if (placements_[i].runtime_uid==uid)
+            return set_placement_sprite_state(i,animation,frame,opacity);
+    return false;
+}
+
+bool WorldSystem::restore_sprite_states(
+    const std::vector<WorldSpriteState>& states) noexcept {
+    if (!generation_complete() ||
+        original_sprite_states_.size()!=placements_.size()) return false;
+    // Fully validate every requested state BEFORE changing any placement.
+    // Reject unknown/duplicate runtime IDs, mismatched original object
+    // types and unsupported atlas frames; do not corrupt the loaded world.
+    for (std::size_t j=0;j<states.size();++j) {
+        const auto& state=states[j];
+        if (state.runtime_uid==0 || !std::isfinite(state.opacity) ||
+            state.opacity<0.0f || state.opacity>1.0f) return false;
+        for (std::size_t k=0;k<j;++k)
+            if (states[k].runtime_uid==state.runtime_uid) return false;
+        const auto it=std::find_if(placements_.begin(),placements_.end(),
+            [&](const WorldPlacement& p){return p.runtime_uid==state.runtime_uid;});
+        if (it==placements_.end() || it->object!=state.object) return false;
+        const auto frames=stage1::animations_for_object(state.object);
+        if (!frames.data || state.animation>=frames.size ||
+            state.frame>=frames.data[state.animation].frames) return false;
+    }
+    // An empty snapshot resets all visual states to the source-generated
+    // baseline. This is needed for New Game and save-slot replacement.
+    for(std::size_t i=0;i<placements_.size();++i) {
+        const auto& baseline=original_sprite_states_[i];
+        auto& placed=placements_[i];
+        placed.source_animation=baseline.animation;
+        placed.source_frame=baseline.frame;
+        placed.opacity=baseline.opacity;
+    }
+    for(const auto& state:states)
+        for(auto& p:placements_)
+            if(p.runtime_uid==state.runtime_uid) {
+                p.source_animation=state.animation;
+                p.source_frame=state.frame;
+                p.opacity=state.opacity;
+                break;
+            }
     return true;
 }
 
