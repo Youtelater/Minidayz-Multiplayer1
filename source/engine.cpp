@@ -150,8 +150,10 @@ void Renderer::draw_text(const char* value,float x,float y,float scale) noexcept
  // Some iOS/3DS emulators cannot provide the region system font at all.
  // A menu made of textured buttons without text is functionally unusable.
  // This 5x7 fallback draws labels directly, without any external font file.
- const float pixel=std::max(0.7f,scale*2.1f);
- float at_x=x,at_y=y;
+ // A 5x7 pixel-font must draw at integer screen pixels: fractional
+ // 0.7-0.9px quads lose columns on GPU rasterization (e.g. CONTINUE).
+ const float pixel=std::max(1.0f,std::round(scale*2.1f));
+ float at_x=std::round(x),at_y=std::round(y);
  const u32 ink=C2D_Color32(243,234,211,255);
  for(const char* p=value;*p;++p) {
   if(*p=='\\n'){at_x=x;at_y+=pixel*9.0f;continue;}
