@@ -1,5 +1,6 @@
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -159,6 +160,58 @@ void test_source_visual_state_snapshot_roundtrip() {
     assert(replay.restore_sprite_states({}));
     assert(replay.capture_sprite_states().empty());
     assert(replay.placement(first)->source_frame==world.placement(second)->source_frame);
+}
+
+void test_original_world_visual_file_roundtrip() {
+    constexpr std::uint32_t seed=0x4d445a33u;
+    constexpr const char* path="minidayz_world_visual_test.bin";
+    constexpr const char* temp="minidayz_world_visual_test.tmp";
+    constexpr const char* corrupt="minidayz_world_visual_corrupt.bin";
+    std::remove(path);
+    std::remove(temp);
+    std::remove(corrupt);
+    minidayz::WorldSystem first, replay, wrong;
+    assert(first.generate_from_source(seed,"Map",0));
+    assert(replay.generate_from_source(seed,"Map",0));
+    assert(wrong.generate_from_source(seed+1,"Map",0));
+    std::size_t tree=first.placement_count();
+    for(std::size_t i=0;i<first.placement_count();++i) {
+        const auto* p=first.placement(i);
+        if(p && p->layer==43 && p->object==207) {tree=i;break;}
+    }
+    assert(tree<first.placement_count());
+    const auto uid=first.placement(tree)->runtime_uid;
+    assert(first.set_sprite_state_by_runtime_uid(uid,0,1,1.0f));
+    using minidayz::persistence::write_world_visual_state;
+    using minidayz::persistence::read_world_visual_state;
+    assert(!write_world_visual_state(first,0,path,path));
+    assert(write_world_visual_state(first,0,path,temp));
+    assert(!read_world_visual_state(wrong,0,path));
+    assert(!read_world_visual_state(replay,1,path));
+    assert(replay.capture_sprite_states().empty());
+    assert(read_world_visual_state(replay,0,path));
+    assert(replay.placement(tree)->source_frame==1);
+    assert(!replay.capture_sprite_states().empty());
+    auto* in=std::fopen(path,"rb");
+    assert(in);
+    auto* out=std::fopen(corrupt,"wb");
+    assert(out);
+    unsigned char bytes[256]{};
+    const auto n=std::fread(bytes,1,sizeof(bytes),in);
+    assert(n>25);
+    bytes[22]^=0x10; // checksum must reject tampering
+    assert(std::fwrite(bytes,1,n,out)==n);
+    assert(std::fclose(in)==0);
+    assert(std::fclose(out)==0);
+    assert(!read_world_visual_state(replay,0,corrupt));
+    assert(replay.placement(tree)->source_frame==1);
+    assert(replay.restore_sprite_states({}));
+    assert(replay.capture_sprite_states().empty());
+    assert(read_world_visual_state(replay,0,path));
+    assert(replay.placement(tree)->source_frame==1);
+    std::remove(path);
+    std::remove(temp);
+    std::remove(corrupt);
 }
 
 void test_grid_semantics() {
@@ -536,6 +589,7 @@ int main() {
     test_grid_semantics();
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
+    test_original_world_visual_file_roundtrip();
     test_source_tree_fall_item_table();
     test_generated_object_instance_ids();
     test_source_profiles();
