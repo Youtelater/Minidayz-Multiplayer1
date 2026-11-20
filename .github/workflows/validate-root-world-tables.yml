@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Regenerate original Construct object, layout and animation tables
+        run: python3 tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
       - name: Generate locations and world event tables from root original
         run: python3 tools/stage1/extract_location_templates.py
       - name: Generate procedural ground scatter from root original
@@ -33,6 +35,14 @@ jobs:
               assert "kLocation" in s or "kTerrainScatter" in s, name
               print(name, len(s), "bytes")
           PY
+      - name: Native world generation regression against regenerated root tables
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
+            source/world.cpp source/stage1_data_access.cpp \
+            source/construct_array.cpp source/construct_expression.cpp \
+            source/construct_event_interpreter.cpp source/location_event_runtime.cpp \
+            source/npc_system.cpp tests/world_system_tests.cpp -o /tmp/minidayz_root_world_tests
+          /tmp/minidayz_root_world_tests
       - name: Upload root-source world tables
         uses: actions/upload-artifact@v4
         with:
