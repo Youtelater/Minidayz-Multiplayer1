@@ -193,6 +193,12 @@ jobs:
           make clean
           make
 
+      - name: Prevent original sprite atlases from rendering as whole PNGs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_original_atlas_runtime_guard.py
+
       - name: Verify exact original sprite frame mappings in generated T3X atlases
         shell: bash
         run: |
