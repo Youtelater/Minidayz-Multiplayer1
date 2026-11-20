@@ -39,6 +39,18 @@ struct WorldFeature {
     std::uint32_t source_value{};
 };
 
+// Source-authored sprite state of one distinct object, addressed by its
+// stable runtime identity rather than the reused Construct event UID.
+// The snapshot is also used for door/tree/roof state replay after generating
+// the same world seed; it deliberately contains no invented gameplay rule.
+struct WorldSpriteState {
+    std::uint64_t runtime_uid{};
+    std::uint16_t object{};
+    std::uint16_t animation{};
+    std::uint32_t frame{};
+    float opacity{};
+};
+
 struct WorldMapMarker {
     std::uint8_t cell_x{};
     std::uint8_t cell_y{};
@@ -162,6 +174,14 @@ public:
                                     std::uint16_t animation,
                                     std::uint32_t frame,
                                     float opacity) noexcept;
+    // Capture only sprite states different from the generated original.
+    // No 3DS rendering resources are needed; replay validates every frame.
+    std::vector<WorldSpriteState> capture_sprite_states() const;
+    bool restore_sprite_states(const std::vector<WorldSpriteState>& states) noexcept;
+    bool set_sprite_state_by_runtime_uid(std::uint64_t uid,
+                                         std::uint16_t animation,
+                                         std::uint32_t frame,
+                                         float opacity) noexcept;
     std::size_t placement_count() const noexcept { return placements_.size(); }
 
     std::size_t source_location_spawn_count() const noexcept { return source_location_spawn_count_; }
@@ -184,6 +204,8 @@ private:
     std::vector<WorldMapMarker> map_markers_{};
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
+    std::vector<WorldSpriteState> original_sprite_states_{};
+
     std::size_t source_location_spawn_count_{};
     std::uint8_t generation_phase_{};
     std::uint8_t generation_level_{};
