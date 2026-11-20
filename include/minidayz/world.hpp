@@ -161,8 +161,6 @@ public:
                                     std::uint32_t frame,
                                     float opacity) noexcept;
     std::size_t placement_count() const noexcept { return placements_.size(); }
-    // An instance ID never changes when its frame or opacity changes.
-    const WorldPlacement* placement_by_id(std::uint32_t id) const noexcept;
 
     std::size_t source_location_spawn_count() const noexcept { return source_location_spawn_count_; }
     const WorldGrid& grid() const noexcept { return grid_; }
