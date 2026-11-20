@@ -53,6 +53,8 @@ The priority extractor located **405** English item names and **383** numeric-to
 
 **Ready-for-implementation handoff:** Every original event and its syntactic condition/action content is now recoverable, source-path keyed and auditable. Use root-original evidence rather than stale `data/stage1` derived indices for new implementation. **Not yet certified:** human/runtime semantic translation of all 22,343 events, complete source RNG reproducibility, and gameplay parity; those must be resolved per system when the world is implemented and tested.
 
+**Additional original files inspected:** see [Additional Original Files — World Reference](ADDITIONAL_ORIGINAL_FILES_WORLD_REFERENCE.md) for `bunker_json`, `spawn_npc_arrays.txt`, original offline resource lists, extended item descriptions, log/UI text, lighting extensions, MP world-state/structures/interactions, and files intentionally excluded pending provenance. These findings complement the Construct event trace; they do not override root-original game rules.
+
 ## 1. Source-of-truth and inventory
 
 | Input | Use | Evidence |
