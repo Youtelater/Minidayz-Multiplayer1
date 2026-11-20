@@ -115,6 +115,52 @@ void test_generated_object_instance_ids() {
     assert(!first.placement_by_instance_id(~std::uint64_t{0}));
 }
 
+void test_source_visual_state_snapshot_roundtrip() {
+    constexpr auto seed=0x4d445a33u;
+    minidayz::WorldSystem world, replay;
+    assert(world.generate_from_source(seed,"Map",0));
+    assert(replay.generate_from_source(seed,"Map",0));
+    assert(world.capture_sprite_states().empty());
+    std::size_t first=world.placement_count();
+    std::size_t second=world.placement_count();
+    for(std::size_t i=0;i<world.placement_count();++i) {
+        const auto* p=world.placement(i);
+        if(!p || p->object!=207 || p->layer!=43) continue;
+        if(first==world.placement_count()) first=i;
+        else {second=i;break;}
+    }
+    assert(first<world.placement_count() && second<world.placement_count());
+    const auto uid=world.placement(first)->runtime_uid;
+    const auto other=*world.placement(second);
+    assert(world.set_sprite_state_by_runtime_uid(uid,0,1,1.0f));
+    assert(world.placement(first)->source_frame==1);
+    assert(world.placement(second)->source_frame==other.source_frame);
+    const auto changed=world.capture_sprite_states();
+    assert(changed.size()==1 && changed[0].runtime_uid==uid);
+    assert(replay.restore_sprite_states(changed));
+    assert(replay.placement(first)->source_frame==1);
+    assert(replay.placement(second)->source_frame==other.source_frame);
+    auto bad=changed;
+    bad.push_back(bad[0]);
+    assert(!replay.restore_sprite_states(bad));
+    assert(replay.placement(first)->source_frame==1);
+    bad=changed;
+    bad[0].frame=999999;
+    assert(!replay.restore_sprite_states(bad));
+    assert(replay.placement(first)->source_frame==1);
+    bad=changed;
+    bad[0].object=209;
+    assert(!replay.restore_sprite_states(bad));
+    assert(replay.placement(first)->source_frame==1);
+    bad=changed;
+    bad[0].runtime_uid=~std::uint64_t{0};
+    assert(!replay.restore_sprite_states(bad));
+    assert(replay.placement(first)->source_frame==1);
+    assert(replay.restore_sprite_states({}));
+    assert(replay.capture_sprite_states().empty());
+    assert(replay.placement(first)->source_frame==world.placement(second)->source_frame);
+}
+
 void test_grid_semantics() {
     minidayz::WorldGrid grid;
     assert(grid.resize(4, 4));
@@ -489,6 +535,7 @@ void test_level_four_split_grid() {
 int main() {
     test_grid_semantics();
     test_source_world_instance_animation_state();
+    test_source_visual_state_snapshot_roundtrip();
     test_source_tree_fall_item_table();
     test_generated_object_instance_ids();
     test_source_profiles();
