@@ -1,14 +1,12 @@
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
-#include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/location_event_runtime.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <random>
-#include <tuple>
 
 namespace minidayz {
 namespace {
@@ -756,19 +754,12 @@ bool WorldSystem::set_placement_sprite_state(
     if (index >= placements_.size() || !std::isfinite(opacity) ||
         opacity < 0.0f || opacity > 1.0f) return false;
     auto& placement = placements_[index];
-    const auto key = std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
-        placement.object, animation, frame};
-    const auto* begin = stage1::kSpriteFrames;
-    const auto* end = begin + stage1::kSpriteFrameCount;
-    const auto* found = std::lower_bound(begin,end,key,
-        [](const stage1::SpriteFrameDef& source,const auto& wanted) {
-            return std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
-                source.object,source.animation,source.frame} < wanted;
-        });
-    // No silent fallback to frame zero. Unmapped states must be audited.
-    if (found == end || found->object != placement.object ||
-        found->animation != animation || found->frame != frame)
-        return false;
+    // Both native tests and the 3DS renderer share the source Construct
+    // animation table. The generated T3X atlas is a build-time artifact and
+    // is deliberately NOT a dependency of the native WorldSystem.
+    const auto animations = stage1::animations_for_object(placement.object);
+    if (animation >= animations.size || !animations.data ||
+        frame >= animations.data[animation].frames) return false;
     placement.source_animation = animation;
     placement.source_frame = frame;
     placement.opacity = opacity;
