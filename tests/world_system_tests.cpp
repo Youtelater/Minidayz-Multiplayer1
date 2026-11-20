@@ -102,11 +102,7 @@ void test_original_map_layout_and_descriptors() {
            p->layer==32 || p->layer>=44 || p->opacity<=0.0f)continue;
         const auto* obj=minidayz::stage1::find_object(p->object);
         if(!obj || obj->type!=18)continue;
-        float source_extent=0.0f;
-        for(const auto& sprite:minidayz::stage1::kSpriteFrames)
-            if(sprite.object==p->object)
-                source_extent=std::max(source_extent,
-                    std::hypot(sprite.width,sprite.height));
+        const float source_extent=std::hypot(obj->width,obj->height);
         if(source_extent<70.0f)continue;
         const float boundary=(std::floor(p->x/512.0f)+1.0f)*512.0f;
         const float dx=boundary-p->x;
