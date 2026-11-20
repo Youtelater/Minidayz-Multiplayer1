@@ -5,7 +5,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
-SOURCE = Path("data/stage1/construct_project_parsed.json")
+SOURCE = Path("data.deobfuscated.js")
 OUTPUT = Path("include/minidayz/generated/npc_spawn_call_source.hpp")
 FUNCTION_OBJECT = 189
 ON_FUNCTION = 40
