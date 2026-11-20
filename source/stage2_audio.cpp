@@ -249,9 +249,9 @@ void Stage2Audio::start_menu_ambience() noexcept {
     // Original Menu_Events/Menu_init event 9948355272197826:
     // play ambient looping at -10 dB. Reuse the gameplay day-ambience
     // sample and NDSP voice so a menu->daytime game transition is seamless.
-    if (!ndsp_ready_ || muted_) return;
+    if (!ndsp_ready_ || muted_ || (ambient_variant_==0 && menu_ambience_)) return;
     set_environment_ambience(false,false);
-    if (ambient_variant_!=0 || !clips_[12].pcm || menu_ambience_) return;
+    if (ambient_variant_!=0 || !clips_[12].pcm) return;
     float mix[12]{};
     constexpr float kOriginalMenuGain = 0.31622777f; // 10^(-10/20)
     mix[0]=kOriginalMenuGain;
