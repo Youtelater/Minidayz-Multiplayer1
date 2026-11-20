@@ -1,7 +1,6 @@
 #pragma once
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
-#include "minidayz/generated/sprite_catalog.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -37,25 +36,16 @@ public:
                 std::strstr(layer->name,"respawn")||
                 std::strstr(layer->name,"_resp")||
                 std::strstr(layer->name,"points")))continue;
-            // Original create_map_element instances often have width=0
-            // and height=0 because Construct creates them at runtime.
-            // Their ACTUAL sprite-frame dimensions still matter for
-            // visibility. Using only zero instance bounds hid buildings
-            // and trees whose hotspot fell in the neighboring 512px bin.
-            float sprite_w=std::max(0.0f,p->width);
-            float sprite_h=std::max(0.0f,p->height);
-            const auto* first=stage1::kSpriteFrames;
-            const auto* last=first+stage1::kSpriteFrameCount;
-            const auto* frame=std::lower_bound(first,last,p->object,
-                [](const stage1::SpriteFrameDef& f,std::uint16_t object){
-                    return f.object<object;
-                });
-            // Exact frame if available, otherwise the largest original
-            // frame of the object, never an invented geometry estimate.
-            for(;frame!=last && frame->object==p->object;++frame){
-                sprite_w=std::max(sprite_w,frame->width);
-                sprite_h=std::max(sprite_h,frame->height);
-            }
+            // Runtime-generated Construct sprites can have ZERO instance
+            // dimensions. Their source ObjectDef still contains the original
+            // sprite size. Without these bounds, buildings/trees disappear
+            // when their hotspot is in the next 512px visibility bin.
+            // Use the shared original game source table, not an optional
+            // renderer-only atlas header (native world tests need this too).
+            const float sprite_w=std::max(std::max(0.0f,p->width),
+                                         std::max(0.0f,object->width));
+            const float sprite_h=std::max(std::max(0.0f,p->height),
+                                         std::max(0.0f,object->height));
             const float scale=std::max(1.0f,std::fabs(p->scale_x));
             const float extent=std::max(30.0f,
                 std::hypot(sprite_w,sprite_h)*scale);
