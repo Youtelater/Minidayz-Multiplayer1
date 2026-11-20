@@ -582,7 +582,10 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
                                     float camera_x,float camera_y,
                                     float view_width,float view_height,
                                     std::uint8_t source_level) noexcept {
- if(grid.width()==0||grid.height()==0||!ground_loaded_) return false;
+ // Roads use independent original road atlases. A damaged/missing ground
+ // layout must NOT suppress an otherwise valid generated road network.
+ // The scene already draws a visible floor-load diagnostic independently.
+ if(grid.width()==0||grid.height()==0) return false;
  if(!(bounds.width>0.0f && bounds.height>0.0f)) return false;
  const auto ensure_road_sheet=[&](std::uint32_t theme) noexcept -> bool {
   if(theme>=7) return false;
