@@ -35,6 +35,24 @@
 6. Trace world-linked NPCs/animals, weather, vehicles, roads/bridges, quest/world events and world-state persistence.
 7. Compare original and native generation output and world interactions on matching map seeds; run Azahar and real-console tests. A completed **source audit** is not a completed **world implementation**.
 
+## Verified source interaction recipes — final audit handoff
+
+The [source audit run #44834090613](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44834090613) passed after adding **every inherited parent condition** and event flags to `world_event_matrix.csv`. This is essential: an object's direct event action cannot be implemented accurately without its parent event conditions.
+
+The original-source priority extractor also found **all 14 requested priority UIDs**, covering tree hits/falls, normal-door open/close, house transparency, auto doors, `create_map_location`, `create_map_element`, map generation, loot respawn, `Trigger_spawn`, and `Spawn_drop`. Original `l_eng_items.xml` labels the tree-drop source IDs as:
+
+| Original item ID | Original English label |
+|---:|---|
+| 37 | Ashwood Stick |
+| 38 | Wooden Sticks |
+| 50 | Woodpiles |
+
+**These are item identity labels, not claims of unconditional drops.** The event conditions, random expressions, source location, quantity, sound and animation must be applied from the saved original event record. This corrects the risk of inventing the wood rewards during implementation.
+
+The priority extractor located **405** English item names and **383** numeric-to-original-sprite labels from the root item table. Differences are retained as a mapping audit, not silently filled. Files are available in the workflow artifact as `priority_world_original_events.json`, `priority_world_original_events.md` and `original_item_id_reference.csv`.
+
+**Ready-for-implementation handoff:** Every original event and its syntactic condition/action content is now recoverable, source-path keyed and auditable. Use root-original evidence rather than stale `data/stage1` derived indices for new implementation. **Not yet certified:** human/runtime semantic translation of all 22,343 events, complete source RNG reproducibility, and gameplay parity; those must be resolved per system when the world is implemented and tested.
+
 ## 1. Source-of-truth and inventory
 
 | Input | Use | Evidence |
