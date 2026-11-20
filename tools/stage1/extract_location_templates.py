@@ -259,7 +259,8 @@ def main():
             event_rows.append((branch_uid, node[4], parent_index, depth,
                                first_condition, len(condition_rows) - first_condition,
                                first_action, len(action_rows) - first_action,
-                               bool(node[2]) if len(node) > 2 else False))
+                               bool(node[2]) if len(node) > 2 else False,
+                               bool(node[3]) if len(node) > 3 and isinstance(node[3], bool) else False))
             children = node[7] if len(node) > 7 and isinstance(node[7], list) else []
             stack.extend((child, node_index, depth + 1, branch_uid)
                          for child in reversed(children) if isinstance(child, list))
@@ -268,13 +269,13 @@ def main():
     event_lines = [
         "#pragma once", "#include <cstddef>", "#include <cstdint>",
         "namespace minidayz::stage1 {",
-        "struct LocationEventSource { std::uint64_t branch_uid, event_uid; std::uint32_t parent_index, first_condition, condition_count, first_action, action_count; std::uint16_t depth; bool disabled; };",
+        "struct LocationEventSource { std::uint64_t branch_uid, event_uid; std::uint32_t parent_index, first_condition, condition_count, first_action, action_count; std::uint16_t depth; bool or_block, disabled; };",
         f"inline constexpr std::size_t kLocationEventSourceCount = {len(event_rows)};",
         "inline constexpr LocationEventSource kLocationEventSource[] = {"
     ]
-    for branch_uid, event_uid, parent, depth, first_condition, condition_count, first_action, action_count, disabled in event_rows:
+    for branch_uid, event_uid, parent, depth, first_condition, condition_count, first_action, action_count, or_block, disabled in event_rows:
         event_lines.append(
-            f"    {{{branch_uid}ULL, {event_uid}ULL, {parent}u, {first_condition}u, {condition_count}u, {first_action}u, {action_count}u, {depth}, {str(disabled).lower()}}},")
+            f"    {{{branch_uid}ULL, {event_uid}ULL, {parent}u, {first_condition}u, {condition_count}u, {first_action}u, {action_count}u, {depth}, {str(or_block).lower()}, {str(disabled).lower()}}},")
     event_lines += [
         "};",
         "struct LocationEventConditionSource { std::uint64_t branch_uid, event_uid; std::int16_t object_index; std::uint16_t command_id; std::uint32_t first_parameter; std::uint16_t parameter_count; const char* raw_call; };",
