@@ -61,9 +61,9 @@ struct WorldPlacement {
     // Original LOOT_respawn instance variable 0, when a source event
     // actually creates and configures a category marker.
     std::uint16_t source_loot_category{};
-    // An object instance has an identity distinct from its Construct event
-    // UID. Generated objects share event UIDs but must retain independent
-    // door/tree/container states for interactions and saving.
+    // One-based, deterministic index within this world generation.
+    // Fast lookup for local interactions; runtime_uid is the globally
+    // distinguished original/static or generated world object identity.
     std::uint64_t instance_id{};
 };
 
@@ -183,7 +183,6 @@ private:
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
     std::size_t source_location_spawn_count_{};
-    std::uint64_t next_generated_instance_id_{1};
     std::uint8_t generation_phase_{};
     std::uint8_t generation_level_{};
     bool generation_is_map_{};
