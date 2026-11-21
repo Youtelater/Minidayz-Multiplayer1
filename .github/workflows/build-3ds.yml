@@ -166,7 +166,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \\
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
             tests/source_world_proximity_tests.cpp -o /tmp/minidayz_source_world_proximity
           /tmp/minidayz_source_world_proximity
 
