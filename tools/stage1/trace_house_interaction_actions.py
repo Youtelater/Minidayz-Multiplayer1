@@ -25,8 +25,11 @@ for sheet,events in p[6]:
    if not isinstance(action,list) or len(action)<6:continue
    if action[1]==73 and action[0]!=508:
     target=action[5][0][1] if action[5] and len(action[5][0])>1 else None
+    # Construct literal expression nodes are [type, value].
     if isinstance(target,list) and len(target)>1 and isinstance(target[1],int):
      spawned.add(target[1])
+    elif isinstance(target,int):
+     spawned.add(target)
    elif action[0] in spawned:
     key=(action[0],action[1])
     counts[key]+=1
