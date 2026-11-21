@@ -437,16 +437,16 @@ void test_original_world_visual_file_roundtrip() {
     // its actual draw layer, not just the Sprite frame.
     std::size_t roof=first.placement_count();
     for(std::size_t i=0;i<first.placement_count();++i)
-        if(stage1::source_family_contains(1049,first.placement(i)->object)){
+        if(minidayz::stage1::source_family_contains(1049,first.placement(i)->object)){
             roof=i;break;
         }
     assert(roof<first.placement_count());
     const auto source_layer=first.placement(roof)->layer;
-    const auto* map=stage1::find_layout("Map");
+    const auto* map=minidayz::stage1::find_layout("Map");
     assert(map);
-    const auto map_id=static_cast<std::uint16_t>(map-stage1::kLayoutTable);
+    const auto map_id=static_cast<std::uint16_t>(map-minidayz::stage1::kLayoutTable);
     std::uint16_t bg=0xffff;
-    for(const auto& l:stage1::kLayerTable)
+    for(const auto& l:minidayz::stage1::kLayerTable)
         if(l.layout==map_id && std::strcmp(l.name,"Buildings_bg")==0){
             bg=l.index;break;
         }
