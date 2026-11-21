@@ -239,10 +239,12 @@ int main() {
         100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,0.0f,100.0f,100.0f));
     assert(!source_solid_sprite_contains(
         100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,0.0f,119.0f,100.0f));
+    // Rotating 90 degrees about the *hotspot* yields a 10x20 rectangle
+    // centred at (100,100), not the formerly displaced top-left box.
     assert(source_solid_sprite_contains(
-        100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,90.0f,85.0f,105.0f));
+        100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,90.0f,100.0f,105.0f));
     assert(!source_solid_sprite_contains(
-        100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,90.0f,105.0f,105.0f));
+        100.0f,100.0f,20.0f,10.0f,0.5f,0.5f,90.0f,110.0f,105.0f));
 
     // Non-finite input must not poison player coordinates or stats.
     PlayerInput invalid{};
