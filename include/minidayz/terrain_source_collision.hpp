@@ -1,7 +1,20 @@
 #pragma once
 #include <cmath>
+#include <cstdint>
 
 namespace minidayz::terrain {
+
+// Root Game_events > House_transparenting (UID 5249390718058362)
+// changes the opacity and draw layer of roof object 1049. This is a
+// visibility overlay, not a solid wall. In the native port, applying
+// a blanket "all Buildings sprites are solid" rule to a roof would
+// make the house impossible to enter even after the roof is faded.
+// Other building sprites still require their source collision tests.
+inline constexpr bool source_visual_roof_overlay(
+    std::uint16_t object_id) noexcept {
+    return object_id==1049;
+}
+
 
 // Original Construct world placements store a hotspot, source dimensions,
 // and an angle in degrees. Evaluate the true rotated rectangle rather than
