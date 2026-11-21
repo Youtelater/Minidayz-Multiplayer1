@@ -926,8 +926,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // interior/wall collider and shadow sprites at ORIGINAL imagepoints.
         // These per-frame imagepoints come from source frame[9], including
         // named w1/s1 and numeric 3, not guessed PNG texture rectangles.
-        if(var1==7 || (var1==4 && ((var2==46 && rule.object==1406) ||
-                                     (var2==47 && rule.object==1407)))) {
+        if(var1==7 || var1==4) {
         std::vector<std::pair<std::uint16_t,std::size_t>> spawned;
         spawned.emplace_back(rule.object,placements_.size()-1);
         for(const auto& action:world_source::kSourceHouseCompanionSpawns){
@@ -936,9 +935,9 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             // UID for house 312; the source event's actual variant/base
             // predicate is authoritative and avoids missing its roof.
             if(action.variant!=var2 || action.base_object!=rule.object)continue;
-            const bool nested_category4 = action.event_uid==502091414218817ULL ||
-                                          action.event_uid==656789528671005ULL;
-            if(nested_category4 != (var1==4))continue;
+            // Category 4 scenery is distinct from category 7 houses;
+            // its exact original event UID also preserves nested variant guards.
+            if(var1==4 && action.event_uid!=rule.uid)continue;
             auto parent_index=placements_.size();
             for(auto it=spawned.rbegin();it!=spawned.rend();++it){
                 if(it->first==action.parent_object){
