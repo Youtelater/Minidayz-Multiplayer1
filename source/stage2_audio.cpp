@@ -297,15 +297,23 @@ void Stage2Audio::play_original_world_sound(OriginalWorldSound cue) noexcept {
     };
     const auto index=static_cast<std::size_t>(cue);
     if (index>=sizeof(files)/sizeof(files[0])) return;
-    constexpr std::size_t voice=13;
-    if (loaded_world_cue_!=static_cast<int>(index)) {
+    // Source treefall can follow a chop in the same event chain. Give it a
+    // separate voice so loading the fall sample does not stop the chop.
+    // When CSND exposes fewer than 15 channels, voice 14 is optional:
+    // preserve the existing effects channel rather than crashing.
+    const bool treefall=index==static_cast<std::size_t>(OriginalWorldSound::treefall02) ||
+                        index==static_cast<std::size_t>(OriginalWorldSound::treefall03);
+    const std::size_t voice=treefall ? 14u : 13u;
+    if (csnd_ready_ && csnd_channels_[voice]<0) return;
+    int& loaded_cue=treefall ? loaded_treefall_cue_ : loaded_world_cue_;
+    if (loaded_cue!=static_cast<int>(index)) {
         stop_voice(voice);
         if(clips_[voice].pcm)linearFree(clips_[voice].pcm);
         clips_[voice]={};
         waves_[voice]={};
-        loaded_world_cue_=-1;
+        loaded_cue=-1;
         if(!load_wav(files[index],clips_[voice]))return;
-        loaded_world_cue_=static_cast<int>(index);
+        loaded_cue=static_cast<int>(index);
     }
     play(voice);
 }
@@ -493,5 +501,6 @@ void Stage2Audio::shutdown() noexcept {
     csnd_status_frame_counter_=0;
     weather_sample_variant_=-1;
     loaded_world_cue_=-1;
+    loaded_treefall_cue_=-1;
 }
 }
