@@ -42,6 +42,19 @@ void test_all_original_location_branches() {
                         static_cast<unsigned>(level));
                     assert(false);
                 }
+                // Verify original source frame, size, opacity, layer and
+                // angle actions never corrupt generated house placements.
+                for(const auto& spawn:branch_runtime.spawns()){
+                    assert(spawn.object<stage1::kObjectCount);
+                    assert(!spawn.layer.empty());
+                    assert(std::isfinite(spawn.x)&&std::isfinite(spawn.y));
+                    assert(std::isfinite(spawn.angle));
+                    assert(std::isfinite(spawn.opacity) &&
+                           spawn.opacity>=0.0 && spawn.opacity<=1.0);
+                    assert(spawn.frame>=0);
+                    assert(std::isfinite(spawn.width)&&
+                           std::isfinite(spawn.height));
+                }
                 ++executions;
             }
         }
