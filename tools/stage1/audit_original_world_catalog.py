@@ -141,7 +141,7 @@ def main():
    frame_references=frame_refs,original_families="|".join(map(str,members)),
    editor_instance_count=inst_count,editor_layers="|".join(matching_layers),
    direct_world_create_action_count=len(actions),
-   direct_world_event_uids="|".join(map(str,sorted({x["event_uid"] for x in actions})),
+   direct_world_event_uids="|".join(map(str,sorted({x["event_uid"] for x in actions}))),
    caution="candidate only; not automatically a unique building"))
  write_csv(out/"building_object_candidates.csv",building_rows)
  summary=dict(source="root/data.deobfuscated.js",original_object_definitions=len(objs),layouts=len(p[5]),editor_placements=len(placed),location_templates=len(branches),location_array_writes=sum(x["array_writes"] for x in branches),direct_create_actions=sum(x["direct_creates"] for x in branches),name_match_candidates={k:len(v) for k,v in matches.items()},building_object_candidates=len(building_rows),original_world_create_actions=len(element_rules),family_member_pairs=len(families))
