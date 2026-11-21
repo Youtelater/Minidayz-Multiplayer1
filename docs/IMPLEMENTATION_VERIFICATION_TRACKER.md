@@ -1,10 +1,8 @@
-## Part 1 — roadside shelters
+## Part 1 — building generator maintenance
 
-- [x] Added seeded roadside shelters on clear cells adjacent to roads. First-aid shelters have a nighttime beacon and a bandage. Ration stops carry food. Both have three solid walls and an open south entrance.
-- [x] Ground supplies spawn when entering a newly generated map. Continue rebuilds the same shelter positions and restores saved ground loot, so collected supplies stay collected.
-- [x] The native shelter regression checks all six map levels, wall and entrance collision, deterministic placement, and loot pickup and restoration.
-- [x] Fixed the event walker to visit leaf events and distinguish variant guards from subtype guards. The loot test now pairs markers in their generated order when their action IDs are reused.
-- [ ] Verify shelter rendering and movement on 3DS. Emulator testing is with the player.
+- [x] Removed the roadside shelter feature added in `e3bc5f6`. An existing save from that revision can still contain its saved ground items.
+- [x] Retained the event walker and variant guard fixes. The loot placement regression pairs markers in generated order when an action ID is reused.
+- [ ] Conditional building placements, initial building loot dispatch and full map-generation parity remain open.
 
 ## Part 2 — per-house roof and wall ownership correction
 

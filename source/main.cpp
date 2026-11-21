@@ -281,7 +281,6 @@ public:
                     boot_input_gate_.reset();
                     return;
                 }
-                if (new_game_generation_) (void)world_.stock_roadside_shelters(ground_loot_);
                 new_game_generation_ = false;
                 travel_generation_ = false;
                 menu_active_ = false;
@@ -2488,26 +2487,6 @@ public:
                 }
             }
 
-            for (const auto& shelter : world_.roadside_shelters()) {
-                const auto floor = shelter.floor();
-                if (floor.x + floor.width < camera_x || floor.x > camera_x + view_w ||
-                    floor.y + floor.height < camera_y || floor.y > camera_y + view_h) continue;
-                const auto floor_color = shelter.beacon ? C2D_Color32(72, 94, 92, 255)
-                                                        : C2D_Color32(116, 93, 63, 255);
-                renderer.draw_solid_rect(floor.x, floor.y, floor.width, floor.height,
-                                         floor_color, 0.55f);
-                for (const auto& wall : shelter.walls()) {
-                    renderer.draw_solid_rect(wall.x, wall.y, wall.width, wall.height,
-                                             C2D_Color32(42, 49, 45, 255), 0.57f);
-                }
-                if (shelter.beacon && !day_night_.day_mode()) {
-                    renderer.draw_solid_rect(shelter.x - 10.0f, floor.y + 4.0f, 20.0f, 14.0f,
-                                             C2D_Color32(255, 185, 80, 96), 0.13f);
-                    renderer.draw_solid_rect(shelter.x - 3.0f, floor.y + 4.0f, 6.0f, 4.0f,
-                                             C2D_Color32(255, 218, 136, 255), 0.12f);
-                }
-            }
-
             // Source bridge and bunker spawn events create terrain features
             // that are NOT pre-placed Map instances. Draw their native
             // Construct sprites at the extracted world coordinates.
@@ -3358,8 +3337,6 @@ private:
         // Original Construct instance positions are relative to their
         // sprite origins, not always their upper-left corners.
         if (scene->terrain_collision_.blocked(x,y)) return true;
-        for (const auto& shelter : scene->world_.roadside_shelters())
-            if (shelter.blocks(x, y)) return true;
         // Original deployed tent foundation Sprite398 has Solid behavior.
         // It lives in the survivor tent store, not the static world index.
         // Root frame[10] is a concave U-shaped wall with an open entrance.

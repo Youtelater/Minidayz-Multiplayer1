@@ -6,11 +6,8 @@
 #include <string_view>
 #include <vector>
 #include "minidayz/generated/location_template_source.hpp"
-#include "minidayz/roadside_shelter.hpp"
 
 namespace minidayz {
-
-namespace items { class GroundLootSystem; }
 
 enum class WorldFeatureKind : std::uint8_t {
     Terrain, Road, Building, Bunker, Bridge, SpawnPoint, Obstacle, Water
@@ -190,10 +187,6 @@ public:
     // world generation completes, before snapshot/save indices are fixed.
     bool create_source_door_companions();
     void reset() noexcept;
-    const std::vector<RoadsideShelter>& roadside_shelters() const noexcept {
-        return roadside_shelters_;
-    }
-    std::size_t stock_roadside_shelters(items::GroundLootSystem& loot) const noexcept;
 
     bool add_feature(const WorldFeature& feature);
     const WorldFeature* feature(std::size_t index) const noexcept;
@@ -258,8 +251,6 @@ private:
     std::uint8_t generation_level_{};
     bool generation_is_map_{};
     bool generate_source_locations(std::uint8_t level);
-    void generate_roadside_shelters();
-    std::vector<RoadsideShelter> roadside_shelters_;
     bool initialized_{};
 };
 
