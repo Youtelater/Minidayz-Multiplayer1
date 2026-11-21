@@ -137,6 +137,10 @@ def main():
   if any(term in item["object_name"].lower() for term in
          ("house","roof","building","door","wall","shelf","table","chair","bed")):
    building_ids.add(oid)
+ # Source evidence identifies these object IDs regardless of whether
+ # their original display names contain an English building keyword.
+ # An original Construct name is NOT a guaranteed semantic category.
+ building_ids.update((302,306,311,312,313,321,322,323,324,333,348,349,787))
  building_rows=[]
  for oid in sorted(building_ids):
   o=objs[oid]
