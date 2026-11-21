@@ -140,6 +140,9 @@ void test_original_generated_house_companions() {
         assert(stage1::source_family_contains(1049,exterior->object));
         assert(!stage1::source_family_contains(1041,foundation->object));
         assert(exterior->linked_runtime_uid==foundation->runtime_uid);
+        assert(exterior->parent_runtime_uid==foundation->runtime_uid);
+        assert(world.placement(door)->parent_runtime_uid==
+               exterior->runtime_uid);
         assert(world.placement(wall)->linked_runtime_uid==
                foundation->runtime_uid);
         assert(world.placement(shadow)->linked_runtime_uid==
