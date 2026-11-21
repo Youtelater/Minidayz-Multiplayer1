@@ -1187,8 +1187,11 @@ public:
         // Construct Doors_auto is an overlap event; it must be allowed to
         // open a source-frame-0 doorway before the next player collision
         // sweep. Otherwise movement blocks at the door and the player can
-        // never cross its "in" imagepoint. Sound still plays only when the
-        // source door state actually changes, inside this handler.
+        // never cross its "in" imagepoint. Each source door may change
+        // frame at most once per update: opened and closed frames can
+        // have DIFFERENT imagepoints. Never trigger both sounds in one tick.
+        std::fill(source_door_changed_this_tick_.begin(),
+                  source_door_changed_this_tick_.end(),0u);
         update_source_automatic_doors();
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
@@ -2876,6 +2879,10 @@ private:
             if(p && p->object==349)
                 source_door_indices_.push_back(static_cast<std::uint32_t>(i));
         }
+        // Rebuild when loading/generating the original source Map. This
+        // vector is a per-frame transition guard, not a saved gameplay
+        // state or a substitute for the original door Sprite frame.
+        source_door_changed_this_tick_.assign(source_door_indices_.size(),0u);
     }
 
     void update_source_automatic_doors() noexcept {
@@ -2883,7 +2890,10 @@ private:
         const minidayz::WorldPoint player_pos{
             player_.state().x,player_.state().y
         };
-        for(const auto index:source_door_indices_){
+        for(std::size_t slot=0;slot<source_door_indices_.size();++slot){
+            if(slot<source_door_changed_this_tick_.size() &&
+               source_door_changed_this_tick_[slot])continue;
+            const auto index=source_door_indices_[slot];
             const auto* p=world_.placement(index);
             if(!p)continue;
             // Check the real source door dimensions and hotspot, not a
@@ -2895,6 +2905,9 @@ private:
             const auto event=minidayz::world_source::source_auto_door_for_placement(
                 world_,index,player_pos);
             using minidayz::world_source::AutomaticDoorEffect;
+            if(event!=AutomaticDoorEffect::none &&
+               slot<source_door_changed_this_tick_.size())
+                source_door_changed_this_tick_[slot]=1u;
             switch(event){
             case AutomaticDoorEffect::open_wood:
                 stage2_audio_.play_original_world_sound(
@@ -3036,6 +3049,7 @@ private:
         npc_ready_ = false;
         menu_active_ = true;
         source_door_indices_.clear();
+        source_door_changed_this_tick_.clear();
         source_roof_indices_.clear();
         source_house_interior_indices_.clear();
         source_roof_elapsed_=0.0f;
@@ -3141,6 +3155,7 @@ private:
     minidayz::terrain::SolidTerrain terrain_collision_{};
     minidayz::terrain::SourceObstacleIndex collision_index_{};
     std::vector<std::uint32_t> source_door_indices_{};
+    std::vector<std::uint8_t> source_door_changed_this_tick_{};
     std::vector<std::uint32_t> source_roof_indices_{};
     std::vector<std::uint32_t> source_house_interior_indices_{};
     float source_roof_elapsed_{};
