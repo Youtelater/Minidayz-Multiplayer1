@@ -956,12 +956,15 @@ bool WorldSystem::set_placement_sprite_state(
         // parked native placement preserves source UID/save identity;
         // transparent 348 has no collision and cannot be rendered.
         const std::uint64_t linked=placement.linked_runtime_uid;
-        for(auto& candidate:placements_){
-            if(candidate.runtime_uid!=linked ||
-               candidate.object!=world_source::door_solid348::kObject ||
-               candidate.linked_runtime_uid!=placement.runtime_uid)continue;
-            candidate.opacity=frame==0?1.0f:0.0f;
-            break;
+        const auto companion_index=static_cast<std::size_t>(
+            (linked&~(std::uint64_t{1}<<63))-1);
+        if((linked&(std::uint64_t{1}<<63))!=0 &&
+           companion_index<placements_.size()){
+            auto& candidate=placements_[companion_index];
+            if(candidate.runtime_uid==linked &&
+               candidate.object==world_source::door_solid348::kObject &&
+               candidate.linked_runtime_uid==placement.runtime_uid)
+                candidate.opacity=frame==0?1.0f:0.0f;
         }
     }
     return true;
@@ -1043,14 +1046,16 @@ bool WorldSystem::restore_sprite_states(
     // This also repairs pre-companion v1 saves that only stored object 349.
     for(const auto& door:placements_) {
         if(door.object!=349 || !door.linked_runtime_uid)continue;
-        for(auto& solid:placements_) {
-            if(solid.runtime_uid==door.linked_runtime_uid &&
-               solid.object==world_source::door_solid348::kObject &&
-               solid.linked_runtime_uid==door.runtime_uid) {
-                solid.opacity=door.source_frame==0?1.0f:0.0f;
-                break;
-            }
-        }
+        const std::uint64_t linked=door.linked_runtime_uid;
+        if((linked&(std::uint64_t{1}<<63))==0)continue;
+        const auto index=static_cast<std::size_t>(
+            (linked&~(std::uint64_t{1}<<63))-1);
+        if(index>=placements_.size())continue;
+        auto& solid=placements_[index];
+        if(solid.runtime_uid==linked &&
+           solid.object==world_source::door_solid348::kObject &&
+           solid.linked_runtime_uid==door.runtime_uid)
+            solid.opacity=door.source_frame==0?1.0f:0.0f;
     }
     return true;
 }
