@@ -74,6 +74,17 @@ for name,nodes in p[6]:
   nested_variant={502091414218817:46,656789528671005:47}.get(e[4])
   if nested_variant is not None and 1506402191387381 in anc and not e[5]:
    variants=[nested_variant]
+  # Root variants 46/47 put their Spawn actions in an unconditional
+  # child of the literal var2 guard. Inherit that guard only for these
+  # independently inspected parent/child pairs; no other conditional
+  # event path is implicitly promoted.
+  inherited_guards={
+      502091414218817:(504327785638027,46),
+      656789528671005:(352684961907206,47),
+  }
+  inherited=inherited_guards.get(e[4])
+  if inherited and not e[5] and anc[-1]==inherited[0]:
+   variants=[inherited[1]]
   if len(variants)!=1:continue
   variant=variants[0]
   # Source parent UID 3673396466799513 is original var1==7 Mapgen
@@ -82,8 +93,10 @@ for name,nodes in p[6]:
   is_house_parent=3673396466799513 in anc
   original_conditions=e[5] if isinstance(e[5],list) else []
   direct_var2_condition=(
-      is_house_parent and len(original_conditions)==1 and
-      original_conditions[0][:2]==[508,71])
+      is_house_parent and ((len(original_conditions)==1 and
+      original_conditions[0][:2]==[508,71]) or
+      (inherited is not None and not original_conditions and
+       anc[-1]==inherited[0] and variant==inherited[1])))
   if direct_var2_condition:
       primaries.append((e[4],base,variant,roots[0][2],roots[0][3]))
   elif nested_variant is None:
