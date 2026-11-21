@@ -30,8 +30,11 @@ for oid in family[1:]:
             pt=next((point for point in points
                 if isinstance(point,list) and point and point[0]=="Imagepoint 1"),None)
             if pt is None:continue
+            # Original 4505026567093285/2384027464846375 compare numeric Imagepoint 2.
+            # Construct numeric index 2 is the second authored point, or hotspot if absent.
+            depth=points[1] if len(points)>1 else ["",frame[7],frame[8]]
             if not isinstance(frame[4],(int,float)) or not isinstance(frame[5],(int,float)) or frame[4]<=0 or frame[5]<=0:continue
-            rows.append((oid,ai,fi,frame[4],frame[5],frame[7],frame[8],pt[1],pt[2]))
+            rows.append((oid,ai,fi,frame[4],frame[5],frame[7],frame[8],pt[1],pt[2],depth[1],depth[2]))
             member_count+=1
     if member_count==0:without.append(oid)
 if not rows:
@@ -43,7 +46,7 @@ lines=["#pragma once","#include <cstdint>","#include <cstddef>",
 "// Each entry belongs to a real Sprite member of the original family 1049.",
 "struct SourceRoofMemberPoint {",
 " std::uint16_t object,animation; std::uint32_t frame;",
-" float width,height,origin_x,origin_y,point_x,point_y; };",
+" float width,height,origin_x,origin_y,point_x,point_y,depth_x,depth_y; };",
 "inline constexpr SourceRoofMemberPoint kSourceRoofMemberPoints[]={"]
 for row in rows:
     lines.append(" {"+",".join([str(row[0]),str(row[1]),str(row[2])]
