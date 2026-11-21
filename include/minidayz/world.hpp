@@ -78,9 +78,8 @@ struct WorldPlacement {
     // actually creates and configures a category marker.
     std::uint16_t source_loot_category{};
     std::uint64_t runtime_uid{};
-    // Root tree create_map_element links each tree to a separate
-    // obst_base (345) via the original instance variables; the hitbox
-    // also records its associated tree. This runtime link is rebuilt
+    // Original source world events link trees to obst_base (345) and
+    // automatic doors (349) to their Solid companion (348). This runtime link is rebuilt
     // deterministically during world generation, not guessed by distance.
     std::uint64_t linked_runtime_uid{};
     // One-based, deterministic index within this world generation.
@@ -166,6 +165,10 @@ public:
     bool load_source_layout(std::string_view layout_name);
     bool load_source_bunker_spawns(bool map_fs = false);
     bool load_source_bridge_elements();
+    // Source Doors_auto creates/destroys companion Sprite 348 for each
+    // door 349. Reserve stable source-compatible linked placements when
+    // world generation completes, before snapshot/save indices are fixed.
+    bool create_source_door_companions();
     void reset() noexcept;
 
     bool add_feature(const WorldFeature& feature);
