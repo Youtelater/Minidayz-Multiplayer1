@@ -135,13 +135,14 @@ void test_original_house_loot_marker_spawns() {
         const auto first=world.placement_count();
         assert(world.expand_map_element(7,static_cast<std::uint8_t>(variant),
             0,{6000.0f,6000.0f})>0);
+        auto next_marker=first;
         for(const auto& action:kSourceHouseLootMarkers){
             if(action.variant!=variant)continue;
             const WorldPlacement* marker=nullptr;
-            for(std::size_t i=first;i<world.placement_count();++i){
+            for(std::size_t i=next_marker;i<world.placement_count();++i){
                 const auto* p=world.placement(i);
                 if(p->object==218 && p->source_uid==action.action_uid){
-                    marker=p;break;
+                    marker=p;next_marker=i+1;break;
                 }
             }
             assert(marker);
@@ -1413,11 +1414,53 @@ void test_level_four_split_grid() {
     }
 }
 
+void test_roadside_shelters() {
+    minidayz::WorldSystem world;
+    constexpr auto seed = 0x9371u;
+    for (std::uint8_t level = 0; level < 6; ++level) {
+        assert(world.generate_from_source(seed, "Map", level));
+        const auto shelters = world.roadside_shelters();
+        assert(shelters.size() == minidayz::RoadsideShelter::maximum_count);
+        minidayz::items::GroundLootSystem loot;
+        assert(world.stock_roadside_shelters(loot) == shelters.size());
+        for (std::size_t i = 0; i < shelters.size(); ++i) {
+            const auto& shelter = shelters[i];
+            assert(world.bounds().contains({shelter.x, shelter.y}));
+            const auto floor = shelter.floor();
+            assert(shelter.blocks(shelter.x, floor.y + 2.0f));
+            assert(shelter.blocks(floor.x + 2.0f, shelter.y));
+            assert(shelter.blocks(floor.x + floor.width - 2.0f, shelter.y));
+            assert(!shelter.blocks(shelter.x, floor.y + floor.height - 1.0f));
+            assert(!shelter.blocks(shelter.x, shelter.supply_y()));
+            assert(shelter.beacon == (i % 2 == 0));
+            const auto* supply = loot.entry(i);
+            assert(supply && supply->item.item_id == shelter.supply_item);
+            assert(supply->x == shelter.x && supply->y == shelter.supply_y());
+        }
+        // Continuing a save rebuilds only the shelter geometry. The existing
+        // ground-loot snapshot carries any items that were not collected.
+        minidayz::items::InventorySystem inventory;
+        assert(loot.pickup_nearest(inventory, shelters.front().x, shelters.front().supply_y(), 1.0f));
+        const auto saved = loot.snapshot();
+        assert(world.generate_from_source(seed, "Map", level));
+        assert(world.roadside_shelters().size() == shelters.size());
+        for (std::size_t i = 0; i < shelters.size(); ++i) {
+            assert(world.roadside_shelters()[i].x == shelters[i].x);
+            assert(world.roadside_shelters()[i].y == shelters[i].y);
+        }
+        assert(loot.restore(saved));
+        assert(!loot.nearest(shelters.front().x, shelters.front().supply_y(), 1.0f));
+    }
+    world.reset();
+    assert(world.roadside_shelters().empty());
+}
+
 } // namespace
 
 int main() {
     test_original_interaction_polygon_geometry();
     test_grid_semantics();
+    test_roadside_shelters();
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
     test_source_event_tree_hit_health_and_atomic_fall();

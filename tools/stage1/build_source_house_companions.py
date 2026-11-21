@@ -15,9 +15,9 @@ objects=p[3]
 source_func=7736925111997576
 def walk(nodes,ancestry=()):
  for e in nodes:
-  if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+  if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
   yield e,ancestry
-  yield from walk(e[7],ancestry+(e[4],))
+  if len(e)>7:yield from walk(e[7],ancestry+(e[4],))
 def literal(expr):
  if not isinstance(expr,list) or len(expr)<2:return None
  if expr[0] in (0,2,4,5,7) and not isinstance(expr[1],list):return expr[1]
@@ -65,7 +65,7 @@ for name,nodes in p[6]:
   for condition in e[5] if isinstance(e[5],list) else []:
    if not isinstance(condition,list) or len(condition)<10 or condition[:2]!=[508,71]:continue
    params=condition[9]
-   if not isinstance(params,list) or len(params)<3:continue
+   if not isinstance(params,list) or len(params)<3 or params[0]!=[10,2]:continue
    last=params[-1]
    value=literal(last[1]) if isinstance(last,list) and len(last)>1 else None
    if isinstance(value,int) and 0<=value<=255:variants.append(value)

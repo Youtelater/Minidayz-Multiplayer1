@@ -1,4 +1,6 @@
 #include "minidayz/world.hpp"
+#include "minidayz/ground_loot.hpp"
+#include "minidayz/terrain_surface.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/location_event_runtime.hpp"
@@ -406,6 +408,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     seed_ = seed;
     grid_.clear();
     map_markers_.clear();
+    roadside_shelters_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();
@@ -455,6 +458,7 @@ bool WorldSystem::advance_source_generation() {
             reset();
             return false;
         }
+        if (generation_is_map_) generate_roadside_shelters();
         // Save the generated baseline for change-only snapshots. This runs
         // after ALL source location/bunker/bridge creation has completed.
         original_sprite_states_.clear();
@@ -569,6 +573,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     bounds_ = {layout->width, layout->height};
     grid_.clear();
     map_markers_.clear();
+    roadside_shelters_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();
@@ -862,9 +867,66 @@ bool WorldSystem::load_source_bridge_elements() {
     return true;
 }
 
+void WorldSystem::generate_roadside_shelters() {
+    // Use a separate stream so adding shelters cannot shift existing map rolls.
+    std::mt19937 random(seed_ ^ 0x84d13e29u);
+    std::vector<WorldPoint> candidates;
+    const float cell_width = bounds_.width / grid_.width();
+    const float cell_height = bounds_.height / grid_.height();
+    for (int row = 1; row + 1 < grid_.height(); ++row) {
+        // The two blank rows between the snow regions are a map seam.
+        if (generation_level_ >= 4 && (row == 15 || row == 16)) continue;
+        for (int column = 1; column + 1 < grid_.width(); ++column) {
+            if (grid_.at(column, row) != 0) continue;
+            constexpr int directions[][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+            for (const auto& direction : directions) {
+                if (!terrain::generated_road_cell(
+                        grid_.at(column + direction[0], row + direction[1]))) continue;
+                candidates.push_back({
+                    (column + 0.5f + direction[0] * 0.34f) * cell_width,
+                    (row + 0.5f + direction[1] * 0.34f) * cell_height});
+                break;
+            }
+        }
+    }
+
+    // Keep the placement order stable even across standard library versions.
+    while (!candidates.empty() && roadside_shelters_.size() < RoadsideShelter::maximum_count) {
+        const auto index = random() % candidates.size();
+        const auto point = candidates[index];
+        candidates[index] = candidates.back();
+        candidates.pop_back();
+        const bool occupied = std::any_of(placements_.begin(), placements_.end(),
+            [&](const WorldPlacement& placement) {
+                const auto* object = stage1::find_object(placement.object);
+                if (!object || object->type != 18 ||
+                    placement.width <= 0.0f || placement.height <= 0.0f) return false;
+                // A circle around the Sprite origin conservatively covers
+                // rotated and off-center placements as well as their approaches.
+                const float radius = std::hypot(placement.width, placement.height) + 48.0f;
+                return std::hypot(point.x - placement.x, point.y - placement.y) < radius;
+            });
+        if (occupied) continue;
+        // A lit first-aid shelter and an unlit ration stop use different supplies.
+        const bool beacon = roadside_shelters_.size() % 2 == 0;
+        constexpr std::uint16_t bandage = 18;
+        constexpr std::uint16_t canned_beans = 1;
+        roadside_shelters_.push_back({point.x, point.y, beacon, beacon ? bandage : canned_beans});
+    }
+}
+
+std::size_t WorldSystem::stock_roadside_shelters(items::GroundLootSystem& loot) const noexcept {
+    std::size_t added = 0;
+    for (const auto& shelter : roadside_shelters_) {
+        if (loot.add({shelter.supply_item, 1}, shelter.x, shelter.supply_y())) ++added;
+    }
+    return added;
+}
+
 void WorldSystem::reset() noexcept {
     grid_.clear();
     map_markers_.clear();
+    roadside_shelters_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();

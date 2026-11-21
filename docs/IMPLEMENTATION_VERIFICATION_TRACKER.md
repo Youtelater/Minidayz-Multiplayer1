@@ -1,3 +1,11 @@
+## Part 1 — roadside shelters
+
+- [x] Added seeded roadside shelters on clear cells adjacent to roads. First-aid shelters have a nighttime beacon and a bandage. Ration stops carry food. Both have three solid walls and an open south entrance.
+- [x] Ground supplies spawn when entering a newly generated map. Continue rebuilds the same shelter positions and restores saved ground loot, so collected supplies stay collected.
+- [x] The native shelter regression checks all six map levels, wall and entrance collision, deterministic placement, and loot pickup and restoration.
+- [x] Fixed the event walker to visit leaf events and distinguish variant guards from subtype guards. The loot test now pairs markers in their generated order when their action IDs are reused.
+- [ ] Verify shelter rendering and movement on 3DS. Emulator testing is with the player.
+
 ## Part 2 — per-house roof and wall ownership correction
 
 - [x] Live roof updates no longer share one global wall-overlap flag across unrelated houses. The picked original 346 wall triggers retain their owning foundation runtime UID, so the roof decision, linked door opacity and indoor rain are restricted to the relevant house. Implementation commit `e6f74de5`.
