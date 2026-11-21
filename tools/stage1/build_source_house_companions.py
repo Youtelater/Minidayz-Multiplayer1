@@ -26,7 +26,7 @@ def spawn(a):
  if not isinstance(a,list) or len(a)<6 or a[1]!=73:return None
  ps=a[5]
  if not isinstance(ps,list) or len(ps)<3:return None
- target=literal(ps[0][1]);layer=literal(ps[1][1]);point=literal(ps[2][1])
+ target=literal(ps[0]);layer=literal(ps[1][1]);point=literal(ps[2][1])
  if not isinstance(target,int) or not 0<=target<len(objects):return None
  if not isinstance(layer,str) or not isinstance(point,(int,str)):return None
  return a[0],target,layer,point
