@@ -92,7 +92,8 @@ for name,nodes in p[6]:
     created.append({"parent":sp[0],"child":sp[1],"layer":sp[2],
                     "point":sp[3],"frame":0,"animation":0,
                     "width_delta":None,"height_delta":None,
-                    "angle_degrees":99999.0,"opacity":1.0})
+                    "angle_degrees":99999.0,"opacity":1.0,
+                    "variables":{}})
    elif a[1]==73 and a[0]!=508:ignored+=1
    elif a[1] in (103,169) and a[0]!=508 and len(a)>5 and a[5]:
     width=imagepoint_delta(a[5][0][1],59) if a[1]==103 else None
@@ -117,6 +118,25 @@ for name,nodes in p[6]:
       for row in reversed(created):
        if row["child"]==a[0]:
         row["animation"]=matched
+        break
+   elif a[1]==88 and a[0]!=508 and len(a)>5 and len(a[5])>=2:
+    # Original SetInstanceVariable: literals and UID-of-source-object
+    # expressions (command 151) are preserved, not guessed. The source
+    # links wall 346, shadow 347 and door 349 to particular parents; it
+    # also sets original loot-marker 218 category 9/19.
+    index=literal(a[5][0][1])
+    expr=a[5][1][1]
+    if isinstance(index,int) and index in (0,1):
+     kind=0;value=0;source_object=65535
+     raw=literal(expr)
+     if isinstance(raw,int):
+      kind=1;value=raw
+     elif isinstance(expr,list) and len(expr)>=3 and expr[0]==20 and expr[2]==151 and isinstance(expr[1],int):
+      kind=2;source_object=expr[1]
+     if kind:
+      for row in reversed(created):
+       if row["child"]==a[0]:
+        row["variables"][index]=(kind,value,source_object)
         break
    elif a[1] in (84,137,163) and a[0]!=508 and len(a)>5 and a[5]:
     # Same-event authored post-Spawn transforms, literal values only.
@@ -147,7 +167,7 @@ for name,nodes in p[6]:
                  point if isinstance(point,int) else 0,
                  item["animation"],item["frame"],
                  item["width_delta"],item["height_delta"],
-                 item["angle_degrees"],item["opacity"]))
+                 item["angle_degrees"],item["opacity"],item["variables"]))
 if not rules:raise SystemExit("No original source house Spawn events recovered")
 parents={row[4] for row in rules}
 # Object frame image points are relative to each source animation frame's
@@ -200,7 +220,7 @@ lines+=["};",
 " const char* height_hi;const char* height_lo;",
 " float angle_degrees,opacity;};",
 "inline constexpr SourceHouseCompanionSpawn kSourceHouseCompanionSpawns[]={"]
-for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd,ang,opacity in rules:
+for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd,ang,opacity,vars in rules:
  lines.append(" {"+",".join([str(uid)+"ULL",str(base),str(variant),str(seq),
                               str(parent),str(obj),quote(layer),
                               quote(name),str(index),str(anim),str(frame),
@@ -213,6 +233,24 @@ for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd,ang,opacit
                               fl(ang),fl(opacity)])+"},")
 lines += ["};",
 "inline constexpr std::size_t kSourceHouseCompanionSpawnCount=sizeof(kSourceHouseCompanionSpawns)/sizeof(kSourceHouseCompanionSpawns[0]);",
+"// Source Sprite SetInstanceVariable 88 immediately after Spawn 73.",
+"struct SourceHouseCompanionVariable {",
+" std::uint64_t event_uid;std::uint16_t base_object;",
+" std::uint8_t variant;std::uint16_t sequence,child,slot;",
+" std::uint8_t kind;std::int32_t literal_value;",
+" std::uint16_t uid_object;};",
+"inline constexpr SourceHouseCompanionVariable kSourceHouseCompanionVariables[]={",
+]
+variable_rows=[]
+for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd,ang,opacity,vars in rules:
+ for slot,(kind,value,uid_object) in sorted(vars.items()):
+  variable_rows.append((uid,base,variant,seq,obj,slot,kind,value,uid_object))
+for uid,base,variant,seq,obj,slot,kind,value,uid_object in variable_rows:
+ lines.append(" {"+",".join([str(uid)+"ULL",str(base),str(variant),
+     str(seq),str(obj),str(slot),str(kind),str(value),str(uid_object)])+"},")
+lines += [
+"};",
+"inline constexpr std::size_t kSourceHouseCompanionVariableCount=sizeof(kSourceHouseCompanionVariables)/sizeof(kSourceHouseCompanionVariables[0]);",
 "struct SourceHouseImagePoint {",
 " std::uint16_t object,animation;std::uint32_t frame;std::uint8_t index;",
 " const char* name;float x,y,origin_x,origin_y;};",
@@ -242,6 +280,7 @@ for oid in (302,306,311,312,313,321,322,323,324,333,346,347,349):
        "point_names",[p[0] for p in fr[9]] if len(fr)>9 and isinstance(fr[9],list) else [])
 print("Root source house companion Spawn actions:",len(rules),
       "events",events,"parents",len(parents),"imagepoints",len(points),
+      "source instance-variable actions",len(variable_rows),
       "unsupported Spawn actions",ignored,
       "literal primary branches",len(primaries),
       "complex-source primary branch guards deferred",unverified_primary_conditions)
