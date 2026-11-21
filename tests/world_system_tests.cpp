@@ -63,6 +63,31 @@ void test_original_roof_family_and_transparency() {
     std::printf("SOURCE ROOF MEMBERS roofs=%zu interiors=%zu frames=%zu\\n",
                 roofs,interiors,frames);
     assert(roofs>0 && interiors>0 && frames>0);
+    // Root event 9848716569903957 changes each picked family-1049
+    // roof's layer to Buildings_bg after player leaves. Ensure the
+    // world does not accidentally move any unrelated instance.
+    const auto* map=stage1::find_layout("Map");
+    assert(map);
+    const auto map_id=static_cast<std::uint16_t>(
+        map-stage1::kLayoutTable);
+    std::uint16_t bg=0xffff;
+    for(const auto& layer:stage1::kLayerTable)
+        if(layer.layout==map_id &&
+           std::strcmp(layer.name,"Buildings_bg")==0){bg=layer.index;break;}
+    assert(bg!=0xffff);
+    std::size_t first=world.placement_count();
+    for(std::size_t i=0;i<world.placement_count();++i)
+        if(stage1::source_family_contains(1049,world.placement(i)->object)){
+            first=i;break;
+        }
+    assert(first<world.placement_count());
+    const auto old_layer=world.placement(first)->layer;
+    const auto other_layer=world.placement(first+1)->layer;
+    assert(world.set_placement_layer(first,bg));
+    assert(world.placement(first)->layer==bg);
+    assert(world.placement(first+1)->layer==other_layer);
+    assert(!world.set_placement_layer(first,0xffff));
+    assert(world.set_placement_layer(first,old_layer));
 }
 
 void test_live_original_automatic_doors() {
