@@ -1,0 +1,43 @@
+name: Audit Started Gameplay vs Original MiniDAYZ
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/audit_started_systems_parity.py'
+      - '.github/workflows/audit-started-gameplay-parity.yml'
+      - 'data.deobfuscated.js'
+  workflow_dispatch:
+jobs:
+  compare-source-to-native:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check audit syntax
+        run: python -m py_compile tools/stage1/audit_started_systems_parity.py
+      - name: Index original conditions, audio, actions and started-system gaps
+        run: python tools/stage1/audit_started_systems_parity.py --out audit-output/started-parity
+      - name: Check report sanity
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('audit-output/started-parity')
+          s = json.loads((p/'summary.json').read_text())
+          assert s['source_events_classified'] > 1000
+          assert s['source_audio_actions'] >= 400
+          assert (p/'source_event_obligations.csv').is_file()
+          assert (p/'source_audio_actions.csv').is_file()
+          assert (p/'source_anchor_chains.json').is_file()
+          print((p/'ORIGINAL_VS_NATIVE_PARITY.md').read_text()[:11000])
+          PY
+      - name: Upload original-vs-native parity report and exact event evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-vs-3ds-started-systems-parity
+          path: audit-output/started-parity/
+          retention-days: 90
