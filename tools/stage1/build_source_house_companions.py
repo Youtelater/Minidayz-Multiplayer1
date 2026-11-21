@@ -85,6 +85,17 @@ for name,nodes in p[6]:
   inherited=inherited_guards.get(e[4])
   if inherited and not e[5] and anc[-1]==inherited[0]:
    variants=[inherited[1]]
+  # Category 4 variant 40 selects seven structures by inherited var2=40
+  # and local var6=0..6. The runtime already matches each exact primary
+  # source event UID, so retaining variant 40 here is sufficient and
+  # preserves all seven original companion Solid348 spawn chains.
+  if not variants and anc[-1]==431776969482924 and 1506402191387381 in anc:
+   if len(e[5])!=1 or e[5][0][:2]!=[508,71] or e[5][0][9][:2]!=[[10,6],[8,0]]:
+    raise RuntimeError("Unexpected original variant40 subtype guard")
+   subtype=literal(e[5][0][9][2][1])
+   if not isinstance(subtype,int) or not 0<=subtype<=6:
+    raise RuntimeError("Unexpected original variant40 subtype")
+   variants=[40]
   if len(variants)!=1:continue
   variant=variants[0]
   # The outer 3673396466799513 event encloses all categories.
