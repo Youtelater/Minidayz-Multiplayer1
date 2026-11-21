@@ -53,6 +53,9 @@ public:
     void stop_environment_ambience() noexcept;
     void start_rain_loop(bool blizzard=false) noexcept;
     void stop_rain_loop() noexcept;
+    // Original House_transparenting mutes outdoor rain and unmutes
+    // rain_roof when PlayerBase enters wall-zone 346.
+    void set_rain_sheltered(bool sheltered) noexcept;
     void shutdown() noexcept;
     ~Stage2Audio() { shutdown(); }
     Stage2Audio() = default;
@@ -93,6 +96,7 @@ private:
     int ambient_csnd_state_{-1};
     unsigned csnd_status_frame_counter_{};
     int weather_sample_variant_{-1};
+    void set_weather_sample_variant(int variant) noexcept;
     int loaded_world_cue_{-1};
     int loaded_treefall_cue_{-1};
 };
