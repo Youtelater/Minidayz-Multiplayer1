@@ -80,7 +80,7 @@ def scan(project):
     rows=[];audios=[];anchors={};totals=Counter()
     def visit(events,sheet,ancestor_uids=(),ancestry=(),source_path=()):
         for idx,e in enumerate(events):
-            if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+            if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
             uid=e[4]
             g=source_groups(e)
             groups=ancestry+((g,) if g else ())
@@ -90,6 +90,7 @@ def scan(project):
             acts=e[6] if isinstance(e[6],list) else []
             totals['__visited']+=1
             totals['__actions']+=len(acts)
+            children=e[7] if len(e)>7 and isinstance(e[7],list) else []
             sound=[]
             for index,a in enumerate(acts):
                 if not isinstance(a,list) or len(a)<2: continue
@@ -119,8 +120,8 @@ def scan(project):
                 anchors.setdefault(str(uid),[]).append({"name":IMPORTANT_UIDS[uid],
                     "sheet":sheet,"source_path":path,"ancestor_uids":ancestor_uids,
                     "groups":groups,"conditions":cond,"actions":acts,
-                    "children_count":len(e[7])})
-            visit(e[7],sheet,ancestor_uids+(uid,),groups,source_path+(idx,))
+                    "children_count":len(children)})
+            visit(children,sheet,ancestor_uids+(uid,),groups,source_path+(idx,))
     for sh in project[6]:visit(sh[1],sh[0])
     return rows,audios,anchors,totals
 
@@ -133,7 +134,7 @@ def main():
     project=decode(raw)
     rows,audios,anchors,counts=scan(project)
     print("SOURCE_SCAN_DIAGNOSTIC", "classified",len(rows),"audio",len(audios),"area_events",dict(counts))
-    assert len(rows)>0 and len(audios)>0, "Source scan unexpectedly lost event/audio coverage"
+    assert totals["__visited"]>20000 and totals["__actions"]>60000 and len(audios)>400, "Source scan unexpectedly lost event/audio coverage"
     native={}
     for area,paths in NATIVE_FILES.items():
         native[area]=[{"path":path,"exists":(ROOT/path).is_file()} for path in paths]
