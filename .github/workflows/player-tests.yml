@@ -43,6 +43,14 @@ jobs:
           python3 tools/stage1/build_source_building_polygons.py
           python3 tools/stage1/build_source_roof_family_points.py
 
+      - name: Verify original per-frame house and building Solid polygons
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_building_polygon_tests.cpp -o /tmp/minidayz_building_collision
+          /tmp/minidayz_building_collision
+
       - name: Verify source-derived world sprite extents
         run: |
           python3 tools/stage1/build_world_source_extents.py --check
