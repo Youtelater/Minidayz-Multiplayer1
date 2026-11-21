@@ -80,6 +80,41 @@ bool compare_source_value(std::uint8_t op, std::uint8_t actual,
     }
 }
 
+// Source close event 243854400993751 creates object 348 from Door's
+// frame-0 Imagepoint 1, assigns animation 0/frame 15 and Door.Angle+6.
+// Keep the exact original companion transform when the door opens/closes.
+bool sync_source_door_solid_placement(
+    const WorldPlacement& door,WorldPlacement& solid) noexcept {
+    if(door.object!=349 ||
+       solid.object!=world_source::door_solid348::kObject)return false;
+    const auto* point=world_source::source_door_point(
+        door.source_animation,0);
+    if(!point || !(door.width>0.0f) || !(door.height>0.0f))
+        return false;
+    constexpr float radians=0.01745329251994329577f;
+    const float angle=door.angle*radians;
+    const float dx=door.width*
+        (point->solid_anchor_x-point->origin_x)*
+        (door.scale_x<0.0f?-1.0f:1.0f);
+    const float dy=door.height*
+        (point->solid_anchor_y-point->origin_y);
+    const float x=door.x+dx*std::cos(angle)-dy*std::sin(angle);
+    const float y=door.y+dx*std::sin(angle)+dy*std::cos(angle);
+    if(!std::isfinite(x)||!std::isfinite(y))return false;
+    solid.x=x;
+    solid.y=y;
+    solid.width=world_source::door_solid348::kWidth;
+    solid.height=world_source::door_solid348::kHeight;
+    solid.origin_x=world_source::door_solid348::kOriginX;
+    solid.origin_y=world_source::door_solid348::kOriginY;
+    solid.angle=door.angle+
+        world_source::door_solid348::kDoorAngleOffsetDegrees;
+    solid.source_animation=0;
+    solid.source_frame=world_source::door_solid348::kClosedFrame;
+    solid.opacity=door.source_frame==0?1.0f:0.0f;
+    return true;
+}
+
 std::uint16_t find_layer_index_by_name(std::uint16_t layout,
                                        const char* name) noexcept {
     if (!name) return 0xffff;
@@ -732,22 +767,16 @@ bool WorldSystem::create_source_door_companions() {
             door.source_animation,door.source_frame);
         if(!point || !(door.width>0.0f) || !(door.height>0.0f))
             continue; // Unsupported animations stay source-verified later.
-        const float degrees=door.angle*0.01745329251994329577f;
-        const float dx=door.width*
-            (point->solid_anchor_x-point->origin_x)*
-            (door.scale_x<0.0f?-1.0f:1.0f);
-        const float dy=door.height*
-            (point->solid_anchor_y-point->origin_y);
-        const float x=door.x+dx*std::cos(degrees)-dy*std::sin(degrees);
-        const float y=door.y+dx*std::sin(degrees)+dy*std::cos(degrees);
-        if(!std::isfinite(x)||!std::isfinite(y))return false;
+        // The helper uses the frame-0 Imagepoint 1 that the original
+        // close event selects, even for a door initially spawned open.
+        (void)point;
         // Original UID link is per-instance, and frame 15 belongs to
         // source Solid object 348, not the door sprite sheet 349.
         const auto runtime_id=(std::uint64_t{1}<<63) |
             static_cast<std::uint64_t>(placements_.size()+1);
         placements_.push_back({
             buildings,world_source::door_solid348::kObject,0,
-            x,y,0.0f,
+            door.x,door.y,0.0f,
             world_source::door_solid348::kWidth,
             world_source::door_solid348::kHeight,
             door.angle+world_source::door_solid348::kDoorAngleOffsetDegrees,
@@ -760,6 +789,7 @@ bool WorldSystem::create_source_door_companions() {
         solid.runtime_uid=runtime_id;
         solid.instance_id=static_cast<std::uint64_t>(placements_.size());
         solid.linked_runtime_uid=door.runtime_uid;
+        if(!sync_source_door_solid_placement(door,solid))return false;
         placements_[i].linked_runtime_uid=runtime_id;
     }
     return true;
@@ -964,7 +994,8 @@ bool WorldSystem::set_placement_sprite_state(
             if(candidate.runtime_uid==linked &&
                candidate.object==world_source::door_solid348::kObject &&
                candidate.linked_runtime_uid==placement.runtime_uid)
-                candidate.opacity=frame==0?1.0f:0.0f;
+                (void)sync_source_door_solid_placement(
+                    placement,candidate);
         }
     }
     return true;
@@ -1055,7 +1086,7 @@ bool WorldSystem::restore_sprite_states(
         if(solid.runtime_uid==linked &&
            solid.object==world_source::door_solid348::kObject &&
            solid.linked_runtime_uid==door.runtime_uid)
-            solid.opacity=door.source_frame==0?1.0f:0.0f;
+            (void)sync_source_door_solid_placement(door,solid);
     }
     return true;
 }
