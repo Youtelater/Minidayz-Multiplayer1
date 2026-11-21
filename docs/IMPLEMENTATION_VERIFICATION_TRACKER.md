@@ -6,6 +6,11 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+### Rotated building overlap correction
+
+- [x] Native roof/interior/wall-trigger rectangle overlap now tests all four separating axes, including world-aligned player axes, avoiding false contact at rotated corners. Implementation commit 520f002; mirrored and unmirrored regression cases commit b47c8b5.
+- [ ] Verify native/3DS CI for this correction. This is rectangle overlap accuracy, not proof of original Construct polygon picking or the remaining furniture, loot, prompt and emulator gates.
+
 ### Full original house source-branch coverage and missing numeric imagepoint fix
 
 - [x] Expanded native world test to execute **every one of the 69 original literal primary house Spawn records** rather than sampling five city-house designs or only the 48 legacy cached rules. For each original parent, the test checks the actual source child object, source animation and frame, including descendants. This found a genuine missing house-generation collision Sprite: var2=36/base1323 originally spawns Solid348 frame30 at numeric Imagepoint 1 on zed_resp.
