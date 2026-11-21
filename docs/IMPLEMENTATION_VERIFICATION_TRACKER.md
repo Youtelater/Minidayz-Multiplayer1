@@ -6,6 +6,13 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+## World original source detailed catalog — 2026-11-21
+
+- [x] Source-backed inventory and world category baseline saved in [World Source Detailed Inventory](WORLD_SOURCE_DETAILED_INVENTORY_2026-11-21.md), with exact source counts and separate world-generation targets.
+- [x] Root-original full object/animation, 62 template branch, layout/layer and editor-placement catalog extractor **implemented** in `tools/stage1/audit_original_world_catalog.py` and added to `.github/workflows/audit-original-world.yml`. **CI execution of this newly added extractor has not yet been independently verified here.**
+- [ ] Execute/check the generated detailed catalog artifact, classify all actual house designs and building variants from source Array writes, and reconcile exterior/interior/roof pairings.
+- [ ] Confirm generated per-world structure counts from original root event/RNG semantics and actual gameplay. A location template is not a house and source name matches are not a unique-house count.
+
 ## Whole-project source parity checkpoint — 2026-11-21
 
 **The original-vs-native started-systems audit is complete as a static source index, NOT as a gameplay-parity certification.** See [Original vs 3DS Started Systems Audit](ORIGINAL_VS_3DS_STARTED_SYSTEMS_AUDIT.md) and [passing source comparison #44932346147](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44932346147). Original-source checks covered **22,343** events, **63,289** actions, all **461** audio actions, and classified **18,937** event rows into started systems; **70** audio actions currently lack a workstream classification but are preserved for further review.
