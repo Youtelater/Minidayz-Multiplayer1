@@ -57,6 +57,19 @@ for name,nodes in p[6]:
   # building-base original Spawn parents belong to this building pass.
   if roots[0][2] not in ("Buildings_base","Buildings"):continue
   base=roots[0][1]
+  # Original child event predicate: Mapgen508 instance variable index2
+  # equals the current create_map_element variant. This is stronger than
+  # trusting stale generated event UIDs in world_source_data.hpp.
+  variants=[]
+  for condition in e[5] if isinstance(e[5],list) else []:
+   if not isinstance(condition,list) or len(condition)<10 or condition[:2]!=[508,71]:continue
+   params=condition[9]
+   if not isinstance(params,list) or len(params)<3:continue
+   last=params[-1]
+   value=literal(last[1]) if isinstance(last,list) and len(last)>1 else None
+   if isinstance(value,int) and 0<=value<=255:variants.append(value)
+  if len(variants)!=1:continue
+  variant=variants[0]
   created=[]
   for a in acts:
    if not isinstance(a,list) or len(a)<2:continue
@@ -104,7 +117,7 @@ for name,nodes in p[6]:
   events+=1
   for seq,item in enumerate(created):
    point=item["point"]
-   rules.append((e[4],base,seq,item["parent"],item["child"],
+   rules.append((e[4],base,variant,seq,item["parent"],item["child"],
                  item["layer"],point if isinstance(point,str) else "",
                  point if isinstance(point,int) else 0,
                  item["animation"],item["frame"],
@@ -141,6 +154,7 @@ lines=["#pragma once","#include <cstddef>","#include <cstdint>",
 "// Root Construct create_map_element nested Sprite command 73, in action order.",
 "struct SourceHouseCompanionSpawn {",
 " std::uint64_t event_uid;std::uint16_t base_object;",
+" std::uint8_t variant;",
 " std::uint16_t sequence,parent_object,object;",
 " const char* layer;const char* point_name;std::uint8_t point_index;",
 " std::uint16_t animation;std::uint32_t frame;",
@@ -148,8 +162,8 @@ lines=["#pragma once","#include <cstddef>","#include <cstdint>",
 " const char* width_hi;const char* width_lo;",
 " const char* height_hi;const char* height_lo;};",
 "inline constexpr SourceHouseCompanionSpawn kSourceHouseCompanionSpawns[]={"]
-for uid,base,seq,parent,obj,layer,name,index,anim,frame,wd,hd in rules:
- lines.append(" {"+",".join([str(uid)+"ULL",str(base),str(seq),
+for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd in rules:
+ lines.append(" {"+",".join([str(uid)+"ULL",str(base),str(variant),str(seq),
                               str(parent),str(obj),quote(layer),
                               quote(name),str(index),str(anim),str(frame),
                               str(wd[0]) if wd else "65535",
