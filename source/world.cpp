@@ -84,6 +84,24 @@ bool compare_source_value(std::uint8_t op, std::uint8_t actual,
 // Source close event 243854400993751 creates object 348 from Door's
 // frame-0 Imagepoint 1, assigns animation 0/frame 15 and Door.Angle+6.
 // Keep the exact original companion transform when the door opens/closes.
+// Root c2runtime.js Sprite frame-change handler r.Zi:
+// width *= new.width/old.width; height *= new.height/old.height;
+// update hotspot and collision data. Preserve authored SetSize scaling
+// instead of stretching the opened door into its closed frame dimensions.
+void apply_source_building_frame_geometry(WorldPlacement& p,
+    std::uint16_t animation,std::uint32_t frame) noexcept {
+    if(p.source_animation==animation && p.source_frame==frame)return;
+    const auto* old_frame=stage1::source_building_frame_geometry(
+        p.object,p.source_animation,p.source_frame);
+    const auto* new_frame=stage1::source_building_frame_geometry(
+        p.object,animation,frame);
+    if(!old_frame || !new_frame || old_frame->width<=0 || old_frame->height<=0)return;
+    if(p.width>0.0f)p.width*=new_frame->width/old_frame->width;
+    if(p.height>0.0f)p.height*=new_frame->height/old_frame->height;
+    p.origin_x=new_frame->origin_x;
+    p.origin_y=new_frame->origin_y;
+}
+
 bool sync_source_door_solid_placement(
     const WorldPlacement& door,WorldPlacement& solid) noexcept {
     if(door.object!=349 ||
@@ -94,10 +112,18 @@ bool sync_source_door_solid_placement(
         return false;
     constexpr float radians=0.01745329251994329577f;
     const float angle=door.angle*radians;
-    const float dx=door.width*
+    // Initial/reloaded doors may be open. The parked companion still
+    // belongs to the CLOSED frame's size, not the taller open artwork.
+    const auto* active=world_source::source_door_point(
+        door.source_animation,door.source_frame);
+    const float closed_width=active&&active->width>0.0f?
+        door.width*point->width/active->width:door.width;
+    const float closed_height=active&&active->height>0.0f?
+        door.height*point->height/active->height:door.height;
+    const float dx=closed_width*
         (point->solid_anchor_x-point->origin_x)*
         (door.scale_x<0.0f?-1.0f:1.0f);
-    const float dy=door.height*
+    const float dy=closed_height*
         (point->solid_anchor_y-point->origin_y);
     const float x=door.x+dx*std::cos(angle)-dy*std::sin(angle);
     const float y=door.y+dx*std::sin(angle)+dy*std::cos(angle);
@@ -1187,10 +1213,15 @@ bool WorldSystem::set_placement_sprite_state(
     const auto animations = stage1::animations_for_object(placement.object);
     if (animation >= animations.size || !animations.data ||
         frame >= animations.data[animation].frames) return false;
+    const bool frame_changed=placement.source_animation!=animation ||
+        placement.source_frame!=frame;
+    apply_source_building_frame_geometry(placement,animation,frame);
     placement.source_animation = animation;
     placement.source_frame = frame;
     placement.opacity = opacity;
-    if(placement.object==349 && placement.linked_runtime_uid!=0) {
+    // A roof-driven door opacity update is not a door frame transition.
+    // Do not respawn a collider during the original 0.01-second wait.
+    if(frame_changed && placement.object==349 && placement.linked_runtime_uid!=0) {
         // Original open event destroys the linked 348 Solid, while close
         // event creates frame 15 at the authored imagepoint. A stable
         // parked native placement preserves source UID/save identity;
@@ -1275,6 +1306,7 @@ bool WorldSystem::restore_sprite_states(
     for(std::size_t i=0;i<placements_.size();++i) {
         const auto& baseline=original_sprite_states_[i];
         auto& placed=placements_[i];
+        apply_source_building_frame_geometry(placed,baseline.animation,baseline.frame);
         placed.source_animation=baseline.animation;
         placed.source_frame=baseline.frame;
         placed.opacity=baseline.opacity;
@@ -1283,6 +1315,7 @@ bool WorldSystem::restore_sprite_states(
     for(const auto& state:states)
         for(auto& p:placements_)
             if(p.runtime_uid==state.runtime_uid) {
+                apply_source_building_frame_geometry(p,state.animation,state.frame);
                 p.source_animation=state.animation;
                 p.source_frame=state.frame;
                 p.opacity=state.opacity;
