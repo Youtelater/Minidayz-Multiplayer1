@@ -277,6 +277,13 @@ void test_live_original_automatic_doors() {
         assert(solid->source_frame==15);
         assert(solid->opacity==1.0f);
         assert(std::fabs(solid->angle-(door->angle+6.0f))<0.001f);
+        // Root open event destroys 348 BEFORE the 0.01s Wait: the door
+        // remains frame0 while its collision is already absent.
+        assert(world.set_linked_door_solid_present(i,false));
+        assert(world.placement(i)->source_frame==0);
+        assert(world.placement_by_instance_id(companion_id)->opacity==0.0f);
+        assert(world.set_linked_door_solid_present(i,true));
+        assert(world.placement_by_instance_id(companion_id)->opacity==1.0f);
         const WorldPoint open_at{door->x,source_door_in_y(*door,*f)+1.0f};
         if(!source_door_overlaps_player(*door,*f,open_at))continue;
         assert(source_auto_door_for_player(world,uid,{1e20f,1e20f})==
