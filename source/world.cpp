@@ -852,6 +852,18 @@ std::size_t WorldSystem::feature_count(WorldFeatureKind kind) const noexcept {
         [kind](const WorldFeature& item){return item.kind==kind;}));
 }
 
+bool WorldSystem::set_placement_layer(
+    std::size_t index,std::uint16_t layer) noexcept {
+    if(index>=placements_.size() || !initialized_)return false;
+    const auto* map=stage1::find_layout("Map");
+    if(!map)return false;
+    const auto map_index=static_cast<std::uint16_t>(
+        map-stage1::kLayoutTable);
+    if(!stage1::find_layer(map_index,layer))return false;
+    placements_[index].layer=layer;
+    return true;
+}
+
 bool WorldSystem::set_placement_sprite_state(
     std::size_t index, std::uint16_t animation, std::uint32_t frame,
     float opacity) noexcept {
