@@ -146,14 +146,23 @@ inline TreeHitOutcome apply_verified_tree_hit(
 inline bool apply_verified_door_frame_at_index(
     WorldSystem& world,std::size_t index,std::uint64_t runtime_uid,
     std::uint64_t source_event_uid) noexcept {
+    // Both original door event families set the SAME frame and linked
+    // Solid 348 state. The second branch also destroys a separate
+    // interaction prompt object 506; that additional action belongs to
+    // the caller, not this strictly frame-only helper.
     constexpr std::uint64_t kOpen=6061166023614368ULL;
     constexpr std::uint64_t kClose=243854400993751ULL;
+    constexpr std::uint64_t kPromptOpen=7258332154939593ULL;
+    constexpr std::uint64_t kPromptClose=353730214514351ULL;
+    const bool opening=source_event_uid==kOpen ||
+                       source_event_uid==kPromptOpen;
+    const bool closing=source_event_uid==kClose ||
+                       source_event_uid==kPromptClose;
     if(!world.generation_complete() || runtime_uid==0 ||
-       (source_event_uid!=kOpen && source_event_uid!=kClose))
-        return false;
+       (!opening && !closing))return false;
     const auto* p=world.placement(index);
     if(!p || p->runtime_uid!=runtime_uid || p->object!=349)return false;
-    const std::uint32_t frame=source_event_uid==kOpen?1u:0u;
+    const std::uint32_t frame=opening?1u:0u;
     if(p->source_frame==frame)return false;
     return world.set_placement_sprite_state(
         index,p->source_animation,frame,p->opacity);
