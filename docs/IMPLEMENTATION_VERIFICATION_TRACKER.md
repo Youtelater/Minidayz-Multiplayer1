@@ -15,6 +15,12 @@ This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port.
 - [ ] **CI results not directly observed yet for latest pushed changes.** Do not infer that tests pass merely because included in the workflow. Validate current Build 3DS Executable run and fix failures.
 - [ ] **Gameplay parity still open:** original object-348 door companion behavior, source roof picking (1048/1049), true original collision polygons, all original furniture/container interactions, object placement completeness, Azahar video inspection and hardware performance remain unverified.
 
+### Original door-collider semantic checkpoint (root-source trace)
+
+- [x] [Root-source world audit #44935601526](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44935601526) completed successfully. It extracted original object **348 = `t348`**: a **42-frame sprite with Construct Solid behavior**; it is **not exclusively a door shadow**. Other original structures, tree companions and maps also create/use different frames of object 348.
+- [x] Original automatic door open source event **6061166023614368** contains object-348 **Destroy (command 53)**, original **0.01s Wait (System 54)** and sets object-349 frame **1**. Original close event **243854400993751** waits **0.01s**, sets door frame **0**, spawns original object **348** at door **Imagepoint 1** on layer `Buildings`, links the instance UID, sets companion frame **15**, and sets the companion angle using original source expression **Door.Angle+6**. This is source evidence, not yet an implemented gameplay claim.
+- [ ] Complete dynamic original 348 create/destroy and per-door instance association, source frame-15 collider polygon and `Imagepoint 1` placement, wait timing, save/reload, and collision index state. The current native code remains an **approximation** for the closed 349 door; it must not be marked complete until these are validated against runtime source.
+
 ## World building interaction gameplay correction — 2026-11-21
 
 - [x] **Actual 3DS gameplay C++ changed:** `source/main.cpp` now uses source sprite dimensions and scale for the broadphase of generated houses/interiors, roof opacity changes and automatic doors. Previous guessed limits `96px`, `256px`, `512px` could silently skip large/off-center original sprites even when the source narrow-phase would accept them.
