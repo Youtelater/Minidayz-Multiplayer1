@@ -54,11 +54,11 @@ inline float source_door_in_y(const WorldPlacement& door,
     return door.y+dx*std::sin(a)+dy*std::cos(a);
 }
 
-// Source-gated door state transition. The native caller must only run this
-// for a live player and a generated Map: menu, death and pause do not animate
-// doors. It returns a sound cue only on an actual successful frame change.
-inline AutomaticDoorEffect source_auto_door_for_placement(
-    WorldSystem& world, std::size_t index,
+// Original Doors_auto chooses a transition from frame and ImagepointY("in").
+// Pure selection allows the native gameplay scene to honor the source 0.01s
+// Wait before changing the actual frame and playing its associated sound.
+inline AutomaticDoorEffect source_auto_door_intended_for_placement(
+    const WorldSystem& world, std::size_t index,
     WorldPoint player) noexcept {
     if(!world.generation_complete())return AutomaticDoorEffect::none;
     const auto* door=world.placement(index);
@@ -72,15 +72,45 @@ inline AutomaticDoorEffect source_auto_door_for_placement(
     if(!std::isfinite(entry_y))return AutomaticDoorEffect::none;
     const bool opening=door->source_frame==0 && player.y>=entry_y;
     const bool closing=door->source_frame==1 && player.y<entry_y;
-    if(!opening && !closing)return AutomaticDoorEffect::none;
-    const auto event_uid=opening ? 6061166023614368ULL : 243854400993751ULL;
-    const bool metal=frame->metal;
-    if(!apply_verified_door_frame_at_index(
-            world,index,door->runtime_uid,event_uid))
-        return AutomaticDoorEffect::none;
     if(opening)
-        return metal?AutomaticDoorEffect::open_metal:AutomaticDoorEffect::open_wood;
-    return metal?AutomaticDoorEffect::close_metal:AutomaticDoorEffect::close_wood;
+        return frame->metal?AutomaticDoorEffect::open_metal:
+                            AutomaticDoorEffect::open_wood;
+    if(closing)
+        return frame->metal?AutomaticDoorEffect::close_metal:
+                            AutomaticDoorEffect::close_wood;
+    return AutomaticDoorEffect::none;
+}
+
+inline bool source_apply_auto_door_intention(
+    WorldSystem& world, std::size_t index,
+    std::uint64_t expected_uid,
+    AutomaticDoorEffect effect) noexcept {
+    if(effect==AutomaticDoorEffect::none || !world.generation_complete())
+        return false;
+    const auto* door=world.placement(index);
+    if(!door || door->runtime_uid!=expected_uid ||
+       door->object!=349)return false;
+    const bool open=effect==AutomaticDoorEffect::open_wood ||
+                    effect==AutomaticDoorEffect::open_metal;
+    const auto required_frame=open?0u:1u;
+    if(door->source_frame!=required_frame)return false;
+    return apply_verified_door_frame_at_index(
+        world,index,expected_uid,
+        open?6061166023614368ULL:243854400993751ULL);
+}
+
+// Compatibility behavior for tests and direct original event dispatch. The
+// gameplay scene instead queues the intention for 0.01 original seconds.
+inline AutomaticDoorEffect source_auto_door_for_placement(
+    WorldSystem& world, std::size_t index,
+    WorldPoint player) noexcept {
+    const auto effect=source_auto_door_intended_for_placement(
+        world,index,player);
+    const auto* door=world.placement(index);
+    if(!door || !source_apply_auto_door_intention(
+        world,index,door->runtime_uid,effect))
+        return AutomaticDoorEffect::none;
+    return effect;
 }
 // UID-based compatibility wrapper for event traces and native tests.
 // The actual 3DS update loops over a precomputed door-placement index and
