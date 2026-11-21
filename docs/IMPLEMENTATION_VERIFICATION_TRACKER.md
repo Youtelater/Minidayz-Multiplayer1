@@ -10,6 +10,7 @@ This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port.
 
 - [x] Source-backed inventory and world category baseline saved in [World Source Detailed Inventory](WORLD_SOURCE_DETAILED_INVENTORY_2026-11-21.md), with exact source counts and separate world-generation targets.
 - [x] Root-original full object/animation, 62 template branch, layout/layer and editor-placement catalog extractor **implemented** in `tools/stage1/audit_original_world_catalog.py` and added to `.github/workflows/audit-original-world.yml`. **CI execution of this newly added extractor has not yet been independently verified here.**
+- [x] Implement a **source-derived building candidate extraction** into `building_object_candidates.csv`, plus all original `1041/1048/1049` family members and literal world Create action site evidence. CI now checks source 62 templates, 5,533 writes and known original paired house/door IDs. These are building discovery checks, **not completion of building gameplay or an independently observed successful workflow run**.
 - [ ] Execute/check the generated detailed catalog artifact, classify all actual house designs and building variants from source Array writes, and reconcile exterior/interior/roof pairings.
 - [ ] Confirm generated per-world structure counts from original root event/RNG semantics and actual gameplay. A location template is not a house and source name matches are not a unique-house count.
 
