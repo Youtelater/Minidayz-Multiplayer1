@@ -189,6 +189,14 @@ for name,nodes in p[6]:
                  item["width_delta"],item["height_delta"],
                  item["angle_degrees"],item["opacity"],item["variables"]))
 if not rules:raise SystemExit("No original source house Spawn events recovered")
+# Root category 7 contains 51 primary events, all single literal variant
+# guards. Fail closed if the original changes: runtime does not consult the
+# stale cached category-7 table anymore.
+if len(primaries)!=51 or unverified_primary_conditions:
+ raise RuntimeError(f"Unexpected category-7 primary coverage: {len(primaries)} direct, {unverified_primary_conditions} complex")
+if len({r[2] for r in primaries})!=len(primaries):
+ raise RuntimeError("Repeated category-7 variant needs explicit source selection")
+
 # The original loot branch is separate from building creation: Mapgen
 # 508.var1=7, var2=building variant, var3=0. Its last action marks var3=1.
 # Emit every literal Spawn/SetVariable/Trigger_spawn in source order.
