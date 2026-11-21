@@ -3,6 +3,7 @@
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/location_event_runtime.hpp"
 #include "minidayz/generated/source_tree_impact_points.hpp"
+#include "minidayz/generated/source_door_points.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 
 #include <algorithm>
@@ -385,6 +386,13 @@ bool WorldSystem::advance_source_generation() {
     }
     ++generation_phase_;
     if (generation_phase_ == 6) {
+        // The original Doors_auto close event creates a separate Solid
+        // Sprite 348 linked to each visual door 349. Do this AFTER the
+        // original terrain/locations, before assigning snapshot IDs.
+        if (!create_source_door_companions()) {
+            reset();
+            return false;
+        }
         // Save the generated baseline for change-only snapshots. This runs
         // after ALL source location/bunker/bridge creation has completed.
         original_sprite_states_.clear();
@@ -703,6 +711,57 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
         ++added;
     }
     source_location_spawn_count_ = added;
+    return true;
+}
+
+bool WorldSystem::create_source_door_companions() {
+    if (!initialized_) return false;
+    const auto* layout=stage1::find_layout("Map");
+    if(!layout)return false;
+    const auto layout_id=static_cast<std::uint16_t>(
+        layout-stage1::kLayoutTable);
+    const auto buildings=find_layer_index_by_name(layout_id,"Buildings");
+    if(buildings==0xffff)return false;
+    const std::size_t original_count=placements_.size();
+    for(std::size_t i=0;i<original_count;++i) {
+        // Indexed relookup is required: push_back may reallocate.
+        const auto door=placements_[i];
+        if(door.object!=349 || door.runtime_uid==0 ||
+           door.linked_runtime_uid!=0)continue;
+        const auto* point=world_source::source_door_point(
+            door.source_animation,door.source_frame);
+        if(!point || !(door.width>0.0f) || !(door.height>0.0f))
+            continue; // Unsupported animations stay source-verified later.
+        const float degrees=door.angle*0.01745329251994329577f;
+        const float dx=door.width*
+            (point->solid_anchor_x-point->origin_x)*
+            (door.scale_x<0.0f?-1.0f:1.0f);
+        const float dy=door.height*
+            (point->solid_anchor_y-point->origin_y);
+        const float x=door.x+dx*std::cos(degrees)-dy*std::sin(degrees);
+        const float y=door.y+dx*std::sin(degrees)+dy*std::cos(degrees);
+        if(!std::isfinite(x)||!std::isfinite(y))return false;
+        // Original UID link is per-instance, and frame 15 belongs to
+        // source Solid object 348, not the door sprite sheet 349.
+        const auto runtime_id=(std::uint64_t{1}<<63) |
+            static_cast<std::uint64_t>(placements_.size()+1);
+        placements_.push_back({
+            buildings,world_source::door_solid348::kObject,0,
+            x,y,0.0f,
+            world_source::door_solid348::kWidth,
+            world_source::door_solid348::kHeight,
+            door.angle+world_source::door_solid348::kDoorAngleOffsetDegrees,
+            door.source_frame==0?1.0f:0.0f,1.0f,
+            world_source::door_solid348::kOriginX,
+            world_source::door_solid348::kOriginY,
+            0,world_source::door_solid348::kClosedFrame
+        });
+        auto& solid=placements_.back();
+        solid.runtime_uid=runtime_id;
+        solid.instance_id=static_cast<std::uint64_t>(placements_.size());
+        solid.linked_runtime_uid=door.runtime_uid;
+        placements_[i].linked_runtime_uid=runtime_id;
+    }
     return true;
 }
 
