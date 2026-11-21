@@ -3277,7 +3277,8 @@ private:
             const auto* layer = minidayz::stage1::find_layer(
                 map_index, placement->layer);
             if (!layer) continue;
-            const bool building = std::strcmp(layer->name, "Buildings") == 0;
+            const bool building = minidayz::terrain::source_building_collision_layer(
+                layer->name,placement->object);
             // Construct sprite collision is behavior-based. Visible
             // building floors/decor must not become opaque solid walls.
             if(building && placement->object!=349 &&
