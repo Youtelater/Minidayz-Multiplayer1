@@ -770,6 +770,23 @@ void test_source_event_tree_fall_and_door_transition() {
         assert(!apply_verified_door_frame(world,did,6061166023614368ULL));
         assert(apply_verified_door_frame(world,did,243854400993751ULL));
         assert(world.placement(door)->source_frame==0);
+        // Original alternate prompt-triggered door group opens at
+        // UID 7258332154939593 and closes at 353730214514351.
+        // Their other action (destroy prompt object 506) is not a
+        // reason to reject the exact original door frame transition.
+        assert(apply_verified_door_frame(world,did,7258332154939593ULL));
+        assert(world.placement(door)->source_frame==1);
+        assert(!apply_verified_door_frame(world,did,7258332154939593ULL));
+        assert(apply_verified_door_frame(world,did,353730214514351ULL));
+        assert(world.placement(door)->source_frame==0);
+        const auto* door_state=world.placement(door);
+        if(door_state->linked_runtime_uid!=0) {
+            const auto instance=door_state->linked_runtime_uid&
+                ~(std::uint64_t{1}<<63);
+            const auto* solid=world.placement_by_instance_id(instance);
+            assert(solid && solid->object==348 &&
+                   solid->opacity==1.0f);
+        }
     }
 }
 
