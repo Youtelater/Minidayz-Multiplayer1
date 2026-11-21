@@ -6,6 +6,12 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+### Family 1048 original animation verification and nested source IDs
+
+- [x] Original-root [native CI #44941584258](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44941584258) passed and showed only **one** family1048 member has a source animation literally named `out`; the five city-house bases 302/306/311/312/313 only contain `in`. The source Construct 1048 SetAnimation(out) therefore **must not be simulated by inventing a second atlas frame on those houses**. The 3DS gameplay looks up and selects `out` only on a source member that truly supports it; the check also tests original 346 wall-trigger ownership.
+- [x] Added explicit `parent_runtime_uid` and `house_base_runtime_uid` to each nested source building placement. A door spawned by the original roof 321 retains both its immediate roof parent and original foundation 302 UID, separately from its linked Solid 348. Native regression asserts the exact source base→roof→door and door→Solid relationship without matching unrelated nearby sprites.
+- [ ] Confirm the latest full 3DS build/native suite after source house UID fields; earlier complete builds cover most source features but not every newest commit.
+
 ### Root source primary house recovery and roof family animation event
 
 - [x] The original root CreateMapElement var1=7/508.var2 branches can contain a **primary house base Spawn** not present in the cached 158-rule world table. The source house extractor now records these literal Spawn actions only when the event is a direct, single-condition source branch; `WorldSystem::expand_map_element` safely emits otherwise-missing original base Sprites and their nested roof, door, wall and shadow Spawn actions, using the same original per-frame atlas and imagepoint handler as existing bases. Unclear or multi-condition branches are not fabricated. Native `test_every_source_mapped_house_spawn_chain` also validates restoration of those uncached original primary houses.
