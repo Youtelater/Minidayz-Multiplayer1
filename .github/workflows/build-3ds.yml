@@ -162,6 +162,14 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude tests/terrain_collision_tests.cpp -o /tmp/minidayz_terrain_collision_tests
           /tmp/minidayz_terrain_collision_tests
 
+      - name: Verify original house interiors and door interaction bounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \\
+            tests/source_world_proximity_tests.cpp -o /tmp/minidayz_source_world_proximity
+          /tmp/minidayz_source_world_proximity
+
       - name: Verify original buildings trees and bridges remain in camera view
         shell: bash
         run: |
