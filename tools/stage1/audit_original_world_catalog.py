@@ -71,7 +71,80 @@ def main():
   creates=[a for a in actions if a[:2]==[-1,94]]
   branches.append(dict(index=idx,event_uid=e[4],tile_codes="|".join(map(str,codes)),event_nodes=sum(1 for _ in events(e)),array_writes=len(writes),direct_creates=len(creates),direct_create_parameters=json.dumps([a[5] for a in creates],separators=(",",":"))))
  write_csv(out/"all_62_location_templates.csv",branches)
- summary=dict(source="root/data.deobfuscated.js",original_object_definitions=len(objs),layouts=len(p[5]),editor_placements=len(placed),location_templates=len(branches),location_array_writes=sum(x["array_writes"] for x in branches),direct_create_actions=sum(x["direct_creates"] for x in branches),name_match_candidates={k:len(v) for k,v in matches.items()})
+ # Build a concrete world-element creation matrix from the authoritative
+ # create_map_element event function. Do not call all these objects houses:
+ # buildings can be made from multiple sprites, families and shadows.
+ source_events=[e for root in sheets["Game_events"] for e in events(root)]
+ event_uids={e[4] for e in source_events}
+ element_rules=[]
+ for e in source_events:
+  # This function dispatch is distinct from editor-placed palette objects.
+  if e[4]!=7736925111997576:continue
+  def visit_element(node,ancestor=()):
+   for ch in node[7] if len(node)>7 and isinstance(node[7],list) else []:
+    if not isinstance(ch,list) or len(ch)<7 or ch[0]!=0:continue
+    active=ancestor+(node[4],)
+    for a in ch[6] if isinstance(ch[6],list) else []:
+     if not isinstance(a,list) or len(a)<6 or a[:2]!=[-1,94]:continue
+     # System Create: parameter[0] is the original object expression.
+     params=a[5]
+     object_ids=[]
+     for par in params[:1]:
+      if isinstance(par,list) and len(par)>1 and isinstance(par[1],list):
+       expr=par[1]
+       if len(expr)>1 and expr[0]==0 and isinstance(expr[1],int):
+        object_ids.append(expr[1])
+     for oid in object_ids:
+      if not 0<=oid<len(objs):continue
+      element_rules.append(dict(
+       event_uid=ch[4],ancestor_uids="|".join(map(str,active)),
+       source_object_id=oid,object_name=names[oid],
+       source_create_action=json.dumps(a,separators=(",",":")),
+       source_conditions=json.dumps(ch[5],separators=(",",":"))))
+    visit_element(ch,active)
+  visit_element(e)
+ write_csv(out/"original_world_create_actions.csv",element_rules)
+ # Original Construct families are not sprite objects. Preserve actual
+ # membership so roof/interior family IDs are never mistaken for art IDs.
+ families=[]
+ for family in p[4]:
+  if not isinstance(family,list) or len(family)<2:continue
+  fid=family[0]
+  for oid in family[1:]:
+   if isinstance(oid,int) and 0<=oid<len(objs):
+    families.append(dict(family_id=fid,object_id=oid,object_name=names[oid],
+                        relevant_building_family=fid in (1041,1048,1049)))
+ write_csv(out/"original_family_membership.csv",families)
+ building_ids=set()
+ for item in objects:
+  if any(tag in item["name_matching_candidates"] for tag in
+         ("houses_buildings","interiors_furniture","doors_walls_fences")):
+   building_ids.add(item["id"])
+ for item in families:
+  if item["family_id"] in (1041,1048,1049):
+   building_ids.add(item["object_id"])
+ for item in element_rules:
+  oid=item["source_object_id"]
+  if any(term in item["object_name"].lower() for term in
+         ("house","roof","building","door","wall","shelf","table","chair","bed")):
+   building_ids.add(oid)
+ building_rows=[]
+ for oid in sorted(building_ids):
+  o=objs[oid]
+  matching_layers=sorted({entry["layer"] for entry in placed if entry["object_id"]==oid})
+  members=sorted({entry["family_id"] for entry in families if entry["object_id"]==oid})
+  inst_count=sum(entry["object_id"]==oid for entry in placed)
+  actions=[entry for entry in element_rules if entry["source_object_id"]==oid]
+  frame_refs=sum(len(a[7]) for a in (o[7] if len(o)>7 and isinstance(o[7],list) else [])
+                 if isinstance(a,list) and len(a)>7 and isinstance(a[7],list))
+  building_rows.append(dict(object_id=oid,name=names[oid],
+   frame_references=frame_refs,original_families="|".join(map(str,members)),
+   editor_instance_count=inst_count,editor_layers="|".join(matching_layers),
+   direct_world_create_action_count=len(actions),
+   direct_world_event_uids="|".join(map(str,sorted({x["event_uid"] for x in actions})),
+   caution="candidate only; not automatically a unique building"))
+ write_csv(out/"building_object_candidates.csv",building_rows)
+ summary=dict(source="root/data.deobfuscated.js",original_object_definitions=len(objs),layouts=len(p[5]),editor_placements=len(placed),location_templates=len(branches),location_array_writes=sum(x["array_writes"] for x in branches),direct_create_actions=sum(x["direct_creates"] for x in branches),name_match_candidates={k:len(v) for k,v in matches.items()},building_object_candidates=len(building_rows),original_world_create_actions=len(element_rules),family_member_pairs=len(families))
  (out/"summary.json").write_text(json.dumps(summary,indent=2)+"\n")
  md=["# MiniDAYZ original-world detailed source catalog","",
  "**Source:** root `data.deobfuscated.js`, not an older cached snapshot or multiplayer override.","",
@@ -99,6 +172,9 @@ def main():
  "- Tree object IDs: `184`, `207`, `209`, `576`, `577`, `581`. Berry bush `296`. Automatic door `349`; companion `348`; bunker door `787`.","",
  "## Machine-readable full lists","",
  "- `all_original_objects.csv`: every original object name/ID and animation/frame counts.",
+ "- `building_object_candidates.csv`: source building/interior/door candidates, family associations, actual authored layers, Create event references and frame counts; **not a unique house total**.",
+ "- `original_family_membership.csv`: every source Construct family and member Sprite, including 1041/1048/1049.",
+ "- `original_world_create_actions.csv`: literal-object System Create action sites under original create_map_element with original condition and action arrays.",
  "- `all_62_location_templates.csv`: all tile-code branches and exact Array/Create action counts and direct Create parameters.",
  "- `all_layout_layers.csv`: every authoring layer and placement count.",
  "- `all_editor_placements.csv`: every editor instance UID, object name/ID and X/Y.",
