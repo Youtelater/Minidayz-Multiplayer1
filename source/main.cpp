@@ -9,6 +9,7 @@
 #include "minidayz/source_door_solid.hpp"
 #include "minidayz/source_building_polygon_collision.hpp"
 #include "minidayz/source_roof_interaction.hpp"
+#include "minidayz/generated/source_roof_foundation_animations.hpp"
 #include "minidayz/source_world_proximity.hpp"
 #include "minidayz/source_map_overlay.hpp"
 #include "minidayz/terrain_collision.hpp"
@@ -2817,6 +2818,7 @@ private:
     void rebuild_source_house_roofs() {
         source_roof_indices_.clear();
         source_house_interior_indices_.clear();
+        source_house_wall_indices_.clear();
         for(std::size_t i=0;i<world_.placement_count();++i){
             const auto* p=world_.placement(i);
             if(!p)continue;
@@ -2827,6 +2829,9 @@ private:
                 source_roof_indices_.push_back(static_cast<std::uint32_t>(i));
             if(minidayz::stage1::source_family_contains(1041,p->object))
                 source_house_interior_indices_.push_back(
+                    static_cast<std::uint32_t>(i));
+            if(p->object==346 && p->parent_runtime_uid!=0)
+                source_house_wall_indices_.push_back(
                     static_cast<std::uint32_t>(i));
         }
         source_roof_background_layer_=0xffff;
@@ -2922,6 +2927,40 @@ private:
             if(!minidayz::world_source::source_roof_opacity_at_player(
                     *roof,player_pos,overlaps_matching_house,opacity))
                 continue;
+            if(overlaps_matching_house && roof->parent_runtime_uid!=0) {
+                // Root event 6159361858903351, inside original 0.1s
+                // House_transparenting/overlap parent:
+                // if PlayerBase 193 NOT overlapping original 346,
+                // set selected original family 1048 to animation "out".
+                // Never pick another building's wall; the original
+                // nested Spawn parent UID ties wall, foundation and roof.
+                const auto parent_uid=roof->parent_runtime_uid;
+                bool touching_own_wall=false;
+                for(const auto wall_index:source_house_wall_indices_){
+                    const auto* wall=world_.placement(wall_index);
+                    if(!wall || wall->parent_runtime_uid!=parent_uid)
+                        continue;
+                    if(minidayz::world_source::source_player_overlaps_world_rect(
+                            *wall,player_pos,wall->origin_x,wall->origin_y)){
+                        touching_own_wall=true;break;
+                    }
+                }
+                if(!touching_own_wall){
+                    const auto instance=parent_uid&
+                        ~(std::uint64_t{1}<<63);
+                    const auto* base=world_.placement_by_instance_id(instance);
+                    if(base && base->runtime_uid==parent_uid &&
+                       minidayz::stage1::source_family_contains(1048,base->object)){
+                        const auto* anim=
+                            minidayz::world_source::source_roof_foundation_animations(
+                                base->object);
+                        if(anim && base->source_animation!=anim->out_animation)
+                            (void)world_.set_placement_sprite_state(
+                                static_cast<std::size_t>(instance-1),
+                                anim->out_animation,0,base->opacity);
+                    }
+                }
+            }
             if(std::fabs(roof->opacity-opacity)>0.001f)
                 (void)world_.set_placement_sprite_state(
                     index,roof->source_animation,roof->source_frame,opacity);
@@ -3164,6 +3203,7 @@ private:
         source_door_waits_.clear();
         source_roof_indices_.clear();
         source_house_interior_indices_.clear();
+        source_house_wall_indices_.clear();
         source_overlapping_house_uids_.clear();
         source_roof_elapsed_=0.0f;
         source_roof_background_layer_=0xffff;
@@ -3319,6 +3359,7 @@ private:
     std::vector<SourceDoorWait> source_door_waits_{};
     std::vector<std::uint32_t> source_roof_indices_{};
     std::vector<std::uint32_t> source_house_interior_indices_{};
+    std::vector<std::uint32_t> source_house_wall_indices_{};
     std::vector<std::uint64_t> source_overlapping_house_uids_{};
     float source_roof_elapsed_{};
     std::uint16_t source_roof_background_layer_{0xffff};
