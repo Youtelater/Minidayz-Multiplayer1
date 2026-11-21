@@ -19,6 +19,8 @@ struct SourceLocationSpawn {
     double y{};
     double width{};
     double height{};
+    double angle{};
+    double opacity{1.0};
     int frame{};
     std::array<Value, 16> instance_variables{};
 };
