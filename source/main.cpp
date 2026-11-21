@@ -2512,12 +2512,30 @@ public:
 
         for (std::size_t i = 0; i < tents_.tent_count(); ++i) {
             const auto* tent = tents_.tent(i);
-            if (!tent || tent->x < camera_x - 24.0f ||
-                tent->x > camera_x + view_w + 24.0f ||
-                tent->y < camera_y - 24.0f ||
-                tent->y > camera_y + view_h + 24.0f) continue;
-            (void)renderer.draw_item_icon(minidayz::items::kOriginalCivilianTentItemId,
-                                          tent->x, tent->y, 28.0f, 28.0f, 0.54f);
+            if (!tent || tent->x < camera_x - 49.0f ||
+                tent->x > camera_x + view_w + 49.0f ||
+                tent->y < camera_y - 65.0f ||
+                tent->y > camera_y + view_h + 65.0f) continue;
+            // Root deployment events 297398672474814 / 1391504325547996:
+            // Sprite398 is the base; Sprite397 is the separate roof.
+            // The renderer selects each original atlas rectangle (49x65),
+            // never the entire civilian_tent_deploy_up sprite sheet.
+            minidayz::WorldPlacement roof{};
+            roof.object=397;
+            roof.x=tent->x;roof.y=tent->y;
+            roof.width=49.0f;roof.height=65.0f;
+            roof.scale_x=1.0f;
+            const minidayz::WorldPoint actor{player_.state().x,player_.state().y};
+            // Root events 3450973739819458 / 8566394378489923:
+            // roof opacity 25% on overlap, 100% outside. The original
+            // mask extends from x=-25 to +12 and y=-33 to +32.
+            const bool overlap=std::fabs(actor.x-(roof.x-6.5f))<=33.5f &&
+                               std::fabs(actor.y-(roof.y-0.5f))<=47.5f;
+            (void)renderer.draw_source_sprite(398,0,0,tent->x,tent->y,
+                                               1.0f,1.0f,0.54f);
+            (void)renderer.draw_source_sprite(397,0,0,tent->x,tent->y,
+                                               1.0f,1.0f,0.66f,0.0f,
+                                               overlap?0.25f:1.0f);
         }
 
         for (std::size_t i = 0; i < stashes_.count(); ++i) {
