@@ -1184,11 +1184,17 @@ public:
             source_temperature_initialized_ = true;
         }
         const float old_x=player_.state().x, old_y=player_.state().y;
+        // Construct Doors_auto is an overlap event; it must be allowed to
+        // open a source-frame-0 doorway before the next player collision
+        // sweep. Otherwise movement blocks at the door and the player can
+        // never cross its "in" imagepoint. Sound still plays only when the
+        // source door state actually changes, inside this handler.
+        update_source_automatic_doors();
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
-        // Original Game_events > Doors_auto compares the live PlayerBase
-        // Y against each overlapping door's authored "in" image point.
-        // A successful source frame transition plays its matching WAV.
+        // Re-evaluate after movement for source-frame-1 closing transitions
+        // and newly reached door triggers. The frame guard prevents double
+        // sounds when both checks observe the same state.
         update_source_automatic_doors();
         update_source_house_roofs(dt);
         // Play the original material-specific WAV only after moving.
