@@ -794,6 +794,10 @@ bool WorldSystem::create_source_door_companions() {
         solid.house_base_runtime_uid=door.house_base_runtime_uid;
         if(!sync_source_door_solid_placement(door,solid))return false;
         placements_[i].linked_runtime_uid=runtime_id;
+        // Original close event 243854400993751 writes
+        // 349.SetInstanceVariable(0, 348.UID) after spawning its Solid.
+        if(placements_[i].source_frame==0)
+            placements_[i].source_variable_0=runtime_id;
     }
     return true;
 }
@@ -1199,9 +1203,15 @@ bool WorldSystem::set_placement_sprite_state(
             auto& candidate=placements_[companion_index];
             if(candidate.runtime_uid==linked &&
                candidate.object==world_source::door_solid348::kObject &&
-               candidate.linked_runtime_uid==placement.runtime_uid)
+               candidate.linked_runtime_uid==placement.runtime_uid){
                 (void)sync_source_door_solid_placement(
                     placement,candidate);
+                // Construct destroys the selected 348 when opening but
+                // does not clear 349.var0. On closing its new 348 UID is
+                // written to var0. The parked native 348 has a stable
+                // per-door identity across transitions.
+                if(frame==0)placement.source_variable_0=linked;
+            }
         }
     }
     return true;
