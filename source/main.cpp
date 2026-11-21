@@ -1200,6 +1200,9 @@ public:
         // before changing door 349 frame. Complete those waits once per
         // game tick; original WAV dispatch follows the committed change.
         advance_source_door_waits(dt);
+        // Physical A adapts the original mobile movement-marker door action.
+        if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0)
+            request_source_manual_door();
         update_source_automatic_doors();
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
@@ -3020,6 +3023,39 @@ private:
         }
     }
 
+    // Mobile GUI original marker506 type 2 arrives at the selected door.
+    // On 3DS, A while overlapping a door replaces mobile marker arrival;
+    // it is not a reproduction of the original touchscreen pathfinding.
+    void request_source_manual_door() noexcept {
+        using namespace minidayz::world_source;
+        const minidayz::WorldPoint actor{player_.state().x,player_.state().y};
+        std::size_t best=source_door_indices_.size();
+        float distance=std::numeric_limits<float>::max();
+        for(std::size_t slot=0;slot<source_door_indices_.size();++slot){
+            if(slot>=source_door_waits_.size() ||
+               source_door_changed_this_tick_[slot] ||
+               source_door_waits_[slot].effect!=AutomaticDoorEffect::none)continue;
+            const auto* p=world_.placement(source_door_indices_[slot]);
+            if(!p || p->source_frame>1 || !p->runtime_uid)continue;
+            const auto* frame=source_door_point(p->source_animation,p->source_frame);
+            if(!frame || !source_door_overlaps_player(*p,*frame,actor))continue;
+            const float d=std::hypot(p->x-actor.x,p->y-actor.y);
+            if(d<distance){distance=d;best=slot;}
+        }
+        if(best==source_door_indices_.size())return;
+        const auto index=source_door_indices_[best];
+        const auto* p=world_.placement(index);
+        const auto* frame=source_door_point(p->source_animation,p->source_frame);
+        const bool opening=p->source_frame==0;
+        const auto effect=opening ?
+            (frame->metal?AutomaticDoorEffect::open_metal:AutomaticDoorEffect::open_wood):
+            (frame->metal?AutomaticDoorEffect::close_metal:AutomaticDoorEffect::close_wood);
+        if(opening && p->linked_runtime_uid)
+            (void)world_.set_linked_door_solid_present(index,false);
+        source_door_waits_[best]={effect,p->runtime_uid,0.01f,true};
+        source_door_changed_this_tick_[best]=1u;
+    }
+
     void advance_source_door_waits(float dt) noexcept {
         if(!world_ready_ || !player_.state().alive ||
            !std::isfinite(dt))return;
@@ -3031,13 +3067,21 @@ private:
             if(pending.seconds>0.0f)continue;
             const auto effect=pending.effect;
             const auto uid=pending.runtime_uid;
+            const bool manual=pending.manual;
             pending={};
             if(slot>=source_door_indices_.size())continue;
             const auto index=source_door_indices_[slot];
             // A door's pending event always belongs to THAT generated
             // instance, even after loading a saved world or moving away.
-            if(minidayz::world_source::source_apply_auto_door_intention(
-                    world_,index,uid,effect)){
+            using minidayz::world_source::AutomaticDoorEffect;
+            const bool opening=effect==AutomaticDoorEffect::open_wood ||
+                               effect==AutomaticDoorEffect::open_metal;
+            const bool applied=manual ?
+                minidayz::world_source::apply_verified_door_frame_at_index(
+                    world_,index,uid,opening?7258332154939593ULL:353730214514351ULL):
+                minidayz::world_source::source_apply_auto_door_intention(
+                    world_,index,uid,effect);
+            if(applied){
                 source_door_changed_this_tick_[slot]=1u;
                 play_source_door_effect(effect);
             }else{
@@ -3387,6 +3431,7 @@ private:
             minidayz::world_source::AutomaticDoorEffect::none};
         std::uint64_t runtime_uid{};
         float seconds{};
+        bool manual{};
     };
     std::vector<std::uint32_t> source_door_indices_{};
     std::vector<std::uint8_t> source_door_changed_this_tick_{};
