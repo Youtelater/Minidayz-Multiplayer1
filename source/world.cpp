@@ -912,8 +912,52 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             if(!child_obj)continue;
             const auto* child_frame=stage1::source_building_frame_geometry(
                 action.object,action.animation,action.frame);
-            const float w=child_frame?child_frame->width:child_obj->width;
-            const float h=child_frame?child_frame->height:child_obj->height;
+            float w=child_frame?child_frame->width:child_obj->width;
+            float h=child_frame?child_frame->height:child_obj->height;
+            float mirror_x=1.0f;
+            // The original source immediately resizes wall-trigger 346
+            // from base.ImagePointX/Y("w2")-("w1") (SetSize 103),
+            // and shadow 347 from "s2"-"s1" (SetHeight 169).
+            // Default 346 is 1x1: ignoring this creates an invisible
+            // near-zero wall trigger and breaks roof transparency.
+            const auto source_delta=[&](
+                std::uint16_t object,const char* hi,const char* lo,
+                bool horizontal,float& output) noexcept {
+                if(object==0xffff || !hi || !lo || !hi[0] || !lo[0])
+                    return false;
+                for(auto it=spawned.rbegin();it!=spawned.rend();++it){
+                    if(it->first!=object)continue;
+                    const auto& base=placements_[it->second];
+                    const auto* a=world_source::source_house_image_point(
+                        object,base.source_animation,base.source_frame,hi,0);
+                    const auto* b=world_source::source_house_image_point(
+                        object,base.source_animation,base.source_frame,lo,0);
+                    if(!a || !b)return false;
+                    const float angle=base.angle*0.01745329251994329577f;
+                    const float dx=base.width*(a->x-b->x)*
+                        (base.scale_x<0.0f?-1.0f:1.0f);
+                    const float dy=base.height*(a->y-b->y);
+                    const float delta=horizontal?
+                        dx*std::cos(angle)-dy*std::sin(angle):
+                        dx*std::sin(angle)+dy*std::cos(angle);
+                    if(!std::isfinite(delta)||std::fabs(delta)<0.001f)
+                        return false;
+                    output=delta;
+                    return true;
+                }
+                return false;
+            };
+            float authored_width=0.0f,authored_height=0.0f;
+            if(source_delta(action.width_parent,
+                            action.width_hi,action.width_lo,
+                            true,authored_width)){
+                mirror_x=authored_width<0.0f?-1.0f:1.0f;
+                w=std::fabs(authored_width);
+            }
+            if(source_delta(action.height_parent,
+                            action.height_hi,action.height_lo,
+                            false,authored_height))
+                h=std::fabs(authored_height);
             if(!(w>0.0f) || !(h>0.0f))continue;
             float x=parent.x,y=parent.y;
             if(action.point_index!=0 ||
@@ -936,7 +980,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                 static_cast<std::uint64_t>(placements_.size()+1);
             placements_.push_back({
                 destination,action.object,action.event_uid,
-                x,y,0.0f,w,h,parent.angle,1.0f,1.0f,
+                x,y,0.0f,w,h,parent.angle,1.0f,mirror_x,
                 child_frame?child_frame->origin_x:child_obj->origin_x,
                 child_frame?child_frame->origin_y:child_obj->origin_y,
                 0,action.frame,action.animation
