@@ -1,4 +1,5 @@
 #include "minidayz/terrain_collision.hpp"
+#include "minidayz/terrain_source_collision.hpp"
 #include <cassert>
 #include <cstdint>
 
@@ -17,5 +18,26 @@ int main() {
     assert(!map.occupied(80.0f,319.0f));
     assert(!map.occupied(-100.1f,201.0f));
     assert(!map.occupied(-39.0f,320.0f));
+    using minidayz::terrain::source_solid_sprite_contains;
+    // An authored 20x10 roof/wall whose image hotspot is at its centre
+    // must keep its hotspot in the solid area after any rotation.
+    assert(source_solid_sprite_contains(
+        100.0f,200.0f,20.0f,10.0f,0.5f,0.5f,90.0f,
+        100.0f,200.0f));
+    // A 90-degree rotation changes a horizontal rectangle into a
+    // vertical one but does not move the pivot.
+    assert(source_solid_sprite_contains(
+        100.0f,200.0f,20.0f,10.0f,0.5f,0.5f,90.0f,
+        100.0f,208.0f));
+    assert(!source_solid_sprite_contains(
+        100.0f,200.0f,20.0f,10.0f,0.5f,0.5f,90.0f,
+        108.0f,200.0f));
+    // Asymmetric image origins are common in original doors/buildings.
+    assert(source_solid_sprite_contains(
+        100.0f,200.0f,20.0f,10.0f,0.0f,0.0f,90.0f,
+        97.0f,205.0f));
+    assert(!source_solid_sprite_contains(
+        100.0f,200.0f,20.0f,10.0f,0.0f,0.0f,90.0f,
+        103.0f,205.0f));
     return 0;
 }
