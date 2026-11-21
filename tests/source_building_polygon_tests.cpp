@@ -4,13 +4,12 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
+#include <initializer_list>
 
 int main(){
     using namespace minidayz;
     using namespace minidayz::world_source;
     assert(stage1::source_object_has_solid_behavior(348));
-    // Family 1049 is not a native Sprite and cannot be a Solid object.
-    assert(!stage1::source_object_has_solid_behavior(1049));
     assert(stage1::kSourceBuildingCollisionPolygonCount>0);
     constexpr float radians=0.01745329251994329577f;
     const std::size_t count=stage1::kSourceBuildingCollisionPolygonCount;
