@@ -3036,6 +3036,14 @@ private:
                     world_,index,uid,effect)){
                 source_door_changed_this_tick_[slot]=1u;
                 play_source_door_effect(effect);
+            }else{
+                // A failed/stale pending event must not leave an original
+                // closed 349 with its Solid 348 already destroyed. Restore
+                // only its own original collider from the live door frame.
+                if(const auto* door=world_.placement(index);
+                   door && door->runtime_uid==uid)
+                    (void)world_.set_linked_door_solid_present(
+                        index,door->source_frame==0u);
             }
         }
     }
@@ -3067,9 +3075,17 @@ private:
             using minidayz::world_source::AutomaticDoorEffect;
             if(event!=AutomaticDoorEffect::none &&
                slot<source_door_waits_.size()){
-                // Both original opening UID 6061166023614368 and closing
-                // UID 243854400993751 wait exactly 0.01 seconds. Defer
-                // the sprite/348 proxy and matching sound together.
+                // Open source UID 6061166023614368 DESTROYS the
+                // linked Solid 348 BEFORE System Wait(0.01), allowing
+                // the player into the building immediately. After the
+                // wait it selects door sprite frame 1 and plays its WAV.
+                // Close UID 243854400993751 waits first; its SetFrame0
+                // and linked Solid-348 Spawn happen on commit.
+                const bool opening=
+                    event==AutomaticDoorEffect::open_wood ||
+                    event==AutomaticDoorEffect::open_metal;
+                if(opening && p->linked_runtime_uid!=0)
+                    (void)world_.set_linked_door_solid_present(index,false);
                 source_door_waits_[slot]={event,p->runtime_uid,0.01f};
                 source_door_changed_this_tick_[slot]=1u;
             }
