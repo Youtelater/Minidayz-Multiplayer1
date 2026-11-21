@@ -6,6 +6,12 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+### Verified recovery of missing original house bases
+
+- [x] Root-source extractor identified **69 literal source primary house Spawn branch records**, in addition to 213 nested Sprite Spawn actions. World regression [#44941485475](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44941485475) completed successfully and verified **48 mapped primary building branches plus 19 additional uncached original building branches recovered by the new runtime**, all directly backed by the original source var1=7/Mapgen.var2 conditions; all five key exterior/interior pairs and exact numeric Imagepoint3 door placement still pass. No invented source place names or guessed roof coordinates.
+- [x] Fixed-seed worlds after this integration contained 64 source roof placements and 140 family-1041 interior placements in the native test; prior map generation with only base sprites produced fewer complete houses. These are observed native counts, not original-game screen or RNG parity.
+- [ ] Remaining discrepancy: 69 source primary Spawn records versus 48+19 exercised mapped/restored branches includes conditional/repeated variants whose full source instance selection still requires original condition and runtime-level verification. Confirm all live corresponding Sprite animations, their shadow order, furniture contents and player overlap in Azahar.
+
 ### Family 1048 original animation verification and nested source IDs
 
 - [x] Original-root [native CI #44941584258](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44941584258) passed and showed only **one** family1048 member has a source animation literally named `out`; the five city-house bases 302/306/311/312/313 only contain `in`. The source Construct 1048 SetAnimation(out) therefore **must not be simulated by inventing a second atlas frame on those houses**. The 3DS gameplay looks up and selects `out` only on a source member that truly supports it; the check also tests original 346 wall-trigger ownership.
