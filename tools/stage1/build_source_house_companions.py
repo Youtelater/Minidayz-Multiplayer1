@@ -22,6 +22,20 @@ def literal(expr):
  if not isinstance(expr,list) or len(expr)<2:return None
  if expr[0] in (0,2,4,5,7) and not isinstance(expr[1],list):return expr[1]
  return None
+def imagepoint_delta(expr,axis):
+ # Root building SetSize( ImagePointX("w2")-ImagePointX("w1"), ... )
+ if not isinstance(expr,list) or len(expr)!=3 or expr[0]!=5:return None
+ def endpoint(node):
+  if not isinstance(node,list) or len(node)<6 or node[0]!=20 or node[2]!=axis:return None
+  ps=node[5]
+  if not isinstance(ps,list) or not ps:return None
+  name=literal(ps[0])
+  if not isinstance(name,str):return None
+  return node[1],name
+ hi=endpoint(expr[1]);lo=endpoint(expr[2])
+ if not hi or not lo or hi[0]!=lo[0]:return None
+ return hi[0],hi[1],lo[1]
+
 def spawn(a):
  if not isinstance(a,list) or len(a)<6 or a[1]!=73:return None
  ps=a[5]
@@ -51,8 +65,19 @@ for name,nodes in p[6]:
     # A companion belongs to the exact original source event and the
     # specific base Sprite. Repeated event UIDs can serve multiple bases.
     created.append({"parent":sp[0],"child":sp[1],"layer":sp[2],
-                    "point":sp[3],"frame":0,"animation":0})
+                    "point":sp[3],"frame":0,"animation":0,
+                    "width_delta":None,"height_delta":None})
    elif a[1]==73 and a[0]!=508:ignored+=1
+   elif a[1] in (103,169) and a[0]!=508 and len(a)>5 and a[5]:
+    width=imagepoint_delta(a[5][0][1],59) if a[1]==103 else None
+    height=imagepoint_delta(
+        a[5][1][1] if a[1]==103 and len(a[5])>1 else a[5][0][1],
+        60)
+    for row in reversed(created):
+     if row["child"]==a[0]:
+      if width:row["width_delta"]=width
+      if height:row["height_delta"]=height
+      break
    elif a[1]==160 and a[0]!=508 and len(a)>5 and a[5]:
     # Original Sprite SetAnimation("city3",from-beginning=1)
     # must select the exact matching animation in the original atlas,
@@ -82,7 +107,8 @@ for name,nodes in p[6]:
    rules.append((e[4],base,seq,item["parent"],item["child"],
                  item["layer"],point if isinstance(point,str) else "",
                  point if isinstance(point,int) else 0,
-                 item["animation"],item["frame"]))
+                 item["animation"],item["frame"],
+                 item["width_delta"],item["height_delta"]))
 if not rules:raise SystemExit("No original source house Spawn events recovered")
 parents={row[3] for row in rules}
 # Object frame image points are relative to each source animation frame's
@@ -117,12 +143,21 @@ lines=["#pragma once","#include <cstddef>","#include <cstdint>",
 " std::uint64_t event_uid;std::uint16_t base_object;",
 " std::uint16_t sequence,parent_object,object;",
 " const char* layer;const char* point_name;std::uint8_t point_index;",
-" std::uint16_t animation;std::uint32_t frame;};",
+" std::uint16_t animation;std::uint32_t frame;",
+" std::uint16_t width_parent,height_parent;",
+" const char* width_hi;const char* width_lo;",
+" const char* height_hi;const char* height_lo;};",
 "inline constexpr SourceHouseCompanionSpawn kSourceHouseCompanionSpawns[]={"]
-for uid,base,seq,parent,obj,layer,name,index,anim,frame in rules:
+for uid,base,seq,parent,obj,layer,name,index,anim,frame,wd,hd in rules:
  lines.append(" {"+",".join([str(uid)+"ULL",str(base),str(seq),
                               str(parent),str(obj),quote(layer),
-                              quote(name),str(index),str(anim),str(frame)])+"},")
+                              quote(name),str(index),str(anim),str(frame),
+                              str(wd[0]) if wd else "65535",
+                              str(hd[0]) if hd else "65535",
+                              quote(wd[1]) if wd else quote(""),
+                              quote(wd[2]) if wd else quote(""),
+                              quote(hd[1]) if hd else quote(""),
+                              quote(hd[2]) if hd else quote("")])+"},")
 lines += ["};",
 "inline constexpr std::size_t kSourceHouseCompanionSpawnCount=sizeof(kSourceHouseCompanionSpawns)/sizeof(kSourceHouseCompanionSpawns[0]);",
 "struct SourceHouseImagePoint {",
