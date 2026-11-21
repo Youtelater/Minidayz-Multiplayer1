@@ -911,7 +911,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             const auto* child_obj=stage1::find_object(action.object);
             if(!child_obj)continue;
             const auto* child_frame=stage1::source_building_frame_geometry(
-                action.object,0,action.frame);
+                action.object,action.animation,action.frame);
             const float w=child_frame?child_frame->width:child_obj->width;
             const float h=child_frame?child_frame->height:child_obj->height;
             if(!(w>0.0f) || !(h>0.0f))continue;
@@ -939,7 +939,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                 x,y,0.0f,w,h,parent.angle,1.0f,1.0f,
                 child_frame?child_frame->origin_x:child_obj->origin_x,
                 child_frame?child_frame->origin_y:child_obj->origin_y,
-                0,action.frame
+                0,action.frame,action.animation
             });
             auto& child=placements_.back();
             child.runtime_uid=new_uid;
