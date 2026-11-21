@@ -6,6 +6,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_door_auto.hpp"
+#include "minidayz/source_door_solid.hpp"
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_world_proximity.hpp"
 #include "minidayz/source_map_overlay.hpp"
@@ -3123,15 +3124,35 @@ private:
                 placement->height <= 0.0f ||
                 minidayz::terrain::source_visual_roof_overlay(
                     placement->object)) continue;
-            // The original door opens on sprite frame 1. Do not retain
-            // its closed rectangular obstruction after the event changes
-            // the frame. Linked obstacle-base 348 state remains to port.
-            if(placement->object==349 && placement->source_frame==1)
-                continue;
             const auto* layer = minidayz::stage1::find_layer(
                 map_index, placement->layer);
             if (!layer) continue;
             const bool building = std::strcmp(layer->name, "Buildings") == 0;
+            if(placement->object==349){
+                // Original Doors_auto does NOT use object-349's entire
+                // rectangular artwork as the closed obstruction. Its
+                // linked object-348 Solid is at Door.Imagepoint 1, uses
+                // original frame 15's polygon and Door.Angle+6. Opening
+                // destroys that Solid; closing recreates it. Model the
+                // effective collider from the saved door frame without
+                // synthesizing a visible object-348 sprite.
+                if(!building || placement->source_frame!=0)continue;
+                bool source_collider_known=false;
+                const bool hit=
+                    minidayz::world_source::original_closed_door_solid_contains(
+                        *placement,{x,y},source_collider_known);
+                if(hit)return true;
+                if(source_collider_known)continue;
+                // Unmapped original animations must remain safely closed
+                // rather than silently creating a walk-through wall.
+                if(minidayz::terrain::source_solid_sprite_contains(
+                        placement->x,placement->y,
+                        placement->width,placement->height,
+                        placement->origin_x,placement->origin_y,
+                        placement->angle,x,y,placement->scale_x))
+                    return true;
+                continue;
+            }
             // Source create_map_element places the separate tree/trunk
             // collision sprites in Obstacle_enviroment; without this layer
             // the player walks through standing trees and world props.
