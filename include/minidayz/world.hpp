@@ -179,6 +179,11 @@ public:
                                     std::uint16_t animation,
                                     std::uint32_t frame,
                                     float opacity) noexcept;
+    // Original House_transparenting event 9848716569903957 moves the
+    // specific roof sprite to Buildings_bg on leaving its overlap area.
+    // Sprite state and source UID remain unchanged.
+    bool set_placement_layer(std::size_t index,
+                             std::uint16_t layer) noexcept;
     // Capture only sprite states different from the generated original.
     // No 3DS rendering resources are needed; replay validates every frame.
     std::vector<WorldSpriteState> capture_sprite_states() const;
