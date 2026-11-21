@@ -46,6 +46,30 @@ lines += ["};",
 " return first<kSourceFamilyMemberCount &&",
 "    kSourceFamilyMembers[first].family==family && kSourceFamilyMembers[first].object==object;",
 "}",
-"} // namespace minidayz::stage1"]
+]
+# Original Construct Sprite Solid behavior membership (object[8]) is the
+# actual collision contract. A rendered Buildings layer is NOT synonymous
+# with a 3DS solid rectangle. Keep the original behavior IDs.
+solids=sorted(oid for oid,obj in enumerate(p[3]) if
+    len(obj)>8 and isinstance(obj[8],list) and any(
+        isinstance(behavior,list) and behavior and behavior[0]=="Solid"
+        for behavior in obj[8]))
+if 348 not in solids:
+    raise SystemExit("Root door companion object 348 unexpectedly has no Solid")
+lines += [
+"inline constexpr std::uint16_t kSourceSolidObjectIds[]={",
+]
+lines += [" "+str(oid)+"," for oid in solids]
+lines += [
+"};",
+"inline constexpr std::size_t kSourceSolidObjectCount=sizeof(kSourceSolidObjectIds)/sizeof(kSourceSolidObjectIds[0]);",
+"inline bool source_object_has_solid_behavior(std::uint16_t object) noexcept {",
+" std::size_t first=0,last=kSourceSolidObjectCount;",
+" while(first<last){const auto mid=first+(last-first)/2;",
+"  if(kSourceSolidObjectIds[mid]<object)first=mid+1;else last=mid;}",
+" return first<kSourceSolidObjectCount && kSourceSolidObjectIds[first]==object;",
+"}",
+"} // namespace minidayz::stage1",
+]
 out.write_text("\n".join(lines)+"\n",encoding="utf-8")
-print("Original family member pairs",len(pairs),"families",len(families))
+print("Original family member pairs",len(pairs),"families",len(families),"Solid object kinds",len(solids))
