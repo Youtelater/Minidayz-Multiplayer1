@@ -1,5 +1,7 @@
 #pragma once
 #include "minidayz/world.hpp"
+#include "minidayz/source_polygon_overlap.hpp"
+#include "minidayz/generated/source_building_collision_polygons.hpp"
 #include "minidayz/generated/source_family_members.hpp"
 #include "minidayz/generated/source_roof_member_points.hpp"
 #include <cmath>
@@ -43,6 +45,33 @@ inline bool source_player_overlaps_world_rect(
            std::fabs(player.y-world_y)<=15.0f+extent_y;
 }
 
+// The original Overlaps conditions use the active Sprite mask even for
+// non-Solid objects. Use its authored vertices where present and the
+// default full-frame rectangle otherwise. Player remains a 30x30 box.
+inline bool source_player_overlaps_world_sprite(
+    const WorldPlacement& object,WorldPoint player,
+    float origin_x,float origin_y) noexcept {
+    if(!std::isfinite(player.x)||!std::isfinite(player.y)||
+       !std::isfinite(object.x)||!std::isfinite(object.y)||
+       !std::isfinite(object.angle)||!std::isfinite(object.width)||
+       !std::isfinite(object.height)||!(object.width>0.0f&&object.height>0.0f))
+        return false;
+    const auto* mask=stage1::source_building_collision_polygon(
+        object.object,object.source_animation,object.source_frame);
+    if(!mask || mask->points<3)
+        return source_player_overlaps_world_rect(object,player,origin_x,origin_y);
+    const float a=object.angle*0.01745329251994329577f;
+    const float cs=std::cos(a),sn=std::sin(a);
+    const float mirror=object.scale_x<0.0f?-1.0f:1.0f;
+    const auto* xy=stage1::kSourceBuildingCollisionXY+2*mask->first;
+    return source_polygon_overlaps_box(mask->points,[&](std::size_t i){
+        const float x=xy[2*i]*object.width*mirror;
+        const float y=xy[2*i+1]*object.height;
+        return WorldPoint{object.x-player.x+x*cs-y*sn,
+                          object.y-player.y+x*sn+y*cs};
+    },15.0f,15.0f);
+}
+
 inline float source_roof_in_world_y(
     const WorldPlacement& roof,const SourceRoofMemberPoint& point) noexcept {
     const float a=roof.angle*0.01745329251994329577f;
@@ -59,7 +88,7 @@ inline bool source_roof_opacity_at_player(
     const auto* frame=source_roof_member_point(
         roof.object,roof.source_animation,roof.source_frame);
     if(!frame)return false;
-    const bool player_under_roof=source_player_overlaps_world_rect(
+    const bool player_under_roof=source_player_overlaps_world_sprite(
         roof,player,frame->origin_x,frame->origin_y);
     const float threshold=source_roof_in_world_y(roof,*frame);
     if(!std::isfinite(threshold))return false;
