@@ -69,6 +69,11 @@ for name,nodes in p[6]:
    last=params[-1]
    value=literal(last[1]) if isinstance(last,list) and len(last)>1 else None
    if isinstance(value,int) and 0<=value<=255:variants.append(value)
+  # Original category 4 variants 46/47 have an unconditional nested Spawn
+  # event with the variant condition on its immediate parent.
+  nested_variant={502091414218817:46,656789528671005:47}.get(e[4])
+  if nested_variant is not None and 1506402191387381 in anc and not e[5]:
+   variants=[nested_variant]
   if len(variants)!=1:continue
   variant=variants[0]
   # Source parent UID 3673396466799513 is original var1==7 Mapgen
@@ -81,7 +86,7 @@ for name,nodes in p[6]:
       original_conditions[0][:2]==[508,71])
   if direct_var2_condition:
       primaries.append((e[4],base,variant,roots[0][2],roots[0][3]))
-  else:
+  elif nested_variant is None:
       unverified_primary_conditions+=1
       unverified_primary_branches.append((e[4],base,variant,
                                           original_conditions,anc[-5:]))
