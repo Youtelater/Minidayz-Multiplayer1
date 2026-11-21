@@ -66,7 +66,7 @@ private:
         std::uint32_t sample_rate{};
         std::uint16_t channels{};
     };
-    static constexpr std::size_t kClipCount = 14;
+    static constexpr std::size_t kClipCount = 15;
     bool load_wav(const char* path, Clip& destination) noexcept;
     void play(std::size_t clip) noexcept;
     void stop_voice(std::size_t clip) noexcept;
@@ -94,6 +94,7 @@ private:
     unsigned csnd_status_frame_counter_{};
     int weather_sample_variant_{-1};
     int loaded_world_cue_{-1};
+    int loaded_treefall_cue_{-1};
 };
 
 } // namespace minidayz
