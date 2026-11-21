@@ -2889,6 +2889,7 @@ private:
                 touching_wall=true;break;
             }
         }
+        bool sheltered=false;
         for(const auto index:source_roof_indices_){
             const auto* roof=world_.placement(index);
             if(!roof)continue;
@@ -2897,6 +2898,7 @@ private:
             if(!frame)continue;
             const bool overlap=source_player_overlaps_world_sprite(
                 *roof,player_pos,frame->origin_x,frame->origin_y);
+            sheltered=sheltered || (overlap && touching_wall);
             // Normal source 1048 pick uses the roof's position, not
             // player overlap with the foundation's *solid wall* mask.
             // Prefer the actual source-generated parent at this position;
@@ -2961,6 +2963,7 @@ private:
                 }
             }
         }
+        if(rain_timer_.active())stage2_audio_.set_rain_sheltered(sheltered);
     }
 
     void rebuild_source_automatic_doors() {
