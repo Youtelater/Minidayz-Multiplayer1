@@ -446,19 +446,30 @@ void Stage2Audio::stop_environment_ambience() noexcept {
     // day/night ambience must not invalidate the active weather sample.
 }
 
+void Stage2Audio::set_weather_sample_variant(int variant) noexcept {
+    if (!audio_ready() || muted_) return;
+    if (weather_sample_variant_==variant && clips_[6].pcm) return;
+    stop_rain_loop();
+    // The original audio tag rain_roof refers to the rainroof asset
+    // (root project[7]: rainroof.m4a/.ogg), not rain_roof.wav.
+    const char* path=variant==1 ? "romfs:/wav/blizzard.wav" :
+                     variant==2 ? "romfs:/wav/rainroof.wav" :
+                                  "romfs:/wav/rain_loop.wav";
+    if (!load_wav(path,clips_[6])) return;
+    weather_sample_variant_=variant;
+    play(6);
+}
+
 void Stage2Audio::start_rain_loop(bool blizzard) noexcept {
-    if (!audio_ready()) return;
-    const int wanted=blizzard ? 1 : 0;
-    if (weather_sample_variant_!=wanted) {
-        stop_rain_loop();
-        // Source Rain event 609331584746158 uses blizzard when
-        // original rains_level=2; levels 1/3 use rain_loop.
-        const char* path=blizzard ? "romfs:/wav/blizzard.wav"
-                                  : "romfs:/wav/rain_loop.wav";
-        weather_sample_variant_=wanted;
-        if (!load_wav(path,clips_[6])) return;
-    }
-    if (clips_[6].pcm) play(6);
+    set_weather_sample_variant(blizzard?1:0);
+}
+
+void Stage2Audio::set_rain_sheltered(bool sheltered) noexcept {
+    // House events set muted state of two source rain tags. Use a single
+    // looping 3DS weather voice and the actual recorded samples, switching
+    // only on a state transition. Blizzard is a separate original cue.
+    if (weather_sample_variant_==0 || weather_sample_variant_==2)
+        set_weather_sample_variant(sheltered?2:0);
 }
 
 void Stage2Audio::stop_rain_loop() noexcept {
