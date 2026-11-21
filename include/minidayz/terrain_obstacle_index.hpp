@@ -36,7 +36,7 @@ public:
             if(object&&object->type==16)continue; // Tilemap solids are elsewhere
             const auto* layer=stage1::find_layer(layout_index,p->layer);
             if(!layer)continue;
-            const bool building=std::strcmp(layer->name,"Buildings")==0;
+            const bool building=source_building_collision_layer(layer->name,p->object);
             // The original procedural world creates the invisible
             // obstacle-base sprites on Obstacle_enviroment, independently
             // of their visible Trees / Forests artwork. This layer is
