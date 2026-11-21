@@ -16,7 +16,7 @@ targets={6061166023614368:"DOOR_OPEN",243854400993751:"DOOR_CLOSE",
 4761103342332918:"TREE_577_HIT",3531921662641626:"TREE_581_HIT"}
 def short(obj,length=14000):
     return json.dumps(obj,ensure_ascii=False,separators=(",",":"))[:length]
-for oid in (184,193,207,209,348,349,576,577,581):
+for oid in (181,184,193,207,209,348,349,576,577,581):
     print("ORIGINAL_OBJECT",oid,short(p[3][oid],3500))
 def visit(nodes,sheet,ancestors=()):
     for e in nodes:
@@ -44,3 +44,9 @@ for sheet in p[6]:scan(sheet[1],sheet[0])
 print("TREE_VAR_SET_OR_SUBTRACT_COUNT",len(found))
 for sheet,chain,uid,a in found[:65]:
     print("TREE_VAR_ACTION",sheet,uid,chain,short(a,1400))
+
+for layout in p[5] if isinstance(p[5],list) else []:
+    raw=json.dumps(layout,ensure_ascii=False,separators=(",",":"))
+    if '"t207"' in raw or '"t349"' in raw:
+        print("INSTANCE_LAYOUT_STRUCTURE",short(layout,1500))
+        break
