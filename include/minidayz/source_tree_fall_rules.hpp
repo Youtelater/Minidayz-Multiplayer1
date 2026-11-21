@@ -33,6 +33,30 @@ inline const TreeFallRule* tree_fall_rule(std::uint16_t object_id) noexcept {
     return nullptr;
 }
 
+// Exact original Game_events > Hitting_obstacles ancestor branches (root
+// data.deobfuscated.js, verified by trace-tree-hit-source CI):
+// sprite 345 tests the collision/power guard, then command 87 subtracts
+// one from tree instance variable 0, BEFORE the fall child compares <= 0.
+// These UIDs identify the hit event, not permission for arbitrary hits.
+struct TreeHitRule {
+    std::uint16_t object_id;
+    std::uint64_t hit_event_uid;
+    std::uint64_t fall_event_uid;
+};
+inline constexpr std::array<TreeHitRule,6> kTreeHitRules{{
+    {184,7227858680569601ULL,8821937621821993ULL},
+    {207,8754965976446553ULL,2738244684146745ULL},
+    {209,5386206472407495ULL,7838407830495979ULL},
+    {576,9193333425135665ULL,4972733237327446ULL},
+    {577,4761103342332918ULL,9345628732648648ULL},
+    {581,3531921662641626ULL,4043087112077636ULL}
+}};
+inline const TreeHitRule* tree_hit_rule(std::uint16_t object_id) noexcept {
+    for (const auto& rule : kTreeHitRules)
+        if (rule.object_id == object_id) return &rule;
+    return nullptr;
+}
+
 // Original falling action for all six species also selects a sound
 // from treefall_02/treefall_03, sets frame 1, invokes Spawn_drop
 // at (Tree.X+random(-30,30), Tree.Y+40+random(10)) for each item,
