@@ -87,19 +87,18 @@ for name,nodes in p[6]:
    variants=[inherited[1]]
   if len(variants)!=1:continue
   variant=variants[0]
-  # Source parent UID 3673396466799513 is original var1==7 Mapgen
-  # branch; source event condition 508.var2 chooses the variant.
-  # A standalone conditional/complex secondary branch is never guessed.
-  is_house_parent=3673396466799513 in anc
+  # The outer 3673396466799513 event encloses all categories.
+  # Only the actual category-7 branch is the primary house catalog.
+  is_house_parent=4949969985883762 in anc
   original_conditions=e[5] if isinstance(e[5],list) else []
-  direct_var2_condition=(
-      is_house_parent and ((len(original_conditions)==1 and
-      original_conditions[0][:2]==[508,71]) or
-      (inherited is not None and not original_conditions and
-       anc[-1]==inherited[0] and variant==inherited[1])))
+  direct_var2_condition=(is_house_parent and
+      len(original_conditions)==1 and
+      original_conditions[0][:2]==[508,71] and
+      original_conditions[0][9][0]==[10,2] and
+      original_conditions[0][9][1]==[8,0])
   if direct_var2_condition:
       primaries.append((e[4],base,variant,roots[0][2],roots[0][3]))
-  elif nested_variant is None:
+  elif is_house_parent:
       unverified_primary_conditions+=1
       unverified_primary_branches.append((e[4],base,variant,
                                           original_conditions,anc[-5:]))
