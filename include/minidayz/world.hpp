@@ -101,6 +101,8 @@ struct WorldPlacement {
     // source data without inferring extra items, sounds or loot tables.
     std::uint64_t source_variable_0{};
     std::uint64_t source_variable_1{};
+    // Source Trigger_spawn was called immediately after setting this marker.
+    bool source_initial_loot_trigger{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
