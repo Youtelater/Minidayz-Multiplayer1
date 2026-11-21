@@ -120,7 +120,7 @@ def main():
                 w=csv.DictWriter(f,fieldnames=list(rows[0]));w.writeheader();w.writerows(rows)
     header=Path("include/minidayz/generated/stage1_data.hpp"); header.parent.mkdir(parents=True,exist_ok=True)
     h=["#pragma once","#include <cstdint>","#include <cstddef>","namespace minidayz::stage1 {",
-       "struct ObjectDef{std::uint16_t index;std::uint8_t type;const char* name;float width{},height{};};",
+       "struct ObjectDef{std::uint16_t index;std::uint8_t type;const char* name;float width{},height{},origin_x{},origin_y{};};",
        "struct LayoutDef{const char* name;float width,height;const char* event_sheet;std::uint32_t first,count;};",
        "struct LayerDef{std::uint16_t layout,index;const char* name;std::uint32_t first,count;bool visible;float px,py;};",
        "struct InstanceDef{std::uint16_t layout,layer,object;std::uint64_t uid;float x,y,z,w,h,angle,opacity,scale_x,ox,oy;};",
@@ -132,6 +132,7 @@ def main():
        "inline constexpr ObjectDef kObjects[]={"]
     for i,o in enumerate(objects):
         width,height=0,0
+        origin_x,origin_y=0.0,0.0
         for animation in (o[7] if len(o)>7 and isinstance(o[7],list) else []):
             frames=animation[7] if len(animation)>7 and isinstance(animation[7],list) else []
             for frame in frames:
@@ -140,9 +141,15 @@ def main():
                     fh=frame[5] if len(frame)>5 else 0
                     if isinstance(fw,(int,float)) and isinstance(fh,(int,float)) and fw>0 and fh>0:
                         width,height=fw,fh
+                        # Source frame origin is normalized to the actual
+                        # sprite dimensions. Do not assume (0,0) or (0.5,0.5).
+                        fx=frame[7] if len(frame)>7 else 0.0
+                        fy=frame[8] if len(frame)>8 else 0.0
+                        origin_x=fx if isinstance(fx,(int,float)) else 0.0
+                        origin_y=fy if isinstance(fy,(int,float)) else 0.0
                         break
             if width>0 and height>0: break
-        h.append(f"{{{i},{o[1]},{q(o[0])},{cf(width)},{cf(height)}}},")
+        h.append(f"{{{i},{o[1]},{q(o[0])},{cf(width)},{cf(height)},{cf(origin_x)},{cf(origin_y)}}},")
     h+=["};","inline constexpr LayoutDef kLayoutTable[]={"]
     for x in layouts:h.append(f"{{{q(x['name'])},{cf(x['width'])},{cf(x['height'])},{q(x['event_sheet'])},{x['first']},{x['count']}}},")
     h+=["};","inline constexpr LayerDef kLayerTable[]={"]
