@@ -2,6 +2,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_world_event_effects.hpp"
+#include "minidayz/source_door_auto.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -28,6 +29,59 @@ std::size_t count_code(const minidayz::WorldGrid& grid, std::uint16_t code) {
 }
 
 // Individual Construct object frames are tested separately below.
+void test_live_original_automatic_doors() {
+    using namespace minidayz;
+    using namespace minidayz::world_source;
+    assert(kSourceDoorPointCount>=20);
+    std::size_t metal=0,ordinary=0;
+    for(const auto& point:kSourceDoorPoints){
+        assert(point.width>0.0f&&point.height>0.0f);
+        assert(std::isfinite(point.in_x)&&std::isfinite(point.in_y));
+        if(point.metal) ++metal;
+        else ++ordinary;
+    }
+    assert(metal>0 && ordinary>0);
+
+    WorldSystem world;
+    assert(world.generate_from_source(0x4d444159u,"Map",0));
+    std::size_t tested=0;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* door=world.placement(i);
+        if(!door || door->object!=349 || door->source_frame!=0)
+            continue;
+        const auto* f=source_door_point(door->source_animation,0);
+        if(!f)continue;
+        const auto uid=door->runtime_uid;
+        const WorldPoint open_at{door->x,source_door_in_y(*door,*f)+1.0f};
+        if(!source_door_overlaps_player(*door,*f,open_at))continue;
+        assert(source_auto_door_for_player(world,uid,{1e20f,1e20f})==
+               AutomaticDoorEffect::none);
+        const auto opened=source_auto_door_for_player(world,uid,open_at);
+        assert(opened==(f->metal?AutomaticDoorEffect::open_metal:
+                                   AutomaticDoorEffect::open_wood));
+        assert(world.placement(i)->source_frame==1);
+        assert(source_auto_door_for_player(world,uid,open_at)==
+               AutomaticDoorEffect::none);
+        const auto* f1=source_door_point(door->source_animation,1);
+        if(f1){
+            const WorldPoint close_at{door->x,
+                source_door_in_y(*world.placement(i),*f1)-1.0f};
+            if(source_door_overlaps_player(*world.placement(i),*f1,close_at)){
+                const auto closed=source_auto_door_for_player(
+                    world,uid,close_at);
+                assert(closed==(f1->metal?AutomaticDoorEffect::close_metal:
+                                           AutomaticDoorEffect::close_wood));
+                assert(world.placement(i)->source_frame==0);
+            }
+        }
+        assert(world.placement(i)->runtime_uid==uid);
+        ++tested;
+        if(tested>=5)break;
+    }
+    std::printf("SOURCE LIVE DOORS opened=%zu\\n",tested);
+    assert(tested>0);
+}
+
 void test_source_tree_fall_item_table() {
     using namespace minidayz::world_source;
     constexpr std::uint16_t objects[]={184,207,209,576,577,581};
@@ -756,6 +810,7 @@ int main() {
     test_source_event_tree_fall_and_door_transition();
     test_original_world_visual_file_roundtrip();
     test_source_tree_fall_item_table();
+    test_live_original_automatic_doors();
     test_generated_object_instance_ids();
     test_source_profiles();
     test_original_map_layout_and_descriptors();
