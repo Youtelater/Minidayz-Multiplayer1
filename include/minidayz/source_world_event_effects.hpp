@@ -112,22 +112,31 @@ inline TreeHitOutcome apply_verified_tree_hit(
 // 243854400993751 sets frame 0 (close).
 // Collision/shadow/sound companion actions are NOT implied by this helper;
 // the caller must dispatch the full verified original event group.
-inline bool apply_verified_door_frame(
-    WorldSystem& world,std::uint64_t runtime_uid,
+inline bool apply_verified_door_frame_at_index(
+    WorldSystem& world,std::size_t index,std::uint64_t runtime_uid,
     std::uint64_t source_event_uid) noexcept {
     constexpr std::uint64_t kOpen=6061166023614368ULL;
     constexpr std::uint64_t kClose=243854400993751ULL;
     if(!world.generation_complete() || runtime_uid==0 ||
        (source_event_uid!=kOpen && source_event_uid!=kClose))
         return false;
+    const auto* p=world.placement(index);
+    if(!p || p->runtime_uid!=runtime_uid || p->object!=349)return false;
+    const std::uint32_t frame=source_event_uid==kOpen?1u:0u;
+    if(p->source_frame==frame)return false;
+    return world.set_placement_sprite_state(
+        index,p->source_animation,frame,p->opacity);
+}
+
+inline bool apply_verified_door_frame(
+    WorldSystem& world,std::uint64_t runtime_uid,
+    std::uint64_t source_event_uid) noexcept {
+    if(!world.generation_complete() || runtime_uid==0)return false;
     for(std::size_t i=0;i<world.placement_count();++i) {
         const auto* p=world.placement(i);
-        if(!p || p->runtime_uid!=runtime_uid)continue;
-        if(p->object!=349)return false;
-        const std::uint32_t frame=source_event_uid==kOpen?1u:0u;
-        if(p->source_frame==frame)return false;
-        return world.set_placement_sprite_state(
-            i,p->source_animation,frame,p->opacity);
+        if(p && p->runtime_uid==runtime_uid)
+            return apply_verified_door_frame_at_index(
+                world,i,runtime_uid,source_event_uid);
     }
     return false;
 }
