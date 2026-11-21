@@ -1122,6 +1122,23 @@ bool WorldSystem::set_placement_layer(
     return true;
 }
 
+bool WorldSystem::set_linked_door_solid_present(
+    std::size_t door_index,bool present) noexcept {
+    if(door_index>=placements_.size())return false;
+    const auto& door=placements_[door_index];
+    if(door.object!=349 || door.linked_runtime_uid==0)return false;
+    const std::uint64_t uid=door.linked_runtime_uid;
+    if((uid&(std::uint64_t{1}<<63))==0)return false;
+    const std::uint64_t slot=uid&~(std::uint64_t{1}<<63);
+    if(slot==0 || slot>placements_.size())return false;
+    auto& solid=placements_[static_cast<std::size_t>(slot-1)];
+    if(solid.object!=world_source::door_solid348::kObject ||
+       solid.runtime_uid!=uid ||
+       solid.linked_runtime_uid!=door.runtime_uid)return false;
+    solid.opacity=present?1.0f:0.0f;
+    return true;
+}
+
 bool WorldSystem::set_placement_sprite_state(
     std::size_t index, std::uint16_t animation, std::uint32_t frame,
     float opacity) noexcept {
