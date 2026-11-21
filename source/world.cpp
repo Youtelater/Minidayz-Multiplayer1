@@ -392,7 +392,7 @@ bool WorldSystem::advance_source_generation() {
         for (const auto& p : placements_)
             original_sprite_states_.push_back({
                 p.runtime_uid,p.object,p.source_animation,
-                p.source_frame,p.opacity});
+                p.source_frame,p.opacity,p.layer});
     }
     return true;
 }
@@ -903,9 +903,10 @@ std::vector<WorldSpriteState> WorldSystem::capture_sprite_states() const {
         const auto& p=placements_[i];
         const auto& base=original_sprite_states_[i];
         if (p.source_animation==base.animation &&
-            p.source_frame==base.frame && p.opacity==base.opacity) continue;
+            p.source_frame==base.frame && p.opacity==base.opacity &&
+            p.layer==base.layer) continue;
         result.push_back({p.runtime_uid,p.object,p.source_animation,
-                          p.source_frame,p.opacity});
+                          p.source_frame,p.opacity,p.layer});
     }
     return result;
 }
@@ -939,6 +940,12 @@ bool WorldSystem::restore_sprite_states(
         const auto frames=stage1::animations_for_object(state.object);
         if (!frames.data || state.animation>=frames.size ||
             state.frame>=frames.data[state.animation].frames) return false;
+        if(state.layer!=0xffff){
+            const auto* map=stage1::find_layout("Map");
+            if(!map)return false;
+            const auto layout=static_cast<std::uint16_t>(map-stage1::kLayoutTable);
+            if(!stage1::find_layer(layout,state.layer))return false;
+        }
     }
     // An empty snapshot resets all visual states to the source-generated
     // baseline. This is needed for New Game and save-slot replacement.
@@ -948,6 +955,7 @@ bool WorldSystem::restore_sprite_states(
         placed.source_animation=baseline.animation;
         placed.source_frame=baseline.frame;
         placed.opacity=baseline.opacity;
+        placed.layer=baseline.layer;
     }
     for(const auto& state:states)
         for(auto& p:placements_)
@@ -955,6 +963,7 @@ bool WorldSystem::restore_sprite_states(
                 p.source_animation=state.animation;
                 p.source_frame=state.frame;
                 p.opacity=state.opacity;
+                if(state.layer!=0xffff)p.layer=state.layer;
                 break;
             }
     return true;
