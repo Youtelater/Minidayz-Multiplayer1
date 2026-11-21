@@ -1,4 +1,5 @@
 #include "minidayz/source_building_polygon_collision.hpp"
+#include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 #include <cassert>
 #include <cmath>
@@ -11,6 +12,14 @@ int main(){
     using namespace minidayz::world_source;
     assert(stage1::source_object_has_solid_behavior(348));
     assert(stage1::kSourceBuildingCollisionPolygonCount>0);
+    assert(stage1::kSourceBuildingFrameGeometryCount>=
+           stage1::kSourceBuildingCollisionPolygonCount);
+    for(const auto& polygon:stage1::kSourceBuildingCollisionPolygons){
+        const auto* frame=stage1::source_building_frame_geometry(
+            polygon.object,polygon.animation,polygon.frame);
+        assert(frame && frame->width>0.0f && frame->height>0.0f);
+        assert(std::isfinite(frame->origin_x)&&std::isfinite(frame->origin_y));
+    }
     constexpr float radians=0.01745329251994329577f;
     const std::size_t count=stage1::kSourceBuildingCollisionPolygonCount;
     for(std::size_t i=0;i<count;++i){
