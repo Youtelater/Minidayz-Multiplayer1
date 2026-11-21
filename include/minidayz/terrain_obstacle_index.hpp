@@ -2,6 +2,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/terrain_source_collision.hpp"
+#include "minidayz/generated/source_door_points.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -50,7 +51,16 @@ public:
             const float center_y=p->y;
             // Rotation is around the Construct hotspot, not the centre.
             // hypot(w,h) encloses every possible hotspot-relative corner.
-            const float radius=std::hypot(p->width,p->height);
+            // Object-349 is decorative door artwork; its original closed
+            // obstacle is Solid object-348 spawned at Imagepoint 1 with
+            // frame 15. Index the entire possible companion footprint;
+            // otherwise a movement query can miss it even though polygon
+            // collision below uses the correct source frame.
+            const float radius=std::hypot(p->width,p->height)+
+                (p->object==349
+                    ? std::hypot(world_source::door_solid348::kWidth,
+                                 world_source::door_solid348::kHeight)
+                    : 0.0f);
             const int x0=std::clamp(static_cast<int>(
                 std::floor((center_x-radius)/kCell)),0,cols_-1);
             const int y0=std::clamp(static_cast<int>(
