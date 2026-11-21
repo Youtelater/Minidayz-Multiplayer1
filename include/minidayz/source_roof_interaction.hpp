@@ -50,7 +50,7 @@ inline bool source_player_overlaps_world_rect(
 // default full-frame rectangle otherwise. Player remains a 30x30 box.
 inline bool source_player_overlaps_world_sprite(
     const WorldPlacement& object,WorldPoint player,
-    float origin_x,float origin_y) noexcept {
+    float origin_x,float origin_y,float player_half=15.0f) noexcept {
     if(!std::isfinite(player.x)||!std::isfinite(player.y)||
        !std::isfinite(object.x)||!std::isfinite(object.y)||
        !std::isfinite(object.angle)||!std::isfinite(object.width)||
