@@ -3,6 +3,7 @@
 #include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_world_event_effects.hpp"
 #include "minidayz/source_door_auto.hpp"
+#include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -30,6 +31,40 @@ std::size_t count_code(const minidayz::WorldGrid& grid, std::uint16_t code) {
 }
 
 // Individual Construct object frames are tested separately below.
+void test_original_roof_family_and_transparency() {
+    using namespace minidayz;
+    using namespace minidayz::world_source;
+    assert(kSourceRoofMemberPointCount>=48);
+    assert(!stage1::source_family_contains(1049,1049));
+    WorldSystem world;
+    assert(world.generate_from_source(0x4d444159u,"Map",0));
+    std::size_t roofs=0,interiors=0,frames=0;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* placement=world.placement(i);
+        if(!placement)continue;
+        if(stage1::source_family_contains(1041,placement->object))
+            ++interiors;
+        if(!stage1::source_family_contains(1049,placement->object))
+            continue;
+        assert(terrain::source_visual_roof_overlay(placement->object));
+        ++roofs;
+        const auto* frame=source_roof_member_point(
+            placement->object,placement->source_animation,placement->source_frame);
+        if(!frame)continue;
+        ++frames;
+        const WorldPoint player{placement->x,placement->y};
+        float opacity=0.0f;
+        assert(source_roof_opacity_at_player(*placement,player,false,opacity));
+        assert(opacity==1.0f); // A roof alone is NOT a house entry.
+        assert(source_roof_opacity_at_player(*placement,player,true,opacity));
+        const float threshold=source_roof_in_world_y(*placement,*frame);
+        assert(opacity==(player.y<=threshold?0.25f:1.0f));
+    }
+    std::printf("SOURCE ROOF MEMBERS roofs=%zu interiors=%zu frames=%zu\\n",
+                roofs,interiors,frames);
+    assert(roofs>0 && interiors>0 && frames>0);
+}
+
 void test_live_original_automatic_doors() {
     using namespace minidayz;
     using namespace minidayz::world_source;
@@ -834,6 +869,7 @@ int main() {
     test_original_world_visual_file_roundtrip();
     test_source_tree_fall_item_table();
     test_live_original_automatic_doors();
+    test_original_roof_family_and_transparency();
     test_generated_object_instance_ids();
     test_source_profiles();
     test_original_map_layout_and_descriptors();
