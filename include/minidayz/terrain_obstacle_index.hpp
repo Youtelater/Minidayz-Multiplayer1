@@ -45,6 +45,11 @@ public:
                                std::strcmp(layer->name,"Obstacle_enviroment")==0 ||
                                std::strcmp(layer->name,"Water")==0;
             if(!building&&!barrier)continue;
+            // The Buildings layer includes decorative floors and roofs.
+            // Only original Construct Solid sprites (or door 349 with
+            // its separate Solid-348 companion) enter collision broadphase.
+            if(building && p->object!=349 &&
+               !stage1::source_object_has_solid_behavior(p->object))continue;
             // Conservative circumscribed AABB covers every rotation and
             // hotspot, without producing false negatives at the border.
             const float center_x=p->x;
