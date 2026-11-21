@@ -59,6 +59,54 @@ inline bool apply_verified_tree_fall(
     return true;
 }
 
+// Source-gated execution of the original "subtract 1, then <=0" tree hit
+// event chain. The caller MUST have evaluated the original ancestor
+// conditions (object 345 and bullet 1031 guard) and provide instance
+// variable 0 from that particular tree. We do not invent initial tree HP,
+// hits, weapon eligibility, RNG, sounds, or spawn offsets.
+// A failed fall must NOT consume HP or create a partial item drop.
+enum class TreeHitOutcome : std::uint8_t { Rejected, Damaged, Fallen };
+
+inline TreeHitOutcome apply_verified_tree_hit(
+    WorldSystem& world, std::uint64_t runtime_uid,
+    std::uint64_t source_hit_event_uid,
+    float& original_tree_health_variable_0,
+    const std::array<WorldPoint,4>& source_drop_positions,
+    items::GroundLootSystem& ground) noexcept {
+    if (!world.generation_complete() || runtime_uid==0 ||
+        !std::isfinite(original_tree_health_variable_0))
+        return TreeHitOutcome::Rejected;
+
+    const WorldPlacement* placed=nullptr;
+    for (std::size_t i=0;i<world.placement_count();++i) {
+        const auto* p=world.placement(i);
+        if (p && p->runtime_uid==runtime_uid) { placed=p;break; }
+    }
+    if (!placed) return TreeHitOutcome::Rejected;
+    const auto* hit=tree_hit_rule(placed->object);
+    if (!hit || hit->hit_event_uid!=source_hit_event_uid ||
+        placed->source_animation!=0 || placed->source_frame!=0)
+        return TreeHitOutcome::Rejected;
+
+    // Original Sprite subtract-from-instance-variable 0 action is 1.
+    // The fall child evaluates the updated value, without rounding.
+    const float next_hp=original_tree_health_variable_0-1.0f;
+    if (!std::isfinite(next_hp))return TreeHitOutcome::Rejected;
+    if (next_hp>0.0f) {
+        original_tree_health_variable_0=next_hp;
+        return TreeHitOutcome::Damaged;
+    }
+
+    // Original Spawn_drop expressions must already have been evaluated
+    // in the same RNG order as the source actions by the caller.
+    if (!apply_verified_tree_fall(
+            world,runtime_uid,hit->fall_event_uid,
+            source_drop_positions,ground))
+        return TreeHitOutcome::Rejected;
+    original_tree_health_variable_0=next_hp;
+    return TreeHitOutcome::Fallen;
+}
+
 // Original automatic door event UIDs:
 // 6061166023614368 sets door object 349 frame 1 (open);
 // 243854400993751 sets frame 0 (close).
