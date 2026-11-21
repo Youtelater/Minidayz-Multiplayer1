@@ -92,10 +92,18 @@ void test_live_original_automatic_doors() {
         if(!source_door_overlaps_player(*door,*f,open_at))continue;
         assert(source_auto_door_for_player(world,uid,{1e20f,1e20f})==
                AutomaticDoorEffect::none);
+        const auto planned=
+            source_auto_door_intended_for_placement(world,i,open_at);
+        assert(planned==(f->metal?AutomaticDoorEffect::open_metal:
+                                    AutomaticDoorEffect::open_wood));
+        assert(world.placement(i)->source_frame==0);
+        assert(!source_apply_auto_door_intention(world,i,uid+1,planned));
+        assert(world.placement(i)->source_frame==0);
         const auto opened=source_auto_door_for_player(world,uid,open_at);
         assert(opened==(f->metal?AutomaticDoorEffect::open_metal:
                                    AutomaticDoorEffect::open_wood));
         assert(world.placement(i)->source_frame==1);
+        assert(!source_apply_auto_door_intention(world,i,uid,planned));
         assert(source_auto_door_for_player(world,uid,open_at)==
                AutomaticDoorEffect::none);
         const auto* f1=source_door_point(door->source_animation,1);
