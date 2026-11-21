@@ -97,7 +97,7 @@ out.write_text("\n".join(lines)+"\n",encoding="utf-8")
 # family member, even sprites without Solid behavior or custom vertices.
 # Source SetFrame actions may change the active original image rectangle.
 geometry=[]
-for oid in sorted(building):
+for oid in sorted(building | {181,346,349}):
     obj=objects[oid]
     animations=obj[7] if len(obj)>7 and isinstance(obj[7],list) else []
     for ai,a in enumerate(animations):
