@@ -36,7 +36,12 @@ public:
             const auto* layer=stage1::find_layer(layout_index,p->layer);
             if(!layer)continue;
             const bool building=std::strcmp(layer->name,"Buildings")==0;
+            // The original procedural world creates the invisible
+            // obstacle-base sprites on Obstacle_enviroment, independently
+            // of their visible Trees / Forests artwork. This layer is
+            // solid and must participate in broadphase candidate lookup.
             const bool barrier=std::strcmp(layer->name,"Obstacles")==0 ||
+                               std::strcmp(layer->name,"Obstacle_enviroment")==0 ||
                                std::strcmp(layer->name,"Water")==0;
             if(!building&&!barrier)continue;
             // Conservative circumscribed AABB covers every rotation and
