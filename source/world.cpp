@@ -950,6 +950,20 @@ bool WorldSystem::set_placement_sprite_state(
     placement.source_animation = animation;
     placement.source_frame = frame;
     placement.opacity = opacity;
+    if(placement.object==349 && placement.linked_runtime_uid!=0) {
+        // Original open event destroys the linked 348 Solid, while close
+        // event creates frame 15 at the authored imagepoint. A stable
+        // parked native placement preserves source UID/save identity;
+        // transparent 348 has no collision and cannot be rendered.
+        const std::uint64_t linked=placement.linked_runtime_uid;
+        for(auto& candidate:placements_){
+            if(candidate.runtime_uid!=linked ||
+               candidate.object!=world_source::door_solid348::kObject ||
+               candidate.linked_runtime_uid!=placement.runtime_uid)continue;
+            candidate.opacity=frame==0?1.0f:0.0f;
+            break;
+        }
+    }
     return true;
 }
 
@@ -1025,6 +1039,19 @@ bool WorldSystem::restore_sprite_states(
                 if(state.layer!=0xffff)p.layer=state.layer;
                 break;
             }
+    // Companion visibility is derived from its linked source door frame.
+    // This also repairs pre-companion v1 saves that only stored object 349.
+    for(const auto& door:placements_) {
+        if(door.object!=349 || !door.linked_runtime_uid)continue;
+        for(auto& solid:placements_) {
+            if(solid.runtime_uid==door.linked_runtime_uid &&
+               solid.object==world_source::door_solid348::kObject &&
+               solid.linked_runtime_uid==door.runtime_uid) {
+                solid.opacity=door.source_frame==0?1.0f:0.0f;
+                break;
+            }
+        }
+    }
     return true;
 }
 
