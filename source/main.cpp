@@ -2526,11 +2526,13 @@ public:
             roof.width=49.0f;roof.height=65.0f;
             roof.scale_x=1.0f;
             const minidayz::WorldPoint actor{player_.state().x,player_.state().y};
-            // Root events 3450973739819458 / 8566394378489923:
-            // roof opacity 25% on overlap, 100% outside. The original
-            // mask extends from x=-25 to +12 and y=-33 to +32.
-            const bool overlap=std::fabs(actor.x-(roof.x-6.5f))<=33.5f &&
-                               std::fabs(actor.y-(roof.y-0.5f))<=47.5f;
+            // Root events 3450973739819458 / 8566394378489923.
+            // Exact source frame vertices relative to its (25,33) hotspot:
+            // (-25,-33), (12,-33), (12,32), (-25,32).
+            const bool overlap=actor.x+15.0f>=roof.x-25.0f &&
+                               actor.x-15.0f<=roof.x+12.0f &&
+                               actor.y+15.0f>=roof.y-33.0f &&
+                               actor.y-15.0f<=roof.y+32.0f;
             (void)renderer.draw_source_sprite(398,0,0,tent->x,tent->y,
                                                1.0f,1.0f,0.54f);
             (void)renderer.draw_source_sprite(397,0,0,tent->x,tent->y,
