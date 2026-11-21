@@ -2,6 +2,7 @@
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/location_event_runtime.hpp"
+#include "minidayz/generated/source_tree_impact_points.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -779,6 +780,47 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         });
         placements_.back().runtime_uid = runtime_id;
         placements_.back().instance_id = static_cast<std::uint64_t>(placements_.size());
+
+        // Original create_map_element branches 5221960099677299,
+        // 1639594650416124, 7109935635557623, 2584406677664733,
+        // 2788700463962024, 5413722554242966 do NOT create a visible
+        // tree alone. Each immediately creates obst_base object 345 on
+        // zed_resp at Tree.ImagePoint("Imagepoint 1"), sets its frame 10,
+        // and saves the companion UID in a tree instance variable.
+        // Previously those hitboxes were absent, so original projectile
+        // Hitting_obstacles branches had nothing to collide with.
+        if(const auto* point=world_source::source_tree_impact_point(rule.object)){
+            const auto hitbox_layer=
+                find_layer_index_by_name(layout_index,"zed_resp");
+            if(hitbox_layer!=0xffff){
+                const std::size_t tree_index=placements_.size()-1;
+                const auto tree=placements_[tree_index];
+                const float angle=tree.angle*0.01745329251994329577f;
+                const float dx=(point->point_x-point->origin_x)*tree.width;
+                const float dy=(point->point_y-point->origin_y)*tree.height;
+                const float bx=tree.x+dx*std::cos(angle)-dy*std::sin(angle);
+                const float by=tree.y+dx*std::sin(angle)+dy*std::cos(angle);
+                const std::uint64_t hitbox_uid=(std::uint64_t{1}<<63) |
+                    (static_cast<std::uint64_t>(placements_.size())+1);
+                placements_.push_back({
+                    hitbox_layer,world_source::kOriginalTreeHitboxObject,0,
+                    bx,by,0.0f,
+                    world_source::kOriginalTreeHitboxWidth,
+                    world_source::kOriginalTreeHitboxHeight,
+                    tree.angle,1.0f,1.0f,
+                    world_source::kOriginalTreeHitboxOriginX,
+                    world_source::kOriginalTreeHitboxOriginY,
+                    0,world_source::kOriginalTreeStandingHitboxFrame
+                });
+                auto& hitbox=placements_.back();
+                hitbox.runtime_uid=hitbox_uid;
+                hitbox.instance_id=static_cast<std::uint64_t>(placements_.size());
+                hitbox.linked_runtime_uid=tree.runtime_uid;
+                placements_[tree_index].linked_runtime_uid=hitbox_uid;
+                // zed_resp is an invisible gameplay trigger layer; do
+                // NOT also add every trunk hitbox as an NPC spawn feature.
+            }
+        }
 
         WorldFeatureKind kind{};
         if (classify_source_layer(rule.layer_name, kind)) {
