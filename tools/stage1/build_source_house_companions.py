@@ -123,7 +123,7 @@ for name,nodes in p[6]:
                  item["animation"],item["frame"],
                  item["width_delta"],item["height_delta"]))
 if not rules:raise SystemExit("No original source house Spawn events recovered")
-parents={row[3] for row in rules}
+parents={row[4] for row in rules}
 # Object frame image points are relative to each source animation frame's
 # own hotspot; multiple image points may live in ONE PNG atlas rectangle.
 points=[]
