@@ -26,7 +26,7 @@ inline bool source_door_overlaps_player(
     WorldPoint player) noexcept {
     // Use the same complete four-axis rectangle SAT as house overlap.
     // This rejects spurious door transitions near rotated corners.
-    return source_player_overlaps_world_rect(
+    return source_player_overlaps_world_sprite(
         door,player,frame.origin_x,frame.origin_y);
 }
 
