@@ -1,0 +1,22 @@
+name: Trace original tree hit conditions
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/audit_tree_hit_source.py'
+      - '.github/workflows/trace-tree-hit-source.yml'
+  workflow_dispatch:
+jobs:
+  trace-tree-hits:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Trace original Construct tree damage and fall
+        run: python3 tools/stage1/audit_tree_hit_source.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-tree-hit-event-chains
+          path: audit-output/world/source_tree_hit_full_chains.json
