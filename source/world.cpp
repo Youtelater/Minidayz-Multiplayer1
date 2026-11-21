@@ -1004,6 +1004,35 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             child.house_base_runtime_uid=
                 parent.house_base_runtime_uid!=0 ?
                 parent.house_base_runtime_uid : parent.runtime_uid;
+            // Original same-event SetInstanceVariable(88): 346 walls
+            // receive numeric slots, while 347 shadows and 349 doors
+            // record the UID of the original chosen parent Sprite.
+            // Original object 218 receives the location loot category
+            // directly from its source Spawn event, not a guessed roll.
+            for(const auto& setting:world_source::kSourceHouseCompanionVariables){
+                if(setting.event_uid!=action.event_uid ||
+                   setting.base_object!=action.base_object ||
+                   setting.variant!=action.variant ||
+                   setting.sequence!=action.sequence ||
+                   setting.child!=action.object)continue;
+                std::uint64_t value=0;
+                if(setting.kind==1 && setting.literal_value>=0)
+                    value=static_cast<std::uint64_t>(
+                        setting.literal_value);
+                else if(setting.kind==2){
+                    for(auto it=spawned.rbegin();it!=spawned.rend();++it)
+                        if(it->first==setting.uid_object){
+                            value=placements_[it->second].runtime_uid;
+                            break;
+                        }
+                }
+                if(setting.slot==0)child.source_variable_0=value;
+                if(setting.slot==1)child.source_variable_1=value;
+            }
+            if(child.object==218 && child.source_variable_0>0 &&
+               child.source_variable_0<=65535)
+                child.source_loot_category=static_cast<std::uint16_t>(
+                    child.source_variable_0);
             // The visual door 349 reserves this link for its separately
             // spawned original Solid 348. Other house pieces remember
             // the original parent Sprite selected by command 73.
