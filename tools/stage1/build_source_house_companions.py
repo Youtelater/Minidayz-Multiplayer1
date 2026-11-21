@@ -124,7 +124,7 @@ for name,nodes in p[6]:
     # expressions (command 151) are preserved, not guessed. The source
     # links wall 346, shadow 347 and door 349 to particular parents; it
     # also sets original loot-marker 218 category 9/19.
-    index=literal(a[5][0][1])
+    index=a[5][0][1] if (isinstance(a[5][0],list) and len(a[5][0])>1) else None
     expr=a[5][1][1]
     if isinstance(index,int) and index in (0,1):
      kind=0;value=0;source_object=65535
