@@ -12,6 +12,7 @@
 #include <vector>
 #include <cstdint>
 #include <cstdio>
+#include <limits>
 #include <initializer_list>
 #include <unordered_set>
 
@@ -42,6 +43,77 @@ void test_source_tree_fall_item_table() {
         for(std::size_t j=0;j<4;++j)assert(r->drop_item_ids[j]==items[i][j]);
     }
     assert(tree_fall_rule(349)==nullptr); // Doors do not drop tree resources.
+}
+
+// Root Game_events/Hitting_obstacles: branch UID 8754965976446553
+// subtracts 1 from instance variable 0 before child fall UID
+// 2738244684146745 checks that the new value is <=0.
+void test_source_event_tree_hit_health_and_atomic_fall() {
+    using namespace minidayz;
+    using namespace minidayz::world_source;
+    const auto* rules=tree_hit_rule(207);
+    assert(rules && rules->hit_event_uid==8754965976446553ULL);
+    assert(rules->fall_event_uid==2738244684146745ULL);
+    for (const auto& rule:kTreeHitRules) {
+        const auto* fall=tree_fall_rule(rule.object_id);
+        assert(fall && fall->event_uid==rule.fall_event_uid);
+    }
+
+    WorldSystem world;
+    assert(world.generate_from_source(0x4d444159u,"Map",0));
+    std::size_t tree=world.placement_count(),other=tree;
+    for (std::size_t i=0;i<world.placement_count();++i) {
+        const auto* p=world.placement(i);
+        if (p && p->object==207 && p->source_frame==0) {
+            if (tree==world.placement_count())tree=i;
+            else {other=i;break;}
+        }
+    }
+    assert(tree<world.placement_count() && other<world.placement_count());
+    const auto* p=world.placement(tree);
+    const std::uint64_t id=p->runtime_uid;
+    const auto other_id=world.placement(other)->runtime_uid;
+    std::array<WorldPoint,4> drops{};
+    for(std::size_t i=0;i<drops.size();++i)
+        drops[i]={p->x+static_cast<float>(i),p->y+40.0f};
+
+    items::GroundLootSystem loot;
+    float hp=2.0f; // TEST FIXTURE; NOT asserted as original initial HP.
+    assert(apply_verified_tree_hit(world,id,999,hp,drops,loot)
+           ==TreeHitOutcome::Rejected);
+    assert(hp==2.0f && loot.count()==0);
+    assert(apply_verified_tree_hit(world,other_id,8754965976446553ULL,
+                                  hp,drops,loot)==TreeHitOutcome::Damaged);
+    assert(hp==1.0f && world.placement(other)->source_frame==0);
+    // Use the original affected tree's independent test health now.
+    float tree_hp=2.0f;
+    assert(apply_verified_tree_hit(world,id,8754965976446553ULL,
+                                  tree_hp,drops,loot)==TreeHitOutcome::Damaged);
+    assert(tree_hp==1.0f && loot.count()==0);
+    assert(world.placement(tree)->source_frame==0);
+    assert(apply_verified_tree_hit(world,id,8754965976446553ULL,
+                                  tree_hp,drops,loot)==TreeHitOutcome::Fallen);
+    assert(tree_hp==0.0f && loot.count()==3);
+    assert(world.placement(tree)->source_frame==1);
+    assert(loot.entry(0)->item.item_id==38);
+    assert(loot.entry(1)->item.item_id==38);
+    assert(loot.entry(2)->item.item_id==50);
+    assert(apply_verified_tree_hit(world,id,8754965976446553ULL,
+                                  tree_hp,drops,loot)==TreeHitOutcome::Rejected);
+    assert(loot.count()==3 && tree_hp==0.0f);
+    assert(world.placement(other)->source_frame==0);
+    assert(!world.capture_sprite_states().empty());
+    // Bad source RNG positions cannot silently consume HP.
+    WorldSystem second;
+    assert(second.generate_from_source(0x4d444159u,"Map",0));
+    const auto uid=second.placement(tree)->runtime_uid;
+    drops[0].x=std::numeric_limits<float>::infinity();
+    float final_hp=1.0f;
+    items::GroundLootSystem empty;
+    assert(apply_verified_tree_hit(second,uid,8754965976446553ULL,
+                                  final_hp,drops,empty)==TreeHitOutcome::Rejected);
+    assert(final_hp==1.0f && empty.count()==0);
+    assert(second.placement(tree)->source_frame==0);
 }
 
 void test_source_world_instance_animation_state() {
@@ -655,6 +727,7 @@ int main() {
     test_grid_semantics();
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
+    test_source_event_tree_hit_health_and_atomic_fall();
     test_source_event_tree_fall_and_door_transition();
     test_original_world_visual_file_roundtrip();
     test_source_tree_fall_item_table();
