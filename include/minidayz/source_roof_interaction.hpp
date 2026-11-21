@@ -26,10 +26,21 @@ inline bool source_player_overlaps_world_rect(
     if(object.scale_x<0.0f)local_x=-local_x;
     // Original player_collision_base sprite is 30x30.
     const float half=15.0f*(std::fabs(cs)+std::fabs(sn));
-    return local_x+half>=-object.width*origin_x &&
-           local_x-half<=object.width*(1.0f-origin_x) &&
-           local_y+half>=-object.height*origin_y &&
-           local_y-half<=object.height*(1.0f-origin_y);
+    if (!(local_x+half>=-object.width*origin_x &&
+          local_x-half<=object.width*(1.0f-origin_x) &&
+          local_y+half>=-object.height*origin_y &&
+          local_y-half<=object.height*(1.0f-origin_y))) return false;
+    // Complete rectangle SAT: local axes alone admit false overlap
+    // at rotated corners. Also test the world-aligned player axes.
+    const float center_x=(0.5f-origin_x)*object.width*
+                         (object.scale_x<0.0f?-1.0f:1.0f);
+    const float center_y=(0.5f-origin_y)*object.height;
+    const float world_x=object.x+center_x*cs-center_y*sn;
+    const float world_y=object.y+center_x*sn+center_y*cs;
+    const float extent_x=0.5f*(object.width*std::fabs(cs)+object.height*std::fabs(sn));
+    const float extent_y=0.5f*(object.width*std::fabs(sn)+object.height*std::fabs(cs));
+    return std::fabs(player.x-world_x)<=15.0f+extent_x &&
+           std::fabs(player.y-world_y)<=15.0f+extent_y;
 }
 
 inline float source_roof_in_world_y(
