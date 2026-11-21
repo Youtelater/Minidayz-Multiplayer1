@@ -137,6 +137,7 @@ stage1-assets:
 	@python3 tools/stage1/build_source_door_points.py
 	@python3 tools/stage1/build_source_tree_impact_points.py
 	@python3 tools/stage1/build_source_family_members.py
+	@python3 tools/stage1/build_source_building_polygons.py
 	@python3 tools/stage1/build_source_roof_family_points.py
 	@python3 tools/stage1/build_water_shoreline.py
 	@test -s $(ROMFS)/gfx/original_map_details_layout.bin || { echo 'ERROR: original environment terrain layout missing'; exit 1; }
