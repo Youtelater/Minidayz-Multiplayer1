@@ -81,6 +81,6 @@ b+=["};",
 "inline const SourceRoofFoundationAnimations* source_roof_foundation_animations(std::uint16_t object) noexcept {",
 " for(const auto& row:kSourceRoofFoundationAnimations)if(row.object==object)return &row;",
 " return nullptr;","} // namespace minidayz::world_source"]
-baseout.write_text("\\n".join(b)+"\\n",encoding="utf-8")
+baseout.write_text("\n".join(b)+"\n",encoding="utf-8")
 print("Original family 1048 out-animation source Sprite count",len(base_rows))
 print("Original roof family frames:",len(rows),"members total",len(family)-1,"without point",without[:25])
