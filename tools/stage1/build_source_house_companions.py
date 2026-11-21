@@ -274,7 +274,7 @@ lines += ["};",
 " }return nullptr;}",
 "} // namespace minidayz::world_source"]
 out.write_text("\n".join(lines)+"\n",encoding="utf-8")
-for oid in (302,306,311,312,313,321,322,323,324,333,346,347,349):
+for oid in (302,306,311,312,313,321,322,323,324,333,346,347,348,349,1323):
  obj=objects[oid]
  anims=obj[7] if len(obj)>7 and isinstance(obj[7],list) else []
  fr=anims[0][7][0] if anims and len(anims[0])>7 and anims[0][7] else []
@@ -286,6 +286,17 @@ for uid,base,variant,conditions,anc in unverified_primary_branches:
        "conditions",json.dumps(conditions,separators=(",",":"),
                                ensure_ascii=False)[:2200],
        "ancestry",list(anc))
+for obj_id,ai,fi in ((1323,0,0),(348,0,30)):
+ obj=objects[obj_id]
+ animations=obj[7] if len(obj)>7 else []
+ frame=(animations[ai][7][fi] if ai<len(animations) and
+        len(animations[ai])>7 and fi<len(animations[ai][7]) else None)
+ print("SOURCE_MISSING_HOUSE_FRAME",obj_id,ai,fi,
+       "frame_fields",json.dumps(frame[:11] if frame else None,
+                                  ensure_ascii=False,separators=(",",":"))[:3400])
+print("SOURCE_VARIANT36_RULES",
+ [(x[0],x[4],x[5],x[6],x[7],x[8],x[9],x[10])
+  for x in rules if x[2]==36])
 print("Root source house companion Spawn actions:",len(rules),
       "events",events,"parents",len(parents),"imagepoints",len(points),
       "source instance-variable actions",len(variable_rows),
