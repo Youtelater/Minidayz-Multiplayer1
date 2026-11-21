@@ -94,6 +94,8 @@ See [Root Original World Source Readiness](ORIGINAL_WORLD_SOURCE_READINESS.md) f
 
 **Regressions fixed while integrating:** A prior attempt treated family 1049 as one sprite and failed at source-frame extraction. That code was removed, then replaced with real project[4] member mapping and member imagepoints. Another CI failure came from the old test expecting the non-Sprite family 1049 to collide; its assertion now checks actual roof members. A native player test needed family table generation before compilation. See latest native/3DS workflows for final confirmation.
 
+**Latest full CI validation of the integrated code:** [Native System Regression Tests #44930751439](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44930751439) **passed** and [Build 3DS Executable #44930751169](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44930751169) **passed** on code commit `e3916e32`. Later tracker-only commits do not change game code. No claim of Azahar or real-hardware confirmation.
+
 **Task 1 is NOT checked complete:** live source projectile hit/HP initialization, linked tree fall audio, source audio probabilities and object state storage, exact door 348 companion logic, full roof/house source conditions, interactive containers/furniture, original collision polygon parity, and in-emulator testing remain. Do not convert successful compilation into a 100%-finished claim.
 
 ## Current priorities
