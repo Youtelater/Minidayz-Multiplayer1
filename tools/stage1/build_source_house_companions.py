@@ -44,7 +44,7 @@ def spawn(a):
  if not isinstance(target,int) or not 0<=target<len(objects):return None
  if not isinstance(layer,str) or not isinstance(point,(int,str)):return None
  return a[0],target,layer,point
-rules=[];ignored=0;events=0
+rules=[];ignored=0;events=0;primaries=[];unverified_primary_conditions=0
 for name,nodes in p[6]:
  if name!="Game_events":continue
  for e,anc in walk(nodes):
@@ -70,6 +70,18 @@ for name,nodes in p[6]:
    if isinstance(value,int) and 0<=value<=255:variants.append(value)
   if len(variants)!=1:continue
   variant=variants[0]
+  # Source parent UID 3673396466799513 is original var1==7 Mapgen
+  # branch; source event condition 508.var2 chooses the variant.
+  # A standalone conditional/complex secondary branch is never guessed.
+  is_house_parent=3673396466799513 in anc
+  original_conditions=e[5] if isinstance(e[5],list) else []
+  direct_var2_condition=(
+      is_house_parent and len(original_conditions)==1 and
+      original_conditions[0][:2]==[508,71])
+  if direct_var2_condition:
+      primaries.append((e[4],base,variant,roots[0][2],roots[0][3]))
+  else:
+      unverified_primary_conditions+=1
   created=[]
   for a in acts:
    if not isinstance(a,list) or len(a)<2:continue
@@ -151,6 +163,17 @@ def fl(v):
 lines=["#pragma once","#include <cstddef>","#include <cstdint>",
 "#include <cstring>",
 "namespace minidayz::world_source {",
+"// Literal root source primary Mapgen508 Spawn command in var1=7 branch.",
+"struct SourceHousePrimarySpawn {std::uint64_t event_uid;",
+" std::uint16_t object;std::uint8_t variant;const char* layer;",
+" std::uint8_t point_index;};",
+"inline constexpr SourceHousePrimarySpawn kSourceHousePrimarySpawns[]={"]
+for uid,base,variant,layer,point in dict.fromkeys(primaries):
+    if not isinstance(point,int) or not 0<=point<255:continue
+    lines.append(" {"+",".join([str(uid)+"ULL",str(base),str(variant),
+                                quote(layer),str(point)])+"},")
+lines+=["};",
+"inline constexpr std::size_t kSourceHousePrimarySpawnCount=sizeof(kSourceHousePrimarySpawns)/sizeof(kSourceHousePrimarySpawns[0]);",
 "// Root Construct create_map_element nested Sprite command 73, in action order.",
 "struct SourceHouseCompanionSpawn {",
 " std::uint64_t event_uid;std::uint16_t base_object;",
@@ -203,4 +226,6 @@ for oid in (302,306,311,312,313,321,322,323,324,333,346,347,349):
        "point_names",[p[0] for p in fr[9]] if len(fr)>9 and isinstance(fr[9],list) else [])
 print("Root source house companion Spawn actions:",len(rules),
       "events",events,"parents",len(parents),"imagepoints",len(points),
-      "unsupported Spawn actions",ignored)
+      "unsupported Spawn actions",ignored,
+      "literal primary branches",len(primaries),
+      "complex-source primary branch guards deferred",unverified_primary_conditions)
