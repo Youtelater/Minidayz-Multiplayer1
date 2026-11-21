@@ -6,6 +6,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_door_auto.hpp"
+#include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_map_overlay.hpp"
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -262,6 +263,7 @@ public:
                 collision_index_.rebuild(world_);
                 visibility_index_.rebuild(world_);
                 rebuild_source_automatic_doors();
+                rebuild_source_house_roofs();
                 npc_ready_ = npcs_.initialize(world_);
                 if (new_game_generation_ && !place_new_player_on_generated_map()) {
                     // Do not start a new run at a hard-coded, blocked map edge.
@@ -1187,6 +1189,7 @@ public:
         // Y against each overlapping door's authored "in" image point.
         // A successful source frame transition plays its matching WAV.
         update_source_automatic_doors();
+        update_source_house_roofs(dt);
         // Play the original material-specific WAV only after moving.
         const float dx=player_.state().x-old_x;
         const float dy=player_.state().y-old_y;
@@ -2795,6 +2798,62 @@ private:
         return false;
     }
 
+    void rebuild_source_house_roofs() {
+        source_roof_indices_.clear();
+        source_house_interior_indices_.clear();
+        for(std::size_t i=0;i<world_.placement_count();++i){
+            const auto* p=world_.placement(i);
+            if(!p)continue;
+            if(p->object==1049)
+                source_roof_indices_.push_back(static_cast<std::uint32_t>(i));
+            if(p->object==1041)
+                source_house_interior_indices_.push_back(
+                    static_cast<std::uint32_t>(i));
+        }
+        source_roof_elapsed_=0.0f;
+    }
+
+    void update_source_house_roofs(float dt) noexcept {
+        if(!world_ready_ || !player_.state().alive)return;
+        // Root House_transparenting updates the interior/roof branch on
+        // a Construct Every 0.5s condition (UID 1316080584290813).
+        source_roof_elapsed_+=std::max(0.0f,dt);
+        if(source_roof_elapsed_<0.5f)return;
+        source_roof_elapsed_=std::fmod(source_roof_elapsed_,0.5f);
+        const minidayz::WorldPoint player_pos{
+            player_.state().x,player_.state().y
+        };
+        bool overlaps_interior=false;
+        for(const auto index:source_house_interior_indices_){
+            const auto* interior=world_.placement(index);
+            if(!interior)continue;
+            if(std::fabs(player_pos.x-interior->x)>256.0f ||
+               std::fabs(player_pos.y-interior->y)>256.0f)continue;
+            if(minidayz::world_source::source_player_overlaps_house_rect(
+                    *interior,player_pos,interior->origin_x,
+                    interior->origin_y)){
+                overlaps_interior=true;
+                break;
+            }
+        }
+        for(const auto index:source_roof_indices_){
+            const auto* roof=world_.placement(index);
+            if(!roof)continue;
+            // Preserve the stored roof state until the player approaches,
+            // except restore a previously transparent distant roof.
+            if(std::fabs(player_pos.x-roof->x)>512.0f &&
+               std::fabs(player_pos.y-roof->y)>512.0f &&
+               roof->opacity==1.0f)continue;
+            float desired=1.0f;
+            if(!minidayz::world_source::source_roof_opacity_at_player(
+                    *roof,player_pos,overlaps_interior,desired))
+                continue;
+            if(std::fabs(roof->opacity-desired)>0.001f)
+                (void)world_.set_placement_sprite_state(
+                    index,roof->source_animation,roof->source_frame,desired);
+        }
+    }
+
     void rebuild_source_automatic_doors() {
         source_door_indices_.clear();
         for(std::size_t i=0;i<world_.placement_count();++i){
@@ -2960,6 +3019,9 @@ private:
         npc_ready_ = false;
         menu_active_ = true;
         source_door_indices_.clear();
+        source_roof_indices_.clear();
+        source_house_interior_indices_.clear();
+        source_roof_elapsed_=0.0f;
         loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_);
         if (!loading_world_) {
             generation_failed_ = true;
@@ -3062,6 +3124,9 @@ private:
     minidayz::terrain::SolidTerrain terrain_collision_{};
     minidayz::terrain::SourceObstacleIndex collision_index_{};
     std::vector<std::uint32_t> source_door_indices_{};
+    std::vector<std::uint32_t> source_roof_indices_{};
+    std::vector<std::uint32_t> source_house_interior_indices_{};
+    float source_roof_elapsed_{};
     minidayz::terrain::VisibleSourcePlacementIndex visibility_index_{};
     std::vector<std::uint32_t> visible_world_placements_{};
     minidayz::NpcSystem npcs_{};
