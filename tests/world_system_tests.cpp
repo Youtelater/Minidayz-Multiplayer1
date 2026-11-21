@@ -9,6 +9,7 @@
 #include "minidayz/npc_system.hpp"
 
 #include <cassert>
+#include <cmath>
 #include <cstring>
 #include <algorithm>
 #include <vector>
@@ -128,6 +129,27 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
     const auto* p=world.placement(tree);
     const std::uint64_t id=p->runtime_uid;
     const auto other_id=world.placement(other)->runtime_uid;
+    // Every procedural tree creates the original separate frame-10
+    // obst_base hitbox at its frame-0 Imagepoint 1. The linked IDs are
+    // essential to the original object-345 projectile collision event.
+    const std::uint64_t hitbox_uid=p->linked_runtime_uid;
+    assert(hitbox_uid!=0);
+    std::size_t hitbox_index=world.placement_count();
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* q=world.placement(i);
+        if(q && q->runtime_uid==hitbox_uid){hitbox_index=i;break;}
+    }
+    assert(hitbox_index<world.placement_count());
+    const auto* hitbox=world.placement(hitbox_index);
+    assert(hitbox->object==345 && hitbox->source_frame==10);
+    assert(hitbox->linked_runtime_uid==id);
+    const auto* original_point=source_tree_impact_point(207);
+    assert(original_point);
+    const float a=p->angle*0.01745329251994329577f;
+    const float dx=(original_point->point_x-original_point->origin_x)*p->width;
+    const float dy=(original_point->point_y-original_point->origin_y)*p->height;
+    assert(std::fabs(hitbox->x-(p->x+dx*std::cos(a)-dy*std::sin(a)))<0.05f);
+    assert(std::fabs(hitbox->y-(p->y+dx*std::sin(a)+dy*std::cos(a)))<0.05f);
     std::array<WorldPoint,4> drops{};
     for(std::size_t i=0;i<drops.size();++i)
         drops[i]={p->x+static_cast<float>(i),p->y+40.0f};
@@ -150,6 +172,7 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
                                   tree_hp,drops,loot)==TreeHitOutcome::Fallen);
     assert(tree_hp==0.0f && loot.count()==3);
     assert(world.placement(tree)->source_frame==1);
+    assert(world.placement(hitbox_index)->source_frame==8);
     assert(loot.entry(0)->item.item_id==38);
     assert(loot.entry(1)->item.item_id==38);
     assert(loot.entry(2)->item.item_id==50);
