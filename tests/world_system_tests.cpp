@@ -4,6 +4,7 @@
 #include "minidayz/source_world_event_effects.hpp"
 #include "minidayz/source_door_auto.hpp"
 #include "minidayz/source_roof_interaction.hpp"
+#include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -88,6 +89,61 @@ void test_original_roof_family_and_transparency() {
     assert(world.placement(first+1)->layer==other_layer);
     assert(!world.set_placement_layer(first,0xffff));
     assert(world.set_placement_layer(first,old_layer));
+}
+
+void test_original_generated_house_companions() {
+    using namespace minidayz;
+    assert(world_source::kSourceHouseCompanionSpawnCount>=15);
+    WorldSystem world;
+    assert(world.initialize(0x31415926u));
+    assert(world.load_source_layout("Map"));
+    struct House { std::uint8_t variant;std::uint16_t base,roof; };
+    // Exact root Spawn action pairs at source UIDs
+    // 5307563843618601, 6055506806351951, 4849857520268099,
+    // 9738497725914855 and 2950646084128909.
+    const House houses[]={
+        {15,306,333},{27,302,321},{28,311,322},
+        {29,312,323},{30,313,324}
+    };
+    for(const auto& h:houses) {
+        const auto start=world.placement_count();
+        assert(world.expand_map_element(7,h.variant,0,
+               {4500.0f+h.variant*30.0f,6000.0f})>0);
+        const auto end=world.placement_count();
+        std::size_t base=end,roof=end,door=end,wall=end,shadow=end;
+        for(std::size_t i=start;i<end;++i) {
+            const auto* p=world.placement(i);
+            if(p->object==h.base)base=i;
+            if(p->object==h.roof)roof=i;
+            if(p->object==349)door=i;
+            if(p->object==346)wall=i;
+            if(p->object==347)shadow=i;
+        }
+        // The old implementation only created the base sprite. The
+        // original source also spawns exterior roof, wall trigger,
+        // shadow and an automatic door from the roof's imagepoint.
+        assert(base<end&&roof<end&&wall<end&&shadow<end&&door<end);
+        const auto* foundation=world.placement(base);
+        const auto* exterior=world.placement(roof);
+        assert(exterior->linked_runtime_uid==foundation->runtime_uid);
+        assert(world.placement(wall)->linked_runtime_uid==
+               foundation->runtime_uid);
+        assert(world.placement(shadow)->linked_runtime_uid==
+               foundation->runtime_uid);
+        assert(world.placement(door)->source_frame==0);
+        assert(world.placement(door)->width>0.0f);
+        assert(world.placement(door)->height>0.0f);
+        const auto* doorpoint=world_source::source_house_image_point(
+            exterior->object,exterior->source_animation,
+            exterior->source_frame,"",3);
+        assert(doorpoint!=nullptr);
+        const float expected_x=exterior->x+
+            (doorpoint->x-doorpoint->origin_x)*exterior->width;
+        const float expected_y=exterior->y+
+            (doorpoint->y-doorpoint->origin_y)*exterior->height;
+        assert(std::fabs(world.placement(door)->x-expected_x)<0.05f);
+        assert(std::fabs(world.placement(door)->y-expected_y)<0.05f);
+    }
 }
 
 void test_live_original_automatic_doors() {
@@ -948,6 +1004,7 @@ int main() {
     test_source_event_tree_fall_and_door_transition();
     test_original_world_visual_file_roundtrip();
     test_source_tree_fall_item_table();
+    test_original_generated_house_companions();
     test_live_original_automatic_doors();
     test_original_roof_family_and_transparency();
     test_generated_object_instance_ids();
