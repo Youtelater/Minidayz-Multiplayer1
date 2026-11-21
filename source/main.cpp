@@ -2816,8 +2816,8 @@ private:
             // 3DS frame. Only evaluate nearby object-349 door sprites.
             if(std::fabs(p->x-player_pos.x)>96.0f ||
                std::fabs(p->y-player_pos.y)>96.0f)continue;
-            const auto event=minidayz::world_source::source_auto_door_for_player(
-                world_,p->runtime_uid,player_pos);
+            const auto event=minidayz::world_source::source_auto_door_for_placement(
+                world_,index,player_pos);
             using minidayz::world_source::AutomaticDoorEffect;
             switch(event){
             case AutomaticDoorEffect::open_wood:
