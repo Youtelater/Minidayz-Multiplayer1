@@ -1,3 +1,9 @@
+## Part 2 — per-house roof and wall ownership correction
+
+- [x] Live roof updates no longer share one global wall-overlap flag across unrelated houses. The picked original 346 wall triggers retain their owning foundation runtime UID, so the roof decision, linked door opacity and indoor rain are restricted to the relevant house. Implementation commit `e6f74de5`.
+- [ ] Verify adjacent-house transitions, unlinked authored wall instances, exact original picker semantics, tint/outline and full 3DS build. This correction is not full Construct event parity.
+- [ ] Part 1 generation reconciliation remains open.
+
 ## Part 2 — manual door input integration
 
 - [x] Root original source event 5295137988838652 stops AltMove when PlayerBase reaches movement marker506; child 742251994234684 selects marker type 2 and 9527050336890525 requires player collider181 overlap with door349. Source open/close UIDs 7258332154939593 / 353730214514351 use Wait(0.01), linked Solid348 removal/recreation and original sound variants.
