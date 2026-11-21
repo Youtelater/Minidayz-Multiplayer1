@@ -134,7 +134,7 @@ def main():
     project=decode(raw)
     rows,audios,anchors,counts=scan(project)
     print("SOURCE_SCAN_DIAGNOSTIC", "classified",len(rows),"audio",len(audios),"area_events",dict(counts))
-    assert totals["__visited"]>20000 and totals["__actions"]>60000 and len(audios)>400, "Source scan unexpectedly lost event/audio coverage"
+    assert counts["__visited"]>20000 and counts["__actions"]>60000 and len(audios)>400, "Source scan unexpectedly lost event/audio coverage"
     native={}
     for area,paths in NATIVE_FILES.items():
         native[area]=[{"path":path,"exists":(ROOT/path).is_file()} for path in paths]
