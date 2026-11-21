@@ -349,6 +349,24 @@ void test_every_source_mapped_house_spawn_chain() {
         }
         ++all_original_primary_branches;
     }
+    // Root house branch UID 304859375570401 (var2=36) literally
+    // spawns object 348 frame 30 at parent 1323 ImagePoint 1.
+    // Parent 1323 has NO authored custom imagepoints: Construct falls
+    // back to its image origin, not to an invented PNG crop position.
+    // This previously dropped the original invisible 348 collider.
+    const std::size_t missing_point_start=world.placement_count();
+    world.expand_map_element(7,36,0,{17123.0f,10123.0f});
+    bool source1323=false,source348frame30=false;
+    for(std::size_t i=missing_point_start;i<world.placement_count();++i){
+        const auto* p=world.placement(i);
+        if(p->object==1323)source1323=true;
+        if(p->object==348 && p->source_frame==30){
+            source348frame30=true;
+            assert(std::fabs(p->x-17123.0f)<0.01f);
+            assert(std::fabs(p->y-10123.0f)<0.01f);
+        }
+    }
+    assert(source1323&&source348frame30);
     assert(all_original_primary_branches==
            world_source::kSourceHousePrimarySpawnCount);
     assert(all_original_primary_branches>=60);
