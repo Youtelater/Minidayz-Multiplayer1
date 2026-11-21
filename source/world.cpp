@@ -658,7 +658,9 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             (static_cast<std::uint64_t>(placements_.size()) + 1);
         placements_.push_back({
             layer, spawn.object, 0, position.x, position.y, 0.0f,
-            object_width, object_height, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0,
+            object_width, object_height, 0.0f, 1.0f, 1.0f,
+            object ? object->origin_x : 0.0f,
+            object ? object->origin_y : 0.0f, 0,
             static_cast<std::uint32_t>(std::max(0, spawn.frame))
         });
         auto& placed = placements_.back();
@@ -761,9 +763,19 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
 
         const auto runtime_id = (std::uint64_t{1} << 63) |
             (static_cast<std::uint64_t>(placements_.size()) + 1);
+        // The source's System Create action doesn't carry a Set Size.
+        // Runtime-created vegetation/buildings inherit their own Construct
+        // Sprite's initial frame dimensions and hotspot; 0x0 placements
+        // previously had no collision, and were poorly culled/rendered.
+        const auto* source_object=stage1::find_object(rule.object);
         placements_.push_back({
             layer, rule.object, rule.uid, position.x, position.y, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, rule.image_point
+            source_object ? source_object->width : 0.0f,
+            source_object ? source_object->height : 0.0f,
+            0.0f, 1.0f, 1.0f,
+            source_object ? source_object->origin_x : 0.0f,
+            source_object ? source_object->origin_y : 0.0f,
+            rule.image_point
         });
         placements_.back().runtime_uid = runtime_id;
         placements_.back().instance_id = static_cast<std::uint64_t>(placements_.size());
