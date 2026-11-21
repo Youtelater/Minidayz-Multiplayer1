@@ -6,6 +6,15 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+## Full house milestone continuation: linked door Solid and versioned roof persistence (2026-11-21)
+
+- [x] Generated world now reserves a separate original object 348 placement for each eligible source door 349, linked bidirectionally by runtime UID. Its position comes from the original door frame-0 Imagepoint 1; original object-348 animation 0 frame 15 is rendered with source width, height, hotspot, and Door.Angle+6. The former decorative door rectangle no longer acts as the primary collision when a linked 348 exists.
+- [x] Opening a door now changes only its own linked 348 opacity to zero (absent from collision/rendering); closing restores the linked Solid frame at the original imagepoint and angle. Generated placement indices/UIDs stay stable for save files and 3DS broadphase; no arbitrary relocation or shared door collider. This is a fixed native instance with activation/deactivation, not a literal Construct Destroy+Spawn allocation/UID lifecycle. Do not imply the latter.
+- [x] Source door links are regenerated from the same seed at world load; the 348 placement state is automatically resynchronized from its source door 349 on world visual restore. Native door tests now assert linked 348 unique identity, frame 15, source angle, open/close visibility and UID isolation.
+- [x] Source roof background-layer changes are now part of the version-2 world visual journal, with version-1 compatibility (missing layer keeps source-generated layer), checksum and atomic restore validation. Tests cover opacity/layer save, restore, reset and individual room isolation.
+- [ ] Latest 3DS/native CI success for these commits must be confirmed. A previously observed native test compile failure from an unqualified namespace was fixed in commit 2586d0a6. Keep the feature gate open until its own tests pass.
+- [ ] Still missing full parity: source family 1048/346 overlap and roof layer reorder ancestry, complete interactive building furnishings/containers and original location loot, polygon/picker equivalence including the native fixed-UID companion approximation, all world audio triggers, Azahar visuals/FPS and physical 3DS verification.
+
 ## Building completion work: original roof event, frame geometry and authored instance actions (2026-11-21)
 
 - [x] Root House_transparenting event subtree traced and verified in [house source run #44937770379](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44937770379). The source roof overlap branch UID 9366118161137804 uses Every(0.1), and exit UID 9848716569903957 sets roof family 1049 to opacity 100 and moves it to Buildings_bg. This corrects the earlier guessed 0.5s opacity check. Event branches also involve family 1048 and object 346; complete picking semantics remain open.
