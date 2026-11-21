@@ -1167,35 +1167,24 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         }
         ++added;
     };
-    for(const auto& rule:stage1::kWorldElementSpawnSource) {
-        if(!compare_source_value(rule.var1_op,var1,rule.var1_value) ||
-           !compare_source_value(rule.var2_op,var2,rule.var2_value) ||
-           !compare_source_value(rule.var6_op,var6,rule.var6_value))
-            continue;
-        emit_source_rule(rule);
-    }
+    // Category 7 is owned by the authoritative root source, not the
+    // older cached map-element table. Preserve original action order and
+    // avoid creating stale cached buildings for removed variants.
     if(var1==7) {
-        // The authoritative root source can directly Spawn a house base
-        // in a literal 508.var2 branch absent from the old cached
-        // world_source_data.hpp. Recover ONLY those unambiguous branches.
-        // Do not synthesize a map from unhandled nonliteral conditions.
         for(const auto& original:world_source::kSourceHousePrimarySpawns) {
             if(original.variant!=var2)continue;
-            bool already_created=false;
-            for(const auto& cached:stage1::kWorldElementSpawnSource) {
-                if(cached.object!=original.object ||
-                   !compare_source_value(cached.var1_op,var1,cached.var1_value) ||
-                   !compare_source_value(cached.var2_op,var2,cached.var2_value) ||
-                   !compare_source_value(cached.var6_op,var6,cached.var6_value))
-                    continue;
-                already_created=true;
-                break;
-            }
-            if(already_created)continue;
             const stage1::WorldElementSpawnSource rule{
                 original.event_uid,0,7,0,original.variant,255,255,
                 original.object,original.layer,original.point_index
             };
+            emit_source_rule(rule);
+        }
+    } else {
+        for(const auto& rule:stage1::kWorldElementSpawnSource) {
+            if(!compare_source_value(rule.var1_op,var1,rule.var1_value) ||
+               !compare_source_value(rule.var2_op,var2,rule.var2_value) ||
+               !compare_source_value(rule.var6_op,var6,rule.var6_value))
+                continue;
             emit_source_rule(rule);
         }
     }
