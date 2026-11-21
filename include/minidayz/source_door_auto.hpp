@@ -51,16 +51,13 @@ inline float source_door_in_y(const WorldPlacement& door,
 // Source-gated door state transition. The native caller must only run this
 // for a live player and a generated Map: menu, death and pause do not animate
 // doors. It returns a sound cue only on an actual successful frame change.
-inline AutomaticDoorEffect source_auto_door_for_player(
-    WorldSystem& world, std::uint64_t runtime_uid,
+inline AutomaticDoorEffect source_auto_door_for_placement(
+    WorldSystem& world, std::size_t index,
     WorldPoint player) noexcept {
-    if(!world.generation_complete() || runtime_uid==0)return AutomaticDoorEffect::none;
-    const WorldPlacement* door=nullptr;
-    for(std::size_t i=0;i<world.placement_count();++i){
-        const auto* p=world.placement(i);
-        if(p && p->runtime_uid==runtime_uid) {door=p;break;}
-    }
-    if(!door || door->object!=349 || door->source_frame>1u)
+    if(!world.generation_complete())return AutomaticDoorEffect::none;
+    const auto* door=world.placement(index);
+    if(!door || door->runtime_uid==0 || door->object!=349 ||
+       door->source_frame>1u)
         return AutomaticDoorEffect::none;
     const auto* frame=source_door_point(door->source_animation,door->source_frame);
     if(!frame || !source_door_overlaps_player(*door,*frame,player))
@@ -72,10 +69,26 @@ inline AutomaticDoorEffect source_auto_door_for_player(
     if(!opening && !closing)return AutomaticDoorEffect::none;
     const auto event_uid=opening ? 6061166023614368ULL : 243854400993751ULL;
     const bool metal=frame->metal;
-    if(!apply_verified_door_frame(world,runtime_uid,event_uid))
+    if(!apply_verified_door_frame_at_index(
+            world,index,door->runtime_uid,event_uid))
         return AutomaticDoorEffect::none;
     if(opening)
         return metal?AutomaticDoorEffect::open_metal:AutomaticDoorEffect::open_wood;
     return metal?AutomaticDoorEffect::close_metal:AutomaticDoorEffect::close_wood;
+}
+// UID-based compatibility wrapper for event traces and native tests.
+// The actual 3DS update loops over a precomputed door-placement index and
+// must use the O(1) function above, never scan the whole 20k-object world
+// once for every door in every rendered frame.
+inline AutomaticDoorEffect source_auto_door_for_player(
+    WorldSystem& world,std::uint64_t runtime_uid,
+    WorldPoint player) noexcept {
+    if(!runtime_uid)return AutomaticDoorEffect::none;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* p=world.placement(i);
+        if(p && p->runtime_uid==runtime_uid)
+            return source_auto_door_for_placement(world,i,player);
+    }
+    return AutomaticDoorEffect::none;
 }
 } // namespace minidayz::world_source
