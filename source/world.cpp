@@ -892,6 +892,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // interior/wall collider and shadow sprites at ORIGINAL imagepoints.
         // These per-frame imagepoints come from source frame[9], including
         // named w1/s1 and numeric 3, not guessed PNG texture rectangles.
+        if(var1==7) {
         std::vector<std::pair<std::uint16_t,std::size_t>> spawned;
         spawned.emplace_back(rule.object,placements_.size()-1);
         for(const auto& action:world_source::kSourceHouseCompanionSpawns){
@@ -998,6 +999,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             if(child.object!=349)
                 child.linked_runtime_uid=parent.runtime_uid;
             spawned.emplace_back(action.object,placements_.size()-1);
+        }
         }
 
         // Original create_map_element branches 5221960099677299,
