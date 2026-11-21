@@ -1,3 +1,11 @@
+## Part 2 — deployed tent source sprites and collision checkpoint
+
+- [x] Live deployed tent rendering uses original Sprite398 foundation and Sprite397 roof, animation 0/frame 0, using frame-indexed atlas rendering rather than item456's inventory icon (commit `0e99b1ee`; deployment UIDs 297398672474814 / 1391504325547996).
+- [x] Roof397 overlap uses the original 49×65 frame with hotspot (25,33) and authored rectangle x=-25..12/y=-33..32, with opacity 25% on overlap and 100% outside (commit `3c99a618`; root UIDs 3450973739819458 / 8566394378489923).
+- [x] Tent foundation398's source concave wall is consulted in live movement collision (commit `1a769643`); interior and entrance remain open. The original roof is not a Solid.
+- [ ] Verify these changes in native tests, latest 3DS build and actual emulator. Exact original tent deployment restrictions and storage limits remain separate unverified behaviors.
+- [ ] Finish manual door prompt/selector, roof picking and tint/outline depth effects; reconcile remaining Part 1 generation categories.
+
 ## Part 1 — original building placement subtype correction
 
 - [x] Re-read root `data.deobfuscated.js` using the blob API. Category 7 has 51 direct primary variant branches; category 4 variant 40 contains seven nested var6=0..6 branches. The existing native table already selects the correct primary Sprite1345–1351, but the companion extractor discarded these branches because it only recognized var2 in the local condition. Fixed the extractor to inherit variant 40 under original event 431776969482924 and preserve the exact event UID. Each original structure now has its source Solid348 frame 33–39 at numeric Imagepoint1, with its original parent UID variable. Commit `0781e1ba`.
