@@ -3,6 +3,7 @@
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/location_event_runtime.hpp"
 #include "minidayz/generated/source_tree_impact_points.hpp"
+#include "minidayz/generated/source_building_frame_geometry.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -641,8 +642,17 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
         if (!bounds_.contains(position)) continue;
 
         const auto* object = stage1::find_object(spawn.object);
+        // Construct SetFrame selects a different original atlas rectangle
+        // whose dimensions and hotspot can differ from the first image.
+        // Preserve explicit SetSize overrides before falling back to the
+        // source frame dimensions, then the original Sprite defaults.
+        const auto* frame=stage1::source_building_frame_geometry(
+            spawn.object,0,static_cast<std::uint32_t>(
+                std::max(0,spawn.frame)));
         float object_width = static_cast<float>(spawn.width);
         float object_height = static_cast<float>(spawn.height);
+        if (object_width <= 0.0f && frame) object_width = frame->width;
+        if (object_height <= 0.0f && frame) object_height = frame->height;
         if (object_width <= 0.0f && object) object_width = object->width;
         if (object_height <= 0.0f && object) object_height = object->height;
         if (object_width <= 0.0f || object_height <= 0.0f) {
@@ -662,8 +672,10 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             object_width, object_height,
             static_cast<float>(spawn.angle),
             static_cast<float>(spawn.opacity), 1.0f,
-            object ? object->origin_x : 0.0f,
-            object ? object->origin_y : 0.0f, 0,
+            frame ? frame->origin_x :
+                (object ? object->origin_x : 0.0f),
+            frame ? frame->origin_y :
+                (object ? object->origin_y : 0.0f), 0,
             static_cast<std::uint32_t>(std::max(0, spawn.frame))
         });
         auto& placed = placements_.back();
