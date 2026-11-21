@@ -2951,12 +2951,12 @@ private:
             // Source 6437471853562815 / 7764770537466591: a door
             // associated with this roof is opaque outside its wall zone,
             // and 25% in the wall zone. Apply only to linked house doors.
-            if(overlap && has_base){
+            if(has_base){
                 for(const auto i:source_door_indices_){
                     const auto* door=world_.placement(i);
                     if(!door || (door->parent_runtime_uid!=roof->runtime_uid &&
                         door->house_base_runtime_uid!=base->runtime_uid))continue;
-                    const float opacity=touching_wall?0.25f:1.0f;
+                    const float opacity=overlap && touching_wall?0.25f:1.0f;
                     if(std::fabs(door->opacity-opacity)>0.001f)
                         (void)world_.set_placement_sprite_state(
                             i,door->source_animation,door->source_frame,opacity);
