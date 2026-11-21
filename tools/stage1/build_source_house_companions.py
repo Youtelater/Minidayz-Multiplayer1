@@ -92,7 +92,7 @@ for name,nodes in p[6]:
     created.append({"parent":sp[0],"child":sp[1],"layer":sp[2],
                     "point":sp[3],"frame":0,"animation":0,
                     "width_delta":None,"height_delta":None,
-                    "angle_degrees":0.0,"opacity":1.0})
+                    "angle_degrees":99999.0,"opacity":1.0})
    elif a[1]==73 and a[0]!=508:ignored+=1
    elif a[1] in (103,169) and a[0]!=508 and len(a)>5 and a[5]:
     width=imagepoint_delta(a[5][0][1],59) if a[1]==103 else None
