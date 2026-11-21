@@ -215,6 +215,30 @@ void test_every_source_mapped_house_spawn_chain() {
                     static_cast<unsigned long long>(action.event_uid),
                     first,last);
             assert(found_base&&found_child);
+            // Every *source original action*, including secondary and
+            // tertiary SpawnAnotherObject sprites, needs its own final
+            // atlas animation/frame and visible placement. Testing
+            // only the first roof missed wall 346, shadow 347 and door.
+            for(const auto& child:world_source::kSourceHouseCompanionSpawns){
+                if(child.base_object!=action.base_object ||
+                   child.variant!=action.variant)continue;
+                bool found=false;
+                for(std::size_t j=first;j<last;++j){
+                    const auto* p=world.placement(j);
+                    if(p->object==child.object &&
+                       p->source_animation==child.animation &&
+                       p->source_frame==child.frame){
+                        found=true;break;
+                    }
+                }
+                if(!found)
+                    std::fprintf(stderr,
+                        "ORIGINAL SOURCE MISSING CHILD variant=%u base=%u child=%u animation=%u frame=%u event=%llu\\n",
+                        child.variant,child.base_object,child.object,
+                        child.animation,child.frame,
+                        static_cast<unsigned long long>(child.event_uid));
+                assert(found);
+            }
             ++checked;
             created+=last-first;
             break;
