@@ -21,6 +21,8 @@ jobs:
         run: python -m py_compile tools/stage1/audit_started_systems_parity.py
       - name: Index original conditions, audio, actions and started-system gaps
         run: python tools/stage1/audit_started_systems_parity.py --out audit-output/started-parity
+      - name: Independently index root original with existing exhaustive extractor
+        run: python tools/stage1/audit_original_world_exhaustive.py --out audit-output/reference-world
       - name: Check report sanity
         run: |
           python - <<'PY'
@@ -29,7 +31,10 @@ jobs:
           p = Path('audit-output/started-parity')
           s = json.loads((p/'summary.json').read_text())
           assert s['source_events_classified'] > 1000
-          assert s['source_audio_actions'] >= 400
+          reference = json.loads(Path('audit-output/reference-world/summary.json').read_text())
+          print('REFERENCE_AUDIO_ACTIONS',reference['audio_actions'])
+          print('CLASSIFIED_AUDIO_ACTIONS',s['source_audio_actions'])
+          assert s['source_audio_actions'] == reference['audio_actions'], 'Audio action indexing disagrees with original exhaustive extractor'
           assert (p/'source_event_obligations.csv').is_file()
           assert (p/'source_audio_actions.csv').is_file()
           assert (p/'source_anchor_chains.json').is_file()
