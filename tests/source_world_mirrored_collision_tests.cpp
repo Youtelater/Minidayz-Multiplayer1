@@ -59,7 +59,7 @@ int main() {
     assert(std::fabs(y_normal-244.0f)<kTolerance);
     assert(std::fabs(y_mirror-156.0f)<kTolerance);
     const SourceRoofMemberPoint roof_point{
-        321,0,0,80.0f,30.0f,0.25f,0.5f,0.8f,0.5f};
+        321,0,0,80.0f,30.0f,0.25f,0.5f,0.8f,0.5f,0.25f,1.0f};
     assert(std::fabs(source_roof_in_world_y(sprite,roof_point)
                      -156.0f)<kTolerance);
     sprite.scale_x=1.0f;
