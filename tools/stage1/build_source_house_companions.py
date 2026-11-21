@@ -39,6 +39,9 @@ for name,nodes in p[6]:
   roots=[spawn(a) for a in acts if isinstance(a,list) and len(a)>1 and a[0]==508 and a[1]==73]
   roots=[x for x in roots if x]
   if not roots:continue
+  # The separate tree branch already creates object 345 hitboxes. Only
+  # building-base original Spawn parents belong to this building pass.
+  if roots[0][2] not in ("Buildings_base","Buildings"):continue
   base=roots[0][1]
   created=[]
   for a in acts:
