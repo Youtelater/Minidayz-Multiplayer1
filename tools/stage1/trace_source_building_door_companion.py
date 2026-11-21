@@ -56,5 +56,20 @@ for row in rows:
   "actions":[{"object":a[0],"command":a[1],"params":a[5] if len(a)>5 else []}
              for a in row["actions"] if isinstance(a,list) and len(a)>1],
  },ensure_ascii=False,separators=(",",":"))[:5500])
+# Inspect original polygon shape encoding for real building/door sprites.
+for oid in (302,306,311,312,313,321,322,323,324,333,348,349):
+ obj=objects[oid]
+ anim=obj[7] if len(obj)>7 and isinstance(obj[7],list) else []
+ frames=[fr for a in anim[:2] if isinstance(a,list) and len(a)>7 and isinstance(a[7],list)
+         for fr in a[7][:2] if isinstance(fr,list)]
+ for fi,fr in enumerate(frames[:2]):
+  print("SOURCE_BUILDING_FRAME",json.dumps({
+   "object":oid,"name":obj[0],"sample_index":fi,
+   "path":fr[0] if fr else None,
+   "rect":fr[2:6] if len(fr)>5 else None,
+   "origin":fr[7:9] if len(fr)>8 else None,
+   "imagepoints":fr[9] if len(fr)>9 else None,
+   "collision_shape":fr[10] if len(fr)>10 else None
+  },ensure_ascii=False,separators=(",",":"))[:3200])
 print("SOURCE_348_TRACE_ROWS",len(rows))
 print("SOURCE_348_DIRECT_ACTION_ROWS",sum(any(a[0]==348 for a in r["actions"] if isinstance(a,list) and a) for r in rows))
