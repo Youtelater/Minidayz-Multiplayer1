@@ -26,7 +26,7 @@ inline bool source_visual_roof_overlay(
 inline bool source_solid_sprite_contains(
     float hot_x,float hot_y,float width,float height,
     float origin_x,float origin_y,float angle_degrees,
-    float point_x,float point_y) noexcept {
+    float point_x,float point_y,float scale_x=1.0f) noexcept {
     if (!(width>0.0f&&height>0.0f) ||
         !std::isfinite(hot_x)||!std::isfinite(hot_y)||
         !std::isfinite(origin_x)||!std::isfinite(origin_y)||
@@ -47,6 +47,9 @@ inline bool source_solid_sprite_contains(
         local_x=dx*cs+dy*sn;
         local_y=-dx*sn+dy*cs;
     }
+    // A negative Construct scale_x flips the original sprite horizontally
+    // around its hotspot. The instance width already includes its size.
+    if(scale_x<0.0f)local_x=-local_x;
     const float px=local_x+width*origin_x;
     const float py=local_y+height*origin_y;
     return px>=0.0f&&py>=0.0f&&px<=width&&py<=height;
