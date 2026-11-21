@@ -344,6 +344,9 @@ void test_live_original_automatic_doors() {
         assert(solid && solid->object==348);
         assert(solid->runtime_uid==door->linked_runtime_uid);
         assert(solid->linked_runtime_uid==uid);
+        // Exact original close event writes 348.UID into 349
+        // instance variable 0; a separate instance owns each door.
+        assert(door->source_variable_0==solid->runtime_uid);
         assert(solid->source_frame==15);
         assert(solid->opacity==1.0f);
         assert(std::fabs(solid->angle-(door->angle+6.0f))<0.001f);
@@ -369,6 +372,7 @@ void test_live_original_automatic_doors() {
         assert(opened==(f->metal?AutomaticDoorEffect::open_metal:
                                    AutomaticDoorEffect::open_wood));
         assert(world.placement(i)->source_frame==1);
+        assert(world.placement(i)->source_variable_0==solid->runtime_uid);
         assert(world.placement_by_instance_id(companion_id)->opacity==0.0f);
         assert(!source_apply_auto_door_intention(world,i,uid,planned));
         assert(source_auto_door_for_player(world,uid,open_at)==
@@ -386,6 +390,8 @@ void test_live_original_automatic_doors() {
                 const auto* restored=world.placement_by_instance_id(companion_id);
                 assert(restored && restored->opacity==1.0f);
                 assert(restored->linked_runtime_uid==uid);
+                assert(world.placement(i)->source_variable_0==
+                       restored->runtime_uid);
                 assert(std::fabs(restored->angle-
                     (world.placement(i)->angle+6.0f))<0.001f);
             }
