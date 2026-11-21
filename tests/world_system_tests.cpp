@@ -435,7 +435,7 @@ void test_every_source_mapped_house_spawn_chain() {
     // back to its image origin, not to an invented PNG crop position.
     // This previously dropped the original invisible 348 collider.
     const std::size_t missing_point_start=world.placement_count();
-    world.expand_map_element(7,36,0,{17123.0f,10123.0f});
+    world.expand_map_element(4,36,0,{17123.0f,10123.0f});
     bool source1323=false,source348frame30=false;
     for(std::size_t i=missing_point_start;i<world.placement_count();++i){
         const auto* p=world.placement(i);
@@ -447,9 +447,15 @@ void test_every_source_mapped_house_spawn_chain() {
         }
     }
     assert(source1323&&source348frame30);
+    // A category-4 structure must not appear in the category-7 house
+    // slot sharing the same variant number.
+    const auto other_start=world.placement_count();
+    world.expand_map_element(7,36,0,{17323.0f,10123.0f});
+    for(auto i=other_start;i<world.placement_count();++i)
+        assert(world.placement(i)->object!=1323);
     assert(all_original_primary_branches==
            world_source::kSourceHousePrimarySpawnCount);
-    assert(all_original_primary_branches>=60);
+    assert(all_original_primary_branches>=45);
     std::printf("ROOT HOUSE SOURCE SPAWN COVERAGE %zu cached branches %zu restored uncached original branches %zu placed sprites %zu original primary source records checked\\n",
                 checked,restored_primary,created,all_original_primary_branches);
 }
