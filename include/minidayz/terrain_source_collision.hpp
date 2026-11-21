@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 #include <cstdint>
+#include "minidayz/generated/source_family_members.hpp"
 
 namespace minidayz::terrain {
 
@@ -10,9 +11,12 @@ namespace minidayz::terrain {
 // a blanket "all Buildings sprites are solid" rule to a roof would
 // make the house impossible to enter even after the roof is faded.
 // Other building sprites still require their source collision tests.
-inline constexpr bool source_visual_roof_overlay(
+inline bool source_visual_roof_overlay(
     std::uint16_t object_id) noexcept {
-    return object_id==1049;
+    // Construct 1049 is a FAMILY, not an actual Sprite object. Check its
+    // exact member list from root project[4]; testing object==1049 skipped
+    // every real house-roof PNG and wrongly made roofs solid walls.
+    return stage1::source_family_contains(1049,object_id);
 }
 
 
