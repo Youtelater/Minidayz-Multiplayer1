@@ -235,6 +235,33 @@ void test_every_source_mapped_house_spawn_chain() {
                         if(child.angle_degrees!=99999.0f)
                             assert(std::fabs(p->angle-
                                 child.angle_degrees)<0.001f);
+                        // Original 346 wall variables, 347 shadow UID,
+                        // door 349 parent UID and object-218 loot marker
+                        // categories are all attached to THAT child.
+                        for(const auto& setting:
+                            world_source::kSourceHouseCompanionVariables){
+                            if(setting.event_uid!=child.event_uid ||
+                               setting.base_object!=child.base_object ||
+                               setting.variant!=child.variant ||
+                               setting.sequence!=child.sequence ||
+                               setting.child!=child.object)continue;
+                            const auto value=setting.slot==0 ?
+                                p->source_variable_0:p->source_variable_1;
+                            if(setting.kind==1 && setting.literal_value>=0)
+                                assert(value==static_cast<std::uint64_t>(
+                                    setting.literal_value));
+                            else if(setting.kind==2) {
+                                assert(value!=0);
+                                const auto* parent=
+                                    world.placement_by_instance_id(
+                                        value & ~(std::uint64_t{1}<<63));
+                                assert(parent);
+                                assert(parent->object==setting.uid_object);
+                            }
+                        }
+                        if(p->object==218 && p->source_variable_0>0)
+                            assert(p->source_loot_category==
+                                   p->source_variable_0);
                         found=true;break;
                     }
                 }
@@ -251,6 +278,7 @@ void test_every_source_mapped_house_spawn_chain() {
             break;
         }
     }
+    assert(world_source::kSourceHouseCompanionVariableCount>=50);
     assert(checked>=5);
     std::size_t restored_primary=0;
     for(const auto& original:world_source::kSourceHousePrimarySpawns) {
