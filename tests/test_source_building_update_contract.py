@@ -22,6 +22,8 @@ checks={
  "no placeholder door sounds": all(s in audio for s in ("open_door.wav","close_door.wav","open_door_metal.wav","close_door_metal.wav")),
  "door audio fired only on transition": "source_apply_auto_door_intention(" in scene and "play_source_door_effect(effect);" in scene,
  "source 0.01s wait is queued": "source_door_waits_[slot]={event,p->runtime_uid,0.01f};" in scene,
+ "original 348 open Destroy before wait": scene.index("set_linked_door_solid_present(index,false);")<scene.index("source_door_waits_[slot]={event,p->runtime_uid,0.01f};"),
+ "source 348 collider restored if pending event fails": "set_linked_door_solid_present(" in scene and "door->source_frame==0u" in scene,
  "wait clock advances before next interaction": game_update.index("advance_source_door_waits(dt);")<game_update.index("update_source_automatic_doors();"),
  "pending source transitions block repeated scheduling": "source_door_waits_[slot].effect!=" in scene,
  "pending state clears when regenerating": "source_door_waits_.clear();" in scene,
