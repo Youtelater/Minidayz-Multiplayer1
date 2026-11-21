@@ -64,11 +64,16 @@ base_rows=[]
 for oid in bases[1:]:
     obj=p[3][oid]
     animations=obj[7] if len(obj)>7 and isinstance(obj[7],list) else []
-    named={a[0]:ai for ai,a in enumerate(animations)
+    named={a[0].lower():ai for ai,a in enumerate(animations)
            if isinstance(a,list) and len(a)>7 and isinstance(a[0],str)}
     if "out" in named:
         base_rows.append((oid,named["out"],named.get("in",65535)))
-if len(base_rows)<5:raise SystemExit("Original foundation 'out' animation candidates missing")
+    elif oid in (302,306,311,312,313):
+        print("Original house base 1048 object",oid,
+              "lacks literal out animation; names",list(named))
+# Original source may dispatch a family SetAnimation without a matching
+# per-member animation. Preserve the authoritative absence rather than
+# inventing an atlas animation or making unrelated game systems unbuildable.
 baseout=ROOT/"include/minidayz/generated/source_roof_foundation_animations.hpp"
 b=["#pragma once","#include <cstddef>","#include <cstdint>",
 "namespace minidayz::world_source {",
@@ -76,8 +81,9 @@ b=["#pragma once","#include <cstddef>","#include <cstdint>",
 "struct SourceRoofFoundationAnimations {std::uint16_t object,out_animation,in_animation;};",
 "inline constexpr SourceRoofFoundationAnimations kSourceRoofFoundationAnimations[]={"]
 b+=[" {"+",".join(map(str,row))+"}," for row in base_rows]
+if not base_rows:b.append(" {65535,65535,65535}, // no matching root member animation")
 b+=["};",
-"inline constexpr std::size_t kSourceRoofFoundationAnimationCount=sizeof(kSourceRoofFoundationAnimations)/sizeof(kSourceRoofFoundationAnimations[0]);",
+"inline constexpr std::size_t kSourceRoofFoundationAnimationCount="+str(len(base_rows))+";",
 "inline const SourceRoofFoundationAnimations* source_roof_foundation_animations(std::uint16_t object) noexcept {",
 " for(const auto& row:kSourceRoofFoundationAnimations)if(row.object==object)return &row;",
 " return nullptr;","} // namespace minidayz::world_source"]
