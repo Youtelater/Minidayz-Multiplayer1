@@ -32,6 +32,31 @@ std::size_t count_code(const minidayz::WorldGrid& grid, std::uint16_t code) {
     return count;
 }
 
+void test_original_interaction_polygon_geometry() {
+    using namespace minidayz;
+    using namespace minidayz::world_source;
+    const WorldPoint concave[]={{-50,-50},{50,-50},{50,-20},
+        {-20,-20},{-20,50},{-50,50}};
+    // Rectangle bounds alone falsely accept the empty L-shaped corner.
+    assert(!source_polygon_overlaps_box(6,[&](std::size_t i){
+        return concave[i];},15,15));
+    assert(source_polygon_overlaps_box(6,[&](std::size_t i){
+        return WorldPoint{concave[i].x+25,concave[i].y+25};
+    },15,15));
+    const WorldPoint outer[]={{-80,-80},{80,-80},{80,80},{-80,80}};
+    assert(source_polygon_overlaps_box(4,[&](std::size_t i){
+        return outer[i];},15,15)); // player entirely inside
+    const WorldPoint strip[]={{-80,-1},{80,-1},{80,1},{-80,1}};
+    assert(source_polygon_overlaps_box(4,[&](std::size_t i){
+        return strip[i];},15,15)); // edges cross, no vertex inside
+    const WorldPoint distant[]={{20,20},{20,20},{80,20},{80,80},{20,80}};
+    assert(!source_polygon_overlaps_box(5,[&](std::size_t i){
+        return distant[i];},15,15)); // duplicate vertices don't add contact
+    assert(source_polygon_overlaps_box(4,[&](std::size_t i){
+        return WorldPoint{-strip[i].y,strip[i].x};
+    },15,15)); // rotated, thin mask
+}
+
 // Individual Construct object frames are tested separately below.
 void test_original_roof_family_and_transparency() {
     using namespace minidayz;
@@ -1255,6 +1280,7 @@ void test_level_four_split_grid() {
 } // namespace
 
 int main() {
+    test_original_interaction_polygon_geometry();
     test_grid_semantics();
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
