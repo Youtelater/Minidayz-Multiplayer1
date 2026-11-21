@@ -6,6 +6,13 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+### Continuing unfinished houses and buildings — original post-Spawn transforms
+
+- [x] Root `create_map_element` house Spawn extractor now carries original literal same-event **SetAngle (84), SetOpacity (163), and MoveToLayer (137)** changes on each particular newly spawned building sprite, without inventing values for unsupported expression-based actions. The runtime applies these to the actual C++ placement, including source frame imagepoint positioning, collision and draw layer. Explicit angle 0 is distinguished from the absence of an original SetAngle.
+- [x] Added native exhaustive house-branch regression assertions for the authored per-child opacity and explicit angles; the native/3DS test workflows regenerate the source tables. Changes: `tools/stage1/build_source_house_companions.py`, `source/world.cpp`, `tests/world_system_tests.cpp`, commits `8fc325ba`–`cee6acce`.
+- [ ] Verify native [CI #44943559378](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44943559378) and [3DS build #44943559287](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44943559287) for this revision; do not mark full gameplay parity without their results.
+- [ ] Houses/buildings remains **not complete**: source-authored container/furniture interactions and loot state, unhandled conditional Spawn action paths, exact family 1048/346/1049 original picking and special draw-order cases, all original interaction audio and actions, dynamic object lifetime parity, and original-game-vs-Azahar/physical 3DS visual/gameplay comparison.
+
 ### Verified recovery of missing original house bases
 
 - [x] Root-source extractor identified **69 literal source primary house Spawn branch records**, in addition to 213 nested Sprite Spawn actions. World regression [#44941485475](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44941485475) completed successfully and verified **48 mapped primary building branches plus 19 additional uncached original building branches recovered by the new runtime**, all directly backed by the original source var1=7/Mapgen.var2 conditions; all five key exterior/interior pairs and exact numeric Imagepoint3 door placement still pass. No invented source place names or guessed roof coordinates.
