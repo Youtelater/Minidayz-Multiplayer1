@@ -4,6 +4,7 @@
 #include "minidayz/location_event_runtime.hpp"
 #include "minidayz/generated/source_tree_impact_points.hpp"
 #include "minidayz/generated/source_door_points.hpp"
+#include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 
 #include <algorithm>
@@ -884,6 +885,72 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         });
         placements_.back().runtime_uid = runtime_id;
         placements_.back().instance_id = static_cast<std::uint64_t>(placements_.size());
+
+        // A root Construct map-element "house" is a SEQUENCE of Sprite
+        // Spawn-another-object actions, not one Building-base texture.
+        // Source UIDs 6055506806351951 etc. spawn matching roof/door,
+        // interior/wall collider and shadow sprites at ORIGINAL imagepoints.
+        // These per-frame imagepoints come from source frame[9], including
+        // named w1/s1 and numeric 3, not guessed PNG texture rectangles.
+        std::vector<std::pair<std::uint16_t,std::size_t>> spawned;
+        spawned.emplace_back(rule.object,placements_.size()-1);
+        for(const auto& action:world_source::kSourceHouseCompanionSpawns){
+            if(action.event_uid!=rule.uid ||
+               action.base_object!=rule.object)continue;
+            auto parent_index=placements_.size();
+            for(auto it=spawned.rbegin();it!=spawned.rend();++it){
+                if(it->first==action.parent_object){
+                    parent_index=it->second;break;
+                }
+            }
+            if(parent_index>=placements_.size())continue;
+            const WorldPlacement parent=placements_[parent_index];
+            const auto destination=find_layer_index_by_name(
+                layout_index,action.layer);
+            if(destination==0xffff)continue;
+            const auto* child_obj=stage1::find_object(action.object);
+            if(!child_obj)continue;
+            const auto* child_frame=stage1::source_building_frame_geometry(
+                action.object,0,action.frame);
+            const float w=child_frame?child_frame->width:child_obj->width;
+            const float h=child_frame?child_frame->height:child_obj->height;
+            if(!(w>0.0f) || !(h>0.0f))continue;
+            float x=parent.x,y=parent.y;
+            if(action.point_index!=0 ||
+               (action.point_name && action.point_name[0])) {
+                const auto* point=world_source::source_house_image_point(
+                    parent.object,parent.source_animation,
+                    parent.source_frame,action.point_name,
+                    action.point_index);
+                if(!point)continue; // Unsupported authored point: no guess.
+                const float angle=parent.angle*0.01745329251994329577f;
+                const float dx=parent.width*
+                    (point->x-point->origin_x)*
+                    (parent.scale_x<0.0f?-1.0f:1.0f);
+                const float dy=parent.height*(point->y-point->origin_y);
+                x=parent.x+dx*std::cos(angle)-dy*std::sin(angle);
+                y=parent.y+dx*std::sin(angle)+dy*std::cos(angle);
+            }
+            if(!std::isfinite(x)||!std::isfinite(y))continue;
+            const auto new_uid=(std::uint64_t{1}<<63) |
+                static_cast<std::uint64_t>(placements_.size()+1);
+            placements_.push_back({
+                destination,action.object,action.event_uid,
+                x,y,0.0f,w,h,parent.angle,1.0f,1.0f,
+                child_frame?child_frame->origin_x:child_obj->origin_x,
+                child_frame?child_frame->origin_y:child_obj->origin_y,
+                0,action.frame
+            });
+            auto& child=placements_.back();
+            child.runtime_uid=new_uid;
+            child.instance_id=static_cast<std::uint64_t>(placements_.size());
+            // The visual door 349 reserves this link for its separately
+            // spawned original Solid 348. Other house pieces remember
+            // the original parent Sprite selected by command 73.
+            if(child.object!=349)
+                child.linked_runtime_uid=parent.runtime_uid;
+            spawned.emplace_back(action.object,placements_.size()-1);
+        }
 
         // Original create_map_element branches 5221960099677299,
         // 1639594650416124, 7109935635557623, 2584406677664733,
