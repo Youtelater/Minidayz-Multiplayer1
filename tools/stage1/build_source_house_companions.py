@@ -91,7 +91,8 @@ for name,nodes in p[6]:
     # specific base Sprite. Repeated event UIDs can serve multiple bases.
     created.append({"parent":sp[0],"child":sp[1],"layer":sp[2],
                     "point":sp[3],"frame":0,"animation":0,
-                    "width_delta":None,"height_delta":None})
+                    "width_delta":None,"height_delta":None,
+                    "angle_degrees":0.0,"opacity":1.0})
    elif a[1]==73 and a[0]!=508:ignored+=1
    elif a[1] in (103,169) and a[0]!=508 and len(a)>5 and a[5]:
     width=imagepoint_delta(a[5][0][1],59) if a[1]==103 else None
@@ -117,6 +118,18 @@ for name,nodes in p[6]:
        if row["child"]==a[0]:
         row["animation"]=matched
         break
+   elif a[1] in (84,137,163) and a[0]!=508 and len(a)>5 and a[5]:
+    # Same-event authored post-Spawn transforms, literal values only.
+    value=literal(a[5][0][1])
+    if a[1]==84 and isinstance(value,(int,float)) and -3600<=value<=3600:
+     for row in reversed(created):
+      if row["child"]==a[0]:row["angle_degrees"]=float(value);break
+    elif a[1]==163 and isinstance(value,(int,float)) and 0<=value<=100:
+     for row in reversed(created):
+      if row["child"]==a[0]:row["opacity"]=float(value)/100.0;break
+    elif a[1]==137 and isinstance(value,str):
+     for row in reversed(created):
+      if row["child"]==a[0]:row["layer"]=value;break
    elif a[1]==72 and a[0]!=508 and len(a)>5 and a[5]:
     # Construct SetFrame acts on the most recently picked spawned Sprite.
     value=literal(a[5][0][1])
@@ -133,7 +146,8 @@ for name,nodes in p[6]:
                  item["layer"],point if isinstance(point,str) else "",
                  point if isinstance(point,int) else 0,
                  item["animation"],item["frame"],
-                 item["width_delta"],item["height_delta"]))
+                 item["width_delta"],item["height_delta"],
+                 item["angle_degrees"],item["opacity"]))
 if not rules:raise SystemExit("No original source house Spawn events recovered")
 parents={row[4] for row in rules}
 # Object frame image points are relative to each source animation frame's
@@ -183,9 +197,10 @@ lines+=["};",
 " std::uint16_t animation;std::uint32_t frame;",
 " std::uint16_t width_parent,height_parent;",
 " const char* width_hi;const char* width_lo;",
-" const char* height_hi;const char* height_lo;};",
+" const char* height_hi;const char* height_lo;",
+" float angle_degrees,opacity;};",
 "inline constexpr SourceHouseCompanionSpawn kSourceHouseCompanionSpawns[]={"]
-for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd in rules:
+for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd,ang,opacity in rules:
  lines.append(" {"+",".join([str(uid)+"ULL",str(base),str(variant),str(seq),
                               str(parent),str(obj),quote(layer),
                               quote(name),str(index),str(anim),str(frame),
@@ -194,7 +209,8 @@ for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd in rules:
                               quote(wd[1]) if wd else quote(""),
                               quote(wd[2]) if wd else quote(""),
                               quote(hd[1]) if hd else quote(""),
-                              quote(hd[2]) if hd else quote("")])+"},")
+                              quote(hd[2]) if hd else quote(""),
+                              fl(ang),fl(opacity)])+"},")
 lines += ["};",
 "inline constexpr std::size_t kSourceHouseCompanionSpawnCount=sizeof(kSourceHouseCompanionSpawns)/sizeof(kSourceHouseCompanionSpawns[0]);",
 "struct SourceHouseImagePoint {",
