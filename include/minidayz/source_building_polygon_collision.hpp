@@ -41,7 +41,7 @@ inline bool source_building_polygon_contains(
         const float cross=(px-xi)*vy-(py-yi)*vx;
         const float dot=(px-xi)*vx+(py-yi)*vy;
         const float len=vx*vx+vy*vy;
-        if(std::fabs(cross)<0.0001f && dot>=-0.0001f &&
+        if(len>0.00000001f && std::fabs(cross)<0.0001f && dot>=-0.0001f &&
            dot<=len+0.0001f)return true;
         if((yi>py)!=(yj>py)){
             const float intersection=xi+(py-yi)*(xj-xi)/(yj-yi);
