@@ -152,6 +152,17 @@ void test_original_generated_house_companions() {
         assert(world.placement(door)->source_frame==0);
         assert(world.placement(door)->width>0.0f);
         assert(world.placement(door)->height>0.0f);
+        // Original source SetAnimation(city3/etc.) must select the
+        // correct frame-specific atlas, never an entire uncut door PNG.
+        bool found_original_animation=false;
+        for(const auto& action:world_source::kSourceHouseCompanionSpawns){
+            if(action.base_object!=h.base ||
+               action.variant!=h.variant || action.object!=349)continue;
+            found_original_animation=true;
+            assert(world.placement(door)->source_animation==
+                   action.animation);
+        }
+        assert(found_original_animation);
         const auto* doorpoint=world_source::source_house_image_point(
             exterior->object,exterior->source_animation,
             exterior->source_frame,"",3);
