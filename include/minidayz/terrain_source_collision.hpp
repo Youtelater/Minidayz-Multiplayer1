@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include "minidayz/generated/source_family_members.hpp"
 
 namespace minidayz::terrain {
@@ -19,6 +20,20 @@ inline bool source_visual_roof_overlay(
     return stage1::source_family_contains(1049,object_id);
 }
 
+
+// The original Solid behavior is independent of rendering layer. House
+// event 4153213040695326 moves a foundation to Buildings_base_top and
+// 7058744064425045 moves it back. Neither action disables Solid.
+inline bool source_building_collision_layer(const char* layer,
+                                             std::uint16_t object) noexcept {
+    return (layer && (std::strcmp(layer,"Buildings")==0 ||
+            std::strcmp(layer,"Buildings_bg")==0 ||
+            std::strcmp(layer,"Buildings_base")==0 ||
+            std::strcmp(layer,"Buildings_base_top")==0 ||
+            std::strcmp(layer,"Buildings_shadows")==0)) ||
+           object==348 || stage1::source_family_contains(1048,object) ||
+           stage1::source_family_contains(1041,object);
+}
 
 // Original Construct world placements store a hotspot, source dimensions,
 // and an angle in degrees. Evaluate the true rotated rectangle rather than
