@@ -9,7 +9,8 @@ namespace minidayz::world_source {
 // Original Doors_auto close UID 243854400993751 spawns Solid object 348 at
 // object-349 Imagepoint 1, selects 348 frame 15, and rotates to Door.Angle+6.
 // Open UID 6061166023614368 destroys that linked Solid. This helper models
-// its *collision footprint* using the exact original 348-frame-15 polygon.
+// its *collision footprint* using the source frame-15 polygon, or the
+// Construct default full-frame rectangle when no custom polygon is authored.
 // It deliberately does not claim to execute Construct's UID/spawn/wait logic.
 inline bool original_closed_door_solid_contains(
     const WorldPlacement& door, WorldPoint point,
@@ -46,8 +47,9 @@ inline bool original_closed_door_solid_contains(
     const float py=(-dx*sn+dy*cs)/door_solid348::kHeight;
     if(!std::isfinite(px)||!std::isfinite(py))return false;
     // Source frame[10] vertices are hotspot-relative normalized pairs,
-    // not the PNG sheet rectangle or pixel coordinates. Use the original
-    // polygon instead of blocking the entire open doorway's sprite image.
+    // not PNG crop coordinates. The generator preserves an explicit
+    // polygon, otherwise it emits the original frame's default rectangle.
+    // This never treats the decorative 349 door sheet as its Solid.
     bool inside=false;
     const auto& vertices=door_solid348::kPolygonXY;
     constexpr auto count=door_solid348::kPolygonPointCount;
