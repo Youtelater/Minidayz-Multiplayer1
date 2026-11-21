@@ -170,6 +170,14 @@ jobs:
             tests/source_world_proximity_tests.cpp -o /tmp/minidayz_source_world_proximity
           /tmp/minidayz_source_world_proximity
 
+      - name: Verify mirrored original building and door interactions
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_world_mirrored_collision_tests.cpp -o /tmp/minidayz_mirror_geometry
+          /tmp/minidayz_mirror_geometry
+
       - name: Verify original buildings trees and bridges remain in camera view
         shell: bash
         run: |
