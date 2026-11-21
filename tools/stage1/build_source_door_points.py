@@ -68,7 +68,7 @@ lines += ["};",
 # They are not the PNG atlas crop coordinates. Both are extracted from
 # the original root Construct frame definition.
 lines += [
-"namespace door_solid348 {",
+"namespace minidayz::world_source::door_solid348 {",
 "inline constexpr std::uint16_t kObject=348;",
 "inline constexpr std::uint32_t kClosedFrame=15;",
 "inline constexpr float kWidth="+f(solid[4])+";",
