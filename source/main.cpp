@@ -44,6 +44,7 @@
 #include "minidayz/generated/item_catalog.hpp"
 
 #include <algorithm>
+#include <limits>
 #include <cmath>
 #include <random>
 #include <vector>
@@ -2819,165 +2820,145 @@ private:
         source_roof_indices_.clear();
         source_house_interior_indices_.clear();
         source_house_wall_indices_.clear();
+        source_house_foundation_indices_.clear();
         for(std::size_t i=0;i<world_.placement_count();++i){
             const auto* p=world_.placement(i);
             if(!p)continue;
-            // The original source's t1041 and t1049 are Construct
-            // families, not the actual building/roof sprites. Resolve
-            // their member objects from root project[4].
             if(minidayz::stage1::source_family_contains(1049,p->object))
                 source_roof_indices_.push_back(static_cast<std::uint32_t>(i));
             if(minidayz::stage1::source_family_contains(1041,p->object))
-                source_house_interior_indices_.push_back(
-                    static_cast<std::uint32_t>(i));
-            if(p->object==346 && p->parent_runtime_uid!=0)
-                source_house_wall_indices_.push_back(
-                    static_cast<std::uint32_t>(i));
+                source_house_interior_indices_.push_back(static_cast<std::uint32_t>(i));
+            if(minidayz::stage1::source_family_contains(1048,p->object))
+                source_house_foundation_indices_.push_back(static_cast<std::uint32_t>(i));
+            if(p->object==346)
+                source_house_wall_indices_.push_back(static_cast<std::uint32_t>(i));
         }
-        source_roof_background_layer_=0xffff;
+        source_roof_background_layer_=source_roof_buildings_layer_=
+            source_roof_base_layer_=source_roof_base_top_layer_=0xffff;
         if(const auto* map=minidayz::stage1::find_layout("Map")){
             const auto layout=static_cast<std::uint16_t>(
                 map-minidayz::stage1::kLayoutTable);
             for(const auto& layer:minidayz::stage1::kLayerTable){
-                if(layer.layout==layout &&
-                   std::strcmp(layer.name,"Buildings_bg")==0){
-                    source_roof_background_layer_=layer.index;break;
-                }
+                if(layer.layout!=layout)continue;
+                if(std::strcmp(layer.name,"Buildings_bg")==0)
+                    source_roof_background_layer_=layer.index;
+                else if(std::strcmp(layer.name,"Buildings")==0)
+                    source_roof_buildings_layer_=layer.index;
+                else if(std::strcmp(layer.name,"Buildings_base")==0)
+                    source_roof_base_layer_=layer.index;
+                else if(std::strcmp(layer.name,"Buildings_base_top")==0)
+                    source_roof_base_top_layer_=layer.index;
             }
         }
-        source_roof_elapsed_=0.0f;
+        source_roof_elapsed_=source_interior_elapsed_=0.0f;
         source_overlapping_house_uids_.clear();
-        source_overlapping_house_uids_.reserve(
-            source_house_interior_indices_.size());
     }
 
     void update_source_house_roofs(float dt) noexcept {
         if(!world_ready_ || !player_.state().alive)return;
-        // Original House_transparenting event 9366118161137804
-        // evaluates roof overlap and opacity every 0.1 seconds.
-        // Its separate interior bookkeeping branch uses Every(0.5).
-        source_roof_elapsed_+=std::max(0.0f,dt);
+        using namespace minidayz::world_source;
+        const float step=std::max(0.0f,dt);
+        source_roof_elapsed_+=step;
+        source_interior_elapsed_+=step;
+        const minidayz::WorldPoint player_pos{player_.state().x,player_.state().y};
+        // Source family1041 has its own 0.5 second layer event, not
+        // the foundation-selection condition of the roof-opacity branch.
+        if(source_interior_elapsed_>=0.5f){
+            source_interior_elapsed_=std::fmod(source_interior_elapsed_,0.5f);
+            for(const auto i:source_house_interior_indices_){
+                const auto* p=world_.placement(i);
+                if(!p || !source_player_overlaps_world_sprite(
+                        *p,player_pos,p->origin_x,p->origin_y))continue;
+                const auto layer=player_pos.y>p->y?
+                    source_roof_background_layer_:source_roof_buildings_layer_;
+                if(layer!=0xffff && p->layer!=layer)
+                    (void)world_.set_placement_layer(i,layer);
+            }
+        }
         if(source_roof_elapsed_<0.1f)return;
         source_roof_elapsed_=std::fmod(source_roof_elapsed_,0.1f);
-        const minidayz::WorldPoint player_pos{
-            player_.state().x,player_.state().y
-        };
-        // Construct's picked family 1041 instances are per-house.
-        // A global boolean makes entering ONE building fade unrelated
-        // neighboring roofs. Keep the actual overlapping source UIDs.
-        source_overlapping_house_uids_.clear();
-        for(const auto index:source_house_interior_indices_){
-            const auto* interior=world_.placement(index);
-            if(!interior)continue;
-            // Source interiors can extend far beyond their hotspot.
-            // Reject only points outside the actual sprite's conservative
-            // transformed extent; the original overlap check stays below.
-            if(!minidayz::world_source::source_sprite_might_touch_player(
-                    interior->x,interior->y,interior->width,
-                    interior->height,interior->scale_x,
-                    player_pos.x,player_pos.y))continue;
-            if(minidayz::world_source::source_player_overlaps_world_sprite(
-                    *interior,player_pos,interior->origin_x,
-                    interior->origin_y)){
-                source_overlapping_house_uids_.push_back(
-                    interior->runtime_uid);
+        // 193 is the authored 2x2 PlayerBase with hotspot (1,1);
+        // 181 is the separate 30x30 collision Sprite. The original
+        // wall-zone condition uses 193, NOT the 30px collision rectangle.
+        const minidayz::WorldPoint actor_base{player_pos.x-1.0f,player_pos.y-1.0f};
+        bool touching_wall=false;
+        for(const auto i:source_house_wall_indices_){
+            const auto* wall=world_.placement(i);
+            if(wall && source_player_overlaps_world_sprite(
+                    *wall,actor_base,wall->origin_x,wall->origin_y,1.0f)){
+                touching_wall=true;break;
             }
         }
         for(const auto index:source_roof_indices_){
             const auto* roof=world_.placement(index);
             if(!roof)continue;
-            // A building roof may be much larger than 512px or have an
-            // off-centre hotspot. Recheck already-faded roofs even when
-            // the player leaves, so the original 100% state is restored.
-            if(!minidayz::world_source::source_sprite_might_touch_player(
-                    roof->x,roof->y,roof->width,roof->height,
-                    roof->scale_x,player_pos.x,player_pos.y,
-                    roof->opacity<0.999f))continue;
-            // The original child roof was spawned from ONE foundation
-            // via Sprite SpawnAnotherObject(73). Only that foundation's
-            // overlap satisfies its roof guard; editor-authored roofs
-            // without source links keep the existing conservative test.
-            // Root source family 1048 contains foundation 302/306/
-            // 311/312/313; family 1041 is a DIFFERENT set of 17
-            // interior objects. Earlier linked-UID matching against
-            // family 1041 would never reveal generated city houses.
-            // For the original source-spawned rooftop, test its OWN
-            // 1048 foundation, not unrelated interiors elsewhere.
-            bool overlaps_matching_house=
-                !source_overlapping_house_uids_.empty();
-            if(roof->linked_runtime_uid!=0){
-                overlaps_matching_house=false;
-                const auto linked=roof->linked_runtime_uid;
-                if((linked&(std::uint64_t{1}<<63))!=0){
-                    const auto parent_index=linked&
-                        ~(std::uint64_t{1}<<63);
-                    const auto* foundation=
-                        world_.placement_by_instance_id(parent_index);
-                    if(foundation &&
-                       foundation->runtime_uid==linked &&
-                       minidayz::stage1::source_family_contains(
-                           1048,foundation->object) &&
-                       minidayz::world_source::source_player_overlaps_world_sprite(
-                           *foundation,player_pos,
-                           foundation->origin_x,foundation->origin_y))
-                        overlaps_matching_house=true;
+            const auto* frame=source_roof_member_point(
+                roof->object,roof->source_animation,roof->source_frame);
+            if(!frame)continue;
+            const bool overlap=source_player_overlaps_world_sprite(
+                *roof,player_pos,frame->origin_x,frame->origin_y);
+            // Normal source 1048 pick uses the roof's position, not
+            // player overlap with the foundation's *solid wall* mask.
+            // Prefer the actual source-generated parent at this position;
+            // for editor placements use the nearest source family member.
+            if(!overlap && roof->opacity==1.0f &&
+               roof->layer==source_roof_background_layer_)continue;
+            std::size_t base_index=world_.placement_count();
+            const auto parent=roof->house_base_runtime_uid?
+                roof->house_base_runtime_uid:roof->linked_runtime_uid;
+            if(parent&(std::uint64_t{1}<<63)){
+                const auto id=parent&~(std::uint64_t{1}<<63);
+                const auto* p=world_.placement_by_instance_id(id);
+                if(p && p->runtime_uid==parent &&
+                   minidayz::stage1::source_family_contains(1048,p->object))
+                    base_index=static_cast<std::size_t>(id-1);
+            }
+            if(base_index==world_.placement_count() && overlap){
+                float best=std::numeric_limits<float>::max();
+                for(const auto i:source_house_foundation_indices_){
+                    const auto* p=world_.placement(i);
+                    if(!p)continue;
+                    const float dx=p->x-roof->x,dy=p->y-roof->y;
+                    const float d=dx*dx+dy*dy;
+                    if(d<best){best=d;base_index=i;}
                 }
             }
-            float opacity=1.0f;
-            if(!minidayz::world_source::source_roof_opacity_at_player(
-                    *roof,player_pos,overlaps_matching_house,opacity))
-                continue;
-            if(overlaps_matching_house && roof->parent_runtime_uid!=0) {
-                // Root event 6159361858903351, inside original 0.1s
-                // House_transparenting/overlap parent:
-                // if PlayerBase 193 NOT overlapping original 346,
-                // set selected original family 1048 to animation "out".
-                // Never pick another building's wall; the original
-                // nested Spawn parent UID ties wall, foundation and roof.
-                const auto parent_uid=roof->parent_runtime_uid;
-                bool touching_own_wall=false;
-                for(const auto wall_index:source_house_wall_indices_){
-                    const auto* wall=world_.placement(wall_index);
-                    if(!wall || wall->parent_runtime_uid!=parent_uid)
-                        continue;
-                    if(minidayz::world_source::source_player_overlaps_world_sprite(
-                            *wall,player_pos,wall->origin_x,wall->origin_y)){
-                        touching_own_wall=true;break;
-                    }
-                }
-                if(!touching_own_wall){
-                    const auto instance=parent_uid&
-                        ~(std::uint64_t{1}<<63);
-                    const auto* base=world_.placement_by_instance_id(instance);
-                    if(base && base->runtime_uid==parent_uid &&
-                       minidayz::stage1::source_family_contains(1048,base->object)){
-                        const auto* anim=
-                            minidayz::world_source::source_roof_foundation_animations(
-                                base->object);
-                        if(anim && base->source_animation!=anim->out_animation)
-                            (void)world_.set_placement_sprite_state(
-                                static_cast<std::size_t>(instance-1),
-                                anim->out_animation,0,base->opacity);
-                    }
-                }
+            const auto* base=world_.placement(base_index);
+            const bool has_base=base!=nullptr;
+            const auto decision=source_house_roof_decision(
+                *roof,*frame,player_pos,has_base,touching_wall);
+            if(overlap && !touching_wall && base){
+                const auto* anim=source_roof_foundation_animations(base->object);
+                if(anim && base->source_animation!=anim->out_animation)
+                    (void)world_.set_placement_sprite_state(
+                        base_index,anim->out_animation,0,base->opacity);
             }
-            if(std::fabs(roof->opacity-opacity)>0.001f)
+            if(std::fabs(roof->opacity-decision.opacity)>0.001f)
                 (void)world_.set_placement_sprite_state(
-                    index,roof->source_animation,roof->source_frame,opacity);
-            // Original source event UID 9848716569903957:
-            // when Player_collision_base is no longer overlapping
-            // roof family 1049, restore opacity and move THAT roof to
-            // layer Buildings_bg. Family 1049 itself has no frame data.
-            if(source_roof_background_layer_!=0xffff){
-                const auto* frame=
-                    minidayz::world_source::source_roof_member_point(
-                        roof->object,roof->source_animation,roof->source_frame);
-                if(frame &&
-                   !minidayz::world_source::source_player_overlaps_world_sprite(
-                        *roof,player_pos,frame->origin_x,frame->origin_y) &&
-                   roof->layer!=source_roof_background_layer_)
-                    (void)world_.set_placement_layer(
-                        index,source_roof_background_layer_);
+                    index,roof->source_animation,roof->source_frame,decision.opacity);
+            const auto roof_layer=decision.move_background?
+                source_roof_background_layer_:source_roof_buildings_layer_;
+            if(roof_layer!=0xffff && roof->layer!=roof_layer)
+                (void)world_.set_placement_layer(index,roof_layer);
+            if(base && (overlap || base->layer==source_roof_base_top_layer_)){
+                const auto base_layer=decision.foundation_top?
+                    source_roof_base_top_layer_:source_roof_base_layer_;
+                if(base_layer!=0xffff && base->layer!=base_layer)
+                    (void)world_.set_placement_layer(base_index,base_layer);
+            }
+            // Source 6437471853562815 / 7764770537466591: a door
+            // associated with this roof is opaque outside its wall zone,
+            // and 25% in the wall zone. Apply only to linked house doors.
+            if(overlap && has_base){
+                for(const auto i:source_door_indices_){
+                    const auto* door=world_.placement(i);
+                    if(!door || (door->parent_runtime_uid!=roof->runtime_uid &&
+                        door->house_base_runtime_uid!=base->runtime_uid))continue;
+                    const float opacity=touching_wall?0.25f:1.0f;
+                    if(std::fabs(door->opacity-opacity)>0.001f)
+                        (void)world_.set_placement_sprite_state(
+                            i,door->source_animation,door->source_frame,opacity);
+                }
             }
         }
     }
@@ -3376,8 +3357,13 @@ private:
     std::vector<std::uint32_t> source_roof_indices_{};
     std::vector<std::uint32_t> source_house_interior_indices_{};
     std::vector<std::uint32_t> source_house_wall_indices_{};
+    std::vector<std::uint32_t> source_house_foundation_indices_{};
     std::vector<std::uint64_t> source_overlapping_house_uids_{};
     float source_roof_elapsed_{};
+    float source_interior_elapsed_{};
+    std::uint16_t source_roof_buildings_layer_{0xffff};
+    std::uint16_t source_roof_base_layer_{0xffff};
+    std::uint16_t source_roof_base_top_layer_{0xffff};
     std::uint16_t source_roof_background_layer_{0xffff};
     minidayz::terrain::VisibleSourcePlacementIndex visibility_index_{};
     std::vector<std::uint32_t> visible_world_placements_{};
