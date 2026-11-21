@@ -659,7 +659,9 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             (static_cast<std::uint64_t>(placements_.size()) + 1);
         placements_.push_back({
             layer, spawn.object, 0, position.x, position.y, 0.0f,
-            object_width, object_height, 0.0f, 1.0f, 1.0f,
+            object_width, object_height,
+            static_cast<float>(spawn.angle),
+            static_cast<float>(spawn.opacity), 1.0f,
             object ? object->origin_x : 0.0f,
             object ? object->origin_y : 0.0f, 0,
             static_cast<std::uint32_t>(std::max(0, spawn.frame))
@@ -682,7 +684,8 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             source_layer && classify_source_layer(source_layer->name, kind)) {
             features_.push_back({
                 kind, position, 0, spawn.object, layer, spawn.object,
-                object_width, object_height, 0.0f, 0
+                object_width, object_height,
+                static_cast<float>(spawn.angle), 0
             });
         }
         ++added;
