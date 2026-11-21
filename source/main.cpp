@@ -2829,15 +2829,28 @@ private:
                 source_house_interior_indices_.push_back(
                     static_cast<std::uint32_t>(i));
         }
+        source_roof_background_layer_=0xffff;
+        if(const auto* map=minidayz::stage1::find_layout("Map")){
+            const auto layout=static_cast<std::uint16_t>(
+                map-minidayz::stage1::kLayoutTable);
+            for(const auto& layer:minidayz::stage1::kLayerTable){
+                if(layer.layout==layout &&
+                   std::strcmp(layer.name,"Buildings_bg")==0){
+                    source_roof_background_layer_=layer.index;break;
+                }
+            }
+        }
         source_roof_elapsed_=0.0f;
     }
 
     void update_source_house_roofs(float dt) noexcept {
         if(!world_ready_ || !player_.state().alive)return;
-        // Root House_transparenting interval branch uses Every(0.5).
+        // Original House_transparenting event 9366118161137804
+        // evaluates roof overlap and opacity every 0.1 seconds.
+        // Its separate interior bookkeeping branch uses Every(0.5).
         source_roof_elapsed_+=std::max(0.0f,dt);
-        if(source_roof_elapsed_<0.5f)return;
-        source_roof_elapsed_=std::fmod(source_roof_elapsed_,0.5f);
+        if(source_roof_elapsed_<0.1f)return;
+        source_roof_elapsed_=std::fmod(source_roof_elapsed_,0.1f);
         const minidayz::WorldPoint player_pos{
             player_.state().x,player_.state().y
         };
@@ -2875,6 +2888,21 @@ private:
             if(std::fabs(roof->opacity-opacity)>0.001f)
                 (void)world_.set_placement_sprite_state(
                     index,roof->source_animation,roof->source_frame,opacity);
+            // Original source event UID 9848716569903957:
+            // when Player_collision_base is no longer overlapping
+            // roof family 1049, restore opacity and move THAT roof to
+            // layer Buildings_bg. Family 1049 itself has no frame data.
+            if(source_roof_background_layer_!=0xffff){
+                const auto* frame=
+                    minidayz::world_source::source_roof_member_point(
+                        roof->object,roof->source_animation,roof->source_frame);
+                if(frame &&
+                   !minidayz::world_source::source_player_overlaps_world_rect(
+                        *roof,player_pos,frame->origin_x,frame->origin_y) &&
+                   roof->layer!=source_roof_background_layer_)
+                    (void)world_.set_placement_layer(
+                        index,source_roof_background_layer_);
+            }
         }
     }
 
@@ -3100,6 +3128,7 @@ private:
         source_roof_indices_.clear();
         source_house_interior_indices_.clear();
         source_roof_elapsed_=0.0f;
+        source_roof_background_layer_=0xffff;
         loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_);
         if (!loading_world_) {
             generation_failed_ = true;
@@ -3250,6 +3279,7 @@ private:
     std::vector<std::uint32_t> source_roof_indices_{};
     std::vector<std::uint32_t> source_house_interior_indices_{};
     float source_roof_elapsed_{};
+    std::uint16_t source_roof_background_layer_{0xffff};
     minidayz::terrain::VisibleSourcePlacementIndex visibility_index_{};
     std::vector<std::uint32_t> visible_world_placements_{};
     minidayz::NpcSystem npcs_{};
