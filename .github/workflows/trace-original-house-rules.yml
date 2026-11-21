@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'tools/stage1/trace_original_house_rules.py'
+      - 'tools/stage1/trace_original_house_companion_spawns.py'
       - '.github/workflows/trace-original-house-rules.yml'
   workflow_dispatch:
 jobs:
@@ -16,3 +17,5 @@ jobs:
           python-version: '3.12'
       - name: Trace exact original roof transparency conditions and actions
         run: python3 tools/stage1/trace_original_house_rules.py
+      - name: Trace original exterior/interior house companion Spawn actions
+        run: python3 tools/stage1/trace_original_house_companion_spawns.py
