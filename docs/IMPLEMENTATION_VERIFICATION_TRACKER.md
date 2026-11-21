@@ -6,6 +6,13 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+### Additional original house event-family coverage and verified build
+
+- [x] [Original building runtime event trace #44944170187](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44944170187) found **25** original non-creation event sites directly referencing known house/roof/wall/door objects and source families. This includes TWO original door open/close event families, not just the automatic one.
+- [x] Original UI-prompt door UIDs **7258332154939593** (open) and **353730214514351** (close) now select their original door animation frames in the native source event executor and update the linked 348 Solid, just as automatic UIDs **6061166023614368** and **243854400993751** do. World regressions cover both families and reject repeated transitions. The alternate source events also destroy object 506, an associated interaction prompt; that particular UI side effect is NOT yet a full native prompt lifecycle.
+- [x] [Native system regression #44943895190](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44943895190) and [3DS build #44943895366](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44943895366) succeeded at revision e297f7e6, covering source house companion slot parsing, original UID linking, source-transformed building sprites and their native regression tests. Later new source trace/alternate door executor commits require own CI results.
+- [ ] Remains unverified: native gameplay selector for prompt-driven original door events including object 506, other original building/fire/perk/looting conditions, all container/furniture gameplay and source 218 category-driven item creation, and Azahar hardware visual parity. Do not mark broad houses/buildings complete based on passing the build alone.
+
 ### Original house child instance variables and category-marked world objects
 
 - [x] Root-original house post-Spawn action trace identified **458 authored actions**, including 168 object-346 wall instance-variable assignments, 48 shadow-347 UID assignments, 27 door-349 UID assignments and source object-218 loot category assignments, as well as original SetSize/SetHeight/SetAnimation actions. [Original trace #44943694658](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44943694658).
