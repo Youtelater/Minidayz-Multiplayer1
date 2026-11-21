@@ -18,6 +18,15 @@ def walk(nodes,sheet,anc=(),path=(),active=False,depth=0):
         if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
         here=path+(i,)
         on=active or e[4]==target
+        if e[4]==target:
+            # Include non-ordinary nested event/wrapper nodes; otherwise
+            # original opposite-side wall/roof effects are silently missed.
+            group_bytes=json.dumps(e[7],ensure_ascii=False,separators=(",",":"))
+            print("ROOF_RAW_CHILDREN_BYTES",len(group_bytes))
+            (ROOT/"audit-output/world").mkdir(parents=True,exist_ok=True)
+            (ROOT/"audit-output/world/original_house_raw_subtree.json").write_text(
+                group_bytes+"\\n",encoding="utf-8")
+            print("ROOF_RAW_CHILDREN",group_bytes[:75000])
         if on:
             source_roof_chains[e[4]]={
                 "parents":anc,"conditions":e[5],"actions":e[6],
