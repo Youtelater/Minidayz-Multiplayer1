@@ -203,6 +203,38 @@ def main():
     csvwrite(opts.out/"source_event_obligations.csv",list(rows[0]),rows)
     csvwrite(opts.out/"source_audio_actions.csv",list(audios[0]),audios)
     opts.out.joinpath("source_anchor_chains.json").write_text(json.dumps(anchors,indent=2,ensure_ascii=False),encoding="utf-8")
+    # This is filename/text *accounting*, not event dispatch verification.
+    wav_files={p.stem.lower():str(p.relative_to(ROOT)) for p in (ROOT/"romfs/wav").glob("*.wav")}
+    native_text="\n".join(p.read_text(encoding="utf-8",errors="replace").lower()
+                       for folder in ("source","include/minidayz")
+                       for p in (ROOT/folder).rglob("*")
+                       if p.suffix in (".cpp",".hpp",".h"))
+    cue_rows=[]
+    seen=set()
+    for audio in audios:
+        for cue in filter(None,audio["sound_literals"].split("|")):
+            cue=cue.strip()
+            if not cue:continue
+            key=(audio["path"],audio["action_index"],cue)
+            if key in seen:continue
+            seen.add(key)
+            normalized=Path(cue.replace("\\\\","/")).stem.lower()
+            cue_rows.append({"source_event_path":audio["path"],"event_uid":audio["event_uid"],
+                "source_cue_literal":cue,"source_workstreams":audio["areas"],
+                "exact_wav_candidate":wav_files.get(normalized,""),
+                "native_source_text_mentions_literal":str(normalized in native_text),
+                "dispatch_verified":"NO — requires event-to-callsite and gameplay trace"})
+    if cue_rows:
+        csvwrite(opts.out/"audio_literal_asset_crosscheck.csv",list(cue_rows[0]),cue_rows)
+    md.extend(["","## Audio dispatch accounting limitations","",
+        "An exact list of original audio actions is in `source_audio_actions.csv`.",
+        "The `audio_literal_asset_crosscheck.csv` also cross-references any source string",
+        "found inside an audio action with a similarly named converted WAV and native",
+        "C++/header text. String presence is **not** a playable-asset or runtime-dispatch",
+        "guarantee. Construct choose()/expression-generated filenames require manual tracing.",
+        ""])
+    opts.out.joinpath("ORIGINAL_VS_NATIVE_PARITY.md").write_text("\n".join(md),encoding="utf-8")
+
     result={"source_sha256":hashlib.sha256(raw).hexdigest(),"source_events_classified":len(rows),
         "source_audio_actions":len(audios),"source_audio_unclassified":sum(x["areas"]=="unclassified" for x in audios),
         "workstream_event_counts":dict(counts),"findings":[{"area":a,"status":b,"description":c} for a,b,c in findings],
