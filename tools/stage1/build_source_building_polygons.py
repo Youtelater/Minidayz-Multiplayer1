@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build exact custom collision polygons for original Construct Solid buildings.
+"""Build exact custom collision polygons for original Construct building sprites and player.
 
 All coordinates are normalized to their ORIGINAL frame hotspot. This is a
 collision source table, not a texture atlas or an inferred generic rectangle.
@@ -19,7 +19,7 @@ for oid,obj in enumerate(objects):
         isinstance(b,list) and b and b[0]=="Solid" for b in obj[8]):
         solid.add(oid)
 # Source-authored Map Buildings layers include many non-solid decorations.
-# Match only actual original Sprite object IDs with Solid behavior.
+# Collect original building Sprite IDs, including non-solid overlap triggers.
 building=set((302,306,311,312,313,321,322,323,324,333,348,349,787))
 for layout in project[5]:
     if layout[0]!="Map":continue
@@ -49,7 +49,7 @@ def fmt(value):
     s=format(float(value),".9g")
     if "." not in s and "e" not in s:s+=".0"
     return s+"f"
-for oid in sorted(building & solid):
+for oid in sorted(building | {181,346,349}):
     obj=objects[oid]
     animations=obj[7] if len(obj)>7 and isinstance(obj[7],list) else []
     for ai,a in enumerate(animations):
@@ -139,4 +139,4 @@ g+=["};",
 "}","} // namespace minidayz::stage1"]
 geom.write_text("\n".join(g)+"\n",encoding="utf-8")
 print("Original building frame geometry",len(geometry),"frames")
-print(f"Original building custom polygons: {len(rows)} frames, {len(vertices)//2} vertices, {len(building & solid)} source-Solid building kinds")
+print(f"Original building custom polygons: {len(rows)} frames, {len(vertices)//2} vertices, {len(building & solid)} source-Solid building kinds (also includes non-solid interaction masks)")
