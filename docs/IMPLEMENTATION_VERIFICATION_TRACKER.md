@@ -6,6 +6,14 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+## Houses and buildings — live collision/door/roof integration — 2026-11-21
+
+- [x] **Gameplay code:** `source/main.cpp` evaluates the existing source-driven automatic door interaction **before and after movement collision**. Previously a closed doorway could stop the player before `Doors_auto` evaluated; successful frame changes still dispatch their original wood/metal open/close WAV exactly once per transition.
+- [x] **Actual mirrored object rendering parity correction:** source door overlap and `in` imagepoint, roof/interior overlap and roof imagepoint Y, and solid obstacle collision now reflect the original Construct sprite when `WorldPlacement::scale_x<0`. Authored width/height are already the displayed dimensions and no longer get a second scale multiplier in world interaction broadphase.
+- [x] **Regression cases committed:** `tests/source_world_mirrored_collision_tests.cpp` checks flipped/unflipped door, roof, and wall geometry, including 90-degree rotated imagepoint positions; `tests/source_world_proximity_tests.cpp` checks actual sized bounds; `tests/test_source_building_update_contract.py` checks pre/post-movement door update and original sound dispatch contract. All are referenced by `.github/workflows/build-3ds.yml`.
+- [ ] **CI results not directly observed yet for latest pushed changes.** Do not infer that tests pass merely because included in the workflow. Validate current Build 3DS Executable run and fix failures.
+- [ ] **Gameplay parity still open:** original object-348 door companion behavior, source roof picking (1048/1049), true original collision polygons, all original furniture/container interactions, object placement completeness, Azahar video inspection and hardware performance remain unverified.
+
 ## World building interaction gameplay correction — 2026-11-21
 
 - [x] **Actual 3DS gameplay C++ changed:** `source/main.cpp` now uses source sprite dimensions and scale for the broadphase of generated houses/interiors, roof opacity changes and automatic doors. Previous guessed limits `96px`, `256px`, `512px` could silently skip large/off-center original sprites even when the source narrow-phase would accept them.
