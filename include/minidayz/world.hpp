@@ -49,6 +49,10 @@ struct WorldSpriteState {
     std::uint16_t animation{};
     std::uint32_t frame{};
     float opacity{};
+    // Original House_transparenting moves individual roofs to Buildings_bg.
+    // Keep this layer state in the versioned world save. 0xffff is the
+    // legacy v1 snapshot sentinel: retain generated source layer.
+    std::uint16_t layer{0xffff};
 };
 
 struct WorldMapMarker {
