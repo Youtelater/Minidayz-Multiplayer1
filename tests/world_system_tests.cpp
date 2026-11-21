@@ -5,6 +5,7 @@
 #include "minidayz/source_door_auto.hpp"
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
+#include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -157,6 +158,55 @@ void test_original_generated_house_companions() {
         assert(std::fabs(world.placement(door)->x-expected_x)<0.05f);
         assert(std::fabs(world.placement(door)->y-expected_y)<0.05f);
     }
+}
+
+void test_every_source_mapped_house_spawn_chain() {
+    using namespace minidayz;
+    WorldSystem world;
+    assert(world.initialize(0x4d444159u));
+    assert(world.load_source_layout("Map"));
+    std::size_t checked=0,created=0;
+    // Source-authored (base Sprite,var2) pairs from root Construct
+    // SpawnAnotherObject actions. A row's exact event UID may differ from
+    // stale precomputed world source headers; compare the real object and
+    // original per-branch instance-variable predicate instead.
+    for(const auto& action:world_source::kSourceHouseCompanionSpawns){
+        if(action.sequence!=0)continue;
+        for(const auto& rule:stage1::kWorldElementSpawnSource){
+            if(rule.object!=action.base_object ||
+               rule.var1_op!=0 || rule.var1_value!=7 ||
+               rule.var2_op!=0 || rule.var2_value!=action.variant)
+                continue;
+            const std::size_t first=world.placement_count();
+            world.expand_map_element(7,action.variant,
+                rule.var6_op==0?rule.var6_value:0,
+                {7500.0f+static_cast<float>(checked%12)*100.0f,
+                 7500.0f+static_cast<float>(checked/12)*100.0f});
+            const std::size_t last=world.placement_count();
+            assert(last>first);
+            // Check that exact action's immediate companion was created;
+            // no invented roof/door fallback is allowed.
+            bool found_base=false,found_child=false;
+            for(std::size_t i=first;i<last;++i){
+                const auto* p=world.placement(i);
+                found_base |= p->object==action.base_object;
+                found_child |= p->object==action.object;
+            }
+            if(!found_base || !found_child)
+                std::fprintf(stderr,
+                    "SOURCE HOUSE SPAWN MISSING base=%u variant=%u child=%u event=%llu first=%zu last=%zu\\n",
+                    action.base_object,action.variant,action.object,
+                    static_cast<unsigned long long>(action.event_uid),
+                    first,last);
+            assert(found_base&&found_child);
+            ++checked;
+            created+=last-first;
+            break;
+        }
+    }
+    assert(checked>=5);
+    std::printf("ROOT HOUSE SOURCE SPAWN COVERAGE %zu branches %zu placed sprites\\n",
+                checked,created);
 }
 
 void test_live_original_automatic_doors() {
@@ -1018,6 +1068,7 @@ int main() {
     test_original_world_visual_file_roundtrip();
     test_source_tree_fall_item_table();
     test_original_generated_house_companions();
+    test_every_source_mapped_house_spawn_chain();
     test_live_original_automatic_doors();
     test_original_roof_family_and_transparency();
     test_generated_object_instance_ids();
