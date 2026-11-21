@@ -95,6 +95,12 @@ struct WorldPlacement {
     // the source foundation UID even when SpawnAnotherObject used roof
     // 1049 as their immediate parent. Distinct from linked Solid 348.
     std::uint64_t house_base_runtime_uid{};
+    // The original house companion SetInstanceVariable(88) uses slots
+    // 0 and 1 for wall solidity settings, selected parent UIDs and
+    // original object-218 loot marker categories. Preserve exact
+    // source data without inferring extra items, sounds or loot tables.
+    std::uint64_t source_variable_0{};
+    std::uint64_t source_variable_1{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
