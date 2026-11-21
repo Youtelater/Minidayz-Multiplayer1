@@ -91,6 +91,10 @@ struct WorldPlacement {
     // while its authored parent is exterior roof 321/322/323/324/333.
     // Retain both relationships without clobbering source tree hitboxes.
     std::uint64_t parent_runtime_uid{};
+    // Original nested house children (especially door 349 var1) retain
+    // the source foundation UID even when SpawnAnotherObject used roof
+    // 1049 as their immediate parent. Distinct from linked Solid 348.
+    std::uint64_t house_base_runtime_uid{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
