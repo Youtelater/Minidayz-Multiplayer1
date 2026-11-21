@@ -1070,6 +1070,47 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                 child.linked_runtime_uid=parent.runtime_uid;
             spawned.emplace_back(action.object,placements_.size()-1);
         }
+        // Separate original var1=7 loot branch (4949969985883762).
+        // Markers use the selected source furniture/foundation imagepoints,
+        // even when no Trigger_spawn call followed SetInstanceVariable.
+        for(const auto& action:world_source::kSourceHouseLootMarkers){
+            if(action.variant!=var2)continue;
+            const auto found=std::find_if(spawned.rbegin(),spawned.rend(),
+                [&](const auto& pair){return pair.first==action.parent;});
+            if(found==spawned.rend())continue;
+            const WorldPlacement parent=placements_[found->second];
+            const auto destination=find_layer_index_by_name(layout_index,action.layer);
+            if(destination==0xffff)continue;
+            float x=parent.x,y=parent.y;
+            const auto* point=world_source::source_house_image_point(
+                parent.object,parent.source_animation,parent.source_frame,
+                action.point_name,action.point_index);
+            if(point){
+                const float angle=parent.angle*0.01745329251994329577f;
+                const float dx=parent.width*(point->x-point->origin_x)*
+                    (parent.scale_x<0.0f?-1.0f:1.0f);
+                const float dy=parent.height*(point->y-point->origin_y);
+                x+=dx*std::cos(angle)-dy*std::sin(angle);
+                y+=dx*std::sin(angle)+dy*std::cos(angle);
+            }else if(action.point_name[0])continue;
+            // Construct's absent numeric imagepoint falls back to the hotspot.
+            if(action.offset_y)y+=parent.height*0.5f+15.0f;
+            if(!std::isfinite(x)||!std::isfinite(y))continue;
+            const auto new_uid=(std::uint64_t{1}<<63)|
+                static_cast<std::uint64_t>(placements_.size()+1);
+            placements_.push_back({
+                destination,218,action.action_uid,x,y,0.0f,1.0f,1.0f,
+                parent.angle,1.0f,1.0f,0.0f,1.0f,action.point_index
+            });
+            auto& marker=placements_.back();
+            marker.runtime_uid=new_uid;
+            marker.instance_id=static_cast<std::uint64_t>(placements_.size());
+            marker.parent_runtime_uid=parent.runtime_uid;
+            marker.house_base_runtime_uid=placements_[spawned.front().second].runtime_uid;
+            marker.source_variable_0=action.category;
+            marker.source_loot_category=action.category;
+            marker.source_initial_loot_trigger=action.trigger_spawn;
+        }
         }
 
         // Original create_map_element branches 5221960099677299,
