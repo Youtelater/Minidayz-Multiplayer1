@@ -1193,6 +1193,10 @@ public:
         // have DIFFERENT imagepoints. Never trigger both sounds in one tick.
         std::fill(source_door_changed_this_tick_.begin(),
                   source_door_changed_this_tick_.end(),0u);
+        // Original open/close events both execute System Wait(0.01)
+        // before changing door 349 frame. Complete those waits once per
+        // game tick; original WAV dispatch follows the committed change.
+        advance_source_door_waits(dt);
         update_source_automatic_doors();
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
@@ -2884,6 +2888,51 @@ private:
         // vector is a per-frame transition guard, not a saved gameplay
         // state or a substitute for the original door Sprite frame.
         source_door_changed_this_tick_.assign(source_door_indices_.size(),0u);
+        source_door_waits_.assign(source_door_indices_.size(),{});
+    }
+
+    void play_source_door_effect(
+        minidayz::world_source::AutomaticDoorEffect effect) noexcept {
+        using minidayz::world_source::AutomaticDoorEffect;
+        switch(effect){
+        case AutomaticDoorEffect::open_wood:
+            stage2_audio_.play_original_world_sound(
+                minidayz::OriginalWorldSound::doorOpen);break;
+        case AutomaticDoorEffect::close_wood:
+            stage2_audio_.play_original_world_sound(
+                minidayz::OriginalWorldSound::doorClose);break;
+        case AutomaticDoorEffect::open_metal:
+            stage2_audio_.play_original_world_sound(
+                minidayz::OriginalWorldSound::doorMetalOpen);break;
+        case AutomaticDoorEffect::close_metal:
+            stage2_audio_.play_original_world_sound(
+                minidayz::OriginalWorldSound::doorMetalClose);break;
+        default:break;
+        }
+    }
+
+    void advance_source_door_waits(float dt) noexcept {
+        if(!world_ready_ || !player_.state().alive ||
+           !std::isfinite(dt))return;
+        for(std::size_t slot=0;slot<source_door_waits_.size();++slot){
+            auto& pending=source_door_waits_[slot];
+            if(pending.effect==
+                minidayz::world_source::AutomaticDoorEffect::none)continue;
+            pending.seconds-=std::max(0.0f,dt);
+            if(pending.seconds>0.0f)continue;
+            const auto effect=pending.effect;
+            const auto uid=pending.runtime_uid;
+            pending={};
+            if(slot>=source_door_indices_.size())continue;
+            const auto index=source_door_indices_[slot];
+            // A door's pending event always belongs to THAT generated
+            // instance, even after loading a saved world or moving away.
+            if(minidayz::world_source::source_apply_auto_door_intention(
+                    world_,index,uid,effect)){
+                source_door_changed_this_tick_[slot]=1u;
+                play_source_door_effect(effect);
+            }
+        }
     }
 
     void update_source_automatic_doors() noexcept {
@@ -2894,6 +2943,10 @@ private:
         for(std::size_t slot=0;slot<source_door_indices_.size();++slot){
             if(slot<source_door_changed_this_tick_.size() &&
                source_door_changed_this_tick_[slot])continue;
+            if(slot<source_door_waits_.size() &&
+               source_door_waits_[slot].effect!=
+                   minidayz::world_source::AutomaticDoorEffect::none)
+                continue;
             const auto index=source_door_indices_[slot];
             const auto* p=world_.placement(index);
             if(!p)continue;
@@ -2903,26 +2956,17 @@ private:
             if(!minidayz::world_source::source_sprite_might_touch_player(
                     p->x,p->y,p->width,p->height,p->scale_x,
                     player_pos.x,player_pos.y))continue;
-            const auto event=minidayz::world_source::source_auto_door_for_placement(
-                world_,index,player_pos);
+            const auto event=
+                minidayz::world_source::source_auto_door_intended_for_placement(
+                    world_,index,player_pos);
             using minidayz::world_source::AutomaticDoorEffect;
             if(event!=AutomaticDoorEffect::none &&
-               slot<source_door_changed_this_tick_.size())
+               slot<source_door_waits_.size()){
+                // Both original opening UID 6061166023614368 and closing
+                // UID 243854400993751 wait exactly 0.01 seconds. Defer
+                // the sprite/348 proxy and matching sound together.
+                source_door_waits_[slot]={event,p->runtime_uid,0.01f};
                 source_door_changed_this_tick_[slot]=1u;
-            switch(event){
-            case AutomaticDoorEffect::open_wood:
-                stage2_audio_.play_original_world_sound(
-                    minidayz::OriginalWorldSound::doorOpen);break;
-            case AutomaticDoorEffect::close_wood:
-                stage2_audio_.play_original_world_sound(
-                    minidayz::OriginalWorldSound::doorClose);break;
-            case AutomaticDoorEffect::open_metal:
-                stage2_audio_.play_original_world_sound(
-                    minidayz::OriginalWorldSound::doorMetalOpen);break;
-            case AutomaticDoorEffect::close_metal:
-                stage2_audio_.play_original_world_sound(
-                    minidayz::OriginalWorldSound::doorMetalClose);break;
-            default:break;
             }
         }
     }
@@ -3051,6 +3095,7 @@ private:
         menu_active_ = true;
         source_door_indices_.clear();
         source_door_changed_this_tick_.clear();
+        source_door_waits_.clear();
         source_roof_indices_.clear();
         source_house_interior_indices_.clear();
         source_roof_elapsed_=0.0f;
@@ -3175,8 +3220,15 @@ private:
     minidayz::WorldSystem world_{};
     minidayz::terrain::SolidTerrain terrain_collision_{};
     minidayz::terrain::SourceObstacleIndex collision_index_{};
+    struct SourceDoorWait {
+        minidayz::world_source::AutomaticDoorEffect effect{
+            minidayz::world_source::AutomaticDoorEffect::none};
+        std::uint64_t runtime_uid{};
+        float seconds{};
+    };
     std::vector<std::uint32_t> source_door_indices_{};
     std::vector<std::uint8_t> source_door_changed_this_tick_{};
+    std::vector<SourceDoorWait> source_door_waits_{};
     std::vector<std::uint32_t> source_roof_indices_{};
     std::vector<std::uint32_t> source_house_interior_indices_{};
     float source_roof_elapsed_{};
