@@ -365,6 +365,65 @@ bool SourceLocationEventRuntime::execute_action(
             spawn->frame = static_cast<int>(p[0].as_number());
         return true;
     }
+    // Preserve original per-instance Construct Sprite actions on generated
+    // world and building objects. A source SetFrame/SetSize/SetAngle/
+    // SetOpacity/SetLayer is not a standalone PNG or a new object type;
+    // it updates the previously picked source-created instance.
+    if(action.object_index>=0) {
+        const auto object=static_cast<std::uint16_t>(action.object_index);
+        auto* selected=self.last_spawn(object);
+        const auto finite=[&](std::size_t i) noexcept {
+            return i<action.parameter_count &&
+                   i<4 && std::isfinite(p[i].as_number());
+        };
+        if(action.command_id==72 && action.parameter_count==1) {
+            if(!finite(0) || p[0].as_number()<0 ||
+               p[0].as_number()>1000000)return false;
+            if(selected) selected->frame=static_cast<int>(p[0].as_number());
+            return true;
+        }
+        if(action.command_id==103 && action.parameter_count==2) {
+            if(!finite(0)||!finite(1) ||
+               p[0].as_number()<0 || p[1].as_number()<0)return false;
+            if(selected) {
+                selected->width=p[0].as_number();
+                selected->height=p[1].as_number();
+            }
+            return true;
+        }
+        if(action.command_id==84 && action.parameter_count==1) {
+            if(!finite(0))return false;
+            if(selected)selected->angle=p[0].as_number();
+            return true;
+        }
+        if(action.command_id==47 && action.parameter_count==2) {
+            if(!finite(0)||!finite(1))return false;
+            if(selected){
+                selected->x=p[0].as_number();
+                selected->y=p[1].as_number();
+            }
+            return true;
+        }
+        if(action.command_id==163 && action.parameter_count==1) {
+            if(!finite(0) || p[0].as_number()<0 ||
+               p[0].as_number()>100)return false;
+            if(selected)selected->opacity=p[0].as_number()/100.0;
+            return true;
+        }
+        if(action.command_id==137 && action.parameter_count==1) {
+            if(p[0].kind!=Value::Kind::String)return false;
+            if(selected)selected->layer=p[0].as_string();
+            return true;
+        }
+        if(action.command_id==88 && action.parameter_count==2) {
+            if(!finite(0))return false;
+            const int index=static_cast<int>(p[0].as_number());
+            if(index<0 || index>=16)return false;
+            if(selected)selected->instance_variables[
+                static_cast<std::size_t>(index)]=p[1];
+            return true;
+        }
+    }
     return false;
 }
 
