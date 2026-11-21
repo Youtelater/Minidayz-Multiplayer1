@@ -2904,12 +2904,16 @@ private:
         // 181 is the separate 30x30 collision Sprite. The original
         // wall-zone condition uses 193, NOT the 30px collision rectangle.
         const minidayz::WorldPoint actor_base{player_pos.x-1.0f,player_pos.y-1.0f};
-        bool touching_wall=false;
+        // Retain the picked wall instances, not a global boolean: an
+        // adjacent building must not inherit another house's wall zone.
+        source_overlapping_house_uids_.clear();
         for(const auto i:source_house_wall_indices_){
             const auto* wall=world_.placement(i);
             if(wall && source_player_overlaps_world_sprite(
                     *wall,actor_base,wall->origin_x,wall->origin_y,1.0f)){
-                touching_wall=true;break;
+                const auto owner=wall->house_base_runtime_uid?
+                    wall->house_base_runtime_uid:wall->parent_runtime_uid;
+                if(owner)source_overlapping_house_uids_.push_back(owner);
             }
         }
         bool sheltered=false;
@@ -2921,7 +2925,6 @@ private:
             if(!frame)continue;
             const bool overlap=source_player_overlaps_world_sprite(
                 *roof,player_pos,frame->origin_x,frame->origin_y);
-            sheltered=sheltered || (overlap && touching_wall);
             // Normal source 1048 pick uses the roof's position, not
             // player overlap with the foundation's *solid wall* mask.
             // Prefer the actual source-generated parent at this position;
@@ -2950,6 +2953,11 @@ private:
             }
             const auto* base=world_.placement(base_index);
             const bool has_base=base!=nullptr;
+            const bool touching_wall=has_base &&
+                std::find(source_overlapping_house_uids_.begin(),
+                          source_overlapping_house_uids_.end(),
+                          base->runtime_uid)!=source_overlapping_house_uids_.end();
+            sheltered=sheltered || (overlap && touching_wall);
             const auto decision=source_house_roof_decision(
                 *roof,*frame,player_pos,has_base,touching_wall);
             if(overlap && !touching_wall && base){
