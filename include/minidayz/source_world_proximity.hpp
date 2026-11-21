@@ -8,6 +8,8 @@ namespace minidayz::world_source {
 // buildings/doors can be much larger than the provisional 96/256px checks.
 // The farthest possible corner is never beyond hypot(full width,full height)
 // from the hotspot. Add the original 30x30 player sprite's half diagonal.
+// WorldPlacement width/height already store the full rendered extent;
+// its scale_x field is a mirror sign, NOT another size multiplier.
 // This is a conservative REJECTION check: actual picking/overlap must still
 // be resolved by the original source-specific narrow-phase handler.
 // A restored 25% roof must always be rechecked so it can return to 100%.
@@ -23,7 +25,7 @@ inline bool source_sprite_might_touch_player(
     if (force_recheck) return true;
     constexpr float kOriginalPlayerHalfDiagonal = 21.213204f; // 30x30
     const float radius =
-        std::hypot(width,height) * std::fabs(scale_x) +
+        std::hypot(width,height) +
         kOriginalPlayerHalfDiagonal;
     return std::hypot(player_x-sprite_x,player_y-sprite_y) <= radius;
 }
