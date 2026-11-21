@@ -2985,7 +2985,11 @@ private:
                 map_index, placement->layer);
             if (!layer) continue;
             const bool building = std::strcmp(layer->name, "Buildings") == 0;
+            // Source create_map_element places the separate tree/trunk
+            // collision sprites in Obstacle_enviroment; without this layer
+            // the player walks through standing trees and world props.
             const bool barrier = std::strcmp(layer->name, "Obstacles") == 0 ||
+                                 std::strcmp(layer->name, "Obstacle_enviroment") == 0 ||
                                  std::strcmp(layer->name, "Water") == 0;
             if (!building && !barrier) continue;
             // Match rotated original house and barrier sprite bounds;
