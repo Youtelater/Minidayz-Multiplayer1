@@ -93,4 +93,50 @@ lines += [
 "}","} // namespace minidayz::stage1",
 ]
 out.write_text("\n".join(lines)+"\n",encoding="utf-8")
+# Preserve original frame-specific sizes and hotspots for EVERY building
+# family member, even sprites without Solid behavior or custom vertices.
+# Source SetFrame actions may change the active original image rectangle.
+geometry=[]
+for oid in sorted(building):
+    obj=objects[oid]
+    animations=obj[7] if len(obj)>7 and isinstance(obj[7],list) else []
+    for ai,a in enumerate(animations):
+        if not isinstance(a,list) or len(a)<8 or not isinstance(a[7],list):continue
+        for fi,fr in enumerate(a[7]):
+            if len(fr)<=8:continue
+            w,h,ox,oy=fr[4],fr[5],fr[7],fr[8]
+            if not all(isinstance(v,(int,float)) and math.isfinite(v)
+                       for v in (w,h,ox,oy)):continue
+            if not (0<w<16384 and 0<h<16384):continue
+            geometry.append((oid,ai,fi,w,h,ox,oy))
+geom=ROOT/"include/minidayz/generated/source_building_frame_geometry.hpp"
+g=[
+ "#pragma once","#include <cstddef>","#include <cstdint>",
+ "namespace minidayz::stage1 {",
+ "struct SourceBuildingFrameGeometry {std::uint16_t object,animation;",
+ " std::uint32_t frame;float width,height,origin_x,origin_y;};",
+ "inline constexpr SourceBuildingFrameGeometry kSourceBuildingFrameGeometry[]={"
+]
+def gf(n):
+    result=format(float(n),".9g")
+    if "." not in result and "e" not in result and "E" not in result:result+=".0"
+    return result+"f"
+g+=[" {"+",".join([str(oid),str(ai),str(fi),gf(w),gf(h),gf(ox),gf(oy)])+"},"
+    for oid,ai,fi,w,h,ox,oy in geometry]
+g+=["};",
+"inline constexpr std::size_t kSourceBuildingFrameGeometryCount=sizeof(kSourceBuildingFrameGeometry)/sizeof(kSourceBuildingFrameGeometry[0]);",
+"inline const SourceBuildingFrameGeometry* source_building_frame_geometry(",
+" std::uint16_t object,std::uint16_t animation,std::uint32_t frame) noexcept {",
+" std::size_t first=0,last=kSourceBuildingFrameGeometryCount;",
+" while(first<last){const auto mid=first+(last-first)/2;",
+"  const auto& row=kSourceBuildingFrameGeometry[mid];",
+"  if(row.object<object || (row.object==object && (row.animation<animation ||",
+"     (row.animation==animation && row.frame<frame))))first=mid+1;",
+"  else last=mid;}",
+" if(first>=kSourceBuildingFrameGeometryCount)return nullptr;",
+" const auto& row=kSourceBuildingFrameGeometry[first];",
+" return row.object==object&&row.animation==animation&&row.frame==frame?&row:nullptr;",
+"}","} // namespace minidayz::stage1"]
+geom.write_text("\n".join(g)+"\n",encoding="utf-8")
+print("Original building frame geometry",len(geometry),"frames")
 print(f"Original building custom polygons: {len(rows)} frames, {len(vertices)//2} vertices, {len(building & solid)} source-Solid building kinds")
