@@ -143,6 +143,8 @@ void test_original_generated_house_companions() {
         assert(exterior->parent_runtime_uid==foundation->runtime_uid);
         assert(world.placement(door)->parent_runtime_uid==
                exterior->runtime_uid);
+        assert(world.placement(door)->house_base_runtime_uid==
+               foundation->runtime_uid);
         assert(world.placement(wall)->linked_runtime_uid==
                foundation->runtime_uid);
         assert(world.placement(shadow)->linked_runtime_uid==
