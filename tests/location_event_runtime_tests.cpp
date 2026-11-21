@@ -1,4 +1,5 @@
 #include "minidayz/location_event_runtime.hpp"
+#include "minidayz/stage1_data_access.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/generated/location_template_source.hpp"
 
