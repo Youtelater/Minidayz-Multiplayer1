@@ -84,3 +84,15 @@ def inspect_roofs(nodes,anc=()):
                 stack.extend((kid,depth+1) for kid in child[7])
         inspect_roofs(e[7],anc+(e[4],))
 for sh in p[6]:inspect_roofs(sh[1])
+
+for oid in (1041,1048,1049):
+    obj=p[3][oid]
+    print("ROOF_FAMILY_OBJECT",oid,
+          "FIELDS",len(obj),"DETAILS",
+          short([(i,v if i!=7 else ("animations",len(v) if isinstance(v,list) else None))
+                for i,v in enumerate(obj)],6500))
+for idx in (1,2,4):
+    data=p[idx]
+    print("PROJECT_SECTION",idx,type(data).__name__,
+          len(data) if isinstance(data,(list,dict)) else None,
+          short(data,1300))
