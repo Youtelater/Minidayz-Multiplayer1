@@ -16,7 +16,9 @@ def f(v):
     return s+"f"
 rows=[]
 for ai,animation in enumerate(anims):
-    for fi,frame in enumerate(animation[7]):
+    frames=animation[7] if len(animation)>7 and isinstance(animation[7],list) else []
+    for fi,frame in enumerate(frames):
+        if not isinstance(frame,list):continue
         pts=frame[9] if len(frame)>9 and isinstance(frame[9],list) else []
         point=next((item for item in pts if item[0]=="Imagepoint 1"),None)
         if not point:continue
