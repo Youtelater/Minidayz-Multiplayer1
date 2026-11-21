@@ -15,6 +15,13 @@ This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port.
 - [ ] **CI results not directly observed yet for latest pushed changes.** Do not infer that tests pass merely because included in the workflow. Validate current Build 3DS Executable run and fix failures.
 - [ ] **Gameplay parity still open:** original object-348 door companion behavior, source roof picking (1048/1049), true original collision polygons, all original furniture/container interactions, object placement completeness, Azahar video inspection and hardware performance remain unverified.
 
+### Original closed-door Solid collision: native integration checkpoint
+
+- [x] Native `WorldPreviewScene::blocked` now tests a source-derived **object-348 frame-15 Solid footprint**, positioned at object-349 `Imagepoint 1` and rotated `Door.Angle+6`, rather than treating the entire visible door artwork as a rectangular collider. Open door frame 1 omits this closed-door footprint. Unmapped source door variants retain a safety fallback rather than becoming walk-through gaps.
+- [x] `tools/stage1/build_source_door_points.py` now exports both original `in` and `Imagepoint 1` for every door frame, plus original object-348 frame-15 Solid geometry. Frame 15 has **no usable authored custom polygon** in the root export; the extractor uses its own source dimensions and hotspot as the default Construct full-frame rectangle. `terrain_obstacle_index.hpp` includes the additional companion extent so movement broadphase cannot omit its collision footprint.
+- [x] New `tests/source_door_solid_tests.cpp` validates source-driven frame-15 corners, rotation, mirroring and open-door no-collider semantics. Its 3DS workflow test must pass before this interaction can be marked verified.
+- [ ] This is a **source-shaped collision proxy, not complete Construct object lifetime parity**. Dynamic 348 Spawn/Destroy instance UIDs, 0.01s waits, original 348 visual rendering, source object picking, collision/timing equivalence and save/reload need exact world integration and emulator verification.
+
 ### Original door-collider semantic checkpoint (root-source trace)
 
 - [x] [Root-source world audit #44935601526](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44935601526) completed successfully. It extracted original object **348 = `t348`**: a **42-frame sprite with Construct Solid behavior**; it is **not exclusively a door shadow**. Other original structures, tree companions and maps also create/use different frames of object 348.
