@@ -28,7 +28,12 @@ inline bool source_door_overlaps_player(
     const float a=door.angle*0.01745329251994329577f;
     const float sn=std::sin(a),cs=std::cos(a);
     const float dx=player.x-door.x,dy=player.y-door.y;
-    const float px=dx*cs+dy*sn,py=-dx*sn+dy*cs;
+    float px=dx*cs+dy*sn;
+    const float py=-dx*sn+dy*cs;
+    // WorldPlacement width is the final rendered width. Its signed
+    // scale_x mirrors the original door atlas frame around the hotspot.
+    // Reflect the local query, NOT the width a second time.
+    if (door.scale_x<0.0f) px=-px;
     // Original player_collision_base (object 181) is a 30x30 sprite.
     // Project its axis-aligned AABB onto door-local axes conservatively.
     const float half=15.0f*(std::fabs(cs)+std::fabs(sn));
@@ -43,7 +48,8 @@ inline bool source_door_overlaps_player(
 inline float source_door_in_y(const WorldPlacement& door,
                              const SourceDoorPoint& frame) noexcept {
     const float a=door.angle*0.01745329251994329577f;
-    const float dx=door.width*(frame.in_x-frame.origin_x);
+    const float dx=door.width*(frame.in_x-frame.origin_x)*
+                   (door.scale_x<0.0f?-1.0f:1.0f);
     const float dy=door.height*(frame.in_y-frame.origin_y);
     return door.y+dx*std::sin(a)+dy*std::cos(a);
 }
