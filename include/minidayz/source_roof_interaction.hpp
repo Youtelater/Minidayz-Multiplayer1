@@ -19,7 +19,11 @@ inline bool source_player_overlaps_world_rect(
     const float a=object.angle*0.01745329251994329577f;
     const float sn=std::sin(a),cs=std::cos(a);
     const float dx=player.x-object.x,dy=player.y-object.y;
-    const float local_x=dx*cs+dy*sn,local_y=-dx*sn+dy*cs;
+    float local_x=dx*cs+dy*sn;
+    const float local_y=-dx*sn+dy*cs;
+    // Construct permits horizontally mirrored roof/interior sprites.
+    // Width is already the authored rendered width: only flip local X.
+    if(object.scale_x<0.0f)local_x=-local_x;
     // Original player_collision_base sprite is 30x30.
     const float half=15.0f*(std::fabs(cs)+std::fabs(sn));
     return local_x+half>=-object.width*origin_x &&
@@ -31,7 +35,8 @@ inline bool source_player_overlaps_world_rect(
 inline float source_roof_in_world_y(
     const WorldPlacement& roof,const SourceRoofMemberPoint& point) noexcept {
     const float a=roof.angle*0.01745329251994329577f;
-    const float dx=(point.point_x-point.origin_x)*roof.width;
+    const float dx=(point.point_x-point.origin_x)*roof.width*
+                   (roof.scale_x<0.0f?-1.0f:1.0f);
     const float dy=(point.point_y-point.origin_y)*roof.height;
     return roof.y+dx*std::sin(a)+dy*std::cos(a);
 }
