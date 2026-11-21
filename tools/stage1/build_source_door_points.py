@@ -38,11 +38,19 @@ solid=p[3][348][7][0][7][15]
 if len(solid)<=10 or solid[4]<=0 or solid[5]<=0:
     raise SystemExit("Original door Solid 348 frame 15 invalid")
 poly=solid[10]
-if not isinstance(poly,list) or len(poly)<6 or len(poly)%2:
-    raise SystemExit("Original door Solid frame 15 polygon missing/odd")
+if isinstance(poly,list) and len(poly)%2:
+    raise SystemExit("Original door Solid frame 15 polygon has an odd coordinate count")
+has_polygon=isinstance(poly,list) and len(poly)>=6
+if not has_polygon:
+    # Construct's missing frame collision poly means its default full-frame
+    # box, relative to that frame's exact source hotspot. Never invent a
+    # custom shape or fail the world generation because no custom vertices
+    # were authored for this sprite frame.
+    ox,oy=solid[7],solid[8]
+    poly=[-ox,-oy,1.0-ox,-oy,1.0-ox,1.0-oy,-ox,1.0-oy]
 for coordinate in poly:
     if not isinstance(coordinate,(int,float)) or not (-4.0<coordinate<4.0):
-        raise SystemExit("Invalid original Solid polygon point")
+        raise SystemExit("Invalid original Solid collision coordinate")
 
 out=ROOT/"include/minidayz/generated/source_door_points.hpp"
 out.parent.mkdir(parents=True,exist_ok=True)
@@ -76,6 +84,7 @@ lines += [
 "inline constexpr float kOriginX="+f(solid[7])+";",
 "inline constexpr float kOriginY="+f(solid[8])+";",
 "inline constexpr float kDoorAngleOffsetDegrees=6.0f;",
+"inline constexpr bool kHasExplicitPolygon="+("true" if has_polygon else "false")+";",
 "inline constexpr float kPolygonXY[]={",
 ]
 lines += [" "+f(poly[i])+","+f(poly[i+1])+"," for i in range(0,len(poly),2)]
