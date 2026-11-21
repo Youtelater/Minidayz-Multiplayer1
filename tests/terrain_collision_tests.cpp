@@ -18,6 +18,9 @@ int main() {
     assert(!map.occupied(80.0f,319.0f));
     assert(!map.occupied(-100.1f,201.0f));
     assert(!map.occupied(-39.0f,320.0f));
+    assert(minidayz::terrain::source_visual_roof_overlay(1049));
+    assert(!minidayz::terrain::source_visual_roof_overlay(349));
+    assert(!minidayz::terrain::source_visual_roof_overlay(207));
     using minidayz::terrain::source_solid_sprite_contains;
     // An authored 20x10 roof/wall whose image hotspot is at its centre
     // must keep its hotspot in the solid area after any rotation.
