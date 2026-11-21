@@ -15,7 +15,7 @@ namespace minidayz::world_source {
 // source member object IDs before evaluating either original condition.
 inline bool source_player_overlaps_world_rect(
     const WorldPlacement& object,WorldPoint player,
-    float origin_x,float origin_y) noexcept {
+    float origin_x,float origin_y,float player_half=15.0f) noexcept {
     if(!std::isfinite(player.x)||!std::isfinite(player.y)||
        !(object.width>0.0f&&object.height>0.0f))return false;
     const float a=object.angle*0.01745329251994329577f;
@@ -27,7 +27,7 @@ inline bool source_player_overlaps_world_rect(
     // Width is already the authored rendered width: only flip local X.
     if(object.scale_x<0.0f)local_x=-local_x;
     // Original player_collision_base sprite is 30x30.
-    const float half=15.0f*(std::fabs(cs)+std::fabs(sn));
+    const float half=player_half*(std::fabs(cs)+std::fabs(sn));
     if (!(local_x+half>=-object.width*origin_x &&
           local_x-half<=object.width*(1.0f-origin_x) &&
           local_y+half>=-object.height*origin_y &&
@@ -41,8 +41,8 @@ inline bool source_player_overlaps_world_rect(
     const float world_y=object.y+center_x*sn+center_y*cs;
     const float extent_x=0.5f*(object.width*std::fabs(cs)+object.height*std::fabs(sn));
     const float extent_y=0.5f*(object.width*std::fabs(sn)+object.height*std::fabs(cs));
-    return std::fabs(player.x-world_x)<=15.0f+extent_x &&
-           std::fabs(player.y-world_y)<=15.0f+extent_y;
+    return std::fabs(player.x-world_x)<=player_half+extent_x &&
+           std::fabs(player.y-world_y)<=player_half+extent_y;
 }
 
 // The original Overlaps conditions use the active Sprite mask even for
@@ -59,7 +59,7 @@ inline bool source_player_overlaps_world_sprite(
     const auto* mask=stage1::source_building_collision_polygon(
         object.object,object.source_animation,object.source_frame);
     if(!mask || mask->points<3)
-        return source_player_overlaps_world_rect(object,player,origin_x,origin_y);
+        return source_player_overlaps_world_rect(object,player,origin_x,origin_y,player_half);
     const float a=object.angle*0.01745329251994329577f;
     const float cs=std::cos(a),sn=std::sin(a);
     const float mirror=object.scale_x<0.0f?-1.0f:1.0f;
@@ -69,7 +69,7 @@ inline bool source_player_overlaps_world_sprite(
         const float y=xy[2*i+1]*object.height;
         return WorldPoint{object.x-player.x+x*cs-y*sn,
                           object.y-player.y+x*sn+y*cs};
-    },15.0f,15.0f);
+    },player_half,player_half);
 }
 
 inline float source_roof_in_world_y(
@@ -79,6 +79,46 @@ inline float source_roof_in_world_y(
                    (roof.scale_x<0.0f?-1.0f:1.0f);
     const float dy=(point.point_y-point.origin_y)*roof.height;
     return roof.y+dx*std::sin(a)+dy*std::cos(a);
+}
+
+inline float source_roof_depth_world_y(
+    const WorldPlacement& roof,const SourceRoofMemberPoint& point) noexcept {
+    const float a=roof.angle*0.01745329251994329577f;
+    const float dx=(point.depth_x-point.origin_x)*roof.width*
+                   (roof.scale_x<0.0f?-1.0f:1.0f);
+    const float dy=(point.depth_y-point.origin_y)*roof.height;
+    return roof.y+dx*std::sin(a)+dy*std::cos(a);
+}
+struct SourceRoofDecision {
+    float opacity{1.0f};
+    bool move_background{true};
+    bool foundation_top{};
+    bool under_roof{};
+};
+// Source House_transparenting: 181 overlap roof 1049, then distinct
+// PlayerBase 193 wall-zone 346 guard. Imagepoints 1 and 2 are different
+// thresholds: opacity and layer respectively. A picked foundation is
+// selected by source position/association, NOT player-vs-Solid overlap.
+inline SourceRoofDecision source_house_roof_decision(
+    const WorldPlacement& roof, const SourceRoofMemberPoint& frame,
+    WorldPoint player, bool picked_foundation, bool touching_wall) noexcept {
+    SourceRoofDecision result;
+    result.under_roof=source_player_overlaps_world_sprite(
+        roof,player,frame.origin_x,frame.origin_y);
+    if(!result.under_roof)return result;
+    if(touching_wall && picked_foundation){
+        result.opacity=0.0f;
+        return result;
+    }
+    if(touching_wall)return result;
+    const float opacity_y=source_roof_in_world_y(roof,frame);
+    const float depth_y=source_roof_depth_world_y(roof,frame);
+    if(std::isfinite(depth_y))result.move_background=player.y>depth_y;
+    if(picked_foundation && std::isfinite(opacity_y) && player.y<=opacity_y){
+        result.opacity=0.25f;
+        result.foundation_top=true;
+    }
+    return result;
 }
 
 inline bool source_roof_opacity_at_player(
