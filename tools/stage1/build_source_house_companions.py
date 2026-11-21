@@ -45,6 +45,7 @@ def spawn(a):
  if not isinstance(layer,str) or not isinstance(point,(int,str)):return None
  return a[0],target,layer,point
 rules=[];ignored=0;events=0;primaries=[];unverified_primary_conditions=0
+unverified_primary_branches=[]
 for name,nodes in p[6]:
  if name!="Game_events":continue
  for e,anc in walk(nodes):
@@ -82,6 +83,8 @@ for name,nodes in p[6]:
       primaries.append((e[4],base,variant,roots[0][2],roots[0][3]))
   else:
       unverified_primary_conditions+=1
+      unverified_primary_branches.append((e[4],base,variant,
+                                          original_conditions,anc[-5:]))
   created=[]
   for a in acts:
    if not isinstance(a,list) or len(a)<2:continue
@@ -278,6 +281,11 @@ for oid in (302,306,311,312,313,321,322,323,324,333,346,347,349):
  print("SOURCE_HOUSE_GEOMETRY",oid,
        "frameWH",fr[4:6] if len(fr)>5 else [],
        "point_names",[p[0] for p in fr[9]] if len(fr)>9 and isinstance(fr[9],list) else [])
+for uid,base,variant,conditions,anc in unverified_primary_branches:
+ print("SOURCE_COMPLEX_PRIMARY_HOUSE",uid,base,variant,
+       "conditions",json.dumps(conditions,separators=(",",":"),
+                               ensure_ascii=False)[:2200],
+       "ancestry",list(anc))
 print("Root source house companion Spawn actions:",len(rules),
       "events",events,"parents",len(parents),"imagepoints",len(points),
       "source instance-variable actions",len(variable_rows),
