@@ -8,6 +8,7 @@
 #include "minidayz/npc_system.hpp"
 
 #include <cassert>
+#include <cstring>
 #include <algorithm>
 #include <vector>
 #include <cstdint>
@@ -454,6 +455,30 @@ void test_original_map_layout_and_descriptors() {
     collision.rebuild(world);
     assert(collision.candidates(600.0f,5000.0f).size()<
            world.placement_count());
+    // Generated tree trunks use a separate original collision sprite
+    // (object 345) on Obstacle_enviroment, not the visible Trees layer.
+    // A spatial index omitting that layer makes the player walk through
+    // trunks even when the original sprite is visibly standing.
+    const auto* map_layout=minidayz::stage1::find_layout("Map");
+    assert(map_layout);
+    const auto layout_id=static_cast<std::uint16_t>(
+        map_layout-minidayz::stage1::kLayoutTable);
+    std::size_t original_obstacle_bases=0;
+    for (std::size_t i=0;i<world.placement_count();++i) {
+        const auto* p=world.placement(i);
+        if(!p || p->object!=345 || p->width<=0 || p->height<=0)
+            continue;
+        const auto* layer=minidayz::stage1::find_layer(layout_id,p->layer);
+        if(!layer || std::strcmp(layer->name,"Obstacle_enviroment")!=0)
+            continue;
+        const auto& nearby=collision.candidates(p->x,p->y);
+        assert(std::find(nearby.begin(),nearby.end(),
+                   static_cast<std::uint32_t>(i))!=nearby.end());
+        ++original_obstacle_bases;
+    }
+    std::printf("ORIGINAL COLLIDER BASES indexed=%zu\\n",
+                original_obstacle_bases);
+
 
     // These counts come from the original Map layout and source spawn calls.
     assert(world.placement_count() >= 1250);
