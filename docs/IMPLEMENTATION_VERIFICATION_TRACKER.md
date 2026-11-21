@@ -6,6 +6,14 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+## World building interaction gameplay correction — 2026-11-21
+
+- [x] **Actual 3DS gameplay C++ changed:** `source/main.cpp` now uses source sprite dimensions and scale for the broadphase of generated houses/interiors, roof opacity changes and automatic doors. Previous guessed limits `96px`, `256px`, `512px` could silently skip large/off-center original sprites even when the source narrow-phase would accept them.
+- [x] New `include/minidayz/source_world_proximity.hpp` uses a conservative full-sprite-diagonal bound plus the original 30×30 player collider's half diagonal. The actual original door imagepoint, wood/metal event, roof family, opacity logic and associated audio still control what occurs; this change **does not invent new sounds or animations**.
+- [x] Regression test `tests/source_world_proximity_tests.cpp` added to `.github/workflows/build-3ds.yml`, covering wide doors, large interiors, rotated/off-center sprites, mirrored sprites, far-object rejection, returning a faded roof to 100%, NaNs and invalid sizes. The same C++ geometry cases compiled and passed with a local C++17 host compiler.
+- [ ] Confirm full CI 3DS build and generated world checks after this commit and test in Azahar/real hardware; local geometry unit tests alone are **not** source-gameplay parity.
+- [ ] Complete source object 348 door companion, original Construct polygon collision, and full original 1048/1049 roof picking/layer semantics. Original world building visuals and audio remain a multi-step task.
+
 ## World original source detailed catalog — 2026-11-21
 
 - [x] Source-backed inventory and world category baseline saved in [World Source Detailed Inventory](WORLD_SOURCE_DETAILED_INVENTORY_2026-11-21.md), with exact source counts and separate world-generation targets.
