@@ -2978,7 +2978,9 @@ private:
                 if (kind && kind->type==16) continue;
             }
             if (!placement || placement->width <= 0.0f ||
-                placement->height <= 0.0f) continue;
+                placement->height <= 0.0f ||
+                minidayz::terrain::source_visual_roof_overlay(
+                    placement->object)) continue;
             const auto* layer = minidayz::stage1::find_layer(
                 map_index, placement->layer);
             if (!layer) continue;
