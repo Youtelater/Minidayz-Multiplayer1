@@ -2876,7 +2876,7 @@ private:
                     interior->x,interior->y,interior->width,
                     interior->height,interior->scale_x,
                     player_pos.x,player_pos.y))continue;
-            if(minidayz::world_source::source_player_overlaps_world_rect(
+            if(minidayz::world_source::source_player_overlaps_world_sprite(
                     *interior,player_pos,interior->origin_x,
                     interior->origin_y)){
                 source_overlapping_house_uids_.push_back(
@@ -2917,7 +2917,7 @@ private:
                        foundation->runtime_uid==linked &&
                        minidayz::stage1::source_family_contains(
                            1048,foundation->object) &&
-                       minidayz::world_source::source_player_overlaps_world_rect(
+                       minidayz::world_source::source_player_overlaps_world_sprite(
                            *foundation,player_pos,
                            foundation->origin_x,foundation->origin_y))
                         overlaps_matching_house=true;
@@ -2940,7 +2940,7 @@ private:
                     const auto* wall=world_.placement(wall_index);
                     if(!wall || wall->parent_runtime_uid!=parent_uid)
                         continue;
-                    if(minidayz::world_source::source_player_overlaps_world_rect(
+                    if(minidayz::world_source::source_player_overlaps_world_sprite(
                             *wall,player_pos,wall->origin_x,wall->origin_y)){
                         touching_own_wall=true;break;
                     }
@@ -2973,7 +2973,7 @@ private:
                     minidayz::world_source::source_roof_member_point(
                         roof->object,roof->source_animation,roof->source_frame);
                 if(frame &&
-                   !minidayz::world_source::source_player_overlaps_world_rect(
+                   !minidayz::world_source::source_player_overlaps_world_sprite(
                         *roof,player_pos,frame->origin_x,frame->origin_y) &&
                    roof->layer!=source_roof_background_layer_)
                     (void)world_.set_placement_layer(
