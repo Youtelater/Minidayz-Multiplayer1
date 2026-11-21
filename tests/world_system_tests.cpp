@@ -83,7 +83,7 @@ void test_generated_object_instance_ids() {
     assert(second.generate_from_source(seed,"Map",0));
     assert(first.placement_count()==second.placement_count());
     std::unordered_set<std::uint64_t> runtime_ids;
-    std::size_t generated=0,trees=0;
+    std::size_t generated=0,trees=0,source_sized_trees=0;
     for(std::size_t i=0;i<first.placement_count();++i) {
         const auto* a=first.placement(i);
         const auto* b=second.placement(i);
@@ -105,6 +105,17 @@ void test_generated_object_instance_ids() {
         if(a->runtime_uid & (1ULL<<63)) {
             ++generated;
             if(a->layer==43)++trees;
+            // Every procedurally created tree's first Construct frame
+            // provides the default size and hotspot. Render, rotation
+            // and collision cannot assume a zero-size, zero-origin sprite.
+            if(a->layer==43 && a->source_uid!=0 && a->object==207) {
+                const auto* def=minidayz::stage1::find_object(a->object);
+                assert(def && def->width>0.0f && def->height>0.0f);
+                assert(a->width==def->width && a->height==def->height);
+                assert(a->origin_x==def->origin_x);
+                assert(a->origin_y==def->origin_y);
+                ++source_sized_trees;
+            }
         } else {
             // Original static objects keep their authored instance UID.
             assert(a->runtime_uid==a->source_uid);
@@ -112,6 +123,7 @@ void test_generated_object_instance_ids() {
     }
     assert(generated>1000);
     assert(trees>1000);
+    assert(source_sized_trees>0);
     assert(!first.placement_by_id(0));
     assert(!first.placement_by_instance_id(0));
     assert(!first.placement_by_instance_id(~std::uint64_t{0}));
