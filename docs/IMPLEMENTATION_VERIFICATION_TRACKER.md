@@ -1,3 +1,10 @@
+## Part 2 — manual door input integration
+
+- [x] Root original source event 5295137988838652 stops AltMove when PlayerBase reaches movement marker506; child 742251994234684 selects marker type 2 and 9527050336890525 requires player collider181 overlap with door349. Source open/close UIDs 7258332154939593 / 353730214514351 use Wait(0.01), linked Solid348 removal/recreation and original sound variants.
+- [x] Native 3DS A input with no selected inventory slot now selects the nearest overlapping source door and queues the manual event family using its runtime UID, source frame, original delay and linked collision state. Automatic events share the wait/transition guard. Implementation commit `d753309f`.
+- [ ] Native A input adapts mobile marker arrival; actual marker506 pathfinding, animated marker lifecycle and exact original overlapping audio branches remain open. Verify full build and manual/automatic interaction in emulator. Do not mark complete.
+- [ ] Remaining Part 1 generation reconciliation and Part 2 roof picker/tint/outline behavior remain open.
+
 ## Part 2 — deployed tent source sprites and collision checkpoint
 
 - [x] Live deployed tent rendering uses original Sprite398 foundation and Sprite397 roof, animation 0/frame 0, using frame-indexed atlas rendering rather than item456's inventory icon (commit `0e99b1ee`; deployment UIDs 297398672474814 / 1391504325547996).
