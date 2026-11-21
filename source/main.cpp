@@ -7,6 +7,7 @@
 #include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_door_auto.hpp"
 #include "minidayz/source_roof_interaction.hpp"
+#include "minidayz/source_world_proximity.hpp"
 #include "minidayz/source_map_overlay.hpp"
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -2829,8 +2830,13 @@ private:
         for(const auto index:source_house_interior_indices_){
             const auto* interior=world_.placement(index);
             if(!interior)continue;
-            if(std::fabs(player_pos.x-interior->x)>256.0f ||
-               std::fabs(player_pos.y-interior->y)>256.0f)continue;
+            // Source interiors can extend far beyond their hotspot.
+            // Reject only points outside the actual sprite's conservative
+            // transformed extent; the original overlap check stays below.
+            if(!minidayz::world_source::source_sprite_might_touch_player(
+                    interior->x,interior->y,interior->width,
+                    interior->height,interior->scale_x,
+                    player_pos.x,player_pos.y))continue;
             if(minidayz::world_source::source_player_overlaps_world_rect(
                     *interior,player_pos,interior->origin_x,
                     interior->origin_y)){
@@ -2840,9 +2846,13 @@ private:
         for(const auto index:source_roof_indices_){
             const auto* roof=world_.placement(index);
             if(!roof)continue;
-            if(std::fabs(player_pos.x-roof->x)>512.0f &&
-               std::fabs(player_pos.y-roof->y)>512.0f &&
-               roof->opacity==1.0f)continue;
+            // A building roof may be much larger than 512px or have an
+            // off-centre hotspot. Recheck already-faded roofs even when
+            // the player leaves, so the original 100% state is restored.
+            if(!minidayz::world_source::source_sprite_might_touch_player(
+                    roof->x,roof->y,roof->width,roof->height,
+                    roof->scale_x,player_pos.x,player_pos.y,
+                    roof->opacity<0.999f))continue;
             float opacity=1.0f;
             if(!minidayz::world_source::source_roof_opacity_at_player(
                     *roof,player_pos,overlaps_interior,opacity))
@@ -2870,10 +2880,12 @@ private:
         for(const auto index:source_door_indices_){
             const auto* p=world_.placement(index);
             if(!p)continue;
-            // Do not scan all ten thousand original world instances each
-            // 3DS frame. Only evaluate nearby object-349 door sprites.
-            if(std::fabs(p->x-player_pos.x)>96.0f ||
-               std::fabs(p->y-player_pos.y)>96.0f)continue;
+            // Check the real source door dimensions and hotspot, not a
+            // guessed 96px range that can suppress large doors and their
+            // original wood/metal open/close sound events.
+            if(!minidayz::world_source::source_sprite_might_touch_player(
+                    p->x,p->y,p->width,p->height,p->scale_x,
+                    player_pos.x,player_pos.y))continue;
             const auto event=minidayz::world_source::source_auto_door_for_placement(
                 world_,index,player_pos);
             using minidayz::world_source::AutomaticDoorEffect;
