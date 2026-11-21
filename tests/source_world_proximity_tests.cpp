@@ -15,9 +15,12 @@ int main() {
     // Rotation around an off-center Construct image hotspot is covered.
     assert(source_sprite_might_touch_player(
         100.0f,100.0f,180.0f,180.0f,1.0f,220.0f,220.0f));
-    // Reflected/negative-scale original sprites cannot be wrongly culled.
+    // Source width is already the rendered extent. Mirroring must NOT
+    // multiply that width again (the renderer uses only the sign).
     assert(source_sprite_might_touch_player(
-        1000.0f,1000.0f,150.0f,50.0f,-2.0f,1200.0f,1000.0f));
+        1000.0f,1000.0f,150.0f,50.0f,-2.0f,1110.0f,1000.0f));
+    assert(!source_sprite_might_touch_player(
+        1000.0f,1000.0f,150.0f,50.0f,-2.0f,1250.0f,1000.0f));
     // Far-away objects must still be rejected for efficient 3DS updates.
     assert(!source_sprite_might_touch_player(
         0.0f,0.0f,32.0f,32.0f,1.0f,600.0f,600.0f));
