@@ -7,6 +7,7 @@ on:
       - 'tools/stage1/trace_original_house_companion_spawns.py'
       - 'tools/stage1/trace_house_interaction_actions.py'
       - 'tools/stage1/trace_original_building_runtime.py'
+      - 'tools/stage1/build_source_house_companions.py'
       - '.github/workflows/trace-original-house-rules.yml'
   workflow_dispatch:
 jobs:
@@ -23,5 +24,7 @@ jobs:
         run: python3 tools/stage1/trace_original_house_companion_spawns.py
       - name: Trace original post-Spawn building actions
         run: python3 tools/stage1/trace_house_interaction_actions.py
+      - name: Trace root house Spawn rule geometry and primary coverage
+        run: python3 tools/stage1/build_source_house_companions.py
       - name: Trace runtime original building interaction events
         run: python3 tools/stage1/trace_original_building_runtime.py
