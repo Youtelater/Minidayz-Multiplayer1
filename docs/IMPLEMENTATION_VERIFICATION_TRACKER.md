@@ -1,3 +1,16 @@
+## 2026-11-21 — Building gameplay implementation continuation
+
+- [x] Extract original per-frame building interaction collision masks, including non-Solid roof and door frames; use hotspot-relative concave polygons rather than treating the entire PNG as a rectangle. Player collision object 181 has the original 30x30 default rectangle. Correct zero-length polygon edge false positives. Six isolated C++17 polygon overlap cases compiled and passed in the local test harness.
+- [x] Wire original roof Imagepoint 1 (opacity) and Imagepoint 2 (drawing depth) to live C++ roof updates, the separate 0.1s/0.5s source timers, foundation animation/layer changes, wall-zone checks and linked door opacity. Preserve Solid behavior across drawing-layer changes. This is not a proof of exact picking/tint/outline parity.
+- [x] Implement original Construct Sprite frame-change width/height ratios and hotspot updates (root c2runtime.js r.Zi) in world state transitions and snapshot restoration. Preserve the door's closed-frame companion anchor and do not accidentally recreate it on an opacity-only update during the original 0.01s wait.
+- [x] Connect original indoor rain sample rainroof.wav to house shelter transitions and restore outdoor rain. Native implementation switches one weather channel rather than reproducing concurrent Construct audio tags.
+- [x] Recover the separate original building loot branch 4949969985883762 from root data.deobfuscated.js: 49 action-bearing branches, 153 object-218 marker spawns, 151 immediate Trigger_spawn calls and two markers without the call. Source-authored category, imagepoint, case-insensitive layer resolution, special variant-1 Y offset, exact parent link and trigger flag are now represented in world generation. Native regression checks all 153 source transforms. Extraction independently checked against the root event blob; all referenced parent/variant pairs are present in the original primary-house spawn branch.
+- [ ] Run latest full native/3DS CI and test Azahar/real hardware. Current connector does not expose main push workflow discovery, so the latest build is **not verified**.
+- [ ] Implement and verify actual initial Trigger_spawn item generation for all building loot categories, including original conditions/weighted choices, capacity, persistence and container gameplay. Marker placement alone is not item spawning.
+- [ ] Finish exact original roof picker, Tint and player outline effects, standalone roof 397 behavior, movement-marker door route and overlapping audio cue branches. Verify old saves after adding generated placements (runtime IDs are generation-order dependent).
+
+Implementation commits include b536b265, 3a57c8cf, fee2235e, f90d68e, 2e46c700, bd4c0d57, 9b51733a. Overall Buildings/Roofs/Interiors/Doors/Furniture remains unchecked until integrated gameplay verification and remaining behavior pass.
+
 # MiniDAYZ 3DS — Implementation Verification Tracker
 
 **Branch:** `main`  
