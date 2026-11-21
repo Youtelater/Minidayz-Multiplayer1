@@ -103,7 +103,16 @@ def main():
        source_conditions=json.dumps(ch[5],separators=(",",":"))))
     visit_element(ch,active)
   visit_element(e)
- write_csv(out/"original_world_create_actions.csv",element_rules)
+ if element_rules:
+  write_csv(out/"original_world_create_actions.csv",element_rules)
+ else:
+  # A valid zero-result source trace must produce a header-only CSV.
+  # The original world helper may use indirect family creation; never
+  # manufacture a direct Create action merely to satisfy the auditor.
+  with (out/"original_world_create_actions.csv").open("w",newline="",encoding="utf-8") as file:
+   csv.writer(file).writerow(("event_uid","ancestor_uids","source_object_id",
+                              "object_name","source_create_action",
+                              "source_conditions"))
  # Original Construct families are not sprite objects. Preserve actual
  # membership so roof/interior family IDs are never mistaken for art IDs.
  families=[]
