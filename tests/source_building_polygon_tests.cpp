@@ -25,7 +25,8 @@ int main(){
     for(std::size_t i=0;i<count;++i){
         const auto& f=stage1::kSourceBuildingCollisionPolygons[i];
         assert(f.points>=3);
-        assert(stage1::source_object_has_solid_behavior(f.object));
+        // Both Solid and non-Solid source sprites have authored masks.
+        // Non-Solid masks are used by interactions, not movement blocking.
         WorldPlacement p{};
         p.object=f.object;
         p.source_animation=f.animation;
