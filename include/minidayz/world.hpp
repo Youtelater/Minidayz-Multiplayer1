@@ -195,6 +195,12 @@ public:
                                     std::uint16_t animation,
                                     std::uint32_t frame,
                                     float opacity) noexcept;
+    // Original door-open sequence destroys object 348 BEFORE Wait(0.01)
+    // and door frame changes. Close creates its 348 AFTER the wait.
+    // Keep the stable native companion ID while changing effective
+    // source object presence, collision and rendering immediately.
+    bool set_linked_door_solid_present(std::size_t door_index,
+                                       bool present) noexcept;
     // Original House_transparenting event 9848716569903957 moves the
     // specific roof sprite to Buildings_bg on leaving its overlap area.
     // Sprite state and source UID remain unchanged.
