@@ -6,6 +6,13 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+### Exact original door instance variable zero, additional source event checks
+
+- [x] Root door close UID 243854400993751 explicitly performs 349.SetInstanceVariable(0,348.UID) after creating its Solid. The native linked 348 companion now writes its own stable source UID into the correct door variable on initial closed-spawn and every close transition; opening leaves the former UID recorded as the original source Destroy branch does. Source variable 1 remains the original Spawn parent's UID. Changes in source/world.cpp and tests/world_system_tests.cpp commits 58083ac2 and 1b0be8ef.
+- [x] Root original alternative door frame events 7258332154939593 / 353730214514351 are now supported in the guarded source door executor, including separate linked 348 activation and the original frame IDs. Normal automatic events remain unchanged. Native regression covers both source event UID pairs. Exact prompt-object 506 lifecycle is **not** yet fully dispatched by the 3DS controls.
+- [ ] Most recent 3DS and native full-build results still need their own confirmation; the last observed fully passed 3DS revision was e297f7e6, with new companion UID and prompt event changes added afterward.
+- [ ] Root original extra conditional house-primary branches are being distinguished from direct unguarded Mapgen.var2 conditions. Do not synthesize those primary houses based on one matching source variable while other original conditions remain unevaluated.
+
 ### Additional original house event-family coverage and verified build
 
 - [x] [Original building runtime event trace #44944170187](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44944170187) found **25** original non-creation event sites directly referencing known house/roof/wall/door objects and source families. This includes TWO original door open/close event families, not just the automatic one.
