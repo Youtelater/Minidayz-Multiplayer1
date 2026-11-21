@@ -208,8 +208,35 @@ void test_every_source_mapped_house_spawn_chain() {
         }
     }
     assert(checked>=5);
-    std::printf("ROOT HOUSE SOURCE SPAWN COVERAGE %zu branches %zu placed sprites\\n",
-                checked,created);
+    std::size_t restored_primary=0;
+    for(const auto& original:world_source::kSourceHousePrimarySpawns) {
+        bool cached=false;
+        for(const auto& rule:stage1::kWorldElementSpawnSource) {
+            if(rule.object==original.object &&
+               rule.var1_op==0 && rule.var1_value==7 &&
+               rule.var2_op==0 && rule.var2_value==original.variant){
+                cached=true;break;
+            }
+        }
+        if(cached)continue;
+        const std::size_t begin=world.placement_count();
+        world.expand_map_element(7,original.variant,0,
+            {9000.0f+static_cast<float>(restored_primary%10)*100.0f,
+             12000.0f+static_cast<float>(restored_primary/10)*100.0f});
+        bool created_base=false;
+        for(std::size_t i=begin;i<world.placement_count();++i)
+            if(world.placement(i)->object==original.object)
+                created_base=true;
+        if(!created_base)
+            std::fprintf(stderr,
+                "UNCACHED ORIGINAL HOUSE variant=%u base=%u event=%llu\\n",
+                original.variant,original.object,
+                static_cast<unsigned long long>(original.event_uid));
+        assert(created_base);
+        ++restored_primary;
+    }
+    std::printf("ROOT HOUSE SOURCE SPAWN COVERAGE %zu cached branches %zu restored uncached original branches %zu placed sprites\\n",
+                checked,restored_primary,created);
 }
 
 void test_live_original_automatic_doors() {
