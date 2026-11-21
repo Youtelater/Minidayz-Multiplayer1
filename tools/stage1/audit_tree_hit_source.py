@@ -39,6 +39,27 @@ for sh in p[6]:visit(sh[1],sh[0])
 out=ROOT/"audit-output/world"
 out.mkdir(parents=True,exist_ok=True)
 (out/"source_tree_hit_full_chains.json").write_text(json.dumps(records,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+# Fail source CI if any native hit UID/action pairing drifts from the root.
+# A 345 parent collision guard is necessary but not sufficient to grant a hit.
+expected={
+    184:(7227858680569601,8821937621821993),
+    207:(8754965976446553,2738244684146745),
+    209:(5386206472407495,7838407830495979),
+    576:(9193333425135665,4972733237327446),
+    577:(4761103342332918,9345628732648648),
+    581:(3531921662641626,4043087112077636),
+}
+for obj,(hit_uid,fall_uid) in expected.items():
+    hit=[x for x in records if x["uid"]==hit_uid and obj in x["trees"]]
+    fall=[x for x in records if x["uid"]==fall_uid and obj in x["trees"]]
+    assert len(hit)==1 and len(fall)==1, (obj,hit_uid,fall_uid)
+    assert any(isinstance(a,list) and a[:2]==[obj,87]
+               for a in hit[0]["actions"]), (obj,"missing subtract action")
+    assert any(isinstance(a,list) and a[:2]==[obj,72]
+               for a in fall[0]["actions"]), (obj,"missing set-frame action")
+    assert any(isinstance(c,list) and c[:2]==[obj,71]
+               for c in fall[0]["conditions"]), (obj,"missing <=0 HP guard")
+print("TREE_HIT_SOURCE_PARITY",len(expected),"species with hit/decrement/fall guards verified")
 print("TREE_HIT_SOURCE_BRANCHES",len(records))
 for row in records:
     if row["uid"] in FALL_UIDS or any(
