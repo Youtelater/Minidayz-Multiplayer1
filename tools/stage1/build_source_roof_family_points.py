@@ -54,4 +54,33 @@ lines += ["};",
 " for(const auto& point:kSourceRoofMemberPoints)if(point.object==object && point.animation==animation && point.frame==frame)return &point;",
 " return nullptr;","}","} // namespace minidayz::world_source"]
 out.write_text("\n".join(lines)+"\n",encoding="utf-8")
+# Root House_transparenting event 6159361858903351 sets picked
+# foundation family 1048 animation to exactly "out" when PlayerBase
+# does not overlap source object 346. This is a Sprite animation index,
+# never a new object ID or PNG filename guess.
+bases=next((row for row in p[4] if isinstance(row,list) and row and row[0]==1048),None)
+if not bases:raise SystemExit("Missing original House foundation family 1048")
+base_rows=[]
+for oid in bases[1:]:
+    obj=p[3][oid]
+    animations=obj[7] if len(obj)>7 and isinstance(obj[7],list) else []
+    named={a[0]:ai for ai,a in enumerate(animations)
+           if isinstance(a,list) and len(a)>7 and isinstance(a[0],str)}
+    if "out" in named:
+        base_rows.append((oid,named["out"],named.get("in",65535)))
+if len(base_rows)<5:raise SystemExit("Original foundation 'out' animation candidates missing")
+baseout=ROOT/"include/minidayz/generated/source_roof_foundation_animations.hpp"
+b=["#pragma once","#include <cstddef>","#include <cstdint>",
+"namespace minidayz::world_source {",
+"// Exact root Construct family 1048 Sprite.SetAnimation(out) mappings.",
+"struct SourceRoofFoundationAnimations {std::uint16_t object,out_animation,in_animation;};",
+"inline constexpr SourceRoofFoundationAnimations kSourceRoofFoundationAnimations[]={"]
+b+=[" {"+",".join(map(str,row))+"}," for row in base_rows]
+b+=["};",
+"inline constexpr std::size_t kSourceRoofFoundationAnimationCount=sizeof(kSourceRoofFoundationAnimations)/sizeof(kSourceRoofFoundationAnimations[0]);",
+"inline const SourceRoofFoundationAnimations* source_roof_foundation_animations(std::uint16_t object) noexcept {",
+" for(const auto& row:kSourceRoofFoundationAnimations)if(row.object==object)return &row;",
+" return nullptr;","} // namespace minidayz::world_source"]
+baseout.write_text("\\n".join(b)+"\\n",encoding="utf-8")
+print("Original family 1048 out-animation source Sprite count",len(base_rows))
 print("Original roof family frames:",len(rows),"members total",len(family)-1,"without point",without[:25])
