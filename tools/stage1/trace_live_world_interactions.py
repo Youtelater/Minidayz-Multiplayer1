@@ -65,3 +65,22 @@ def findtree(nodes,anc=()):
         findtree(e[7],anc+(e,))
 for sheet in p[6]:
     if sheet[0]=="Game_events":findtree(sheet[1])
+
+def inspect_roofs(nodes,anc=()):
+    for e in nodes:
+        if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+        if e[4]==5249390718058362:
+            print("ROOF_GROUP_EVENT",e[4],"CHILD_COUNT",len(e[7]),
+                  "ACTIONS",short(e[6],4000))
+            stack=[(child,1) for child in e[7]]
+            seen=0
+            while stack and seen<45:
+                child,depth=stack.pop(0)
+                if not isinstance(child,list) or len(child)<8 or child[0]!=0:continue
+                print("ROOF_CHILD",depth,child[4],
+                    "COND",short(child[5],3500),
+                    "ACT",short(child[6],4200))
+                seen+=1
+                stack.extend((kid,depth+1) for kid in child[7])
+        inspect_roofs(e[7],anc+(e[4],))
+for sh in p[6]:inspect_roofs(sh[1])
