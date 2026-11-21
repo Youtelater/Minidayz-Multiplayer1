@@ -1345,6 +1345,26 @@ void test_full_generation_all_source_maps() {
     }
 }
 
+void test_category4_variant40_building_spawns() {
+    minidayz::WorldSystem world;
+    assert(world.initialize(0x1234u));
+    for(unsigned subtype=0;subtype<7;++subtype){
+        const auto first=world.placement_count();
+        assert(world.expand_map_element(4,40,subtype,{9000.0f,9000.0f})==1);
+        const minidayz::WorldPlacement* base=nullptr;
+        const minidayz::WorldPlacement* solid=nullptr;
+        for(auto i=first;i<world.placement_count();++i){
+            const auto* p=world.placement(i);
+            if(p->object==1345+subtype)base=p;
+            if(p->object==348 && p->source_frame==33+subtype)solid=p;
+        }
+        assert(base && solid);
+        assert(solid->parent_runtime_uid==base->runtime_uid);
+        assert(solid->source_variable_0==base->runtime_uid);
+        assert(solid->width>1.0f && solid->height>1.0f);
+    }
+}
+
 void test_nested_category4_building_spawns() {
     minidayz::WorldSystem world;
     assert(world.initialize(0x1234u));
@@ -1406,6 +1426,7 @@ int main() {
     test_source_tree_fall_item_table();
     test_original_generated_house_companions();
     test_nested_category4_building_spawns();
+    test_category4_variant40_building_spawns();
     test_original_house_loot_marker_spawns();
     test_every_source_mapped_house_spawn_chain();
     test_live_original_automatic_doors();
