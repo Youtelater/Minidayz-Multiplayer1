@@ -65,5 +65,17 @@ int main() {
     sprite.scale_x=1.0f;
     assert(std::fabs(source_roof_in_world_y(sprite,roof_point)
                      -244.0f)<kTolerance);
+    // A 20x20 square rotated 45 degrees has world extent sqrt(200).
+    // At x=32 the old two-axis test accepted a non-touching player.
+    sprite.width=20.0f;
+    sprite.height=20.0f;
+    sprite.origin_x=0.5f;
+    sprite.origin_y=0.5f;
+    sprite.angle=45.0f;
+    assert(!source_player_overlaps_world_rect(sprite,{132.0f,200.0f},0.5f,0.5f));
+    assert(source_player_overlaps_world_rect(sprite,{128.0f,200.0f},0.5f,0.5f));
+    sprite.scale_x=-1.0f;
+    assert(!source_player_overlaps_world_rect(sprite,{132.0f,200.0f},0.5f,0.5f));
+    assert(source_player_overlaps_world_rect(sprite,{128.0f,200.0f},0.5f,0.5f));
     return 0;
 }
