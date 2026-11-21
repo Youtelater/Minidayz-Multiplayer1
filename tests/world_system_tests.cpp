@@ -455,7 +455,29 @@ void test_every_source_mapped_house_spawn_chain() {
         assert(world.placement(i)->object!=1323);
     assert(all_original_primary_branches==
            world_source::kSourceHousePrimarySpawnCount);
-    assert(all_original_primary_branches>=45);
+    assert(all_original_primary_branches==51);
+    // Exhaust all 256 category-7 variant values: each supported root
+    // variant must emit exactly one primary sprite with its root UID
+    // and unsupported variants must not leak stale cached houses.
+    for(unsigned variant=0;variant<256;++variant){
+        const auto begin=world.placement_count();
+        const auto* expected=static_cast<const world_source::SourceHousePrimarySpawn*>(nullptr);
+        for(const auto& r:world_source::kSourceHousePrimarySpawns)
+            if(r.variant==variant){assert(!expected);expected=&r;}
+        world.expand_map_element(7,static_cast<std::uint8_t>(variant),0,
+            {18000.0f,10000.0f});
+        if(!expected){assert(world.placement_count()==begin);continue;}
+        assert(world.placement_count()>begin);
+        const auto* base=world.placement(begin);
+        assert(base->object==expected->object);
+        assert(std::fabs(base->x-18000.0f)<0.01f);
+        assert(std::fabs(base->y-10000.0f)<0.01f);
+        std::size_t primary_count=0;
+        for(auto k=begin;k<world.placement_count();++k)
+            if(world.placement(k)->parent_runtime_uid==0 &&
+               world.placement(k)->object==expected->object)++primary_count;
+        assert(primary_count==1);
+    }
     std::printf("ROOT HOUSE SOURCE SPAWN COVERAGE %zu cached branches %zu restored uncached original branches %zu placed sprites %zu original primary source records checked\\n",
                 checked,restored_primary,created,all_original_primary_branches);
 }
