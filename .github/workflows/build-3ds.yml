@@ -177,6 +177,14 @@ jobs:
             tests/source_world_proximity_tests.cpp -o /tmp/minidayz_source_world_proximity
           /tmp/minidayz_source_world_proximity
 
+      - name: Verify original per-frame house and building Solid polygons
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_building_polygon_tests.cpp -o /tmp/minidayz_building_collision
+          /tmp/minidayz_building_collision
+
       - name: Verify exact original 348 closed door Solid polygon
         shell: bash
         run: |
