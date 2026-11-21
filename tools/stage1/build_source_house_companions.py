@@ -51,8 +51,22 @@ for name,nodes in p[6]:
     # A companion belongs to the exact original source event and the
     # specific base Sprite. Repeated event UIDs can serve multiple bases.
     created.append({"parent":sp[0],"child":sp[1],"layer":sp[2],
-                    "point":sp[3],"frame":0})
+                    "point":sp[3],"frame":0,"animation":0})
    elif a[1]==73 and a[0]!=508:ignored+=1
+   elif a[1]==160 and a[0]!=508 and len(a)>5 and a[5]:
+    # Original Sprite SetAnimation("city3",from-beginning=1)
+    # must select the exact matching animation in the original atlas,
+    # especially for visible house doors and metal/wood sound families.
+    value=literal(a[5][0][1])
+    if isinstance(value,str):
+     anims=objects[a[0]][7] if 0<=a[0]<len(objects) and len(objects[a[0]])>7 else []
+     matched=next((ai for ai,anim in enumerate(anims)
+                   if isinstance(anim,list) and anim and anim[0]==value),None)
+     if matched is not None:
+      for row in reversed(created):
+       if row["child"]==a[0]:
+        row["animation"]=matched
+        break
    elif a[1]==72 and a[0]!=508 and len(a)>5 and a[5]:
     # Construct SetFrame acts on the most recently picked spawned Sprite.
     value=literal(a[5][0][1])
@@ -67,7 +81,8 @@ for name,nodes in p[6]:
    point=item["point"]
    rules.append((e[4],base,seq,item["parent"],item["child"],
                  item["layer"],point if isinstance(point,str) else "",
-                 point if isinstance(point,int) else 0,item["frame"]))
+                 point if isinstance(point,int) else 0,
+                 item["animation"],item["frame"]))
 if not rules:raise SystemExit("No original source house Spawn events recovered")
 parents={row[3] for row in rules}
 # Object frame image points are relative to each source animation frame's
@@ -102,12 +117,12 @@ lines=["#pragma once","#include <cstddef>","#include <cstdint>",
 " std::uint64_t event_uid;std::uint16_t base_object;",
 " std::uint16_t sequence,parent_object,object;",
 " const char* layer;const char* point_name;std::uint8_t point_index;",
-" std::uint32_t frame;};",
+" std::uint16_t animation;std::uint32_t frame;};",
 "inline constexpr SourceHouseCompanionSpawn kSourceHouseCompanionSpawns[]={"]
-for uid,base,seq,parent,obj,layer,name,index,frame in rules:
+for uid,base,seq,parent,obj,layer,name,index,anim,frame in rules:
  lines.append(" {"+",".join([str(uid)+"ULL",str(base),str(seq),
                               str(parent),str(obj),quote(layer),
-                              quote(name),str(index),str(frame)])+"},")
+                              quote(name),str(index),str(anim),str(frame)])+"},")
 lines += ["};",
 "inline constexpr std::size_t kSourceHouseCompanionSpawnCount=sizeof(kSourceHouseCompanionSpawns)/sizeof(kSourceHouseCompanionSpawns[0]);",
 "struct SourceHouseImagePoint {",
