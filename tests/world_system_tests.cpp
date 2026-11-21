@@ -113,6 +113,19 @@ void test_live_original_automatic_doors() {
         const auto* f=source_door_point(door->source_animation,0);
         if(!f)continue;
         const auto uid=door->runtime_uid;
+        // Each original visual door 349 owns its distinct spawned Solid
+        // object 348 on the original Buildings layer, frame 15 at the
+        // authored Imagepoint 1 with angle Door.Angle+6.
+        assert(door->linked_runtime_uid!=0);
+        const auto companion_id=door->linked_runtime_uid &
+            ~(std::uint64_t{1}<<63);
+        const auto* solid=world.placement_by_instance_id(companion_id);
+        assert(solid && solid->object==348);
+        assert(solid->runtime_uid==door->linked_runtime_uid);
+        assert(solid->linked_runtime_uid==uid);
+        assert(solid->source_frame==15);
+        assert(solid->opacity==1.0f);
+        assert(std::fabs(solid->angle-(door->angle+6.0f))<0.001f);
         const WorldPoint open_at{door->x,source_door_in_y(*door,*f)+1.0f};
         if(!source_door_overlaps_player(*door,*f,open_at))continue;
         assert(source_auto_door_for_player(world,uid,{1e20f,1e20f})==
@@ -128,6 +141,7 @@ void test_live_original_automatic_doors() {
         assert(opened==(f->metal?AutomaticDoorEffect::open_metal:
                                    AutomaticDoorEffect::open_wood));
         assert(world.placement(i)->source_frame==1);
+        assert(world.placement_by_instance_id(companion_id)->opacity==0.0f);
         assert(!source_apply_auto_door_intention(world,i,uid,planned));
         assert(source_auto_door_for_player(world,uid,open_at)==
                AutomaticDoorEffect::none);
@@ -141,6 +155,11 @@ void test_live_original_automatic_doors() {
                 assert(closed==(f1->metal?AutomaticDoorEffect::close_metal:
                                            AutomaticDoorEffect::close_wood));
                 assert(world.placement(i)->source_frame==0);
+                const auto* restored=world.placement_by_instance_id(companion_id);
+                assert(restored && restored->opacity==1.0f);
+                assert(restored->linked_runtime_uid==uid);
+                assert(std::fabs(restored->angle-
+                    (world.placement(i)->angle+6.0f))<0.001f);
             }
         }
         assert(world.placement(i)->runtime_uid==uid);
