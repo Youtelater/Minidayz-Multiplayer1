@@ -895,7 +895,11 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         std::vector<std::pair<std::uint16_t,std::size_t>> spawned;
         spawned.emplace_back(rule.object,placements_.size()-1);
         for(const auto& action:world_source::kSourceHouseCompanionSpawns){
-            if(action.event_uid!=rule.uid ||
+            // Source child condition is Mapgen508.var2 == variant.
+            // The archived world element table contains a known stale
+            // UID for house 312; the source event's actual variant/base
+            // predicate is authoritative and avoids missing its roof.
+            if(action.variant!=var2 ||
                action.base_object!=rule.object)continue;
             auto parent_index=placements_.size();
             for(auto it=spawned.rbegin();it!=spawned.rend();++it){
