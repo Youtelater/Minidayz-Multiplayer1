@@ -413,6 +413,30 @@ void test_original_world_visual_file_roundtrip() {
     assert(tree<first.placement_count());
     const auto uid=first.placement(tree)->runtime_uid;
     assert(first.set_sprite_state_by_runtime_uid(uid,0,1,1.0f));
+    // Source roof event 9848716569903957 moves one family-1049 member
+    // to Buildings_bg. The journal must restore both its opacity and
+    // its actual draw layer, not just the Sprite frame.
+    std::size_t roof=first.placement_count();
+    for(std::size_t i=0;i<first.placement_count();++i)
+        if(stage1::source_family_contains(1049,first.placement(i)->object)){
+            roof=i;break;
+        }
+    assert(roof<first.placement_count());
+    const auto source_layer=first.placement(roof)->layer;
+    const auto* map=stage1::find_layout("Map");
+    assert(map);
+    const auto map_id=static_cast<std::uint16_t>(map-stage1::kLayoutTable);
+    std::uint16_t bg=0xffff;
+    for(const auto& l:stage1::kLayerTable)
+        if(l.layout==map_id && std::strcmp(l.name,"Buildings_bg")==0){
+            bg=l.index;break;
+        }
+    assert(bg!=0xffff);
+    assert(first.set_placement_layer(roof,bg));
+    assert(first.set_placement_sprite_state(
+        roof,first.placement(roof)->source_animation,
+        first.placement(roof)->source_frame,0.25f));
+    assert(!first.capture_sprite_states().empty());
     using minidayz::persistence::write_world_visual_state;
     using minidayz::persistence::read_world_visual_state;
     assert(!write_world_visual_state(first,0,path,path));
@@ -422,6 +446,8 @@ void test_original_world_visual_file_roundtrip() {
     assert(replay.capture_sprite_states().empty());
     assert(read_world_visual_state(replay,0,path));
     assert(replay.placement(tree)->source_frame==1);
+    assert(replay.placement(roof)->layer==bg);
+    assert(replay.placement(roof)->opacity==0.25f);
     assert(!replay.capture_sprite_states().empty());
     auto* in=std::fopen(path,"rb");
     assert(in);
@@ -438,8 +464,10 @@ void test_original_world_visual_file_roundtrip() {
     assert(replay.placement(tree)->source_frame==1);
     assert(replay.restore_sprite_states({}));
     assert(replay.capture_sprite_states().empty());
+    assert(replay.placement(roof)->layer==source_layer);
     assert(read_world_visual_state(replay,0,path));
     assert(replay.placement(tree)->source_frame==1);
+    assert(replay.placement(roof)->layer==bg);
     std::remove(path);
     std::remove(temp);
     std::remove(corrupt);
