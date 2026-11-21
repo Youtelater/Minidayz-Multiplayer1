@@ -926,7 +926,8 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // interior/wall collider and shadow sprites at ORIGINAL imagepoints.
         // These per-frame imagepoints come from source frame[9], including
         // named w1/s1 and numeric 3, not guessed PNG texture rectangles.
-        if(var1==7) {
+        if(var1==7 || (var1==4 && ((var2==46 && rule.object==1406) ||
+                                     (var2==47 && rule.object==1407)))) {
         std::vector<std::pair<std::uint16_t,std::size_t>> spawned;
         spawned.emplace_back(rule.object,placements_.size()-1);
         for(const auto& action:world_source::kSourceHouseCompanionSpawns){
@@ -934,8 +935,10 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             // The archived world element table contains a known stale
             // UID for house 312; the source event's actual variant/base
             // predicate is authoritative and avoids missing its roof.
-            if(action.variant!=var2 ||
-               action.base_object!=rule.object)continue;
+            if(action.variant!=var2 || action.base_object!=rule.object)continue;
+            const bool nested_category4 = action.event_uid==502091414218817ULL ||
+                                          action.event_uid==656789528671005ULL;
+            if(nested_category4 != (var1==4))continue;
             auto parent_index=placements_.size();
             for(auto it=spawned.rbegin();it!=spawned.rend();++it){
                 if(it->first==action.parent_object){
@@ -1074,7 +1077,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // Markers use the selected source furniture/foundation imagepoints,
         // even when no Trigger_spawn call followed SetInstanceVariable.
         for(const auto& action:world_source::kSourceHouseLootMarkers){
-            if(action.variant!=var2)continue;
+            if(var1!=7 || action.variant!=var2)continue;
             const auto found=std::find_if(spawned.rbegin(),spawned.rend(),
                 [&](const auto& pair){return pair.first==action.parent;});
             if(found==spawned.rend())continue;
