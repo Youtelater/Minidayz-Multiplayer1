@@ -6,6 +6,12 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+### Verified native house Spawn coverage and 3DS build checkpoints
+
+- [x] Root-original Spawn generator reported **213 literal house companion Spawn actions, 66 source events, 87 parent Sprite kinds, 624 sprite-frame imagepoints**, with no unsupported Spawn action in the extracted set. Native [world regression #44940777597](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44940777597) **passed**, including five roof/door/wall/shadow city house pairs, **48 distinct primary map-rule building branches** and 243 created test Sprites; fixed-seed world generated 64 roof members and 80 family-1041 interior placements, and player automatic doors exercised five variants. These counts are native regression observations, not proof of every original source branch or emulator appearance.
+- [x] 3DS CI [#44940503158](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44940503158) **succeeded** with native original five-pair source Spawn implementation; later [#44940595361](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44940595361) succeeded after local source house roof visibility improvements. Newer changes must still pass their own builds before claiming that full revision compiled.
+- [ ] Outstanding: root 66 child-event branches versus only 48 covered primary rule variants must be mapped with exact conditions; original 1048/346/1049 roof selection, furniture/containers, special animations, save state for contents, and Azahar rendering remain unverified.
+
 ### Full original house Spawn parent identity and linked door ownership
 
 - [x] The original nested house Spawn hierarchy now records `WorldPlacement::parent_runtime_uid` for each generated roof/door/wall/shadow separately from `linked_runtime_uid` used by the original 349-door→348-Solid relationship. Thus a generated door retains its exterior-roof parent even after gaining its own door Solid companion. World tests assert source pairings `foundation→exterior roof→door` and companion links rather than guessing by proximity.
