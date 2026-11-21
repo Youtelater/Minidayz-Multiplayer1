@@ -6,6 +6,12 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+### Full original house Spawn parent identity and linked door ownership
+
+- [x] The original nested house Spawn hierarchy now records `WorldPlacement::parent_runtime_uid` for each generated roof/door/wall/shadow separately from `linked_runtime_uid` used by the original 349-door→348-Solid relationship. Thus a generated door retains its exterior-roof parent even after gaining its own door Solid companion. World tests assert source pairings `foundation→exterior roof→door` and companion links rather than guessing by proximity.
+- [x] The original 1048 foundation/1049 roof relationship is now used for the source-generated roof opacity decision. Original 1041 membership was independently confirmed to be a different family; the previous assumption would never fade generated city roofs.
+- [ ] Verify latest broad native regression + compiled 3DS run for this revised original-source Spawn hierarchy and test all 66+ original nested building variants. Original source picker, furniture/containers, roof/wall triggers, actions beyond source Spawn and emulator rendering remain incomplete.
+
 ### Per-building roof ancestry, source Spawn coverage and 3DS performance
 
 - [x] Corrected a dangerous roof-family assumption while comparing against the original project[4]. Original family **1048** (50 members) contains house foundations 302/306/311/312/313; family **1049** (48 members) contains their exteriors 321/322/323/324/333; family **1041** (17 members) is a DIFFERENT group. Source-spawned roofs now gate opacity on *their own linked 1048 foundation* rather than a global interior flag or matching their parent UID against family 1041 (which could never match). The authored/unlinked roofs retain a conservative fallback. Native tests assert family membership for all five house pairs.
