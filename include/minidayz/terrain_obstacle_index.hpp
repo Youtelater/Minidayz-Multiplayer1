@@ -1,6 +1,7 @@
 #pragma once
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
+#include "minidayz/terrain_source_collision.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -28,7 +29,8 @@ public:
             layout-stage1::kLayoutTable);
         for(std::size_t i=0;i<world.placement_count();++i){
             const auto* p=world.placement(i);
-            if(!p||p->width<=0||p->height<=0)continue;
+            if(!p||p->width<=0||p->height<=0||
+               source_visual_roof_overlay(p->object))continue;
             const auto* object=stage1::find_object(p->object);
             if(object&&object->type==16)continue; // Tilemap solids are elsewhere
             const auto* layer=stage1::find_layer(layout_index,p->layer);
