@@ -22,13 +22,39 @@ jobs:
         with:
           python-version: '3.12'
       - name: Check extractor syntax
-        run: python -m py_compile tools/stage1/audit_original_world_exhaustive.py
+        run: python -m py_compile tools/stage1/audit_original_world_exhaustive.py tools/stage1/audit_original_world_catalog.py
       - name: Build complete audit from root original
         run: python tools/stage1/audit_original_world_exhaustive.py --out audit-output/world
       - name: Build complete world event and interaction matrices
         run: python tools/stage1/build_world_implementation_matrix.py --in-dir audit-output/world
       - name: Catalog all original world objects, layers and 62 location templates
         run: python tools/stage1/audit_original_world_catalog.py --out audit-output/world/detailed-catalog
+      - name: Validate original building and world catalog completeness
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          p=Path("audit-output/world/detailed-catalog")
+          s=json.loads((p/"summary.json").read_text())
+          assert s["location_templates"]==62
+          assert s["location_array_writes"]==5533
+          def rows(name):
+              with (p/name).open(newline="",encoding="utf-8") as f:
+                  return list(csv.DictReader(f))
+          buildings=rows("building_object_candidates.csv")
+          families=rows("original_family_membership.csv")
+          create=rows("original_world_create_actions.csv")
+          assert buildings and families, "Missing original building or family records"
+          for oid in (321,322,323,324,333,302,311,312,313,306,349):
+              assert any(int(row["object_id"])==oid for row in buildings),f"Missing house or door object {oid}"
+          for family in (1041,1048,1049):
+              assert any(int(row["family_id"])==family for row in families),f"Missing building family {family}"
+          assert (p/"all_62_location_templates.csv").exists()
+          print("SOURCE BUILDING OBJECT CANDIDATES",len(buildings))
+          print("SOURCE FAMILY MEMBERS",len(families))
+          print("DIRECT SOURCE WORLD CREATE ACTIONS",len(create))
+          print("SOURCE ARRAY WRITES",s["location_array_writes"])
+          PY
       - name: Compare root original against old extracted snapshot
         run: python tools/stage1/compare_original_to_cached.py
       - name: Extract exact original tree, door, house and loot event chains
