@@ -2892,13 +2892,32 @@ private:
             // via Sprite SpawnAnotherObject(73). Only that foundation's
             // overlap satisfies its roof guard; editor-authored roofs
             // without source links keep the existing conservative test.
-            const bool overlaps_matching_house=
-                roof->linked_runtime_uid!=0 ?
-                std::find(source_overlapping_house_uids_.begin(),
-                          source_overlapping_house_uids_.end(),
-                          roof->linked_runtime_uid)!=
-                    source_overlapping_house_uids_.end() :
+            // Root source family 1048 contains foundation 302/306/
+            // 311/312/313; family 1041 is a DIFFERENT set of 17
+            // interior objects. Earlier linked-UID matching against
+            // family 1041 would never reveal generated city houses.
+            // For the original source-spawned rooftop, test its OWN
+            // 1048 foundation, not unrelated interiors elsewhere.
+            bool overlaps_matching_house=
                 !source_overlapping_house_uids_.empty();
+            if(roof->linked_runtime_uid!=0){
+                overlaps_matching_house=false;
+                const auto linked=roof->linked_runtime_uid;
+                if((linked&(std::uint64_t{1}<<63))!=0){
+                    const auto parent_index=linked&
+                        ~(std::uint64_t{1}<<63);
+                    const auto* foundation=
+                        world_.placement_by_instance_id(parent_index);
+                    if(foundation &&
+                       foundation->runtime_uid==linked &&
+                       minidayz::stage1::source_family_contains(
+                           1048,foundation->object) &&
+                       minidayz::world_source::source_player_overlaps_world_rect(
+                           *foundation,player_pos,
+                           foundation->origin_x,foundation->origin_y))
+                        overlaps_matching_house=true;
+                }
+            }
             float opacity=1.0f;
             if(!minidayz::world_source::source_roof_opacity_at_player(
                     *roof,player_pos,overlaps_matching_house,opacity))
