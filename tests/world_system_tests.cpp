@@ -85,7 +85,9 @@ void test_original_roof_family_and_transparency() {
         assert(opacity==1.0f); // A roof alone is NOT a house entry.
         assert(source_roof_opacity_at_player(*placement,player,true,opacity));
         const float threshold=source_roof_in_world_y(*placement,*frame);
-        assert(opacity==(player.y<=threshold?0.25f:1.0f));
+        const bool actual_overlap=source_player_overlaps_world_sprite(
+            *placement,player,frame->origin_x,frame->origin_y);
+        assert(opacity==(actual_overlap&&player.y<=threshold?0.25f:1.0f));
     }
     std::printf("SOURCE ROOF MEMBERS roofs=%zu interiors=%zu frames=%zu\\n",
                 roofs,interiors,frames);
@@ -115,6 +117,59 @@ void test_original_roof_family_and_transparency() {
     assert(world.placement(first+1)->layer==other_layer);
     assert(!world.set_placement_layer(first,0xffff));
     assert(world.set_placement_layer(first,old_layer));
+}
+
+void test_original_house_loot_marker_spawns() {
+    using namespace minidayz;
+    using namespace minidayz::world_source;
+    assert(kSourceHouseLootMarkerCount==153);
+    WorldSystem world;
+    assert(world.initialize(12345));
+    assert(world.load_source_layout("Map"));
+    std::size_t tested=0;
+    for(unsigned variant=0;variant<256;++variant){
+        bool expected=false;
+        for(const auto& action:kSourceHouseLootMarkers)
+            expected|=action.variant==variant;
+        if(!expected)continue;
+        const auto first=world.placement_count();
+        assert(world.expand_map_element(7,static_cast<std::uint8_t>(variant),
+            0,{6000.0f,6000.0f})>0);
+        for(const auto& action:kSourceHouseLootMarkers){
+            if(action.variant!=variant)continue;
+            const WorldPlacement* marker=nullptr;
+            for(std::size_t i=first;i<world.placement_count();++i){
+                const auto* p=world.placement(i);
+                if(p->object==218 && p->source_uid==action.action_uid){
+                    marker=p;break;
+                }
+            }
+            assert(marker);
+            assert(marker->source_loot_category==action.category);
+            assert(marker->source_variable_0==action.category);
+            assert(marker->source_initial_loot_trigger==action.trigger_spawn);
+            const auto* parent=world.placement_by_instance_id(
+                marker->parent_runtime_uid&~(std::uint64_t{1}<<63));
+            assert(parent && parent->object==action.parent);
+            float x=parent->x,y=parent->y;
+            const auto* pt=source_house_image_point(parent->object,
+                parent->source_animation,parent->source_frame,
+                action.point_name,action.point_index);
+            if(pt){
+                const float angle=parent->angle*0.01745329251994329577f;
+                const float dx=(pt->x-pt->origin_x)*parent->width*
+                    (parent->scale_x<0.0f?-1.0f:1.0f);
+                const float dy=(pt->y-pt->origin_y)*parent->height;
+                x+=dx*std::cos(angle)-dy*std::sin(angle);
+                y+=dx*std::sin(angle)+dy*std::cos(angle);
+            }
+            if(action.offset_y)y+=parent->height*0.5f+15.0f;
+            assert(std::fabs(marker->x-x)<0.01f);
+            assert(std::fabs(marker->y-y)<0.01f);
+            ++tested;
+        }
+    }
+    assert(tested==153);
 }
 
 void test_original_generated_house_companions() {
@@ -422,6 +477,7 @@ void test_live_original_automatic_doors() {
         const auto* f=source_door_point(door->source_animation,0);
         if(!f)continue;
         const auto uid=door->runtime_uid;
+        const float closed_width=door->width, closed_height=door->height;
         // Each original visual door 349 owns its distinct spawned Solid
         // object 348 on the original Buildings layer, frame 15 at the
         // authored Imagepoint 1 with angle Door.Angle+6.
@@ -460,6 +516,12 @@ void test_live_original_automatic_doors() {
         assert(opened==(f->metal?AutomaticDoorEffect::open_metal:
                                    AutomaticDoorEffect::open_wood));
         assert(world.placement(i)->source_frame==1);
+        if(const auto* next=source_door_point(door->source_animation,1)){
+            assert(std::fabs(door->width-closed_width*next->width/f->width)<0.01f);
+            assert(std::fabs(door->height-closed_height*next->height/f->height)<0.01f);
+            assert(std::fabs(door->origin_x-next->origin_x)<0.001f);
+            assert(std::fabs(door->origin_y-next->origin_y)<0.001f);
+        }
         assert(world.placement(i)->source_variable_0==solid->runtime_uid);
         assert(world.placement_by_instance_id(companion_id)->opacity==0.0f);
         assert(!source_apply_auto_door_intention(world,i,uid,planned));
@@ -1289,6 +1351,7 @@ int main() {
     test_original_world_visual_file_roundtrip();
     test_source_tree_fall_item_table();
     test_original_generated_house_companions();
+    test_original_house_loot_marker_spawns();
     test_every_source_mapped_house_spawn_chain();
     test_live_original_automatic_doors();
     test_original_roof_family_and_transparency();
