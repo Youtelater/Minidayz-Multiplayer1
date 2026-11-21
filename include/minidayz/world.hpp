@@ -86,6 +86,11 @@ struct WorldPlacement {
     // Fast lookup for local interactions; runtime_uid is the globally
     // distinguished original/static or generated world object identity.
     std::uint64_t instance_id{};
+    // Exact root Construct SpawnAnotherObject parent, distinct from
+    // linked_runtime_uid: a door's latter points to companion Solid 348,
+    // while its authored parent is exterior roof 321/322/323/324/333.
+    // Retain both relationships without clobbering source tree hitboxes.
+    std::uint64_t parent_runtime_uid{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
