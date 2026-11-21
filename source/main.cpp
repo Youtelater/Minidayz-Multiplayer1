@@ -3208,14 +3208,17 @@ private:
             if(building && placement->object!=349 &&
                !minidayz::stage1::source_object_has_solid_behavior(
                    placement->object))continue;
+            // Opening a source door removes the linked Solid object
+            // from collision/picking and drawing. A parked native sprite
+            // with opacity 0 preserves its stable original UID linkage.
+            if(placement->object==348 &&
+               placement->linked_runtime_uid!=0 &&
+               placement->opacity<=0.0f)continue;
             if(placement->object==349){
-                // Original Doors_auto does NOT use object-349's entire
-                // rectangular artwork as the closed obstruction. Its
-                // linked object-348 Solid is at Door.Imagepoint 1, uses
-                // original frame 15's polygon and Door.Angle+6. Opening
-                // destroys that Solid; closing recreates it. Model the
-                // effective collider from the saved door frame without
-                // synthesizing a visible object-348 sprite.
+                // A linked original Solid 348 owns this doorway's actual
+                // collision. Don't test its decorative door sheet twice.
+                if(placement->linked_runtime_uid!=0)continue;
+                // Source fallback for an unpaired/unmapped original door.
                 if(!building || placement->source_frame!=0)continue;
                 bool source_collider_known=false;
                 const bool hit=
