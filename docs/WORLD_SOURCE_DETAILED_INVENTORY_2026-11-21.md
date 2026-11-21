@@ -95,3 +95,15 @@ The workflow `.github/workflows/audit-original-world.yml` runs it automatically 
 4. Azahar/hardware confirmation and full native/world parity.
 
 This is a **source discovery inventory**, not a claim that our 3DS implementation is complete.
+
+## Building-specific catalog extension — 2026-11-21
+
+The root-source extractor now also emits **three building-oriented datasets**, avoiding assumptions from original PNG names:
+
+- `building_object_candidates.csv`: every name/family-classified building, interior, door, wall, roof and furniture candidate with original object IDs, frame counts, source family memberships, placed authoring layers and raw Create event references.
+- `original_family_membership.csv`: every Construct source family/member pair. The **1041/1048/1049 family IDs are not independent drawable building images**, so source member IDs must be used for correct texture rectangles and collision.
+- `original_world_create_actions.csv`: direct, literal System Create object actions found under the original `create_map_element` chain, retaining the original event UID and conditions. This intentionally does **not** label dynamic or indirectly created objects as absent.
+
+**Evidence limit:** these are source-discovery tables. Generated-world building totals require original Array expression evaluation and Construct world creation semantics. The workflows regenerate these tables; the current edit has not yet been individually confirmed through a completed workflow run or Azahar visual comparison.
+
+**Next exact building implementation gates:** resolve all house/interior/roof companion object pairs, verify every original sprite-sheet frame coordinate and origin, validate placement dimensions against Construct root frames, then complete collision/entry/door/roof/audio with matching original event ancestry. Do not mark the world complete based solely on the extractor.
