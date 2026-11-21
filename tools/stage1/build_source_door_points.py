@@ -13,7 +13,9 @@ p=decode((ROOT/"data.deobfuscated.js").read_bytes())
 animations=p[3][349][7]
 rows=[]
 def f(v):
-    return format(float(v),".9g")+"f"
+    s=format(float(v),".9g")
+    if "." not in s and "e" not in s and "E" not in s:s+=".0"
+    return s+"f"
 for ai,anim in enumerate(animations):
     name=anim[0]
     metal=name in ("firestation","ga_brown","ga_blue")
