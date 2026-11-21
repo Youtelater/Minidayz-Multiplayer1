@@ -15,10 +15,9 @@ objects=p[3]
 source_func=7736925111997576
 def walk(nodes,ancestry=()):
  for e in nodes:
-  if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+  if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
   yield e,ancestry
-  if len(e)>7 and isinstance(e[7],list):
-   yield from walk(e[7],ancestry+(e[4],))
+  yield from walk(e[7],ancestry+(e[4],))
 def literal(expr):
  if not isinstance(expr,list) or len(expr)<2:return None
  if expr[0] in (0,2,4,5,7) and not isinstance(expr[1],list):return expr[1]
@@ -176,7 +175,7 @@ if not rules:raise SystemExit("No original source house Spawn events recovered")
 # The original loot branch is separate from building creation: Mapgen
 # 508.var1=7, var2=building variant, var3=0. Its last action marks var3=1.
 # Emit every literal Spawn/SetVariable/Trigger_spawn in source order.
-# Preserve markers without a Trigger_spawn call (three city-house points).
+# Preserve markers without a Trigger_spawn call (two city-house points).
 loot_markers=[]
 def loot_walk(nodes,active=False,variant=None):
  for e in nodes:
