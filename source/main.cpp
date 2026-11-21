@@ -3131,7 +3131,7 @@ private:
                     placement->x,placement->y,
                     placement->width,placement->height,
                     placement->origin_x,placement->origin_y,
-                    placement->angle,x,y))
+                    placement->angle,x,y,placement->scale_x))
                 return true;
         }
         return false;
