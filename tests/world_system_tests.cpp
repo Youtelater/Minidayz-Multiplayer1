@@ -122,6 +122,14 @@ void test_original_generated_house_companions() {
         // The old implementation only created the base sprite. The
         // original source also spawns exterior roof, wall trigger,
         // shadow and an automatic door from the roof's imagepoint.
+        if(!(base<end&&roof<end&&wall<end&&shadow<end&&door<end)){
+            std::fprintf(stderr,
+                "HOUSE SOURCE variant=%u base=%zu roof=%zu wall=%zu shadow=%zu door=%zu start=%zu end=%zu\\n",
+                static_cast<unsigned>(h.variant),base,roof,wall,shadow,door,start,end);
+            for(std::size_t k=start;k<end;++k)
+                std::fprintf(stderr,"HOUSE SOURCE spawn object=%u x=%.2f y=%.2f\\n",
+                    world.placement(k)->object,world.placement(k)->x,world.placement(k)->y);
+        }
         assert(base<end&&roof<end&&wall<end&&shadow<end&&door<end);
         const auto* foundation=world.placement(base);
         const auto* exterior=world.placement(roof);
