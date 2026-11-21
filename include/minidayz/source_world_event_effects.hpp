@@ -1,6 +1,7 @@
 #pragma once
 #include "minidayz/world.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
+#include "minidayz/generated/source_tree_impact_points.hpp"
 #include "minidayz/ground_loot.hpp"
 #include <array>
 #include <cmath>
@@ -38,6 +39,26 @@ inline bool apply_verified_tree_fall(
            !std::isfinite(source_drop_positions[i].y))
             return false;
     const auto original=*placed;
+    // The six original tree-creation branches bind each tree to an
+    // obst_base (object 345), initialized to frame 10. Its companion
+    // frame changes to 8 only AFTER Spawn_drop calls complete.
+    std::size_t base_index=world.placement_count();
+    WorldPlacement original_base{};
+    if(original.linked_runtime_uid!=0){
+        for(std::size_t i=0;i<world.placement_count();++i){
+            const auto* candidate=world.placement(i);
+            if(candidate && candidate->runtime_uid==original.linked_runtime_uid){
+                if(candidate->object!=kOriginalTreeHitboxObject ||
+                   candidate->linked_runtime_uid!=runtime_uid ||
+                   candidate->source_frame!=kOriginalTreeStandingHitboxFrame)
+                    return false;
+                base_index=i;
+                original_base=*candidate;
+                break;
+            }
+        }
+        if(base_index==world.placement_count())return false;
+    }
     // GroundLootSystem::add is validated by its own original-item catalog.
     // Save its previous state so a failed drop cannot leave a chopped
     // tree with missing resources.
@@ -55,6 +76,16 @@ inline bool apply_verified_tree_fall(
                 original.source_frame,original.opacity);
             return false;
         }
+    }
+    if(base_index<world.placement_count() &&
+       !world.set_placement_sprite_state(
+           base_index,original_base.source_animation,
+           kOriginalTreeFallenHitboxFrame,original_base.opacity)){
+        (void)ground.restore(ground_before);
+        (void)world.set_placement_sprite_state(
+            index,original.source_animation,
+            original.source_frame,original.opacity);
+        return false;
     }
     return true;
 }
