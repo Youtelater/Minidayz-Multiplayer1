@@ -790,6 +790,7 @@ bool WorldSystem::create_source_door_companions() {
         solid.runtime_uid=runtime_id;
         solid.instance_id=static_cast<std::uint64_t>(placements_.size());
         solid.linked_runtime_uid=door.runtime_uid;
+        solid.parent_runtime_uid=door.runtime_uid;
         if(!sync_source_door_solid_placement(door,solid))return false;
         placements_[i].linked_runtime_uid=runtime_id;
     }
@@ -993,6 +994,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             auto& child=placements_.back();
             child.runtime_uid=new_uid;
             child.instance_id=static_cast<std::uint64_t>(placements_.size());
+            child.parent_runtime_uid=parent.runtime_uid;
             // The visual door 349 reserves this link for its separately
             // spawned original Solid 348. Other house pieces remember
             // the original parent Sprite selected by command 73.
