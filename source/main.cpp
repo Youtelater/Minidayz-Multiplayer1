@@ -7,6 +7,7 @@
 #include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_door_auto.hpp"
 #include "minidayz/source_door_solid.hpp"
+#include "minidayz/source_building_polygon_collision.hpp"
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_world_proximity.hpp"
 #include "minidayz/source_map_overlay.hpp"
@@ -3210,6 +3211,18 @@ private:
                                  std::strcmp(layer->name, "Obstacle_enviroment") == 0 ||
                                  std::strcmp(layer->name, "Water") == 0;
             if (!building && !barrier) continue;
+            // A source Solid building with a custom Construct polygon
+            // can have door-shaped gaps, slanted walls, and furniture
+            // outlines. Never replace its authored collision with a
+            // solid rectangle covering the entire visible PNG.
+            if(building){
+                bool has_custom_polygon=false;
+                const bool hits=
+                    minidayz::world_source::source_building_polygon_contains(
+                        *placement,{x,y},has_custom_polygon);
+                if(hits)return true;
+                if(has_custom_polygon)continue;
+            }
             // Match rotated original house and barrier sprite bounds;
             // a static axis-aligned box blocks empty corners and doorways.
             if (minidayz::terrain::source_solid_sprite_contains(
