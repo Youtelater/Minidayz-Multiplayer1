@@ -50,14 +50,24 @@ for name,nodes in p[6]:
    if sp and sp[0]!=508:
     # A companion belongs to the exact original source event and the
     # specific base Sprite. Repeated event UIDs can serve multiple bases.
-    created.append(sp)
+    created.append({"parent":sp[0],"child":sp[1],"layer":sp[2],
+                    "point":sp[3],"frame":0})
    elif a[1]==73 and a[0]!=508:ignored+=1
+   elif a[1]==72 and a[0]!=508 and len(a)>5 and a[5]:
+    # Construct SetFrame acts on the most recently picked spawned Sprite.
+    value=literal(a[5][0][1])
+    if isinstance(value,int) and 0<=value<100000:
+     for created_row in reversed(created):
+      if created_row["child"]==a[0]:
+       created_row["frame"]=value
+       break
   if not created:continue
   events+=1
-  for seq,(parent,child,layer,point) in enumerate(created):
-   rules.append((e[4],base,seq,parent,child,layer,
-                 point if isinstance(point,str) else "",
-                 point if isinstance(point,int) else 0))
+  for seq,item in enumerate(created):
+   point=item["point"]
+   rules.append((e[4],base,seq,item["parent"],item["child"],
+                 item["layer"],point if isinstance(point,str) else "",
+                 point if isinstance(point,int) else 0,item["frame"]))
 if not rules:raise SystemExit("No original source house Spawn events recovered")
 parents={row[3] for row in rules}
 # Object frame image points are relative to each source animation frame's
@@ -91,12 +101,13 @@ lines=["#pragma once","#include <cstddef>","#include <cstdint>",
 "struct SourceHouseCompanionSpawn {",
 " std::uint64_t event_uid;std::uint16_t base_object;",
 " std::uint16_t sequence,parent_object,object;",
-" const char* layer;const char* point_name;std::uint8_t point_index;};",
+" const char* layer;const char* point_name;std::uint8_t point_index;",
+" std::uint32_t frame;};",
 "inline constexpr SourceHouseCompanionSpawn kSourceHouseCompanionSpawns[]={"]
-for uid,base,seq,parent,obj,layer,name,index in rules:
+for uid,base,seq,parent,obj,layer,name,index,frame in rules:
  lines.append(" {"+",".join([str(uid)+"ULL",str(base),str(seq),
                               str(parent),str(obj),quote(layer),
-                              quote(name),str(index)])+"},")
+                              quote(name),str(index),str(frame)])+"},")
 lines += ["};",
 "inline constexpr std::size_t kSourceHouseCompanionSpawnCount=sizeof(kSourceHouseCompanionSpawns)/sizeof(kSourceHouseCompanionSpawns[0]);",
 "struct SourceHouseImagePoint {",
