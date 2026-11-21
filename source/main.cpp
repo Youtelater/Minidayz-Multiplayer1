@@ -3173,6 +3173,11 @@ private:
                 map_index, placement->layer);
             if (!layer) continue;
             const bool building = std::strcmp(layer->name, "Buildings") == 0;
+            // Construct sprite collision is behavior-based. Visible
+            // building floors/decor must not become opaque solid walls.
+            if(building && placement->object!=349 &&
+               !minidayz::stage1::source_object_has_solid_behavior(
+                   placement->object))continue;
             if(placement->object==349){
                 // Original Doors_auto does NOT use object-349's entire
                 // rectangular artwork as the closed obstruction. Its
