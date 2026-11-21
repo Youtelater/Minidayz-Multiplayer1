@@ -6,6 +6,14 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+### Original house child instance variables and category-marked world objects
+
+- [x] Root-original house post-Spawn action trace identified **458 authored actions**, including 168 object-346 wall instance-variable assignments, 48 shadow-347 UID assignments, 27 door-349 UID assignments and source object-218 loot category assignments, as well as original SetSize/SetHeight/SetAnimation actions. [Original trace #44943694658](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44943694658).
+- [x] Source-generated house companion table now captures original same-event Sprite SetInstanceVariable (command 88) values in slots 0/1, both authored literals and actual UID-of-a-selected-source-parent expressions (expression 151). WorldPlacement preserves those per-instance source variables; source/world.cpp resolves the correct parent runtime identity in the same ordered Spawn chain instead of assigning unrelated nearby object IDs.
+- [x] Original generated object-218 house loot markers now retain their exact source category (including source categories 9 and 19) as source_loot_category rather than losing the value. This is **metadata preservation, not a claim that category 9/19 timed loot logic is implemented**; original_timed_loot.hpp is source-guarded on category 15.
+- [x] Native world regression asserts each mapped source companion's literal slot assignments and UID-linked object's actual source type, and that a generated loot marker category matches its original instance variable. Fixed the empty generated C++ array by decoding Construct numeric slot parameters. Latest code commit e297f7e6.
+- [ ] Latest native/3DS CI completion for this revision must be verified; gameplay audio, actual container interactions, remaining conditional source event chains and Azahar parity remain open.
+
 ### Continuing unfinished houses and buildings — original post-Spawn transforms
 
 - [x] Root `create_map_element` house Spawn extractor now carries original literal same-event **SetAngle (84), SetOpacity (163), and MoveToLayer (137)** changes on each particular newly spawned building sprite, without inventing values for unsupported expression-based actions. The runtime applies these to the actual C++ placement, including source frame imagepoint positioning, collision and draw layer. Explicit angle 0 is distinguished from the absence of an original SetAngle.
