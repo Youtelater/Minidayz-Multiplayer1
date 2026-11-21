@@ -88,6 +88,8 @@ def scan(project):
             path=sheet+":"+".".join(map(str,source_path+(idx,)))
             cond=e[5] if isinstance(e[5],list) else []
             acts=e[6] if isinstance(e[6],list) else []
+            totals['__visited']+=1
+            totals['__actions']+=len(acts)
             sound=[]
             for index,a in enumerate(acts):
                 if not isinstance(a,list) or len(a)<2: continue
