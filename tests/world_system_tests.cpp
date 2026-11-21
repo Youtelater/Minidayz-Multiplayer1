@@ -228,6 +228,13 @@ void test_every_source_mapped_house_spawn_chain() {
                     if(p->object==child.object &&
                        p->source_animation==child.animation &&
                        p->source_frame==child.frame){
+                        // Exact literal original post-Spawn effects must
+                        // apply to the SAME instance, not its entire
+                        // Construct family or a neighboring building.
+                        assert(std::fabs(p->opacity-child.opacity)<0.0001f);
+                        if(child.angle_degrees!=99999.0f)
+                            assert(std::fabs(p->angle-
+                                child.angle_degrees)<0.001f);
                         found=true;break;
                     }
                 }
