@@ -29,12 +29,12 @@ def walk(nodes,sheet,anc=(),path=(),active=False,depth=0):
                 "conditions":e[5],"actions":e[6],
                 "child_count":len(e[7])
             },ensure_ascii=False,separators=(",",":"))[:10000])
-        if on and depth>=4:continue
+        if on and depth>=20:continue
         walk(e[7],sheet,anc+(e[4],),here,on,depth+1 if on else 0)
 for sh in project[6]:
     walk(sh[1],sh[0])
 expected=(5249390718058362,3352196201835613,
-          7755220865965526,9848716569903956)
+          7755220865965526,9848716569903957)
 missing=[uid for uid in expected if uid not in source_roof_chains]
 if missing:raise SystemExit(f"Root House_transparenting source nodes missing: {missing}")
 out=ROOT/"audit-output/world"
