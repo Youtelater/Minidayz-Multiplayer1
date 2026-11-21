@@ -989,7 +989,10 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                 static_cast<std::uint64_t>(placements_.size()+1);
             placements_.push_back({
                 destination,action.object,action.event_uid,
-                x,y,0.0f,w,h,parent.angle,1.0f,mirror_x,
+                x,y,0.0f,w,h,
+                action.angle_degrees==99999.0f ?
+                    parent.angle : action.angle_degrees,
+                action.opacity,mirror_x,
                 child_frame?child_frame->origin_x:child_obj->origin_x,
                 child_frame?child_frame->origin_y:child_obj->origin_y,
                 0,action.frame,action.animation
