@@ -1,5 +1,6 @@
 #pragma once
 #include "minidayz/world.hpp"
+#include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_world_event_effects.hpp"
 #include "minidayz/generated/source_door_points.hpp"
 #include <algorithm>
@@ -13,7 +14,7 @@ namespace minidayz::world_source {
 // compares its Y against Door.ImagePointY("in").
 // Original open UID 6061166023614368: comparator >=; frame 0 -> 1.
 // Original close UID 243854400993751: comparator <; frame 1 -> 0.
-// Native overlap is a rotated-rectangle approximation of Construct sprite
+// Native overlap is a four-axis rotated-rectangle SAT approximation of Construct sprite
 // collision, *not* a claim to reproduce its polygon/obstacle-base conditions.
 // The source frame point and source audio family are exact.
 enum class AutomaticDoorEffect : std::uint8_t {
@@ -23,26 +24,10 @@ enum class AutomaticDoorEffect : std::uint8_t {
 inline bool source_door_overlaps_player(
     const WorldPlacement& door, const SourceDoorPoint& frame,
     WorldPoint player) noexcept {
-    if (!std::isfinite(player.x) || !std::isfinite(player.y) ||
-        door.width<=0.0f || door.height<=0.0f) return false;
-    const float a=door.angle*0.01745329251994329577f;
-    const float sn=std::sin(a),cs=std::cos(a);
-    const float dx=player.x-door.x,dy=player.y-door.y;
-    float px=dx*cs+dy*sn;
-    const float py=-dx*sn+dy*cs;
-    // WorldPlacement width is the final rendered width. Its signed
-    // scale_x mirrors the original door atlas frame around the hotspot.
-    // Reflect the local query, NOT the width a second time.
-    if (door.scale_x<0.0f) px=-px;
-    // Original player_collision_base (object 181) is a 30x30 sprite.
-    // Project its axis-aligned AABB onto door-local axes conservatively.
-    const float half=15.0f*(std::fabs(cs)+std::fabs(sn));
-    const float min_x=-door.width*frame.origin_x;
-    const float max_x=door.width*(1.0f-frame.origin_x);
-    const float min_y=-door.height*frame.origin_y;
-    const float max_y=door.height*(1.0f-frame.origin_y);
-    return px+half>=min_x && px-half<=max_x &&
-           py+half>=min_y && py-half<=max_y;
+    // Use the same complete four-axis rectangle SAT as house overlap.
+    // This rejects spurious door transitions near rotated corners.
+    return source_player_overlaps_world_rect(
+        door,player,frame.origin_x,frame.origin_y);
 }
 
 inline float source_door_in_y(const WorldPlacement& door,
