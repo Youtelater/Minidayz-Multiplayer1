@@ -33,6 +33,23 @@ def walk(nodes,sheet,anc=(),path=(),active=False,depth=0):
         walk(e[7],sheet,anc+(e[4],),here,on,depth+1 if on else 0)
 for sh in project[6]:
     walk(sh[1],sh[0])
+# Construct Else branches (event type !=0) and nested blocks can contain
+# original reverse-roof animations. Include them instead of silently
+# treating the active ordinary-event subset as the full event hierarchy.
+def all_child_actions(nodes,sheet,active=False):
+    for e in nodes:
+        if not isinstance(e,list) or len(e)<8:continue
+        selected=active or e[4]==target
+        if selected:
+            print("ROOF_ALL_BRANCH",json.dumps({
+                "sheet":sheet,"kind":e[0],"uid":e[4],
+                "conditions":e[5],"actions":e[6],
+                "children":len(e[7]) if isinstance(e[7],list) else 0},
+                ensure_ascii=False,separators=(",",":"))[:7000])
+        if isinstance(e[7],list):
+            all_child_actions(e[7],sheet,selected)
+for sh in project[6]:
+    all_child_actions(sh[1],sh[0])
 expected=(5249390718058362,3352196201835613,
           7755220865965526,9848716569903957)
 missing=[uid for uid in expected if uid not in source_roof_chains]
