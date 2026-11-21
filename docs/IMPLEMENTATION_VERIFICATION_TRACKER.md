@@ -1,3 +1,9 @@
+## Part 1 — original building placement subtype correction
+
+- [x] Re-read root `data.deobfuscated.js` using the blob API. Category 7 has 51 direct primary variant branches; category 4 variant 40 contains seven nested var6=0..6 branches. The existing native table already selects the correct primary Sprite1345–1351, but the companion extractor discarded these branches because it only recognized var2 in the local condition. Fixed the extractor to inherit variant 40 under original event 431776969482924 and preserve the exact event UID. Each original structure now has its source Solid348 frame 33–39 at numeric Imagepoint1, with its original parent UID variable. Commit `0781e1ba`.
+- [x] Added native regression for all seven subtypes, including collider frame and ownership, commit `cca0dfd2`.
+- [ ] Confirm current CI and remaining original building placement categories; no claim of complete emulator parity.
+
 ## 2026-11-21 — Building gameplay implementation continuation
 
 - [x] Extract original per-frame building interaction collision masks, including non-Solid roof and door frames; use hotspot-relative concave polygons rather than treating the entire PNG as a rectangle. Player collision object 181 has the original 30x30 default rectangle. Correct zero-length polygon edge false positives. Six isolated C++17 polygon overlap cases compiled and passed in the local test harness.
