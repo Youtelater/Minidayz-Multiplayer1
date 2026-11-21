@@ -145,6 +145,13 @@ lines += ["};",
 " }return nullptr;}",
 "} // namespace minidayz::world_source"]
 out.write_text("\n".join(lines)+"\n",encoding="utf-8")
+for oid in (302,306,311,312,313,321,322,323,324,333,346,347,349):
+ obj=objects[oid]
+ anims=obj[7] if len(obj)>7 and isinstance(obj[7],list) else []
+ fr=anims[0][7][0] if anims and len(anims[0])>7 and anims[0][7] else []
+ print("SOURCE_HOUSE_GEOMETRY",oid,
+       "frameWH",fr[4:6] if len(fr)>5 else [],
+       "point_names",[p[0] for p in fr[9]] if len(fr)>9 and isinstance(fr[9],list) else [])
 print("Root source house companion Spawn actions:",len(rules),
       "events",events,"parents",len(parents),"imagepoints",len(points),
       "unsupported Spawn actions",ignored)
