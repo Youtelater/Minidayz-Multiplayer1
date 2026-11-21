@@ -50,3 +50,18 @@ for layout in p[5] if isinstance(p[5],list) else []:
     if '"t207"' in raw or '"t349"' in raw:
         print("INSTANCE_LAYOUT_STRUCTURE",short(layout,1500))
         break
+
+init_ids={5221960099677299,1639594650416124,7109935635557623,
+          2584406677664733,2788700463962024,5413722554242966}
+def findtree(nodes,anc=()):
+    for e in nodes:
+        if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+        if e[4] in init_ids:
+            print("TREE_CREATE",e[4],"CONDITIONS",short(e[5],5000),
+                  "ACTIONS",short(e[6],6000))
+            for a in anc[-5:]:
+                print("TREE_CREATE_PARENT",a[4],"CONDITIONS",short(a[5],3800),
+                      "ACTIONS",short(a[6],3800))
+        findtree(e[7],anc+(e,))
+for sheet in p[6]:
+    if sheet[0]=="Game_events":findtree(sheet[1])
