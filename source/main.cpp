@@ -3285,6 +3285,19 @@ private:
         // Original Construct instance positions are relative to their
         // sprite origins, not always their upper-left corners.
         if (scene->terrain_collision_.blocked(x,y)) return true;
+        // Original deployed tent foundation Sprite398 has Solid behavior.
+        // It lives in the survivor tent store, not the static world index.
+        // Root frame[10] is a concave U-shaped wall with an open entrance.
+        // Use the source mask in pixel coordinates relative to its hotspot
+        // (25,33), leaving the interior walkable; never block the roof PNG.
+        for(std::size_t i=0;i<scene->tents_.tent_count();++i){
+            const auto* tent=scene->tents_.tent(i);
+            if(!tent)continue;
+            const float dx=x-tent->x,dy=y-tent->y;
+            if(dx < -25.0f || dx > 9.0f || dy < -18.0f || dy > 28.0f)
+                continue;
+            if(dy<=-12.0f || dx<=-21.0f || dx>=5.0f)return true;
+        }
         for (const auto i : scene->collision_index_.candidates(x,y)) {
             const auto* placement = scene->world_.placement(i);
             // A tilemap's rectangular bounds mostly contain EMPTY cells.
