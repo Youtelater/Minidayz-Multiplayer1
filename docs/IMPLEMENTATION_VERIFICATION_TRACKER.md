@@ -6,6 +6,15 @@
 
 This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port. Update it as development proceeds. It is not a list of features already implemented, nor a claim that the original game contains every listed mechanic. Confirm feature presence and exact behavior in the original source first.
 
+## Houses and buildings: additional live source implementation (2026-11-21)
+
+- [x] Source automatic-door timing: source_door_auto.hpp now separates non-mutating ImagepointY("in") event selection from the real frame change. The 3DS game queues each original door event, waits 0.01 seconds as prescribed by original open/close event UIDs 6061166023614368 and 243854400993751, then updates the source frame, effective collider, and matching original wood/metal sound. Queued transitions carry a distinct door runtime UID, and pending waits reset on world generation.
+- [x] Original Solid behavior extraction: build_source_family_members.py reads each original Sprite Solid behavior from root object data. Building collision broadphase and narrowphase no longer treat non-Solid decoration and floors as blocking walls. Door 349 retains its special linked Solid-348 behavior.
+- [x] Original per-frame building collision polygons: build_source_building_polygons.py derives actual custom normalized vertices from original house/building frame[10]. source_building_polygon_collision.hpp uses the correct animation/frame, original instance dimensions, hotspot, rotation and mirroring in live player collision. Without a custom polygon the source full-frame rectangle remains; the existing object-348 door Solid is treated separately.
+- [x] Tests committed: world_system_tests.cpp checks door intention does not mutate the world and rejects wrong UIDs. test_source_building_update_contract.py checks source wait/order/sound flow. source_building_polygon_tests.cpp tests original polygon boundary vertices across rotations and mirrors. Both GitHub CI jobs and the local devkitPro Makefile regenerate source polygon data.
+- [ ] Verify all latest CI tests and the 3DS executable build. The above are committed code and test changes, not a final passing-build claim.
+- [ ] Houses and buildings still require original object-348 actual Spawn/Destroy/link lifecycle (current code is a source-shaped effective collider), full original roof 1048/1049 and object 346 selection/layer actions, furniture/container interactions, complete original generated placements and interaction sounds, nonvisual persistence, and Azahar/real-device parity.
+
 ## Houses and buildings — live collision/door/roof integration — 2026-11-21
 
 - [x] **Gameplay code:** `source/main.cpp` evaluates the existing source-driven automatic door interaction **before and after movement collision**. Previously a closed doorway could stop the player before `Doors_auto` evaluated; successful frame changes still dispatch their original wood/metal open/close WAV exactly once per transition.
