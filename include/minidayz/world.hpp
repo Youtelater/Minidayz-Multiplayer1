@@ -74,6 +74,11 @@ struct WorldPlacement {
     // actually creates and configures a category marker.
     std::uint16_t source_loot_category{};
     std::uint64_t runtime_uid{};
+    // Root tree create_map_element links each tree to a separate
+    // obst_base (345) via the original instance variables; the hitbox
+    // also records its associated tree. This runtime link is rebuilt
+    // deterministically during world generation, not guessed by distance.
+    std::uint64_t linked_runtime_uid{};
     // One-based, deterministic index within this world generation.
     // Fast lookup for local interactions; runtime_uid is the globally
     // distinguished original/static or generated world object identity.
