@@ -16,7 +16,7 @@ int main() {
     sprite.origin_y=0.5f;
     sprite.scale_x=1.0f;
     sprite.angle=0.0f;
-    SourceDoorPoint point{0,0,80.0f,30.0f,0.25f,0.5f,0.8f,0.5f,false};
+    SourceDoorPoint point{0,0,80.0f,30.0f,0.25f,0.5f,0.8f,0.5f,0.5f,0.666667f,false};
 
     // At normal orientation the hotspot-relative x range is [80,160].
     assert(source_door_overlaps_player(sprite,point,{145.0f,200.0f}));
