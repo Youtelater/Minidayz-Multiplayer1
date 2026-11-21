@@ -5,6 +5,7 @@
 #include "minidayz/player.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/world_visual_save.hpp"
+#include "minidayz/source_door_auto.hpp"
 #include "minidayz/source_map_overlay.hpp"
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -260,6 +261,7 @@ public:
                 }
                 collision_index_.rebuild(world_);
                 visibility_index_.rebuild(world_);
+                rebuild_source_automatic_doors();
                 npc_ready_ = npcs_.initialize(world_);
                 if (new_game_generation_ && !place_new_player_on_generated_map()) {
                     // Do not start a new run at a hard-coded, blocked map edge.
@@ -1181,6 +1183,10 @@ public:
         const float old_x=player_.state().x, old_y=player_.state().y;
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
+        // Original Game_events > Doors_auto compares the live PlayerBase
+        // Y against each overlapping door's authored "in" image point.
+        // A successful source frame transition plays its matching WAV.
+        update_source_automatic_doors();
         // Play the original material-specific WAV only after moving.
         const float dx=player_.state().x-old_x;
         const float dy=player_.state().y-old_y;
@@ -2789,6 +2795,48 @@ private:
         return false;
     }
 
+    void rebuild_source_automatic_doors() {
+        source_door_indices_.clear();
+        for(std::size_t i=0;i<world_.placement_count();++i){
+            const auto* p=world_.placement(i);
+            if(p && p->object==349)
+                source_door_indices_.push_back(static_cast<std::uint32_t>(i));
+        }
+    }
+
+    void update_source_automatic_doors() noexcept {
+        if(!world_ready_ || !player_.state().alive)return;
+        const minidayz::WorldPoint player_pos{
+            player_.state().x,player_.state().y
+        };
+        for(const auto index:source_door_indices_){
+            const auto* p=world_.placement(index);
+            if(!p)continue;
+            // Do not scan all ten thousand original world instances each
+            // 3DS frame. Only evaluate nearby object-349 door sprites.
+            if(std::fabs(p->x-player_pos.x)>96.0f ||
+               std::fabs(p->y-player_pos.y)>96.0f)continue;
+            const auto event=minidayz::world_source::source_auto_door_for_player(
+                world_,p->runtime_uid,player_pos);
+            using minidayz::world_source::AutomaticDoorEffect;
+            switch(event){
+            case AutomaticDoorEffect::open_wood:
+                stage2_audio_.play_original_world_sound(
+                    minidayz::OriginalWorldSound::doorOpen);break;
+            case AutomaticDoorEffect::close_wood:
+                stage2_audio_.play_original_world_sound(
+                    minidayz::OriginalWorldSound::doorClose);break;
+            case AutomaticDoorEffect::open_metal:
+                stage2_audio_.play_original_world_sound(
+                    minidayz::OriginalWorldSound::doorMetalOpen);break;
+            case AutomaticDoorEffect::close_metal:
+                stage2_audio_.play_original_world_sound(
+                    minidayz::OriginalWorldSound::doorMetalClose);break;
+            default:break;
+            }
+        }
+    }
+
     void start_next_source_map() noexcept {
         if(world_level_>=5)return;
         continue_world_visual_state_=false;
@@ -2911,6 +2959,7 @@ private:
         world_ready_ = false;
         npc_ready_ = false;
         menu_active_ = true;
+        source_door_indices_.clear();
         loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_);
         if (!loading_world_) {
             generation_failed_ = true;
@@ -2981,6 +3030,11 @@ private:
                 placement->height <= 0.0f ||
                 minidayz::terrain::source_visual_roof_overlay(
                     placement->object)) continue;
+            // The original door opens on sprite frame 1. Do not retain
+            // its closed rectangular obstruction after the event changes
+            // the frame. Linked obstacle-base 348 state remains to port.
+            if(placement->object==349 && placement->source_frame==1)
+                continue;
             const auto* layer = minidayz::stage1::find_layer(
                 map_index, placement->layer);
             if (!layer) continue;
@@ -3007,6 +3061,7 @@ private:
     minidayz::WorldSystem world_{};
     minidayz::terrain::SolidTerrain terrain_collision_{};
     minidayz::terrain::SourceObstacleIndex collision_index_{};
+    std::vector<std::uint32_t> source_door_indices_{};
     minidayz::terrain::VisibleSourcePlacementIndex visibility_index_{};
     std::vector<std::uint32_t> visible_world_placements_{};
     minidayz::NpcSystem npcs_{};
