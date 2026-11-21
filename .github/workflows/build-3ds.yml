@@ -162,6 +162,12 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude tests/terrain_collision_tests.cpp -o /tmp/minidayz_terrain_collision_tests
           /tmp/minidayz_terrain_collision_tests
 
+      - name: Guard original door and roof gameplay update ordering
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_source_building_update_contract.py
+
       - name: Verify original house interiors and door interaction bounds
         shell: bash
         run: |
