@@ -18,7 +18,17 @@ int main() {
     assert(!map.occupied(80.0f,319.0f));
     assert(!map.occupied(-100.1f,201.0f));
     assert(!map.occupied(-39.0f,320.0f));
-    assert(minidayz::terrain::source_visual_roof_overlay(1049));
+    // 1049 is a Construct FAMILY with no PNG frames of its own.
+    // Every *real member* roof sprite must be ignored by solid-wall
+    // collision, while the abstract family ID is not a placed sprite.
+    assert(!minidayz::terrain::source_visual_roof_overlay(1049));
+    bool found_roof_member=false;
+    for(const auto& member:minidayz::stage1::kSourceFamilyMembers){
+        if(member.family!=1049)continue;
+        assert(minidayz::terrain::source_visual_roof_overlay(member.object));
+        found_roof_member=true;
+    }
+    assert(found_roof_member);
     assert(!minidayz::terrain::source_visual_roof_overlay(349));
     assert(!minidayz::terrain::source_visual_roof_overlay(207));
     using minidayz::terrain::source_solid_sprite_contains;
