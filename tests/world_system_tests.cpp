@@ -307,8 +307,53 @@ void test_every_source_mapped_house_spawn_chain() {
         assert(created_base);
         ++restored_primary;
     }
-    std::printf("ROOT HOUSE SOURCE SPAWN COVERAGE %zu cached branches %zu restored uncached original branches %zu placed sprites\\n",
-                checked,restored_primary,created);
+    // Every literal original 508.var2 primary Spawn source record has
+    // exactly the Mapgen.var1==7 and single var2 guard (source audit
+    // reports zero complex-source primary branches). Exercise ALL
+    // source records, including duplicates and the uncached additions,
+    // not only the five known city-house designs.
+    std::size_t all_original_primary_branches=0;
+    for(const auto& original:world_source::kSourceHousePrimarySpawns){
+        const auto first=world.placement_count();
+        world.expand_map_element(7,original.variant,0,
+            {16500.0f+static_cast<float>(all_original_primary_branches%10)*120.0f,
+             9000.0f+static_cast<float>(all_original_primary_branches/10)*120.0f});
+        const auto last=world.placement_count();
+        bool found_base=false;
+        for(std::size_t i=first;i<last;++i)
+            if(world.placement(i)->object==original.object)
+                found_base=true;
+        if(!found_base)
+            std::fprintf(stderr,
+                "UNIMPLEMENTED ORIGINAL HOUSE Spawn record var2=%u object=%u event=%llu\\n",
+                original.variant,original.object,
+                static_cast<unsigned long long>(original.event_uid));
+        assert(found_base);
+        for(const auto& child:world_source::kSourceHouseCompanionSpawns){
+            if(child.base_object!=original.object ||
+               child.variant!=original.variant)continue;
+            bool created_child=false;
+            for(std::size_t i=first;i<last;++i){
+                const auto* p=world.placement(i);
+                if(p->object==child.object &&
+                   p->source_animation==child.animation &&
+                   p->source_frame==child.frame){
+                    created_child=true;break;
+                }
+            }
+            if(!created_child)
+                std::fprintf(stderr,
+                    "ORIGINAL PRIMARY HOUSE CHILD MISSING var2=%u base=%u child=%u\\n",
+                    original.variant,original.object,child.object);
+            assert(created_child);
+        }
+        ++all_original_primary_branches;
+    }
+    assert(all_original_primary_branches==
+           world_source::kSourceHousePrimarySpawnCount);
+    assert(all_original_primary_branches>=60);
+    std::printf("ROOT HOUSE SOURCE SPAWN COVERAGE %zu cached branches %zu restored uncached original branches %zu placed sprites %zu original primary source records checked\\n",
+                checked,restored_primary,created,all_original_primary_branches);
 }
 
 void test_live_original_automatic_doors() {
