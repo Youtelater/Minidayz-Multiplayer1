@@ -12,6 +12,18 @@ This is the persistent checklist for the MiniDAYZ / MiniDAYZ+ Nintendo 3DS port.
 
 **Definite gaps uncovered:** chopping/treefall sounds are supported in the native WAV player but have no live tree dispatch; actual player hit/projectile input does not call the original tree-hit executor. **Partial/unverified:** original door companion object 348, roof ancestor overlap/layers, dynamic world save state, generated location loot markers, and original audiovisual sequences for all started systems. **Nothing was silently checked as complete** just because a source action or WAV was found. Audit report, exact event-condition/audio CSVs and audio cue/WAV candidate crosscheck are archived by [the new reproducible workflow](../.github/workflows/audit-started-gameplay-parity.yml).
 
+## Whole-project original-source parity review — 2026-11-21
+
+**Audit verdict: NOT SOURCE-EQUIVALENT / INCOMPLETE.** Reviewed original source obligations across **12 started systems** against current 3DS code, previous specialized source audits, and successful root-source whole-game audit CI [#44932251628](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44932251628). The [full system-by-system audit](WHOLE_PROJECT_SOURCE_PARITY_AUDIT_2026-11-21.md) records source event counts, high-priority original event UIDs, known missing actions, verification criteria, and what cannot be certified by static analysis. The [source-event/action/artifact bundle](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/44932251628/artifacts/14718311471) is reproducible.
+
+- [x] Whole-project **source event/condition/action and audio obligation indexing** run successfully from root original; **this is an audit-tool milestone only**.
+- [x] Root original versus 3DS **initial system gap ledger** saved, with known blockers explicitly distinguished from implemented modules.
+- [ ] Interpret and map **all 63,289 source actions**, including inherited conditions, function-triggered effects, and RNG order, to actual native handlers; report action-level coverage.
+- [ ] Verify **all 461 original audio action sites** have correctly gated live 3DS playback (not merely packaged audio files).
+- [ ] Verify every original gameplay system in actual Azahar/real 3DS gameplay and save/restore; no complete parity is yet established.
+
+**Do not treat these first two audit checkmarks as game completion.** Task 1 live tree hit and damage dispatch, tree sound/HP state, door companion object 348, full house transparency source conditions, world loot marker generation and complete dynamic persistence remain open.
+
 ## How to mark an item complete
 
 - Keep `[ ]` until the original-game source behavior has been identified, C++ implementation is integrated, correct original image frames and coordinates are mapped, relevant sounds and interactions are connected, unit/regression tests pass, and Azahar gameplay has been verified.
