@@ -15,9 +15,10 @@ objects=p[3]
 source_func=7736925111997576
 def walk(nodes,ancestry=()):
  for e in nodes:
-  if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+  if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
   yield e,ancestry
-  yield from walk(e[7],ancestry+(e[4],))
+  if len(e)>7 and isinstance(e[7],list):
+   yield from walk(e[7],ancestry+(e[4],))
 def literal(expr):
  if not isinstance(expr,list) or len(expr)<2:return None
  if expr[0] in (0,2,4,5,7) and not isinstance(expr[1],list):return expr[1]
@@ -172,7 +173,48 @@ for name,nodes in p[6]:
                  item["width_delta"],item["height_delta"],
                  item["angle_degrees"],item["opacity"],item["variables"]))
 if not rules:raise SystemExit("No original source house Spawn events recovered")
-parents={row[4] for row in rules}
+# The original loot branch is separate from building creation: Mapgen
+# 508.var1=7, var2=building variant, var3=0. Its last action marks var3=1.
+# Emit every literal Spawn/SetVariable/Trigger_spawn in source order.
+# Preserve markers without a Trigger_spawn call (three city-house points).
+loot_markers=[]
+def loot_walk(nodes,active=False,variant=None):
+ for e in nodes:
+  if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+  in_branch=active or e[4]==4949969985883762
+  v=variant
+  if in_branch:
+   for c in e[5]:
+    if c[:2]==[508,71] and c[9][0]==[10,2] and c[9][1]==[8,0]:
+     v=literal(c[9][2][1])
+   pending=None
+   for a in e[6]:
+    sp=spawn(a)
+    if sp and sp[1]==218:
+     if v is None:raise ValueError("Missing original house loot variant")
+     pending=[e[4],a[3],v,sp[0],sp[2],sp[3],None,False,False]
+     loot_markers.append(pending)
+    elif pending is not None and a[:2]==[218,88]:
+     if a[5][0]!=[10,0]:raise ValueError("Unexpected marker variable")
+     pending[6]=literal(a[5][1][1])
+    elif pending is not None and a[:2]==[218,55]:
+     # Source variant 1: marker.Y = marker.Y + parent.Height/2 + 15.
+     expected=[4,[4,[20,218,66,False,None],[7,[20,pending[3],61,False,None],[0,2]]],[0,15]]
+     if a[5][0][1]!=expected:raise ValueError("Unsupported source marker Y expression")
+     pending[8]=True
+    elif pending is not None and a[:2]==[189,69]:
+     if a[5][0][1]!=[2,"Trigger_spawn"]:raise ValueError("Unexpected marker function")
+     pending[7]=True
+  if len(e)>7 and isinstance(e[7],list):loot_walk(e[7],in_branch,v)
+for name,nodes in p[6]:
+ if name=="Game_events":loot_walk(nodes)
+if len(loot_markers)!=153 or any(r[6] is None for r in loot_markers):
+ raise RuntimeError("Original house loot markers missing: "+str(len(loot_markers)))
+# Construct layer names are case-insensitive. Resolve the exact Map layer.
+map_layers={l[0].lower():l[0] for l in next(l for l in p[5] if l[0]=="Map")[6]}
+for r in loot_markers:r[4]=map_layers[r[4].lower()]
+parents={row[4] for row in rules} | {row[3] for row in loot_markers}
+
 # Original source may Spawn at numeric ImagePoint 1 even where the
 # author's sprite frame has NO custom imagepoints (e.g. 1323 var2=36).
 # Construct resolves such a missing numeric point to its hotspot/origin.
@@ -283,6 +325,19 @@ lines += ["};",
 "  if(name&&name[0]){if(std::strcmp(p.name,name)==0)return &p;}",
 "  else if(p.index==index)return &p;",
 " }return nullptr;}",
+"} // namespace minidayz::world_source"]
+# Append before the namespace closes, using the same original sprite imagepoint table.
+lines.pop()
+lines += [
+ "struct SourceHouseLootMarker {std::uint64_t event_uid,action_uid;",
+ " std::uint8_t variant;std::uint16_t parent;const char* layer;const char* point_name;",
+ " std::uint8_t point_index;std::uint16_t category;bool trigger_spawn,offset_y;};",
+ "inline constexpr SourceHouseLootMarker kSourceHouseLootMarkers[]={"]
+for uid,aid,variant,parent,layer,pt,category,trigger,offset in loot_markers:
+ lines.append(" {"+",".join([str(uid)+"ULL",str(aid)+"ULL",str(variant),str(parent),
+    quote(layer),quote(pt if isinstance(pt,str) else ""),str(pt if isinstance(pt,int) else 0),
+    str(category),str(trigger).lower(),str(offset).lower()])+"},")
+lines += ["};","inline constexpr std::size_t kSourceHouseLootMarkerCount=sizeof(kSourceHouseLootMarkers)/sizeof(kSourceHouseLootMarkers[0]);",
 "} // namespace minidayz::world_source"]
 out.write_text("\n".join(lines)+"\n",encoding="utf-8")
 for oid in (302,306,311,312,313,321,322,323,324,333,346,347,348,349,1323):
