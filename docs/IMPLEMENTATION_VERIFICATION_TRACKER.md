@@ -92,6 +92,25 @@ See [Root Original World Source Readiness](ORIGINAL_WORLD_SOURCE_READINESS.md) f
 - `extract_construct.py` now extracts the initial Construct frame `origin_x/origin_y` along with object dimensions into `ObjectDef`. Procedural `create_map_element` placements and root-location create actions inherit these source values instead of `0x0` object sizes and zero origins. World tests confirm real source dimensions and hotspots on generated trees. **Exact later Set Size / Set ImagePoint / animation-dependent collider polygons remain unimplemented.**
 - **Verification policy:** tests and a successful 3DS build are necessary, not sufficient. All house/tree/collision boxes remain open until correct original geometry, source event conditions, state transitions, sound, and Azahar/real console tests pass.
 
+## Active cross-system progress board — keep moving through the whole game
+
+This is a **work queue**, not a claim that any listed system is 100% complete. Track multiple workstreams instead of stopping all development for a single unfinished interaction. A failed or blocked feature stays listed, with its original source reference, while work on independent features continues.
+
+| Workstream | Verified foundation | Next implementable work | Full-game gate |
+|---|---|---|---|
+| World terrain and procedural generation | Root-original extractors; fixed-seed generated vegetation tests | Validate roads, bridges, towns, bunkers, and map density against source branches | Original-generation parity and Azahar comparison |
+| Buildings, roofs, doors, interactions | Source sprite geometry, frame/effect helpers | Dispatch house opacity/roof reveal, door states, interior collisions and original sounds | In-game entrance/exit and interactive-object tests |
+| Vegetation and resource gathering | Six source-UID-gated original tree-hit/fall executors pass native tests | Wire player projectile/melee collision and initial tree HP, fall/drop/audio and persistence | Actual chopping with rewards and original timing |
+| Items, inventory, survival and crafting | Item/localization/source graphics indexed; some native gameplay modules already present | Audit item-ID ↔ sprite ↔ spawn/recipe chains and fill missing inventory/loot/survival events | Live pickup, use, craft, survival effects and saved inventory |
+| Location loot and world respawns | Original event traces and marker category handling | Fix root location creation-to-spawn chain; 0 eligible markers in tested new worlds | In-game loot and correct category/timer probabilities |
+| Combat, enemies and NPCs | Native combat/NPC foundations and original NPC event extraction | Complete original contact damage, AI, spawns, firearms/reloads and enemy drops | Full live encounter tests |
+| Vehicles and world objects | Original source files and mechanics indexed | Source-check vehicles/traps/structures and implement missing control/state transitions | Actual vehicle/structure interactions and saving |
+| UI, maps, sound, quests and progression | Main menu/render/audio foundations already built | Connect HUD, bottom-screen inventory/map, world cues, quests and achievements | Original visual/audio and control parity |
+| Saving, multiplayer and release | Some per-instance visual-state replay and save infrastructure exists | Save dynamic destruction, loot, doors, NPC/vehicle state; then multiplayer sync | Reload, synchronization, emulator and physical 3DS |
+| Asset completeness and performance | Original source frame/PNG audio audit tools | Classify remaining 119 unreferenced PNGs and validate full T3X/WAV coverage; profile hardware | 100% source-used assets reachable and verified |
+
+**Workflow rule:** whenever one workstream is blocked, document the precise blocker and continue another independent workstream. For every implementation change, append test results and update its row here. Do not falsely convert broad gates to `[x]` merely because a component passes CI. Priority is world/interaction parity while also continuing item, combat, audio, saving and UI integration where source evidence permits.
+
 ## Current completion ledger — narrow milestones versus full gameplay
 
 **How to read the unchecked boxes below:** They are *end-to-end completion gates*, not "nothing implemented." The `[x]` items in this ledger are smaller tasks with direct source, code and CI evidence. A large category remains `[ ]` until its *entire original event chain* (including visual, audio, physics, rewards, state, and Azahar verification) passes. Do not check all of a section merely because its core code compiles.
