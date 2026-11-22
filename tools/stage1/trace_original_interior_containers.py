@@ -47,3 +47,19 @@ for oid,name in candidates.items():
  print("OBJECT_EVENT_COUNT",oid,name,len(rec))
  for e in rec[:45]:
   print("OBJECT_EVENT",oid,json.dumps(e,ensure_ascii=False,separators=(",",":"))[:3600])
+
+# Source bunker storage and airdrop event descendants; original sheet only.
+TARGET_U={389950912936355,425016699358996,7711324247664447,
+  353286644684551,114378063020685,884665878059776}
+def all_events(nodes,ancestors=()):
+ for e in nodes if isinstance(nodes,list) else []:
+  if isinstance(e,list) and len(e)>=8 and e[0]==0:
+   yield e,ancestors
+   yield from all_events(e[7],ancestors+(e[4],))
+for sheet,evs in p[6]:
+ if sheet!='Game_events':continue
+ for e,anc in all_events(evs):
+  if e[4] in TARGET_U or any(x in TARGET_U for x in anc):
+   print('SOURCE_BOX_FAMILY',json.dumps({'uid':e[4],'anc':anc[-8:],
+     'conditions':e[5],'actions':e[6]},separators=(',',':'),
+     ensure_ascii=False)[:5000])
