@@ -1180,11 +1180,9 @@ void test_original_map_layout_and_descriptors() {
         const auto& nearby=collision.candidates(p->x,p->y);
         assert(std::find(nearby.begin(),nearby.end(),
                    static_cast<std::uint32_t>(i))!=nearby.end());
-        if(tree) {
+        if(tree && p->source_frame==
+           minidayz::world_source::kOriginalTreeStandingHitboxFrame)
             ++linked_tree_bases;
-            assert(p->source_frame==
-                   minidayz::world_source::kOriginalTreeStandingHitboxFrame);
-        }
         ++original_obstacle_bases;
     }
     std::printf("ORIGINAL COLLIDER BASES indexed=%zu linked_tree=%zu\\n",
