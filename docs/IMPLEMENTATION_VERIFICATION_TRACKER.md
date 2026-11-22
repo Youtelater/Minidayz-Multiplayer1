@@ -484,3 +484,9 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - Native CI and 3DS build verification pending; emulator parity remains open. Do not mark building collisions complete yet.
 
 - Commit `40a4f9826bb4077f2d2039ee48cb8fbc991b4b0c` verifies all extracted polygon frames using their original frame dimensions and hotspots, with rotation and mirroring. The existing push-triggered 3DS workflow runs this regression before compilation. CI result not yet confirmed; Azahar and physical-hardware tests remain open.
+
+## Part 2 Step 7 — interior visibility follow-up
+
+- User reported the preceding collision CI workflows passed; emulator verification remains open independently.
+- Read the authoritative root `data.deobfuscated.js` blob `bd6fc44626d2f4ede48f9a6b83dedbb23ce06a9d`, `House_transparenting` event 5249390718058362. Commit `119f33df157705657b9114148873f4f0c30f9ff1` implements spatial foundation picking (6583602733022543) and reciprocal roof selection before foundation layer changes (4153213040695326 / 7058744064425045), instead of assuming the generated parent identity is the source picker. Commit `495586a61828e8f2aca2ab55c81a2d44fc57ff` adds a regression contract for this dispatch. No changes to original PNG coordinates.
+- CI not yet independently confirmed. Full wall-zone sprite overlap picking, Tint/Outline effects and emulator verification remain open; do not mark Step 7 complete.
