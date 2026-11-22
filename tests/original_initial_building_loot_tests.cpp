@@ -62,10 +62,15 @@ int main() {
         InitialBuildingLootResult::not_applicable);
     marker.object=218;
     marker.source_loot_category=17;marker.source_variable_0=17;
-    // Original category17 compares choose(95)==55: source never passes.
-    for(int i=0;i<15;i++)
-        assert(source_spawn_initial_loot_for_marker(loot,marker,rng)==
-            InitialBuildingLootResult::no_drop);
+    // Category17 uses source round(random(1,100))==55, not choose(95).
+    const SourceInitialBuildingLootRule* rare=nullptr;
+    for(const auto& row:kSourceInitialBuildingLootRules)
+        if(row.category==17)rare=&row;
+    assert(rare && rare->gate_kind==4 && rare->gate_target==55);
+    assert(!source_initial_loot_chance(*rare,0));
+    assert(source_initial_loot_chance(*rare,
+        static_cast<std::uint32_t>((54.0/99.0)*4294967296.0)));
+    assert(!source_initial_loot_chance(*rare,UINT32_MAX));
     assert(loot.count()==1);
     // No synthetic category or guessed fallback item.
     marker.source_loot_category=65535;marker.source_variable_0=65535;
