@@ -103,4 +103,4 @@ for oid in (181,193,218,345,346,347,348,349,404,508,514,571,573,857,984):
  acts=Counter((str(e["group"]),str(e["cmd"])) for e in refs if e["kind"]=="action")
  print("SOURCE_VISUAL_OBJECT",json.dumps({"object":oid,
      "png_frames":frames[:32],"frame_count":len(frames),
-     "actions":acts.most_common(15)},separators=(",",":"))
+     "actions":acts.most_common(15)},separators=(",",":")))
