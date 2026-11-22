@@ -1,0 +1,14 @@
+name: Trace Original Furniture Sleep Source
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/stage1/trace_furniture_sleep_source.py"
+      - ".github/workflows/trace-original-furniture-sleep.yml"
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trace root-original sleep, bed and pump event families
+        run: python3 tools/stage1/trace_furniture_sleep_source.py
