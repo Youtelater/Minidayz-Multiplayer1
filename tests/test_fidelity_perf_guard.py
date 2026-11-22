@@ -43,6 +43,9 @@ assert "sprite_cache_misses_" in engine
 assert "KEY_SELECT" in engine and "measured_frame_seconds_" in engine
 assert "scatter_cache_" in header and "std::vector<ScatterCacheEntry>" in header
 assert "patch->cells" in terrain and "if(!patch)" in terrain
-assert "C2D_SpriteSetDepth(&sprite,0.17f)" in terrain
+# The original Tilemap230 ground_enviroment layer is source layer 6, not
+# a guessed GPU constant. Test the source-derived depth path.
+assert "source_world_layer_depth(" in terrain
+assert "stage1::kSourceScatterGroundLayer" in terrain
 print("PASS: original-spawn relocation removed, slow frames retained, "
       "cached source terrain and emulator profiling wired")
