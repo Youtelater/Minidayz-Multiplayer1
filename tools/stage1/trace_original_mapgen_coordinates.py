@@ -79,3 +79,19 @@ for lay in p[5]:
   for i in layer[14] if len(layer)>14 and isinstance(layer[14],list) else ():
    if len(i)>2 and i[1] in (514,508,518,525):
     print("MAPGEN_SPRITE",i[1],layer[0],json.dumps(i,separators=(',',':'))[:4200])
+
+print("MAPGEN_ORIGINAL_TILE_COORD_TRANSFORMS")
+for layout in p[5]:
+ if layout[0] not in ("Map","TD"):continue
+ for layer in layout[6]:
+  for inst in layer[14] if len(layer)>14 and isinstance(layer[14],list) else ():
+   if len(inst)<6 or inst[1] not in (1066,514,508):continue
+   print("TILE_COORD_SOURCE_INSTANCE",layout[0],layer[0],inst[1],
+     "transform",json.dumps(inst[0],separators=(",",":"))[:800],
+     "attributes",json.dumps(inst[5],separators=(",",":"))[:800])
+print("TILE_COORD_OBJECT_TYPE",1066,p[3][1066][0],p[3][1066][1])
+for sheet,events in p[6]:
+ for e,anc,groups in walk(events):
+  for a in e[6] if isinstance(e[6],list) else ():
+   if isinstance(a,list) and len(a)>5 and a[0]==1066 and a[1] in (47,103,189,206,210,212):
+    print("TILE_COORD_MUTATION",e[4],json.dumps(a,separators=(",",":"))[:1500])
