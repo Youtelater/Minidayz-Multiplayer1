@@ -93,6 +93,13 @@ flat_gates=[]
 for category_event in picked[7]:
     if not isinstance(category_event,list) or len(category_event)<7 or category_event[0]!=0:
         raise SystemExit("Unrecognized source category event")
+    # Final original 218.Destroy after the category branches is a separate
+    # one-shot marker cleanup action, not a 49th loot category.
+    if category_event[4]==723893136813997:
+        if category_event[5] or len(category_event[6])!=1 or (
+                category_event[6][0][:2]!=[218,53]):
+            raise SystemExit("Original post-Trigger_spawn marker cleanup changed")
+        continue
     conditions=[category_condition(c) for c in category_event[5]]
     conditions=[c for c in conditions if c is not None]
     if len(conditions)!=1 or len(category_event[5])!=1:
