@@ -922,13 +922,26 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // Sprite's initial frame dimensions and hotspot; 0x0 placements
         // previously had no collision, and were poorly culled/rendered.
         const auto* source_object=stage1::find_object(rule.object);
+        // ObjectDef width/height/origin are zero in the root snapshot's
+        // metadata (stage1_data.hpp); reading them made every generated
+        // house foundation 0x0. Original Spawn inherits the ACTUAL Sprite
+        // animation0/frame0 dimensions and hotspot. In particular, child
+        // roofs/walls/doors compute their named imagepoint offsets using
+        // this parent's width and height. A zero-sized parent collapses
+        // those offsets even though the renderer can draw frame pixels.
+        const auto* initial_frame=stage1::source_building_frame_geometry(
+            rule.object,0,0);
         placements_.push_back({
             layer, rule.object, rule.uid, position.x, position.y, 0.0f,
-            source_object ? source_object->width : 0.0f,
-            source_object ? source_object->height : 0.0f,
+            initial_frame ? initial_frame->width :
+                (source_object ? source_object->width : 0.0f),
+            initial_frame ? initial_frame->height :
+                (source_object ? source_object->height : 0.0f),
             0.0f, 1.0f, 1.0f,
-            source_object ? source_object->origin_x : 0.0f,
-            source_object ? source_object->origin_y : 0.0f,
+            initial_frame ? initial_frame->origin_x :
+                (source_object ? source_object->origin_x : 0.0f),
+            initial_frame ? initial_frame->origin_y :
+                (source_object ? source_object->origin_y : 0.0f),
             rule.image_point
         });
         placements_.back().runtime_uid = runtime_id;
