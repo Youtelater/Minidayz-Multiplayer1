@@ -23,8 +23,8 @@ public:
  void draw_text(const char* value,float x,float y,float scale=0.4f) noexcept;
  bool load_sheet(std::size_t slot,const char* romfs_path) noexcept;
  void unload_sheet(std::size_t slot) noexcept; void unload_all() noexcept;
- bool draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx=1.0f,float sy=1.0f,float rotation=0.0f,float depth=0.5f,float opacity=1.0f) noexcept;
- bool draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f,float opacity=1.0f) noexcept;
+ bool draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx=1.0f,float sy=1.0f,float rotation=0.0f,float depth=0.5f,float opacity=1.0f,float rgb_multiplier=1.0f) noexcept;
+ bool draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f,float opacity=1.0f,float rgb_multiplier=1.0f,bool outline=false) noexcept;
  // Draw the original Construct sprite frame to an exact 3DS rectangle.
  // Keeps source artwork and texture scaling; only the destination changes.
  bool draw_original_ground_floor(float camera_x,float camera_y,float view_width,float view_height,std::uint8_t source_level=0,float second_half_y=1.0e30f) noexcept;
@@ -37,7 +37,7 @@ public:
                             float camera_x,float camera_y,float view_width,float view_height,
                             std::uint8_t source_level=0) noexcept;
   bool draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth=0.4f) noexcept;
-  bool draw_source_animation(std::uint16_t object,const char* animation_name,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f) noexcept;
+  bool draw_source_animation(std::uint16_t object,const char* animation_name,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f,bool outline=false) noexcept;
  // Render any original assets/gfx PNG by its exact source filename.
  bool draw_original_image(const char* original_png,float x,float y,float width,float height,float depth=0.5f) noexcept;
  bool draw_menu_art(std::size_t index,float x,float y,float width,float height,float depth=0.7f) noexcept;
