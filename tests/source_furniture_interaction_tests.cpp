@@ -59,6 +59,7 @@ int main() {
     assert(bag.count(50)==0 && bag.count(784)==0);
     assert(source_count_sleep_seconds(300,50,50,0.75f,0.75f,0,0)==90.0f);
     assert(source_count_sleep_seconds(360,50,50,0.75f,0.75f,0,0)==0.0f);
+    assert(source_count_sleep_seconds(1440,50,50,0.75f,0.75f,0,0)==0.0f);
     assert(source_count_sleep_seconds(0,100,100,1.0f,1.0f,0,0)==450.0f);
     assert(source_count_sleep_seconds(0,100,100,1.0f,1.0f,1,1)<450.0f);
     assert(source_count_sleep_seconds(0,9,100,0.75f,0.75f,0,0)==0.0f);

@@ -79,9 +79,10 @@ inline float source_count_sleep_seconds(
         (hunger-10.0f)/foodrate*5.0f,
         (thirst-10.0f)/waterrate*5.0f);
     // Timer_ALL is original source minutes; each game minute=1.5s.
-    // Timer_ALL=1440 is an original one-frame midnight rollover state.
-    const float until_morning=(360.0f-static_cast<float>(
-        timer_all==1440?0:timer_all))*1.5f;
+    // Root source clamps TimeReturn_All to 360 without special-casing
+    // Timer_ALL=1440. That one-tick rollover state has no sleep window.
+    const float until_morning=(360.0f-
+        static_cast<float>(timer_all))*1.5f;
     return std::max(0.0f,std::min(survival_seconds,until_morning));
 }
 // Original game events 903835777805920 resets bed951 to source
