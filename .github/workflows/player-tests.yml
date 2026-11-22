@@ -461,7 +461,7 @@ jobs:
 
       - name: Test original bunker lootbox one-time collision/open contract
         run: |
-          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \\
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
             tests/source_interior_container_tests.cpp -o source_interior_container_tests
           ./source_interior_container_tests
 
