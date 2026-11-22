@@ -96,3 +96,11 @@ for oid in (181,193,207,210,218,302,306,311,312,313,321,322,323,324,333,345,346,
  entries=[(i["layout"],i["layer_name"],i["visible"],i["transform"][:7]) for i in layouts_by_obj.get(oid,[])]
  print("TEMPLATE_ROLE",json.dumps({"object":oid,"name":objects[oid][0],
    "templates":entries[:10],"total":len(entries)},separators=(",",":")))
+
+for oid in (181,193,218,345,346,347,348,349,404,508,514,571,573,857,984):
+ frames=[(n,ai,fi) for n,refs in by_png.items() for ref_oid,ai,fi,_,_ in refs if ref_oid==oid]
+ refs=event_refs[oid]
+ acts=Counter((str(e["group"]),str(e["cmd"])) for e in refs if e["kind"]=="action")
+ print("SOURCE_VISUAL_OBJECT",json.dumps({"object":oid,
+     "png_frames":frames[:32],"frame_count":len(frames),
+     "actions":acts.most_common(15)},separators=(",",":"))
