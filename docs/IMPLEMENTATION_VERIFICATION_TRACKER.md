@@ -5,6 +5,8 @@
 - [x] Fixed companion placement for missing numeric attachment points. It uses the parent sprite hotspot, with authored frame points still used where present. Native world regression covers the variant 36 collider that uses this fallback.
 - [x] Bridge and bunker loaders validate replacement placements before changing the world. Native regression checks record counts, reloads, alternate bunker coordinates, and preservation of existing features if a replacement is out of bounds.
 - [x] Checked point-of-interest quotas for eight seeds across all six map levels. The six full-generation cases check road presence and each bridge and bunker placement against the configured coordinates, with bunker slot weights checked as well. Native world tests passed.
+- [x] Bridge travel builds the destination before replacing the active map. A generation failure keeps the current map, survivor, loot, tents and stashes available. The bridge prompt offers a retry.
+- [ ] Verify bridge travel and retry in the emulator, including memory use while both maps are allocated.
 - [ ] Conditional building placements, initial building loot dispatch and full map-generation parity remain open.
 
 ## Part 2 — per-house roof and wall ownership correction

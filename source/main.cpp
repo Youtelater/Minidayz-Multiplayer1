@@ -53,6 +53,7 @@
 #include <tuple>
 #include <memory>
 #include <new>
+#include <utility>
 #include <sys/stat.h>
 
 namespace {
@@ -183,7 +184,6 @@ public:
             ?CraftFeedback::pending:CraftFeedback::none;
         continue_world_visual_state_=true;
         new_game_generation_=false;
-        travel_generation_=false;
         source_temperature_initialized_=false;
         last_source_warmth_=equipment_.temperature_offset();
         last_source_snowborn_level_=
@@ -245,16 +245,36 @@ public:
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
         if (loading_world_) {
-            if (!world_.advance_source_generation()) {
-                loading_world_ = false;
-                generation_failed_ = true;
-                menu_active_ = true;
-                menu_page_ = minidayz::menu::BootPage::main;
-                menu_selection_ = minidayz::menu::default_selection(has_saved_game_);
-                boot_input_gate_.reset();
+            auto& generating = travel_world_ ? *travel_world_ : world_;
+            if (!generating.advance_source_generation()) {
+                fail_world_generation();
                 return;
             }
-            if (world_.generation_complete()) {
+            if (generating.generation_complete()) {
+                if ((new_game_generation_ || travel_world_) &&
+                    !place_new_player_on_generated_map(generating, static_cast<bool>(travel_world_))) {
+                    fail_world_generation();
+                    return;
+                }
+                if (travel_world_) {
+                    world_seed_ = generating.seed();
+                    world_level_ = generating.generation_level();
+                    world_ = std::move(generating);
+                    travel_world_.reset();
+                    ground_loot_.clear();
+                    tents_.clear();
+                    stashes_.clear();
+                    selected_inventory_slot_ = -1;
+                    storage_open_ = false;
+                    crafting_open_ = false;
+                    perks_open_ = false;
+                    details_open_ = false;
+                    paused_ = false;
+                    stage2_audio_.stop_environment_ambience();
+                    stage2_audio_.stop_rain_loop();
+                    footstep_elapsed_ = 0.0f;
+                    save_elapsed_ = 0.0f;
+                }
                 loading_world_ = false;
                 world_ready_ = true;
                 if (continue_world_visual_state_) {
@@ -270,19 +290,7 @@ public:
                 rebuild_source_automatic_doors();
                 rebuild_source_house_roofs();
                 npc_ready_ = npcs_.initialize(world_);
-                if (new_game_generation_ && !place_new_player_on_generated_map()) {
-                    // Do not start a new run at a hard-coded, blocked map edge.
-                    loading_world_ = false;
-                    world_ready_ = false;
-                    generation_failed_ = true;
-                    menu_active_ = true;
-                    menu_page_ = minidayz::menu::BootPage::main;
-                    menu_selection_ = minidayz::menu::default_selection(has_saved_game_);
-                    boot_input_gate_.reset();
-                    return;
-                }
                 new_game_generation_ = false;
-                travel_generation_ = false;
                 menu_active_ = false;
                 stage2_audio_.set_environment_ambience(
                     !day_night_.day_mode(),world_level_==4);
@@ -1358,7 +1366,8 @@ public:
                 "PLACING SOURCE LOCATIONS", "ADDING BUNKERS",
                 "ADDING BRIDGES", "FINALIZING WORLD"
             };
-            const auto phase = world_.generation_phase();
+            const auto phase = travel_world_ ? travel_world_->generation_phase()
+                                             : world_.generation_phase();
             // Generation phases start at 1; phase 1 generates the road grid.
             const auto step = phase > 0 && phase <= 6 ? phase - 1 : 0;
             renderer.draw_text(steps[step], 26.0f, 112.0f, 0.32f);
@@ -2283,7 +2292,7 @@ public:
         if(near_source_bridge_exit()){
             renderer.draw_solid_rect(18.0f, 104.0f, 284.0f, 21.0f,
                                      C2D_Color32(39, 63, 46, 230));
-            renderer.draw_text("A: TRAVEL TO NEXT MAP",
+            renderer.draw_text(travel_failed_ ? "TRAVEL FAILED. A: RETRY" : "A: TRAVEL TO NEXT MAP",
                                48.0f, 108.0f, 0.37f);
         }
     }
@@ -3149,29 +3158,38 @@ private:
     }
 
     void start_next_source_map() noexcept {
-        if(world_level_>=5)return;
-        continue_world_visual_state_=false;
-        // A new map is a new Construct world generation, not simply a
-        // background texture swap. Preserve survivor condition and items.
-        // The source bridge artwork remains the travel landmark on 3DS.
-        ++world_level_;
-        stage2_audio_.stop_environment_ambience();
-        stage2_audio_.stop_rain_loop();
-        footstep_elapsed_=0.0f;
-        world_seed_ ^= (0x9e3779b9u + static_cast<std::uint32_t>(world_level_) * 0x85ebca6bu);
-        if(world_seed_==0)world_seed_=0x6d696e69u;
-        ground_loot_.clear();
-        tents_.clear();
-        stashes_.clear();
-        selected_inventory_slot_=-1;
-        storage_open_=false;
-        crafting_open_=false;
-        perks_open_=false;
-        details_open_=false;
-        paused_=false;
-        new_game_generation_=true;
-        travel_generation_=true;
-        begin_world_generation();
+        if (world_level_ >= 5) return;
+        const auto destination_level = static_cast<std::uint8_t>(world_level_ + 1);
+        auto destination_seed = world_seed_ ^
+            (0x9e3779b9u + static_cast<std::uint32_t>(destination_level) * 0x85ebca6bu);
+        if (destination_seed == 0) destination_seed = 0x6d696e69u;
+
+        // Keep the active world and its save state usable until the
+        // destination has generated and accepted the survivor's spawn.
+        travel_world_.reset(new(std::nothrow) minidayz::WorldSystem);
+        if (!travel_world_ ||
+            !travel_world_->begin_source_generation(destination_seed, "Map", destination_level)) {
+            travel_world_.reset();
+            travel_failed_ = true;
+            return;
+        }
+        travel_failed_ = false;
+        loading_world_ = true;
+    }
+
+    void fail_world_generation() noexcept {
+        loading_world_ = false;
+        if (travel_world_) {
+            travel_world_.reset();
+            travel_failed_ = true;
+            return;
+        }
+        world_ready_ = false;
+        generation_failed_ = true;
+        menu_active_ = true;
+        menu_page_ = minidayz::menu::BootPage::main;
+        menu_selection_ = minidayz::menu::default_selection(has_saved_game_);
+        boot_input_gate_.reset();
     }
 
     void start_new_game() noexcept {
@@ -3181,7 +3199,6 @@ private:
         stage2_audio_.stop_rain_loop();
         footstep_elapsed_=0.0f;
         world_level_ = 0;
-        travel_generation_ = false;
         player_ = minidayz::PlayerSystem(make_initial_state());
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
@@ -3239,11 +3256,12 @@ private:
     // (random(1000,16500),373).
     // Never retry, snap to a road, or shift the position on collision:
     // those extra rules changed the original starting position.
-    bool place_new_player_on_generated_map() noexcept {
-        const auto& bounds=world_.bounds();
+    bool place_new_player_on_generated_map(const minidayz::WorldSystem& destination,
+                                           bool traveling) noexcept {
+        const auto& bounds=destination.bounds();
         if(!(bounds.width>0.0f && bounds.height>0.0f))return false;
-        std::mt19937 rng(world_seed_ ^ 0x73506177u);
-        const bool snow=world_level_==
+        std::mt19937 rng(destination.seed() ^ 0x73506177u);
+        const bool snow=destination.generation_level()==
             minidayz::stage1::kSnowPlayerStartLevel;
         const float range=std::max(0.0f,bounds.height-
             minidayz::stage1::kNormalPlayerStartLayoutMargin);
@@ -3256,7 +3274,7 @@ private:
         const float py=snow?minidayz::stage1::kSnowPlayerStartY:
             minidayz::stage1::kNormalPlayerStartYBase+random_normal_y(rng);
         if(!std::isfinite(px)||!std::isfinite(py))return false;
-        auto state=travel_generation_?player_.state():make_initial_state();
+        auto state=traveling?player_.state():make_initial_state();
         state.x=px;
         state.y=py;
         player_=minidayz::PlayerSystem(state);
@@ -3267,6 +3285,7 @@ private:
 
     void begin_world_generation() noexcept {
         generation_failed_ = false;
+        travel_failed_ = false;
         world_ready_ = false;
         npc_ready_ = false;
         menu_active_ = true;
@@ -3280,12 +3299,7 @@ private:
         source_roof_elapsed_=0.0f;
         source_roof_background_layer_=0xffff;
         loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_);
-        if (!loading_world_) {
-            generation_failed_ = true;
-            menu_page_ = minidayz::menu::BootPage::main;
-            menu_selection_ = minidayz::menu::default_selection(has_saved_game_);
-            boot_input_gate_.reset();
-        }
+        if (!loading_world_) fail_world_generation();
     }
 
     static minidayz::PlayerState make_initial_state() noexcept {
@@ -3460,7 +3474,8 @@ private:
     minidayz::NpcSystem npcs_{};
     std::uint32_t world_seed_{};
     std::uint8_t world_level_{};
-    bool travel_generation_{};
+    std::unique_ptr<minidayz::WorldSystem> travel_world_;
+    bool travel_failed_{};
     bool continue_world_visual_state_{};
     float save_elapsed_{};
     float footstep_elapsed_{};
