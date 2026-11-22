@@ -64,7 +64,24 @@ void test_source_furniture_and_pump() {
     assert(pump<world.placement_count());
     const auto* source=world.placement(pump);
     assert(source_furniture_active(*source));
-    assert(source->source_variable_0>=100 && source->source_variable_0<=200);
+    // Original floor(random(100,200)) excludes 200. The same seed
+    // must consume the same uint32 draw on GCC, Clang and devkitARM.
+    assert(source->source_variable_0>=100 && source->source_variable_0<200);
+    WorldSystem replay;
+    assert(replay.initialize(0x95549514u));
+    assert(replay.load_source_layout("Map"));
+    const auto replay_start=replay.placement_count();
+    assert(replay.expand_map_element(3,2,0,{4500.0f,4500.0f},0.0)>0);
+    bool found_same=false;
+    for(auto i=replay_start;i<replay.placement_count();++i) {
+        const auto* candidate=replay.placement(i);
+        if(candidate->object==kFurniturePump) {
+            assert(candidate->source_variable_0==source->source_variable_0);
+            found_same=true;
+            break;
+        }
+    }
+    assert(found_same);
     assert(world.set_source_pump_water(pump,70));
     assert(world.placement(pump)->source_variable_0==70);
     assert(!world.set_source_pump_water(pump,201));

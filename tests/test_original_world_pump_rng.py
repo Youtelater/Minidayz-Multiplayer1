@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+"""Guard original water-pump random(100,200) source range and native bounds."""
+from pathlib import Path
+import sys
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/"tools"/"stage1"))
+from audit_original_world_exhaustive import decode
+p=decode((ROOT/"data.deobfuscated.js").read_bytes())
+def walk(nodes):
+ for e in nodes if isinstance(nodes,list) else ():
+  if isinstance(e,list) and len(e)>=8 and e[0]==0:
+   yield e
+   yield from walk(e[7])
+uids={8279941300293499,3903561981802149}
+original=[e for _,ev in p[6] for e in walk(ev) if e[4] in uids]
+assert {e[4] for e in original}==uids
+assert any(a[0]==442 and a[1]==88 and "100" in str(a[5]) and "200" in str(a[5])
+ for e in original for a in e[6] if isinstance(a,list) and len(a)>5)
+source=(ROOT/"source/world.cpp").read_text()
+assert "100u + source_random_bounded(rng_, 100u)" in source
+assert "uniform_int_distribution<std::uint64_t>(100,200)" not in source
+print("PASS source pump random(100,200): half-open 100..199 and cross-toolchain deterministic")

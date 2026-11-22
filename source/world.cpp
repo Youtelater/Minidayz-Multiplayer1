@@ -971,7 +971,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         if(rule.object==world_source::kFurniturePump &&
            var1==3 && var2==2 && var3==0.0)
             placements_.back().source_variable_0=
-                std::uniform_int_distribution<std::uint64_t>(100,200)(rng_);
+                100u + source_random_bounded(rng_, 100u);
 
         // A root Construct map-element "house" is a SEQUENCE of Sprite
         // Spawn-another-object actions, not one Building-base texture.
