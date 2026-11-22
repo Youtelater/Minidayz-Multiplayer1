@@ -1,6 +1,7 @@
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
+#include "minidayz/generated/stage1_data.hpp"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
