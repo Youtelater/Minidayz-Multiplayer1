@@ -1519,6 +1519,23 @@ void test_full_generation_all_source_maps() {
         assert(generated_trees >= (level >= 4 ? 3500u : 1000u));
         assert(all_trees>=generated_trees);
         assert(generated_trees>0);
+        // Step12: for ALL six source maps ensure every original active
+        // creation-event marker fits, chooses only authored item IDs and
+        // survives a no-loss ground snapshot (large levels are denser).
+        minidayz::items::GroundLootSystem ground;
+        const auto source_loot =
+            minidayz::items::source_spawn_initial_building_loot(
+                world,ground,world.source_random());
+        assert(source_loot.complete());
+        assert(source_loot.spawned+source_loot.no_drop+source_loot.skipped==
+               source_loot.attempted);
+        assert(source_loot.spawned==ground.count());
+        minidayz::items::GroundLootSystem copied;
+        assert(copied.restore(ground.snapshot()));
+        assert(copied.count()==ground.count());
+        std::printf("ORIGINAL BUILDING LOOT level=%u authored=%zu items=%zu no_drop=%zu skipped=%zu\\n",
+                    static_cast<unsigned>(level),source_loot.attempted,
+                    source_loot.spawned,source_loot.no_drop,source_loot.skipped);
     }
 }
 
