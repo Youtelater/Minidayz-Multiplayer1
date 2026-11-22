@@ -22,7 +22,9 @@ for sheet,events in p[6]:
   act=e[6] if isinstance(e[6],list) else []
   matches=find_terms(cond+act)
   direct_bed=any(isinstance(c,list) and c and c[0] in (951,442) for c in cond+act)
-  if not matches and not direct_bed:continue
+  in_goto=242979671087187 in parents or e[4]==242979671087187
+  in_approval=760795525771502 in parents or e[4]==760795525771502
+  if not matches and not direct_bed and not in_goto and not in_approval:continue
   print("SOURCE_SLEEP_EVENT",json.dumps({"sheet":sheet,"uid":e[4],
-   "ancestors":parents[-5:],"matches":matches,"bed_or_pump":direct_bed,
+   "ancestors":parents[-5:],"matches":matches,"bed_or_pump":direct_bed,"goto_branch":in_goto,"approval_branch":in_approval,
    "conditions":cond,"actions":act},ensure_ascii=False,separators=(",",":"))[:6000])
