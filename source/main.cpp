@@ -3364,10 +3364,13 @@ private:
         ghost.x=x;ghost.y=y;
         // Original 811103055423252 requires object573 collision overlap
         // with wall zone346. Use source per-frame collision polygons.
-        for(std::size_t i=0;i<world_.placement_count();++i){
+        // Reuse source-extracted 346 wall slots built once per world.
+        // Scanning every authored Map placement each frame on a 3DS
+        // would turn the original ghost preview into an O(world) stall.
+        for(const auto i:source_house_wall_indices_){
             const auto* wall=world_.placement(i);
-            if(wall && wall->object==346 &&
-               source_house_sprites_overlap(ghost,*wall))return true;
+            if(wall && source_house_sprites_overlap(ghost,*wall))
+                return true;
         }
         return false;
     }
