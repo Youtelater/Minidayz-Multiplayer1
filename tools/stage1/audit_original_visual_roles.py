@@ -90,3 +90,9 @@ for name in sorted(target_names):
   for h in hits[:10]:
    print("ROLE_EVENT",name,json.dumps(h,ensure_ascii=False,separators=(",",":"))[:3500])
 print("VISUAL_ROLE_INVENTORY",out)
+
+print("SOURCE_TEMPLATE_OPACITY_AUDIT")
+for oid in (181,193,207,210,218,302,306,311,312,313,321,322,323,324,333,345,346,347,348,349,404,508,514,571,573,857,931,984,1323,1345,1406):
+ entries=[(i["layout"],i["layer_name"],i["visible"],i["transform"][:7]) for i in layouts_by_obj.get(oid,[])]
+ print("TEMPLATE_ROLE",json.dumps({"object":oid,"name":objects[oid][0],
+   "templates":entries[:10],"total":len(entries)},separators=(",",":")))
