@@ -1,0 +1,21 @@
+name: Audit Original Visual Sprite Roles
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/audit_original_visual_roles.py'
+      - '.github/workflows/audit-original-visual-roles.yml'
+  workflow_dispatch:
+jobs:
+  original-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify original source sprite roles and event conditions
+        run: python3 tools/stage1/audit_original_visual_roles.py
+      - name: Upload original source role evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-visual-role-audit
+          path: audit-output/graphics/visual_role_inventory.json
