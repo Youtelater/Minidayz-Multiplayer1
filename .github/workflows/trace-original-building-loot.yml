@@ -1,0 +1,15 @@
+name: Trace Original Building Loot Branches
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage2/trace_initial_building_loot.py'
+      - '.github/workflows/trace-original-building-loot.yml'
+  workflow_dispatch:
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trace original Trigger_spawn category ancestry and Spawn_drop
+        run: python3 tools/stage2/trace_initial_building_loot.py
