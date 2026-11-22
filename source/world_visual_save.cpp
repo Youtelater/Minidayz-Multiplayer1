@@ -8,10 +8,12 @@
 namespace minidayz::persistence {
 namespace {
 constexpr std::uint32_t kMagic=0x5357444du; // "MDWS" little-endian
-constexpr std::uint32_t kVersion=3u; // source variable0 reserve
-constexpr std::uint32_t kPreviousVersion=2u; // source layer
+constexpr std::uint32_t kVersion=4u; // source-constructed Sprite951 bed journal
+constexpr std::uint32_t kPreviousVersion=3u; // source variable0 reserve
+constexpr std::uint32_t kLayerVersion=2u; // source layer
 constexpr std::uint32_t kLegacyVersion=1u;
 constexpr std::uint32_t kMaxChanges=100000u;
+constexpr std::uint32_t kMaxConstructedBeds=256u;
 constexpr std::uint32_t kFnvBasis=2166136261u;
 constexpr std::uint32_t kFnvPrime=16777619u;
 
@@ -56,10 +58,10 @@ std::array<unsigned char,32> encode(const WorldSpriteState& item) noexcept {
     pack32(b.data()+8,static_cast<std::uint32_t>(item.object) |
                         (static_cast<std::uint32_t>(item.animation)<<16));
     pack32(b.data()+12,item.frame);
-    static_assert(sizeof(float)==4,"World visual save requires IEEE-754 float32");
-    std::uint32_t opacity_bits{};
-    std::memcpy(&opacity_bits,&item.opacity,4);
-    pack32(b.data()+16,opacity_bits);
+    static_assert(sizeof(float)==4,"World visual save requires float32");
+    std::uint32_t bits{};
+    std::memcpy(&bits,&item.opacity,4);
+    pack32(b.data()+16,bits);
     pack32(b.data()+20,item.layer);
     pack64(b.data()+24,item.source_variable_0);
     return b;
@@ -76,9 +78,31 @@ WorldSpriteState decode(const std::array<unsigned char,32>& b,
     std::memcpy(&item.opacity,&bits,4);
     item.layer=version==kLegacyVersion?0xffff:
         static_cast<std::uint16_t>(unpack32(b.data()+20));
-    item.source_variable_0=version==kVersion?unpack64(b.data()+24)
-        :~std::uint64_t{0};
+    item.source_variable_0=version>=kPreviousVersion?
+        unpack64(b.data()+24):~std::uint64_t{0};
     return item;
+}
+std::array<unsigned char,24> encode_bed(const SourceConstructedBed& bed) noexcept {
+    std::array<unsigned char,24> row{};
+    pack64(row.data(),bed.runtime_uid);
+    std::uint32_t x{},y{};
+    std::memcpy(&x,&bed.x,4);
+    std::memcpy(&y,&bed.y,4);
+    pack32(row.data()+8,x);
+    pack32(row.data()+12,y);
+    pack32(row.data()+16,bed.material_variant);
+    pack32(row.data()+20,bed.active?1u:0u);
+    return row;
+}
+SourceConstructedBed decode_bed(const std::array<unsigned char,24>& row) noexcept {
+    SourceConstructedBed bed{};
+    bed.runtime_uid=unpack64(row.data());
+    const auto xb=unpack32(row.data()+8),yb=unpack32(row.data()+12);
+    std::memcpy(&bed.x,&xb,4);
+    std::memcpy(&bed.y,&yb,4);
+    bed.material_variant=static_cast<std::uint8_t>(unpack32(row.data()+16));
+    bed.active=unpack32(row.data()+20)!=0;
+    return bed;
 }
 }
 
@@ -88,16 +112,25 @@ bool write_world_visual_state(const WorldSystem& world, std::uint8_t level,
         !target[0] || !temporary[0] || std::strcmp(target,temporary)==0)
         return false;
     const auto changes=world.capture_sprite_states();
-    if(changes.size()>kMaxChanges || changes.size()>world.placement_count())
-        return false;
+    const auto beds=world.capture_source_constructed_beds();
+    if(changes.size()>kMaxChanges || changes.size()>world.placement_count() ||
+       beds.size()>kMaxConstructedBeds)return false;
     auto* file=std::fopen(temporary,"wb");
     if(!file)return false;
     bool ok=write32(file,kMagic) && write32(file,kVersion) &&
         write32(file,world.seed()) && write32(file,level) &&
-        write32(file,static_cast<std::uint32_t>(changes.size()));
+        write32(file,static_cast<std::uint32_t>(changes.size())) &&
+        write32(file,static_cast<std::uint32_t>(beds.size()));
     std::uint32_t checksum=kFnvBasis;
     for(const auto& state:changes) {
         const auto row=encode(state);
+        checksum=extend_hash(checksum,row.data(),row.size());
+        if(ok)ok=std::fwrite(row.data(),1,row.size(),file)==row.size();
+    }
+    // Original Create object951 placement survives save/load even if the
+    // player dismantled it; the tombstone preserves stable native UIDs.
+    for(const auto& bed:beds){
+        const auto row=encode_bed(bed);
         checksum=extend_hash(checksum,row.data(),row.size());
         if(ok)ok=std::fwrite(row.data(),1,row.size(),file)==row.size();
     }
@@ -115,14 +148,16 @@ bool read_world_visual_state(WorldSystem& world,std::uint8_t level,
     if(!world.generation_complete() || !path || !path[0]) return false;
     auto* file=std::fopen(path,"rb");
     if(!file)return false;
-    std::uint32_t magic{},version{},seed{},saved_level{},count{};
+    std::uint32_t magic{},version{},seed{},saved_level{},count{},bed_count{};
     bool ok=read32(file,magic)&&read32(file,version)&&
         read32(file,seed)&&read32(file,saved_level)&&read32(file,count);
+    if(ok && version==kVersion)ok=read32(file,bed_count);
     if(!ok || magic!=kMagic ||
        (version!=kVersion && version!=kPreviousVersion &&
-        version!=kLegacyVersion) || seed!=world.seed() ||
-       saved_level!=level || count>kMaxChanges ||
-       count>world.placement_count()) {
+        version!=kLayerVersion && version!=kLegacyVersion) ||
+       seed!=world.seed() || saved_level!=level ||
+       count>kMaxChanges || count>world.placement_count() ||
+       bed_count>kMaxConstructedBeds) {
         std::fclose(file);
         return false;
     }
@@ -132,19 +167,31 @@ bool read_world_visual_state(WorldSystem& world,std::uint8_t level,
     for(std::uint32_t i=0;i<count;++i) {
         std::array<unsigned char,32> row{};
         const auto bytes=version==kLegacyVersion?20u:
-            version==kPreviousVersion?24u:32u;
+            version==kLayerVersion?24u:32u;
         if(std::fread(row.data(),1,bytes,file)!=bytes) {
-            ok=false;
-            break;
+            ok=false;break;
         }
         hash=extend_hash(hash,row.data(),bytes);
         changes.push_back(decode(row,version));
+    }
+    std::vector<SourceConstructedBed> beds;
+    beds.reserve(bed_count);
+    for(std::uint32_t i=0;i<bed_count && ok;++i){
+        std::array<unsigned char,24> row{};
+        if(std::fread(row.data(),1,row.size(),file)!=row.size()){
+            ok=false;break;
+        }
+        if(unpack32(row.data()+16)>1 || unpack32(row.data()+20)>1) {
+            ok=false;break;
+        }
+        beds.push_back(decode_bed(row));
+        hash=extend_hash(hash,row.data(),row.size());
     }
     std::uint32_t expected{};
     if(ok)ok=read32(file,expected)&&expected==hash &&
               std::fgetc(file)==EOF && !std::ferror(file);
     if(std::fclose(file)!=0)ok=false;
-    return ok && world.restore_sprite_states(changes);
+    if(!ok || !world.restore_sprite_states(changes))return false;
+    return world.restore_source_constructed_beds(beds);
 }
-
 } // namespace minidayz::persistence
