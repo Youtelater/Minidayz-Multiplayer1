@@ -42,6 +42,7 @@ bool Renderer::draw_source_procedural_environment(
   ScatterCacheEntry* patch=nullptr;
   for(auto& candidate:scatter_cache_)
    if(candidate.valid && candidate.seed==world.seed() &&
+      candidate.level==world.generation_level() &&
       candidate.marker_index==index &&
       candidate.marker_type==marker->marker_type &&
       candidate.cell_x==marker->cell_x &&
@@ -79,6 +80,7 @@ bool Renderer::draw_source_procedural_environment(
     }
    }
    patch->seed=world.seed();
+   patch->level=world.generation_level();
    patch->marker_index=index;
    patch->marker_type=marker->marker_type;
    patch->cell_x=marker->cell_x;

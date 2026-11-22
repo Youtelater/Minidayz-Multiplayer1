@@ -65,6 +65,7 @@ private:
   static constexpr std::size_t kScatterCacheEntries=12;
   struct ScatterCacheEntry {
     std::uint32_t seed{};
+    std::uint8_t level{255};
     std::size_t marker_index{};
     std::uint16_t marker_type{};
     int cell_x{},cell_y{};
