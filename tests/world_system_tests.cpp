@@ -2,6 +2,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_world_event_effects.hpp"
+#include "minidayz/source_world_sprite_visibility.hpp"
 #include "minidayz/source_door_auto.hpp"
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
@@ -1532,14 +1533,30 @@ void test_full_generation_all_source_maps() {
         assert(generated_trees >= (level >= 4 ? 3500u : 1000u));
         assert(all_trees>=generated_trees);
         assert(generated_trees>0);
+        // Region-marker visibility contract: object404 is a magenta
+        // achievement city-counter sprite, but its original world logic
+        // needs the 1000x1000 placement and UID intact.
+        assert(minidayz::world_source::source_world_logic_marker_not_art(404));
+        assert(!minidayz::world_source::source_world_logic_marker_not_art(321));
+        assert(!minidayz::world_source::source_world_logic_marker_not_art(349));
+        assert(!minidayz::world_source::source_world_logic_marker_not_art(184));
+        std::size_t hidden_city_counters=0;
         // Trace any originally magenta editor/marker sprites which must not
         // become giant visible world overlays. Sprite colors were checked
         // against original root assets/gfx in audit_purple_world_sprites.py.
         for(std::size_t pi=0;pi<world.placement_count();++pi){
             const auto* pc=world.placement(pi);
             if(!pc || pc->opacity<=0.0f || pc->layer>=44)continue;
+            if(pc->object==404){
+                ++hidden_city_counters;
+                assert(pc->layer==41 && pc->width==1000.0f &&
+                       pc->height==1000.0f);
+                assert(minidayz::world_source::source_world_logic_marker_not_art(
+                           pc->object));
+                continue; // preserve source placement; never render it
+            }
             switch(pc->object){
-            case 404: case 407: case 400: case 216: case 557:
+            case 407: case 400: case 216: case 557:
             case 646: case 225: case 706: case 128:
                 std::printf("AZAHAR_PURPLE_CANDIDATE level=%u obj=%u layer=%u w=%.1f h=%.1f alpha=%.2f x=%.1f y=%.1f\\n",
                     static_cast<unsigned>(level),
@@ -1550,6 +1567,9 @@ void test_full_generation_all_source_maps() {
             default:break;
             }
         }
+        assert(hidden_city_counters>0);
+        std::printf("AZAHAR HIDDEN CITY MARKERS level=%u suppressed_magenta_regions=%zu\\n",
+                    static_cast<unsigned>(level),hidden_city_counters);
         // Azahar no-building regression: a terrain-only successful map
         // cannot be called generated. Prove that real root category-7
         // house foundations and their indoor/roof companions exist.

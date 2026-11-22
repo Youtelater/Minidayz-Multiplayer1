@@ -12,6 +12,7 @@
 #include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/source_interior_container.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
+#include "minidayz/source_world_sprite_visibility.hpp"
 #include "minidayz/generated/source_roof_foundation_animations.hpp"
 #include "minidayz/source_world_proximity.hpp"
 #include "minidayz/source_map_overlay.hpp"
@@ -2555,6 +2556,15 @@ public:
                 const auto* source_object =
                     minidayz::stage1::find_object(placement->object);
                 if (!source_object || source_object->type != 18) continue;
+                // Root Sprite404 is ach_city_counter-sheet0.png: a tiny
+                // magenta gameplay REGION MARKER, not building artwork.
+                // Construct creates it as a 1000x1000 area on Buildings41;
+                // drawing that counter as a sprite produced the enormous
+                // solid purple blocks visible in Manic Emu screenshots.
+                // Keep the placement and UID for source achievements/
+                // proximity logic, but never submit its pixels to the GPU.
+                if (minidayz::world_source::source_world_logic_marker_not_art(
+                        placement->object)) continue;
                 const auto* source_layer = source_map
                     ? minidayz::stage1::find_layer(
                           source_map_index, placement->layer)
