@@ -22,7 +22,7 @@ for oi,o in enumerate(obj):
   for fi,fr in enumerate(a[7]):
    if not isinstance(fr,list) or len(fr)<=5 or not isinstance(fr[0],str):continue
    x,y,w,h=map(int,fr[2:6])
-   if min(w,h)<100:continue
+   if min(w,h)<2:continue
    path=ROOT/"assets/gfx"/Path(fr[0].replace("\\","/")).name
    if not path.is_file():continue
    try:
@@ -38,7 +38,7 @@ for oi,o in enumerate(obj):
    semi=sum(1 for q in purples if q[3]<245)/len(opaque)
    if frac>=0.08:
     candidates.append((frac,semi,oi,ai,fi,w,h,path.name,str(a[0]),o[0]))
-for c in sorted(candidates,reverse=True)[:100]:
+for c in sorted(candidates,reverse=True)[:90]:
  print("PURPLE_SOURCE_SPRITE",json.dumps(c,ensure_ascii=False))
 print("PURPLE_SOURCE_TOTAL",len(candidates))
 for idx,layout in enumerate(p[5]):
