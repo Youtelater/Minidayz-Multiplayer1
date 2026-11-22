@@ -95,6 +95,68 @@ inline bool source_player_base_overlaps_wall(
         },wall.width*0.5f,wall.height*0.5f);
 }
 
+// Construct overlap picking uses the active frame mask on both instances.
+// Source frame[10] coordinates are hotspot-relative; default masks use
+// the full original frame rectangle. Handle concave masks and mirroring.
+inline std::size_t source_house_mask_count(const WorldPlacement& p) noexcept {
+    const auto* m=stage1::source_building_collision_polygon(
+        p.object,p.source_animation,p.source_frame);
+    return m && m->points>=3?m->points:4;
+}
+inline WorldPoint source_house_mask_vertex(const WorldPlacement& p,std::size_t i) noexcept {
+    const auto* m=stage1::source_building_collision_polygon(
+        p.object,p.source_animation,p.source_frame);
+    const float x=m && m->points>=3?
+        stage1::kSourceBuildingCollisionXY[2*(m->first+i)]:
+        ((i==1 || i==2)?1.0f:0.0f)-p.origin_x;
+    const float y=m && m->points>=3?
+        stage1::kSourceBuildingCollisionXY[2*(m->first+i)+1]:
+        (i>=2?1.0f:0.0f)-p.origin_y;
+    const float a=p.angle*0.01745329251994329577f;
+    const float dx=x*p.width*(p.scale_x<0?-1.0f:1.0f),dy=y*p.height;
+    return {p.x+dx*std::cos(a)-dy*std::sin(a),
+            p.y+dx*std::sin(a)+dy*std::cos(a)};
+}
+inline bool source_house_sprites_overlap(const WorldPlacement& a,
+                                         const WorldPlacement& b) noexcept {
+    if(!(a.width>0 && a.height>0 && b.width>0 && b.height>0) ||
+       !std::isfinite(a.x) || !std::isfinite(a.y) ||
+       !std::isfinite(b.x) || !std::isfinite(b.y) ||
+       !std::isfinite(a.angle) || !std::isfinite(b.angle))return false;
+    const auto na=source_house_mask_count(a),nb=source_house_mask_count(b);
+    auto cross=[](WorldPoint p,WorldPoint q,WorldPoint r){
+        return (q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);
+    };
+    auto contains=[](const WorldPlacement& p,std::size_t n,WorldPoint q){
+        bool inside=false;auto prev=source_house_mask_vertex(p,n-1);
+        for(std::size_t i=0;i<n;++i){
+            const auto cur=source_house_mask_vertex(p,i);
+            if((cur.y>q.y)!=(prev.y>q.y) &&
+               q.x<cur.x+(q.y-cur.y)*(prev.x-cur.x)/(prev.y-cur.y))
+                inside=!inside;
+            prev=cur;
+        }
+        return inside;
+    };
+    if(contains(a,na,source_house_mask_vertex(b,0)) ||
+       contains(b,nb,source_house_mask_vertex(a,0)))return true;
+    for(std::size_t i=0;i<na;++i){
+        const auto p=source_house_mask_vertex(a,i),q=source_house_mask_vertex(a,(i+1)%na);
+        for(std::size_t j=0;j<nb;++j){
+            const auto r=source_house_mask_vertex(b,j),s=source_house_mask_vertex(b,(j+1)%nb);
+            if(std::max(p.x,q.x)<std::min(r.x,s.x) ||
+               std::max(r.x,s.x)<std::min(p.x,q.x) ||
+               std::max(p.y,q.y)<std::min(r.y,s.y) ||
+               std::max(r.y,s.y)<std::min(p.y,q.y))continue;
+            const float c1=cross(p,q,r),c2=cross(p,q,s),
+                        c3=cross(r,s,p),c4=cross(r,s,q);
+            if(((c1<=0 && c2>=0)||(c1>=0 && c2<=0)) &&
+               ((c3<=0 && c4>=0)||(c3>=0 && c4<=0)))return true;
+        }
+    }
+    return false;
+}
+
 inline float source_roof_in_world_y(
     const WorldPlacement& roof,const SourceRoofMemberPoint& point) noexcept {
     const float a=roof.angle*0.01745329251994329577f;
