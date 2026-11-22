@@ -456,6 +456,12 @@ jobs:
       - name: Run Original Item Use Regression Tests
         run: ./item_use_tests
 
+      - name: Test original bunker lootbox one-time collision/open contract
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \\
+            tests/source_interior_container_tests.cpp -o source_interior_container_tests
+          ./source_interior_container_tests
+
       - name: Compile Original NPC Spawn Source Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -ffunction-sections -fdata-sections -Iinclude \

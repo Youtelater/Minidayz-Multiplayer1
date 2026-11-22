@@ -10,6 +10,7 @@
 #include "minidayz/source_building_polygon_collision.hpp"
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
+#include "minidayz/source_interior_container.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
 #include "minidayz/generated/source_roof_foundation_animations.hpp"
 #include "minidayz/source_world_proximity.hpp"
@@ -294,6 +295,7 @@ public:
                 rebuild_source_automatic_doors();
                 rebuild_source_house_roofs();
                 rebuild_source_furniture();
+                rebuild_source_interior_containers();
                 npc_ready_ = npcs_.initialize(world_);
                 new_game_generation_ = false;
                 menu_active_ = false;
@@ -1244,6 +1246,7 @@ public:
         update_source_automatic_doors();
         update_source_house_roofs(dt);
         update_source_furniture_bed_frame();
+        update_source_interior_containers();
         source_furniture_feedback_seconds_=
             std::max(0.0f,source_furniture_feedback_seconds_-std::max(0.0f,dt));
         // Play the original material-specific WAV only after moving.
@@ -3571,6 +3574,46 @@ private:
         source_furniture_feedback_seconds_=3.0f;
     }
 
+    // Original bunker Sprite796 is a collision-triggered one-time lootbox
+    // (event 389950912936355), NOT a searchable city-house cabinet.
+    // Do not synthesize 796 objects for unrelated rooms: only act on
+    // instances created by an original bunker event.
+    void rebuild_source_interior_containers() noexcept {
+        source_interior_container_indices_.clear();
+        for(std::size_t i=0;i<world_.placement_count();++i){
+            const auto* p=world_.placement(i);
+            if(p && p->object==minidayz::world_source::kSourceBunkerLootbox &&
+               p->layer==minidayz::world_source::kSourceInteriorContainerLayer)
+                source_interior_container_indices_.push_back(
+                    static_cast<std::uint32_t>(i));
+        }
+    }
+
+    void update_source_interior_containers() noexcept {
+        const minidayz::WorldPoint player_pos{
+            player_.state().x,player_.state().y};
+        for(const auto idx:source_interior_container_indices_){
+            const auto* box=world_.placement(idx);
+            if(!box || !minidayz::world_source::source_bunker_lootbox_closed(*box))
+                continue;
+            // Root 181.OnCollision(796): use the original active-frame
+            // collider and hotspot, not a guessed radius or touch button.
+            if(!minidayz::world_source::source_player_overlaps_world_sprite(
+                  *box,player_pos,box->origin_x,box->origin_y))continue;
+            // Root 796.SetFrame(1), Fade.StartFade, var1=true. Frame1
+            // is an independent source atlas rectangle in every authored
+            // bunker-lootbox animation. The existing v4 world sprite
+            // sidecar persists frame1 so it cannot be looted repeatedly.
+            (void)world_.set_placement_sprite_state(
+                idx,box->source_animation,
+                minidayz::world_source::kSourceBunkerLootboxOpenedFrame,
+                box->opacity);
+            // Contents dispatch belongs to original category-specific
+            // bunker loot drops, not invented storage slots. Do not grant
+            // guessed items or replay open events on a saved box.
+        }
+    }
+
     void rebuild_source_automatic_doors() {
         source_door_indices_.clear();
         for(std::size_t i=0;i<world_.placement_count();++i){
@@ -4050,6 +4093,7 @@ private:
     };
     SourceSleepWait source_sleep_{};
     std::vector<std::uint32_t> source_furniture_indices_{};
+    std::vector<std::uint32_t> source_interior_container_indices_{};
     SourcePumpWait source_pump_pending_{};
     std::uint64_t source_bed_selected_uid_{};
     const char* source_furniture_feedback_="";
