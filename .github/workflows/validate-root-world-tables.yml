@@ -61,6 +61,16 @@ jobs:
           python3 tools/stage2/build_source_loot_catalog.py
           python3 tools/stage2/build_original_timed_loot.py
 
+      - name: Regenerate source building geometry, tree hitboxes and world loot definitions
+        run: |
+          python3 tools/stage1/build_source_door_points.py
+          python3 tools/stage1/build_source_tree_impact_points.py
+          python3 tools/stage1/build_source_family_members.py
+          python3 tools/stage1/build_source_house_companions.py
+          python3 tools/stage1/build_source_building_polygons.py
+          python3 tools/stage1/build_source_roof_family_points.py
+          python3 tools/stage2/build_original_initial_building_loot.py
+
       - name: Native world generation regression against regenerated root tables
         run: |
           g++ -std=c++17 -O2 -Wall -Wextra -pedantic -Iinclude \
