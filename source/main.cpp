@@ -3153,7 +3153,13 @@ private:
                 source_bed_selected_uid_=p->runtime_uid;
             // The original SleepApproved/GotoSleep hierarchy is separate:
             // do not skip days, heal or fake sleep without its full guards.
-            source_furniture_feedback_="BED FOUND - SLEEP SYSTEM PENDING";
+            // Bed_activated -> SleepApproved: show accurate original
+            // rejection conditions; this is NOT full GotoSleep. The
+            // remaining original guards/side effects must be ported first.
+            const auto precheck=source_bed_sleep_precheck(
+                day_night_.snapshot().timer_all,source_weather_exposure_,
+                player_.state().hunger,player_.state().thirst);
+            source_furniture_feedback_=source_bed_precheck_feedback(precheck);
             source_furniture_feedback_seconds_=3.0f;
             return;
         }

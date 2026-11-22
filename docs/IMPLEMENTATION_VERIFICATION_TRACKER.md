@@ -539,3 +539,10 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - [x] Real water pumps: native A starts root event UID 7034863253908448, waits original 2 seconds, then consumes up to 25 water and replenishes player thirst without exceeding 100, using existing WorldSystem source object mutation and v3 save. Exhaustion and full-thirst cases do not consume water. Pending event validates the same runtime UID and resets when traveling/new game.
 - [x] Bed Sprite951 selects original atlas animation0/frame1 upon native interaction and resets to frame0 when leaving original sprite overlap. This is original root interaction event UID 948724703580895 / reset UID 903835777805920, not guessed bed texture coordinates.
 - [ ] Complete original `SleepApproved`, time-skipping `GotoSleep`, Building-mode bed placement and deconstruction before full Step 10 signoff. Do NOT invent a sleep reward or time skip while source conditions remain unported.
+
+
+### Part 2 / Step 10 — original bed sleep preconditions (2026-11-22)
+
+- [x] Read and executed the root `data.deobfuscated.js` sleep event trace via `tools/stage1/trace_furniture_sleep_source.py` and its GitHub workflow; original `Bed_activated` event UID `760795525771502` calls `Count_sleep_hours`, then `SleepApproved` and `GotoSleep`. Verified rejection events: daytime `373077181447985` (`360 < Timer_ALL < 1440`), temperature below zero `648183463842982`, player var13 hunger below 10 `993930551645035`, and player var14 thirst below 10 `413036232407346`.
+- [x] Added native source-derived bed precheck and controller feedback with regression threshold cases. The UI does not give a sleep reward or move game time on passing only these conditions.
+- [ ] Full root `SleepApproved` includes separate raid, shelter, status and nearby-enemy exclusions; `GotoSleep` advances many gameplay systems through a source event family. These are NOT yet implemented. Do not call Step 10 fully complete or claim original-source sleep parity.

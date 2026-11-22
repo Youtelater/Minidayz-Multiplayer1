@@ -21,6 +21,43 @@ inline bool source_furniture_active(const WorldPlacement& p) noexcept {
            p.layer==kFurnitureLayer && p.opacity>0.0f &&
            p.width>0.0f && p.height>0.0f && p.runtime_uid!=0;
 }
+// Verified original Bed_activated -> SleepApproved branches from root
+// Construct source UIDs 373077181447985, 648183463842982,
+// 993930551645035 and 413036232407346. These are ONLY early rejection
+// checks. A successful precheck does not authorize sleeping: the original
+// also checks raid, shelter/perks, illness and nearby threats, then runs
+// Count_sleep_hours and GotoSleep. Never advance time without those events.
+enum class SourceBedSleepPrecheck : std::uint8_t {
+    passed_known_conditions, daytime, cold, starving, dehydrated,
+    invalid
+};
+inline SourceBedSleepPrecheck source_bed_sleep_precheck(
+    std::uint16_t timer_all, float player_temperature,
+    float hunger, float thirst) noexcept {
+    if(timer_all>1440 || !std::isfinite(player_temperature) ||
+       !std::isfinite(hunger) || !std::isfinite(thirst))
+        return SourceBedSleepPrecheck::invalid;
+    if(timer_all>360 && timer_all<1440)
+        return SourceBedSleepPrecheck::daytime;
+    if(player_temperature<0.0f)
+        return SourceBedSleepPrecheck::cold;
+    if(hunger<10.0f)
+        return SourceBedSleepPrecheck::starving;
+    if(thirst<10.0f)
+        return SourceBedSleepPrecheck::dehydrated;
+    return SourceBedSleepPrecheck::passed_known_conditions;
+}
+inline const char* source_bed_precheck_feedback(
+    SourceBedSleepPrecheck result) noexcept {
+    switch(result) {
+    case SourceBedSleepPrecheck::daytime:return "SLEEP RESTRICTED: DAYTIME";
+    case SourceBedSleepPrecheck::cold:return "SLEEP RESTRICTED: TOO COLD";
+    case SourceBedSleepPrecheck::starving:return "SLEEP RESTRICTED: HUNGRY";
+    case SourceBedSleepPrecheck::dehydrated:return "SLEEP RESTRICTED: THIRSTY";
+    case SourceBedSleepPrecheck::invalid:return "SLEEP CONDITIONS INVALID";
+    default:return "BED FOUND - SLEEP SYSTEM PENDING";
+    }
+}
 struct SourcePumpDraw {
     std::uint16_t consumed{};
     float thirst_gain{};
