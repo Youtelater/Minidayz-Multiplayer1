@@ -32,8 +32,11 @@ int main(){
         p.source_animation=f.animation;
         p.source_frame=f.frame;
         p.x=1200.0f;p.y=1400.0f;
-        p.width=160.0f;p.height=90.0f;
-        p.origin_x=0.3f;p.origin_y=0.7f;
+        const auto* geometry=stage1::source_building_frame_geometry(
+            f.object,f.animation,f.frame);
+        assert(geometry);
+        p.width=geometry->width;p.height=geometry->height;
+        p.origin_x=geometry->origin_x;p.origin_y=geometry->origin_y;
         bool known=false;
         for(float angle:{0.0f,90.0f,147.0f}){
             p.angle=angle;
