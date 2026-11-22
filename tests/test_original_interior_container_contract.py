@@ -7,7 +7,7 @@ import json,re
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 raw=(ROOT/"data/stage1/construct_project_parsed.json").read_text(encoding="utf-8-sig")
-source=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)","-",raw))["project"]
+source=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",raw))["project"]
 obj=source[3][796]
 animations=obj[7]
 assert len(animations)==4,[a[0] for a in animations]
@@ -34,8 +34,8 @@ matched=[e for e in walk(game) if e[4]==uid]
 assert len(matched)==1
 e=matched[0]
 # Only player181 COLLISION with box796 and bool1=false opens the source crate.
-assert any(c[0]==181 and c[1]==178 and c[10][0][1]==796 for c in e[5])
-assert any(c[0]==796 and c[1]==91 and c[10][0]==[10,1] for c in e[5])
+assert any(c[0]==181 and c[1]==178 and c[9][0][1]==796 for c in e[5])
+assert any(c[0]==796 and c[1]==91 and c[9][0]==[10,1] for c in e[5])
 assert any(a[0]==796 and a[1]==72 and a[5][0]==[0,[0,1]] for a in e[6])
 assert any(a[0]==796 and a[1]==167 and a[2]=="Fade" for a in e[6])
 assert any(a[0]==796 and a[1]==161 and a[5]==[[10,1],[3,1]] for a in e[6])
