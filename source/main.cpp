@@ -2493,7 +2493,9 @@ public:
                         placement->source_animation, placement->source_frame,
                         px, py, sx, sy, layer_depth,
                         placement->angle * 0.01745329251994329577f,
-                        placement->opacity)) {
+                        placement->opacity,
+                        i<source_foundation_tint_.size() && source_foundation_tint_[i]?
+                            0.5f:1.0f)) {
                     // Original art was not loaded: do not draw a fake object.
                     // Missing source atlas frames are audited during CI.
                 }
@@ -2624,6 +2626,8 @@ public:
             held_item);
         const auto* weapon_pose=minidayz::stage1::original_equipment_pose(
             held_visual,p.animation!=minidayz::PlayerAnimation::idle,true);
+        const bool outlined=source_player_outline_ &&
+            minidayz::stage1::source_family_contains(1064,source_skin_object);
         bool sprite_drawn=false;
         if(p.alive && weapon_pose &&
             std::strcmp(weapon_pose,"idle")!=0 &&
@@ -2633,12 +2637,12 @@ public:
                           weapon_pose,skin_direction);
             sprite_drawn=renderer.draw_source_animation(source_skin_object,
                 armed_animation,player_.source_animation_frame(),
-                p.x,p.y,1.0f,1.0f,0.57f);
+                p.x,p.y,1.0f,1.0f,0.57f,0.0f,outlined);
         }
         if(p.alive && !sprite_drawn)
             sprite_drawn=renderer.draw_source_animation(source_skin_object,
                 skin_animation,player_.source_animation_frame(),
-                p.x,p.y,1.0f,1.0f,0.57f);
+                p.x,p.y,1.0f,1.0f,0.57f,0.0f,outlined);
         // If an optional survivor texture is missing from RomFS, use the
         // game's ORIGINAL default survivor as a last-resort sprite. This
         // keeps the player visible without substituting invented artwork;
@@ -2649,7 +2653,9 @@ public:
             sprite_drawn=renderer.draw_source_animation(
                 minidayz::kSourcePlayerObject,skin_animation,
                 player_.source_animation_frame(),
-                p.x,p.y,1.0f,1.0f,0.57f);
+                p.x,p.y,1.0f,1.0f,0.57f,0.0f,
+                source_player_outline_ && minidayz::stage1::source_family_contains(
+                    1064,minidayz::kSourcePlayerObject));
         if (p.alive) {
             // Original item pickups and wearable actor overlays are NOT
             // interchangeable. Only draw original animation poses proven to
@@ -2887,6 +2893,8 @@ private:
         }
         source_roof_elapsed_=source_interior_elapsed_=0.0f;
         source_overlapping_wall_indices_.clear();
+        source_foundation_tint_.assign(world_.placement_count(),0u);
+        source_player_outline_=false;
     }
 
     void update_source_house_roofs(float dt) noexcept {
@@ -2926,6 +2934,7 @@ private:
             }
         }
         bool sheltered=false;
+        bool any_roof_overlap=false;
         for(const auto index:source_roof_indices_){
             const auto* roof=world_.placement(index);
             if(!roof)continue;
@@ -2934,6 +2943,7 @@ private:
             if(!frame)continue;
             const bool overlap=source_player_overlaps_world_sprite(
                 *roof,player_pos,frame->origin_x,frame->origin_y);
+            any_roof_overlap=any_roof_overlap || overlap;
             // Root event 6583602733022543 (System Pick nearest 1048)
             // selects the foundation at the roof's X/Y. Do not substitute
             // the procedural parent UID for this source picking condition.
@@ -3013,6 +3023,17 @@ private:
                     source_roof_base_top_layer_:source_roof_base_layer_;
                 if(base_layer!=0xffff && base->layer!=base_layer)
                     (void)world_.set_placement_layer(base_index,base_layer);
+                if(overlap){
+                    // Original effects 7294047492931295 / 8381343549210222:
+                    // Map t1048 members author Tint RGB=(0.5,0.5,0.5).
+                    // 181 instance variable 42 enables family 1064 Outline.
+                    if(base_index<source_foundation_tint_.size())
+                        source_foundation_tint_[base_index]=decision.foundation_top?1u:0u;
+                    source_player_outline_=decision.foundation_top;
+                }else if(base_index<source_foundation_tint_.size() &&
+                         source_house_sprites_overlap(*base,*roof)){
+                    source_foundation_tint_[base_index]=0u;
+                }
             }
             // Original events 6437471853562815 / 7764770537466591
             // pick door 349 by mask overlap with the roof or wall-zone.
@@ -3037,6 +3058,12 @@ private:
                             i,door->source_animation,door->source_frame,opacity);
                 }
             }
+        }
+        // Event 9848716569903957 clears the Outline flag when no roof
+        // is overlapped, and child 7529401044727926 disables Tint.
+        if(!any_roof_overlap){
+            source_player_outline_=false;
+            std::fill(source_foundation_tint_.begin(),source_foundation_tint_.end(),0u);
         }
         if(rain_timer_.active())stage2_audio_.set_rain_sheltered(sheltered);
     }
@@ -3328,6 +3355,8 @@ private:
         source_house_interior_indices_.clear();
         source_house_wall_indices_.clear();
         source_overlapping_wall_indices_.clear();
+        source_foundation_tint_.clear();
+        source_player_outline_=false;
         source_roof_elapsed_=0.0f;
         source_roof_background_layer_=0xffff;
         loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_);
@@ -3495,6 +3524,8 @@ private:
     std::vector<std::uint32_t> source_house_wall_indices_{};
     std::vector<std::uint32_t> source_house_foundation_indices_{};
     std::vector<std::uint32_t> source_overlapping_wall_indices_{};
+    std::vector<std::uint8_t> source_foundation_tint_{};
+    bool source_player_outline_{};
     float source_roof_elapsed_{};
     float source_interior_elapsed_{};
     std::uint16_t source_roof_buildings_layer_{0xffff};
