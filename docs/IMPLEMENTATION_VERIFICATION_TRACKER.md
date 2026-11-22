@@ -482,3 +482,5 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 
 - Commit `883fcfa32e4df3e43a2b29578d467f8175036b5f` expands the original frame polygon and geometry extraction to every object identified with the source Solid behavior, including procedural building spawns absent from static Map instances. No synthetic vertices added.
 - Native CI and 3DS build verification pending; emulator parity remains open. Do not mark building collisions complete yet.
+
+- Commit `40a4f9826bb4077f2d2039ee48cb8fbc991b4b0c` verifies all extracted polygon frames using their original frame dimensions and hotspots, with rotation and mirroring. The existing push-triggered 3DS workflow runs this regression before compilation. CI result not yet confirmed; Azahar and physical-hardware tests remain open.
