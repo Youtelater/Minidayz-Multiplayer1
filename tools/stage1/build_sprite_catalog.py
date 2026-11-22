@@ -36,6 +36,36 @@ def cf(v) -> str:
         value += ".0"
     return value + "f"
 
+def original_player_outline(image):
+    """Root c2runtime.js outline effect, width=1, RGB=(255,255,255).
+    At the source pixel-art nearest sampling grid, the eight samples at
+    +/-1 and +/-0.7071 resolve to the eight adjacent pixels. Preserve the
+    frame rectangle and alpha, including edge clamp. Convert shader's
+    premultiplied result to straight RGBA for Tex3DS.
+    """
+    from PIL import Image
+    image = image.convert("RGBA")
+    w, h = image.size
+    px = image.load()
+    out = Image.new("RGBA", image.size)
+    dst = out.load()
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            maximum = max(px[min(w-1, max(0, x+dx)), min(h-1, max(0, y+dy))][3]
+                          for dx, dy in ((-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)))
+            ina = (maximum-a)/255.0
+            # The original shader writes ina + front.a*(1-ina).
+            alpha = a/255.0
+            outa = ina + alpha*(1.0-ina)
+            if outa <= 0.0:
+                dst[x,y] = (0,0,0,0)
+                continue
+            def channel(v):
+                return max(0,min(255,round((ina + v/255.0*alpha*(1-ina))/outa*255)))
+            dst[x,y] = (channel(r),channel(g),channel(b),max(0,min(255,round(outa*255))))
+    return out
+
 def main() -> int:
     if not SOURCE.is_file():
         raise SystemExit("Missing parsed Construct source; run reassemble_snapshot.py and extract_construct.py first")
@@ -44,6 +74,11 @@ def main() -> int:
     source_text = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", source_text)
     project = json.loads(source_text)
     objects = project["project"][3]
+    outline_family = next((f for f in project["project"][4] if f[0] == 1064), None)
+    if not outline_family:
+        raise SystemExit("Original player Outline family 1064 missing")
+    outline_objects = set(outline_family[1:])
+    outline_sheets = set()
     # Preserve first-seen source-sheet and frame order from the original object
     # and animation arrays. Deduplicate only identical source rectangles.
     sheets: OrderedDict[str, OrderedDict[tuple, int]] = OrderedDict()
@@ -59,6 +94,8 @@ def main() -> int:
                 if not isinstance(fr, list) or not fr or not isinstance(fr[0], str):
                     continue
                 source_path = fr[0]
+                if oi in outline_objects:
+                    outline_sheets.add(source_path)
                 key = (int(fr[2]), int(fr[3]), int(fr[4]), int(fr[5]))
                 if key[2] <= 0 or key[3] <= 0:
                     raise SystemExit(f"Invalid source frame rectangle: object={oi} animation={anim[0]} frame={fi} rect={key}")
@@ -171,6 +208,7 @@ def main() -> int:
                 page_dir = temp / page_stem
                 page_dir.mkdir()
                 entries = []
+                outline_entries = []
                 with Image.open(source) as image:
                     image.load()
                     for index, (x,y,w,h) in enumerate(page_items):
@@ -197,6 +235,10 @@ def main() -> int:
                             frame_image = frame_image.resize(packed_size, Image.Resampling.NEAREST)
                         frame_image.save(crop, format="PNG")
                         entries.append(crop.name)
+                        if source_path in outline_sheets:
+                            outline_crop = page_dir / f"outline_{index:03d}.png"
+                            original_player_outline(frame_image).save(outline_crop, format="PNG")
+                            outline_entries.append(outline_crop.name)
                 manifest = page_dir / "atlas.t3s"
                 manifest.write_text("--atlas -f rgba -z auto\n" + "\n".join(entries) + "\n", encoding="utf-8")
                 destination = OUT / f"{page_stem}.t3x"
@@ -205,6 +247,18 @@ def main() -> int:
                     (script_digest + hashlib.sha256(source.read_bytes()).hexdigest()
                      + json.dumps(page_items, separators=(",", ":"))).encode("utf-8")
                 ).hexdigest()
+                # The derived effect atlas mirrors the exact original page
+                # order: runtime selects the same frame index and hotspot.
+                if outline_entries:
+                    effect_manifest = page_dir / "outline.t3s"
+                    effect_manifest.write_text("--atlas -f rgba -z auto\n" + "\n".join(outline_entries) + "\n", encoding="utf-8")
+                    effect_dest = OUT / f"{page_stem}_outline.t3x"
+                    effect_stamp = OUT / f"{page_stem}_outline.sha256"
+                    if not (effect_dest.is_file() and effect_stamp.is_file() and effect_stamp.read_text(encoding="ascii").strip() == fingerprint):
+                        result = subprocess.run(["tex3ds", "-i", str(effect_manifest), "-o", str(effect_dest)], cwd=page_dir, check=False)
+                        if result.returncode or not effect_dest.is_file():
+                            raise SystemExit(f"Tex3DS failed original Outline atlas {page_stem}")
+                        effect_stamp.write_text(fingerprint+"\n",encoding="ascii")
                 if destination.is_file() and stamp.is_file() and stamp.read_text(encoding="ascii").strip() == fingerprint:
                     print(f"{source.name} page {page}: unchanged; reusing cached {destination.name}")
                     continue
