@@ -138,14 +138,6 @@ jobs:
           set -euo pipefail
           python3 tests/test_fidelity_perf_guard.py
 
-      - name: Test original furniture/fixture source rules
-        shell: bash
-        run: |
-          set -euo pipefail
-          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
-            source/inventory.cpp tests/source_furniture_interaction_tests.cpp -o /tmp/minidayz_furniture
-          /tmp/minidayz_furniture
-
       - name: Verify emulator-correct menu and world depth layering
         shell: bash
         run: |
@@ -270,6 +262,14 @@ jobs:
           
           make clean
           make
+
+      - name: Test original furniture/fixture source rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp tests/source_furniture_interaction_tests.cpp -o /tmp/minidayz_furniture
+          /tmp/minidayz_furniture
 
       - name: Prevent original sprite atlases from rendering as whole PNGs
         shell: bash
