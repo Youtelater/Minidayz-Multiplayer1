@@ -7,6 +7,7 @@
 #include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/original_initial_building_loot.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
+#include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
@@ -537,6 +538,18 @@ void test_every_source_mapped_house_spawn_chain() {
         assert(world.placement_count()>begin);
         const auto* base=world.placement(begin);
         assert(base->object==expected->object);
+        // Every one of the ORIGINAL 51 house variants has literal Sprite
+        // animation0/frame0 size + hotspot. The compact ObjectDef table
+        // stores 0x0 defaults; using those collapses named ImagePoints
+        // for all attached roofs, walls and interior sprites at runtime.
+        const auto* source_geometry=stage1::source_building_frame_geometry(
+            expected->object,0,0);
+        assert(source_geometry);
+        assert(base->width==source_geometry->width);
+        assert(base->height==source_geometry->height);
+        assert(base->origin_x==source_geometry->origin_x);
+        assert(base->origin_y==source_geometry->origin_y);
+        assert(base->width>0.0f && base->height>0.0f);
         assert(std::fabs(base->x-18000.0f)<0.01f);
         assert(std::fabs(base->y-10000.0f)<0.01f);
         std::size_t primary_count=0;
