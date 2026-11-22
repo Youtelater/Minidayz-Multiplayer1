@@ -262,11 +262,21 @@ public:
                 // that INITIAL event once for a newly generated Map, before
                 // writing the first save. Continue restores existing ground
                 // loot and must never re-roll already looted buildings.
-                minidayz::items::GroundLootSystem generated_initial_loot{};
+                // Keep large ground-drop storage off the 3DS's narrow
+                // update() stack; dense Map levels may carry 300+ source
+                // marker placements even though not every marker drops.
+                std::unique_ptr<minidayz::items::GroundLootSystem>
+                    generated_initial_loot{};
                 if(new_game_generation_ || traveling){
+                    generated_initial_loot.reset(new(std::nothrow)
+                        minidayz::items::GroundLootSystem{});
+                    if(!generated_initial_loot){
+                        fail_world_generation(traveling);
+                        return;
+                    }
                     const auto result=
                         minidayz::items::source_spawn_initial_building_loot(
-                            generating,generated_initial_loot,
+                            generating,*generated_initial_loot,
                             generating.source_random());
                     if(!result.complete()){
                         fail_world_generation(traveling);
@@ -283,7 +293,7 @@ public:
                     world_level_ = generating.generation_level();
                     world_ = std::move(generating);
                     travel_.cancel();
-                    ground_loot_=std::move(generated_initial_loot);
+                    ground_loot_=std::move(*generated_initial_loot);
                     tents_.clear();
                     stashes_.clear();
                     selected_inventory_slot_ = -1;
@@ -298,7 +308,7 @@ public:
                     save_elapsed_ = 0.0f;
                 }
                 if(new_game_generation_ && !traveling)
-                    ground_loot_=std::move(generated_initial_loot);
+                    ground_loot_=std::move(*generated_initial_loot);
                 loading_world_ = false;
                 world_ready_ = true;
                 if (continue_world_visual_state_) {
@@ -4228,10 +4238,17 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    SavedGame restored{};
-    const bool has_saved_game = load_saved_game(restored);
-    WorldPreviewScene scene(has_saved_game ? &restored : nullptr);
-    if (!engine.set_scene(&scene)) {
+    // The v21 original loot snapshot and full world scene are larger than
+    // the earlier 64-item build. Avoid constructing both on the main stack.
+    std::unique_ptr<SavedGame> restored(new(std::nothrow) SavedGame{});
+    if(!restored){
+        engine.shutdown();
+        return 1;
+    }
+    const bool has_saved_game = load_saved_game(*restored);
+    std::unique_ptr<WorldPreviewScene> scene(new(std::nothrow)
+        WorldPreviewScene(has_saved_game ? restored.get() : nullptr));
+    if (!scene || !engine.set_scene(scene.get())) {
         std::printf("Mini DAYZ+: startup scene attachment failed.\\n");
         engine.shutdown();
         return 1;
