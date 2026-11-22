@@ -183,17 +183,27 @@ void Renderer::unload_sheet(std::size_t slot) noexcept {
  sprite_cache_[slot]={};
 }
 void Renderer::unload_all() noexcept { for(std::size_t i=0;i<kMaxSheets;++i) unload_sheet(i); }
-bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx,float sy,float rotation,float depth,float opacity) noexcept {
+bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx,float sy,float rotation,float depth,float opacity,float rgb_multiplier) noexcept {
  if(slot>=kMaxSheets||!sheets_[slot]||image>=C2D_SpriteSheetCount(sheets_[slot])) return false;
  if(!std::isfinite(opacity)||opacity<=0.0f)return true;
  C2D_Sprite sprite{}; C2D_SpriteFromSheet(&sprite,sheets_[slot],image); C2D_SpriteSetPos(&sprite,x,y);
  C2D_SpriteSetScale(&sprite,sx,sy); C2D_SpriteSetRotation(&sprite,rotation); C2D_SpriteSetDepth(&sprite,depth);
+ if(rgb_multiplier<1.0f){
+  // Root Tint shader multiplies the original RGB and preserves alpha.
+  C2D_ImageTint tint{};
+  const float rgb=std::clamp(rgb_multiplier,0.0f,1.0f);
+  C2D_PlainImageTint(&tint,C2D_Color32f(rgb,rgb,rgb,std::clamp(opacity,0.0f,1.0f)),1.0f);
+  C2D_SetTintMode(C2D_TintMult);
+  const bool drawn=C2D_DrawSpriteTinted(&sprite,&tint);
+  C2D_SetTintMode(C2D_TintSolid);
+  return drawn;
+ }
  if(opacity>=1.0f)return C2D_DrawSprite(&sprite);
  C2D_ImageTint tint{};
  C2D_AlphaImageTint(&tint,std::clamp(opacity,0.0f,1.0f));
  return C2D_DrawSpriteTinted(&sprite,&tint);
 }
-bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float sx,float sy,float depth,float rotation,float opacity) noexcept {
+bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float sx,float sy,float depth,float rotation,float opacity,float rgb_multiplier,bool outline) noexcept {
  const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,animation,frame};
  const auto* begin=stage1::kSpriteFrames;
  const auto* end=begin+stage1::kSpriteFrameCount;
@@ -202,18 +212,25 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  });
  if(found==end||found->object!=object||found->animation!=animation||found->frame!=frame) return false;
  const auto* selected=found;
+ char effect_sheet[128]{};
+ const char* sheet=selected->sheet;
+ if(outline){
+  const int n=std::snprintf(effect_sheet,sizeof(effect_sheet),"%s_outline",sheet);
+  if(n<=0 || static_cast<std::size_t>(n)>=sizeof(effect_sheet))return false;
+  sheet=effect_sheet;
+ }
  std::size_t slot=kMaxSheets;
  for(std::size_t i=0;i<kMaxSheets;++i){
-  if(sprite_cache_[i].sheet[0]&&std::strcmp(sprite_cache_[i].sheet,selected->sheet)==0){slot=i;break;}
+  if(sprite_cache_[i].sheet[0]&&std::strcmp(sprite_cache_[i].sheet,sheet)==0){slot=i;break;}
  }
  if(slot==kMaxSheets){
   ++sprite_cache_misses_;
   slot=next_sprite_cache_++%kMaxSheets;
   unload_sheet(slot);
   char path[128];
-  const int n=std::snprintf(path,sizeof(path),"romfs:/gfx/%s.t3x",selected->sheet);
+  const int n=std::snprintf(path,sizeof(path),"romfs:/gfx/%s.t3x",sheet);
   if(n<=0||static_cast<std::size_t>(n)>=sizeof(path)||!load_sheet(slot,path)) return false;
-  std::snprintf(sprite_cache_[slot].sheet,sizeof(sprite_cache_[slot].sheet),"%s",selected->sheet);
+  std::snprintf(sprite_cache_[slot].sheet,sizeof(sprite_cache_[slot].sheet),"%s",sheet);
   sprite_cache_[slot].slot=slot;
  }
  // Citro2D negative scales reverse texture UVs but keep geometry size
@@ -224,7 +241,7 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  const float draw_y=terrain::source_sprite_top_left(
      y,selected->height,selected->origin_y,sy);
  return draw_sprite(slot,selected->image,draw_x,draw_y,
-                     sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth,opacity);
+                     sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth,opacity,rgb_multiplier);
 }
 bool Renderer::draw_original_image(const char* original_png,float x,float y,
                                    float width,float height,float depth) noexcept {
@@ -699,7 +716,7 @@ bool Renderer::draw_source_sprite_fitted(std::uint16_t object,std::uint16_t anim
 }
 bool Renderer::draw_source_animation(std::uint16_t object,const char* animation_name,
                                       std::uint32_t frame,float x,float y,
-                                      float sx,float sy,float depth,float rotation) noexcept {
+                                      float sx,float sy,float depth,float rotation,bool outline) noexcept {
  if(!animation_name||!animation_name[0]) return false;
  const auto* begin=stage1::kSpriteAnimations;
  const auto* end=begin+stage1::kSpriteAnimationCount;
@@ -710,7 +727,7 @@ bool Renderer::draw_source_animation(std::uint16_t object,const char* animation_
   if(found->frame_count==0) return false;
   const std::uint32_t selected=found->loop?frame%found->frame_count:
       std::min(frame,found->frame_count-1);
-  return draw_source_sprite(object,found->animation,selected,x,y,sx,sy,depth,rotation);
+  return draw_source_sprite(object,found->animation,selected,x,y,sx,sy,depth,rotation,1.0f,1.0f,outline);
  }
  return false;
 }
