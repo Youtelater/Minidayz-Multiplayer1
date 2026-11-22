@@ -129,7 +129,11 @@ for category_event in picked[7]:
         flat_choices.extend(items)
         flat_gates.extend(gate[1])
         found+=1
-    if not found:raise SystemExit("Source category has no Spawn_drop: "+str(category))
+    # Original marker category25 has no Spawn_drop in normal mode.
+    # Its event is source-authored but deliberately drops nothing.
+    if not found:
+        if category==25:continue
+        raise SystemExit("Unexpected source category with no Spawn_drop: "+str(category))
     if found>2:raise SystemExit("Source category has more than two Spawn_drop branches")
     if found==2 and not (rows[-2][8] in (1,2) and rows[-1][8]==3):
         raise SystemExit("Source multiple category branches lack matching chance/Else")
