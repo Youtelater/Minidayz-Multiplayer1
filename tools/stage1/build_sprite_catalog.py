@@ -62,7 +62,8 @@ def original_player_outline(image):
                 dst[x,y] = (0,0,0,0)
                 continue
             def channel(v):
-                return max(0,min(255,round((ina + v/255.0*alpha*(1-ina))/outa*255)))
+                # Root runtime uploads textures with UNPACK_PREMULTIPLY_ALPHA_WEBGL.
+                return max(0,min(255,round((ina + v/255.0*alpha*alpha*(1-ina))/outa*255)))
             dst[x,y] = (channel(r),channel(g),channel(b),max(0,min(255,round(outa*255))))
     return out
 
