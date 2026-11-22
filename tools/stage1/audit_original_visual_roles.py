@@ -104,3 +104,72 @@ for oid in (181,193,218,345,346,347,348,349,404,508,514,571,573,857,984):
  print("SOURCE_VISUAL_OBJECT",json.dumps({"object":oid,
      "png_frames":frames[:32],"frame_count":len(frames),
      "actions":acts.most_common(15)},separators=(",",":")))
+
+
+# Full canonical image register: include assets with no direct Construct frame.
+# Such assets may belong to Tilemap, procedural, UI, shader, or event paths;
+# never label them "unused" merely because they lack an animation frame.
+canonical_assets=sorted((p for p in (ROOT/"assets/gfx").rglob("*.png") if p.is_file()),
+                        key=lambda p:p.relative_to(ROOT/"assets/gfx").as_posix())
+assert canonical_assets, "Missing original assets/gfx PNGs"
+known_names={p.name.casefold() for p in canonical_assets}
+if len(known_names)!=len(canonical_assets):
+ raise AssertionError("Ambiguous duplicate canonical PNG basename")
+source_texture_pngs=set()
+for obj in objects:
+ if isinstance(obj,list) and len(obj)>6 and isinstance(obj[6],list):
+  source_texture_pngs.update(Path(v.replace(chr(92),"/")).name.casefold()
+    for v in obj[6] if isinstance(v,str) and v.lower().endswith(".png"))
+referenced=set(by_png)|source_texture_pngs
+missing_references=sorted(referenced-known_names)
+assert not missing_references, "Missing original Construct PNGs: "+repr(missing_references[:20])
+known_logic={181,193,218,345,346,348,404,508,514,857,984}
+conditional_previews={571,573}
+full=[]
+category_counts=Counter()
+for img in canonical_assets:
+ key=img.name.casefold()
+ entries=by_png.get(key,[])
+ ids=sorted({entry[0] for entry in entries})
+ map_templates=[instance for oid in ids for instance in layouts_by_obj.get(oid,[])
+                if instance["layout"]=="Map"]
+ action_refs=sum(sum(e["kind"]=="action" for e in event_refs[oid]) for oid in ids)
+ if key in by_png:
+  classification="construct_sprite_animation"
+ elif key in source_texture_pngs:
+  classification="construct_tilemap_or_texture"
+ else:
+  classification="other_source_asset_not_directly_frame_mapped"
+ category_counts[classification]+=1
+ role_flags=[]
+ if ids and all(oid in known_logic for oid in ids):
+  role_flags.append("nonvisual_generic_world_pass")
+ if ids and all(oid in conditional_previews for oid in ids):
+  role_flags.append("conditional_build_mode_preview")
+ if any(t["visible"] for t in map_templates):
+  role_flags.append("map_template_on_visible_layer")
+ if map_templates and not any(t["visible"] for t in map_templates):
+  role_flags.append("map_templates_on_hidden_layers")
+ if any(t["transform"][6]<=0 for t in map_templates
+        if isinstance(t["transform"],list) and len(t["transform"])>6):
+  role_flags.append("map_has_zero_opacity_template")
+ if action_refs:
+  role_flags.append("original_event_actions_reference_object")
+ if not role_flags:
+  role_flags.append("requires_runtime_use_analysis")
+ full.append({"png":img.relative_to(ROOT/"assets/gfx").as_posix(),
+   "source_class":classification,"object_ids":ids,
+   "source_frame_count":len(entries),"map_template_count":len(map_templates),
+   "source_event_action_references":action_refs,"role_flags":role_flags})
+assert sum(len(e) for e in by_png.values())==14505, "Source frame inventory unexpectedly changed"
+assert len(full)==1854, "Original graphics inventory unexpectedly changed"
+full_report={"source":"root original data.deobfuscated.js and assets/gfx",
+ "note":"A frame mapping is not proof of unconditional gameplay visibility; unknown role is not unused.",
+ "summary":{"all_original_pngs":len(full),"construct_sprite_frames":sum(len(e) for e in by_png.values()),
+   "missing_source_references":len(missing_references),
+   "source_classes":dict(category_counts)},
+ "images":full}
+full_path=ROOT/"audit-output/graphics/full_original_visual_role_inventory.json"
+full_path.write_text(json.dumps(full_report,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+print("PASS FULL_ORIGINAL_VISUAL_ROLE_INVENTORY",json.dumps(full_report["summary"],sort_keys=True))
+print("FULL_VISUAL_ROLE_INVENTORY",full_path)

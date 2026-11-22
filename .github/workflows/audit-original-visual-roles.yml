@@ -13,9 +13,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify original source sprite roles and event conditions
         run: python3 tools/stage1/audit_original_visual_roles.py
+      - name: Verify complete original 1,854-image visual-role report
+        run: python3 tests/test_complete_original_visual_roles.py
       - name: Upload original source role evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: original-visual-role-audit
-          path: audit-output/graphics/visual_role_inventory.json
+          path: |
+            audit-output/graphics/visual_role_inventory.json
+            audit-output/graphics/full_original_visual_role_inventory.json

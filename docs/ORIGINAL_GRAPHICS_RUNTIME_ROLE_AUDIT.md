@@ -69,3 +69,10 @@ Original **real** artwork must still render: wall/exterior house321, visible doo
 - [Native System Regression Tests #45073236585](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45073236585) — player/world native tests passed, including 15 original root sprite role mappings, conditional green ghost usage and no always-on world mask sprites.
 - [3DS executable build #45073236616](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45073236616) — success; original frame mapping validator checked **14,505 frames**, **1,812 converted atlas pages**, **1,735 source-frame sheets**, **32 off-edge frames transparently padded**.
 - Gameplay in Azahar on the new build has **not yet been verified**. Passing these jobs is proof of source/table/build-level checks, not a claim of perfect rendering on screen.
+
+
+## Exhaustive per-PNG source role register
+
+Source event, object, and Map-template checks now produce
+`audit-output/graphics/full_original_visual_role_inventory.json` covering **all 1,854 canonical PNGs**, not only assets referenced by sprite animations. For each file, it records original Construct object IDs, authored frame count, Map-template count, source event action-reference count, and safe role flags (nonvisual gameplay marker, conditional construction preview, visible/hidden template, or requires runtime analysis). Tilemap/texture references remain separate from sprite animation frames. This register cannot prove every later gameplay event is implemented, and does not mislabel unreferenced images as unused.
+
