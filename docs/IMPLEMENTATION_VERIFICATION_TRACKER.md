@@ -12,6 +12,7 @@
 - [x] Native travel regression forces a destination-generation failure, checks that the active world is preserved, and retries successfully. The staged loader also handles allocation failure while generating the destination.
 - [x] The 3DS build passed on `f0e2d2a`. Azahar retested the first bridge crossing on that executable. A native fault-injection check also verified retry after allocation failure during setup and generation.
 - [ ] Verify failure and retry in the emulator and measure peak memory on real 3DS hardware.
+- [x] Location Array 525 row 5 now reaches native element placement as Mapgen var3. Existing category 4 variant 42 placement (event 593462046150106) applies its original var3 equals zero guard. Native regression verifies values 0, 1 and 0.5, and the world suite passed.
 - [ ] Conditional building placements, initial building loot dispatch and full map-generation parity remain open.
 
 ## Part 2 — per-house roof and wall ownership correction

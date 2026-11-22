@@ -5,7 +5,7 @@ namespace minidayz::stage1 {
 struct BunkerSpawnSource { std::uint64_t uid; std::int32_t x, y; std::uint8_t slot; std::uint16_t weight; std::uint8_t kind; };
 struct BridgeElementSource { std::uint64_t uid; std::uint8_t family, element; std::uint16_t object; std::int32_t x, y; bool enabled; };
 // Raw comparison operator IDs are retained from the Construct source.
-struct WorldElementSpawnSource { std::uint64_t uid; std::uint8_t var1_op,var1_value,var2_op,var2_value,var6_op,var6_value; std::uint16_t object; const char* layer_name; std::uint8_t image_point; };
+struct WorldElementSpawnSource { std::uint64_t uid; std::uint8_t var1_op,var1_value,var2_op,var2_value,var6_op,var6_value; std::uint16_t object; const char* layer_name; std::uint8_t image_point; std::uint8_t var3_op{255},var3_value{}; };
 inline constexpr std::size_t kBunkerSpawnSourceCount = 136;
 inline constexpr BunkerSpawnSource kBunkerSpawnSource[] = {
 {784072011546860ULL,4691,563,4,100,1},
@@ -287,7 +287,7 @@ inline constexpr WorldElementSpawnSource kWorldElementSpawnSource[] = {
 {286052595493758ULL,0,4,0,40,0,5,1350,"Buildings",0},
 {933115901266041ULL,0,4,0,40,0,6,1351,"Buildings",0},
 {460028037248073ULL,0,4,0,41,255,255,1354,"Buildings",0},
-{593462046150106ULL,0,4,0,42,255,255,218,"zed_resp",1},
+{593462046150106ULL,0,4,0,42,255,255,218,"zed_resp",1,0,0},
 {740727881918170ULL,0,4,0,43,255,255,1393,"Buildings",0},
 {172170955370863ULL,0,4,0,44,255,255,1394,"Buildings",0},
 {544871150737251ULL,0,4,0,45,255,255,1395,"Buildings",0},

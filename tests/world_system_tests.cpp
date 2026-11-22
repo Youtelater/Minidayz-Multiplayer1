@@ -120,6 +120,19 @@ void test_original_roof_family_and_transparency() {
     assert(world.set_placement_layer(first,old_layer));
 }
 
+void test_location_state_gates_existing_placement() {
+    minidayz::WorldSystem world;
+    assert(world.initialize(12345));
+    const minidayz::WorldPoint position{6000.0f, 6000.0f};
+    const auto start = world.placement_count();
+    assert(world.expand_map_element(4, 42, 0, position, 1.0) == 0);
+    assert(world.expand_map_element(4, 42, 0, position, 0.5) == 0);
+    assert(world.placement_count() == start);
+    assert(world.expand_map_element(4, 42, 0, position, 0.0) == 1);
+    const auto* marker = world.placement(start);
+    assert(marker && marker->object == 218 && marker->source_uid == 593462046150106ULL);
+}
+
 void test_original_house_loot_marker_spawns() {
     using namespace minidayz;
     using namespace minidayz::world_source;
@@ -1539,6 +1552,7 @@ int main() {
     test_original_generated_house_companions();
     test_nested_category4_building_spawns();
     test_category4_variant40_building_spawns();
+    test_location_state_gates_existing_placement();
     test_original_house_loot_marker_spawns();
     test_every_source_mapped_house_spawn_chain();
     test_live_original_automatic_doors();

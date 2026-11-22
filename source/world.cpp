@@ -68,7 +68,7 @@ bool classify_source_layer(const char* name, WorldFeatureKind& kind) noexcept {
 }
 
 
-bool compare_source_value(std::uint8_t op, std::uint8_t actual,
+bool compare_source_value(std::uint8_t op, double actual,
                           std::uint8_t expected) noexcept {
     switch (op) {
     case 0: return actual == expected;
@@ -650,8 +650,8 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             };
 
             // The root game's create_map_location reads Array 525 after
-            // each generate_location() call. Its columns 0,1,2,3 and 6
-            // are the original create_map_element var1, var2, x, y, var6.
+            // each generate_location() call. Rows 0, 1, 2, 3, 5 and 6
+            // supply create_map_element with var1, var2, x, y, var3 and var6.
             // Without translating these location proposals, only invisible
             // zombie respawn markers are created and the map looks empty.
             if (!runtime.reset_location_array()) return false;
@@ -684,10 +684,11 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
                 const double raw_variant=locations.at(static_cast<int>(entry),1).as_number();
                 const double raw_x=locations.at(static_cast<int>(entry),2).as_number();
                 const double raw_y=locations.at(static_cast<int>(entry),3).as_number();
+                const double element_state=locations.at(static_cast<int>(entry),5).as_number();
                 const double raw_extra=locations.at(static_cast<int>(entry),6).as_number();
                 if (!std::isfinite(raw_type)||!std::isfinite(raw_variant)||
                     !std::isfinite(raw_x)||!std::isfinite(raw_y)||
-                    !std::isfinite(raw_extra)) return false;
+                    !std::isfinite(element_state)||!std::isfinite(raw_extra)) return false;
                 // The source Array includes unused rows. Only populated
                 // entries select one of the original element categories.
                 if (raw_type<1.0 || raw_variant<1.0) continue;
@@ -698,7 +699,7 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
                     static_cast<std::uint8_t>(raw_variant),
                     static_cast<std::uint8_t>(raw_extra),
                     WorldPoint{static_cast<float>(raw_x),
-                               static_cast<float>(raw_y)});
+                               static_cast<float>(raw_y)}, element_state);
             }
         }
     }
@@ -892,7 +893,8 @@ bool WorldSystem::add_feature(const WorldFeature& f) {
 
 
 std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2,
-                                            std::uint8_t var6, WorldPoint position) {
+                                            std::uint8_t var6, WorldPoint position,
+                                            double var3) {
     if (!initialized_ || !bounds_.contains(position)) return 0;
     const auto* layout = stage1::find_layout("Map");
     if (!layout) return 0;
@@ -1194,6 +1196,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         for(const auto& rule:stage1::kWorldElementSpawnSource) {
             if(!compare_source_value(rule.var1_op,var1,rule.var1_value) ||
                !compare_source_value(rule.var2_op,var2,rule.var2_value) ||
+               !compare_source_value(rule.var3_op,var3,rule.var3_value) ||
                !compare_source_value(rule.var6_op,var6,rule.var6_value))
                 continue;
             emit_source_rule(rule);
