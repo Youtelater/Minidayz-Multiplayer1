@@ -11,7 +11,7 @@ int main() {
     assert(kSourceInitialBuildingLootItemCount>300);
     assert(kSourceInitialMarkerCreationEventCount>5);
     std::uint16_t previous=0;
-    bool has_house9=false,has_house19=false,has_else23=false,has_no_drop=false;
+    bool has_house9=false,has_house19=false,has_else23=false;
     for(const auto& source:kSourceInitialBuildingLootRules) {
         assert(source.category>=previous);
         previous=source.category;
@@ -25,10 +25,9 @@ int main() {
         for(std::size_t j=0;j<source.choices;++j) {
             const auto id=kSourceInitialBuildingLootItems[source.first+j];
             assert(id==0 || source_item_exists(id));
-            has_no_drop|=id==0;
         }
     }
-    assert(has_house9&&has_house19&&has_else23&&has_no_drop);
+    assert(has_house9&&has_house19&&has_else23);
     assert(source_initial_loot_choice_index(0,5)==0);
     assert(source_initial_loot_choice_index(UINT32_MAX,5)==4);
     GroundLootSystem loot;
@@ -72,7 +71,7 @@ int main() {
         static_cast<std::uint32_t>((54.0/99.0)*4294967296.0)));
     assert(!source_initial_loot_chance(*rare,UINT32_MAX));
     assert(loot.count()==1);
-    // No synthetic category or guessed fallback item.
+    // No synthetic category, no invented item0, or guessed fallback item.
     marker.source_loot_category=65535;marker.source_variable_0=65535;
     assert(source_spawn_initial_loot_for_marker(loot,marker,rng)==
         InitialBuildingLootResult::not_applicable);
