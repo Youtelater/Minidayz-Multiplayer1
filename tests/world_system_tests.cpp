@@ -1294,26 +1294,30 @@ void test_every_source_level_quota() {
         minidayz::WorldGenerationProfile profile{};
         assert(minidayz::source_world_profile(level, profile));
 
-        minidayz::WorldSystem world;
-        const std::uint32_t seed = 0x4d445a33u + level * 7919u;
-        assert(world.initialize(seed));
-        assert(world.generate_procedural_grid(level, seed));
-        assert(world.build_map_markers(level, seed));
-
-        const auto total = [](std::uint8_t first, std::uint8_t second) {
-            return static_cast<std::size_t>(first) + second;
+        constexpr std::uint32_t seeds[] = {
+            0u, 1u, 2u, 123456u, 0x10203040u, 0x4d445a33u, 0x55667788u, 0xffffffffu
         };
-        assert(count_code(world.grid(), 9) == total(profile.villages, profile.second_half_villages));
-        assert(count_code(world.grid(), 5) == total(profile.militaries, profile.second_half_militaries));
-        assert(count_code(world.grid(), 6) == total(profile.cities, profile.second_half_cities));
-        assert(count_code(world.grid(), 11) == total(profile.hospitals, profile.second_half_hospitals));
-        assert(count_code(world.grid(), 15) == total(profile.firestations, profile.second_half_firestations));
-        assert(count_code(world.grid(), 103) == total(profile.chaoshi, profile.second_half_chaoshi));
-        assert(count_code(world.grid(), 99) == profile.gas_stations);
-        assert(count_code(world.grid(), 51) == profile.lite_shop);
-        assert(count_code(world.grid(), 50) == profile.roadside_cafes);
-        assert(world.map_marker_count() ==
-               static_cast<std::size_t>(profile.map_size_x) * profile.grid_height);
+        for (const auto seed : seeds) {
+            minidayz::WorldSystem world;
+            assert(world.initialize(seed));
+            assert(world.generate_procedural_grid(level, seed));
+            assert(world.build_map_markers(level, seed));
+
+            const auto total = [](std::uint8_t first, std::uint8_t second) {
+                return static_cast<std::size_t>(first) + second;
+            };
+            assert(count_code(world.grid(), 9) == total(profile.villages, profile.second_half_villages));
+            assert(count_code(world.grid(), 5) == total(profile.militaries, profile.second_half_militaries));
+            assert(count_code(world.grid(), 6) == total(profile.cities, profile.second_half_cities));
+            assert(count_code(world.grid(), 11) == total(profile.hospitals, profile.second_half_hospitals));
+            assert(count_code(world.grid(), 15) == total(profile.firestations, profile.second_half_firestations));
+            assert(count_code(world.grid(), 103) == total(profile.chaoshi, profile.second_half_chaoshi));
+            assert(count_code(world.grid(), 99) == profile.gas_stations);
+            assert(count_code(world.grid(), 51) == profile.lite_shop);
+            assert(count_code(world.grid(), 50) == profile.roadside_cafes);
+            assert(world.map_marker_count() ==
+                   static_cast<std::size_t>(profile.map_size_x) * profile.grid_height);
+        }
     }
 }
 
@@ -1343,6 +1347,28 @@ void test_full_generation_all_source_maps() {
         assert(world.grid().height()==(level>=4?33:16));
         assert(world.map_marker_count()==
             static_cast<std::size_t>(world.grid().width())*world.grid().height());
+        using minidayz::WorldFeatureKind;
+        std::size_t bridges = 0;
+        std::size_t bunkers = 0;
+        for (std::size_t i = 0; i < world.feature_count(); ++i) {
+            const auto& feature = *world.feature(i);
+            if (feature.kind == WorldFeatureKind::Bridge) {
+                assert(bridges < minidayz::stage1::kBridgeElementSourceCount);
+                const auto& spec = minidayz::stage1::kBridgeElementSource[bridges++];
+                assert(feature.source_uid == spec.uid);
+                assert(feature.source_object == spec.object);
+                assert(feature.position.x == spec.x && feature.position.y == spec.y);
+            } else if (feature.kind == WorldFeatureKind::Bunker) {
+                assert(bunkers < minidayz::stage1::kBunkerSpawnSourceCount);
+                const auto& spec = minidayz::stage1::kBunkerSpawnSource[bunkers++];
+                assert(feature.source_uid == spec.uid);
+                assert(feature.position.x == 2306.0f + spec.x);
+                assert(feature.position.y == 17464.0f + spec.y);
+                assert(feature.source_value == (static_cast<std::uint32_t>(spec.slot) << 16 | spec.weight));
+            }
+        }
+        assert(bridges == minidayz::stage1::kBridgeElementSourceCount);
+        assert(bunkers == minidayz::stage1::kBunkerSpawnSourceCount);
         // Each generated world must carry both its original environmental
         // features and runtime spawn points, not only the static Map layout.
         assert(world.feature_count(minidayz::WorldFeatureKind::SpawnPoint)>0);

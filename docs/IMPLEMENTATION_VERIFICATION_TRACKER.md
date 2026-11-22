@@ -4,6 +4,7 @@
 - [x] Retained the event walker and variant guard fixes. The loot placement regression pairs markers in generated order when an action ID is reused.
 - [x] Fixed companion placement for missing numeric attachment points. It uses the parent sprite hotspot, with authored frame points still used where present. Native world regression covers the variant 36 collider that uses this fallback.
 - [x] Bridge and bunker loaders validate replacement placements before changing the world. Native regression checks record counts, reloads, alternate bunker coordinates, and preservation of existing features if a replacement is out of bounds.
+- [x] Checked point-of-interest quotas for eight seeds across all six map levels. The six full-generation cases check road presence and each bridge and bunker placement against the configured coordinates, with bunker slot weights checked as well. Native world tests passed.
 - [ ] Conditional building placements, initial building loot dispatch and full map-generation parity remain open.
 
 ## Part 2 — per-house roof and wall ownership correction
