@@ -236,9 +236,6 @@ struct SavedGameV19 {
     PendingCraftSnapshot pending_craft{};
     std::uint8_t world_level{};
 };
-static_assert(offsetof(SavedGameV19,world_level)==
-              offsetof(SavedGameV20,world_level),
-              "v19 world level offset changed; do not corrupt existing saves");
 // Exact preceding v20 on-disk representation (64 ground loot entries).
 struct SavedGameV20 {
     std::uint32_t magic{},version{},seed{};
@@ -259,6 +256,9 @@ struct SavedGameV20 {
     std::uint8_t world_level{};
     minidayz::items::QuickPistolSnapshot quick_pistol{};
 };
+static_assert(offsetof(SavedGameV19,world_level)==
+              offsetof(SavedGameV20,world_level),
+              "v19 world level offset changed; do not corrupt existing saves");
 // SavedGameV19 ends with alignment padding. The four-byte v20 quick
 // pistol can fit inside that padding without enlarging the struct; its
 // position is validated here, and the versioned loader never interprets
@@ -266,7 +266,7 @@ struct SavedGameV20 {
 static_assert(offsetof(SavedGameV20,quick_pistol)>
               offsetof(SavedGameV19,world_level),
               "v20 quick slot must follow the old world level byte");
-static_assert(offsetof(SavedGame,quick_pistol)+
+static_assert(offsetof(SavedGameV20,quick_pistol)+
               sizeof(minidayz::items::QuickPistolSnapshot)<=sizeof(SavedGameV20),
               "v20 quick slot must fit inside the new save layout");
 
