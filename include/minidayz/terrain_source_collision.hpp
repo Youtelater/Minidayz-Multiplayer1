@@ -21,6 +21,18 @@ inline bool source_visual_roof_overlay(
 }
 
 
+// Original create_map_element tree branches (e.g. UID 5221960099677299)
+// spawn an invisible obst_base Sprite345 companion onto "zed_resp".
+// It is NOT scenery and does NOT belong on Obstacle_enviroment. Only
+// a linked runtime tree companion is solid: generic zed_resp markers
+// must never block the player.
+inline bool source_linked_tree_collision_hitbox(std::uint16_t object,
+                                                std::uint64_t tree_uid,
+                                                const char* layer) noexcept {
+    return object==345 && tree_uid!=0 && layer &&
+           std::strcmp(layer,"zed_resp")==0;
+}
+
 // The original Solid behavior is independent of rendering layer. House
 // event 4153213040695326 moves a foundation to Buildings_base_top and
 // 7058744064425045 moves it back. Neither action disables Solid.

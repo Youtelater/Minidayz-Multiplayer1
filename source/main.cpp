@@ -4072,12 +4072,15 @@ private:
                     return true;
                 continue;
             }
-            // Source create_map_element places the separate tree/trunk
-            // collision sprites in Obstacle_enviroment; without this layer
-            // the player walks through standing trees and world props.
+            // Original tree trunks are linked invisible Sprite345 on
+            // zed_resp. Keep player collision consistent with the world
+            // broadphase: ordinary zombie/loot respawn markers stay nonsolid.
             const bool barrier = std::strcmp(layer->name, "Obstacles") == 0 ||
                                  std::strcmp(layer->name, "Obstacle_enviroment") == 0 ||
-                                 std::strcmp(layer->name, "Water") == 0;
+                                 std::strcmp(layer->name, "Water") == 0 ||
+                                 minidayz::terrain::source_linked_tree_collision_hitbox(
+                                     placement->object,placement->linked_runtime_uid,
+                                     layer->name);
             if (!building && !barrier) continue;
             // A source Solid building with a custom Construct polygon
             // can have door-shaped gaps, slanted walls, and furniture

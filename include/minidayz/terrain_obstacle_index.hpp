@@ -37,13 +37,14 @@ public:
             const auto* layer=stage1::find_layer(layout_index,p->layer);
             if(!layer)continue;
             const bool building=source_building_collision_layer(layer->name,p->object);
-            // The original procedural world creates the invisible
-            // obstacle-base sprites on Obstacle_enviroment, independently
-            // of their visible Trees / Forests artwork. This layer is
-            // solid and must participate in broadphase candidate lookup.
+            // The original generated tree obstacle is Sprite345 on
+            // zed_resp, linked to a visible tree's runtime UID. The old
+            // layer-only gate discarded ALL these trunk hitboxes.
             const bool barrier=std::strcmp(layer->name,"Obstacles")==0 ||
                                std::strcmp(layer->name,"Obstacle_enviroment")==0 ||
-                               std::strcmp(layer->name,"Water")==0;
+                               std::strcmp(layer->name,"Water")==0 ||
+                               source_linked_tree_collision_hitbox(
+                                   p->object,p->linked_runtime_uid,layer->name);
             if(!building&&!barrier)continue;
             // The Buildings layer includes decorative floors and roofs.
             // Only original Construct Solid sprites (or door 349 with
