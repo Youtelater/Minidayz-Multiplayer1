@@ -1,0 +1,15 @@
+name: Audit Purple World Sprite From Original
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/audit_purple_world_sprites.py'
+      - '.github/workflows/audit-purple-world-sprites.yml'
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --quiet Pillow
+      - run: python3 tools/stage1/audit_purple_world_sprites.py
