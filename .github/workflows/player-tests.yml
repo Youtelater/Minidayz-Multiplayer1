@@ -456,6 +456,9 @@ jobs:
       - name: Run Original Item Use Regression Tests
         run: ./item_use_tests
 
+      - name: Verify original Construct bunker lootbox event and frame atlas
+        run: python3 tests/test_original_interior_container_contract.py
+
       - name: Test original bunker lootbox one-time collision/open contract
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \\
