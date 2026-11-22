@@ -291,6 +291,13 @@ bool Renderer::draw_original_image(const char* original_png,float x,float y,
  return C2D_DrawSprite(&sprite);
 }
 
+void Renderer::release_menu_sheets() noexcept {
+ for(auto& sheet:menu_sheets_) {
+  if(!sheet)continue;
+  C2D_SpriteSheetFree(sheet);
+  sheet=nullptr;
+ }
+}
 bool Renderer::draw_menu_art(std::size_t index,float x,float y,float width,float height,float depth) noexcept {
  // Original assets/gfx menu sprites, already converted into romfs/gfx.
  static constexpr const char* paths[]={

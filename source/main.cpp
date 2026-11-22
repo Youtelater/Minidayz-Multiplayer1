@@ -2458,6 +2458,11 @@ public:
             renderer.draw_text("START OR B: RESUME", 114.0f, 208.0f, 0.32f);
             return;
         }
+        // Menu textures otherwise remain allocated after switching from
+        // boot/loading screens. Recover their VRAM before the first
+        // generated forest, village and house atlas loads. Pausing or
+        // dying lazily reloads the exact original menu images when needed.
+        renderer.release_menu_sheets();
         const auto& p = player_.state();
         constexpr float view_w = 400.0f;
         constexpr float view_h = 240.0f;

@@ -32,6 +32,8 @@ assert 'draw_source_procedural_environment(' in main
 # Each instance may be in a different original Construct animation (e.g.
 # closed/open doors and damaged/standing trees). Do not regress to always
 # drawing animation 0 just to satisfy the old static-render contract.
+assert 'renderer.release_menu_sheets();' in main
+assert 'void Renderer::release_menu_sheets() noexcept' in engine
 assert 'draw_source_sprite(placement->object,' in main
 assert 'placement->source_animation, placement->source_frame' in main
 assert 'sprite->animation==placement->source_animation' in main
