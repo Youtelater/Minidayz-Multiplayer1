@@ -1519,6 +1519,47 @@ void test_full_generation_all_source_maps() {
         assert(generated_trees >= (level >= 4 ? 3500u : 1000u));
         assert(all_trees>=generated_trees);
         assert(generated_trees>0);
+        // Azahar no-building regression: a terrain-only successful map
+        // cannot be called generated. Prove that real root category-7
+        // house foundations and their indoor/roof companions exist.
+        std::size_t built_houses=0, built_houses_in_view=0;
+        std::size_t house_roofs=0, town_markers=0;
+        minidayz::terrain::VisibleSourcePlacementIndex building_visibility;
+        building_visibility.rebuild(world);
+        std::vector<std::uint32_t> nearby;
+        for(std::size_t marker_i=0;marker_i<world.map_marker_count();++marker_i) {
+            const auto* marker=world.map_marker(marker_i);
+            if(marker && (marker->marker_type==9 || marker->marker_type==4 ||
+                          marker->marker_type==16 || marker->marker_type==17 ||
+                          marker->marker_type==6 || marker->marker_type==21))
+                ++town_markers;
+        }
+        for(std::size_t i=0;i<world.placement_count();++i){
+            const auto* placement=world.placement(i);
+            if(!placement || !world.bounds().contains({placement->x,placement->y}))
+                continue;
+            for(const auto& root:minidayz::world_source::kSourceHousePrimarySpawns){
+                if(placement->source_uid!=root.event_uid ||
+                   placement->object!=root.object)continue;
+                ++built_houses;
+                building_visibility.query(placement->x-200.0f,
+                    placement->y-120.0f,400.0f,240.0f,nearby);
+                if(std::find(nearby.begin(),nearby.end(),
+                    static_cast<std::uint32_t>(i))!=nearby.end())
+                    ++built_houses_in_view;
+                break;
+            }
+            if(placement->object==321 || placement->object==322 ||
+               placement->object==323 || placement->object==324 ||
+               placement->object==333)++house_roofs;
+        }
+        std::printf("AZAHAR HOUSE SOURCE level=%u town_markers=%zu original_house_bases=%zu roofs=%zu broadphase_visible=%zu\\n",
+            static_cast<unsigned>(level),town_markers,built_houses,
+            house_roofs,built_houses_in_view);
+        assert(town_markers>0);
+        assert(built_houses>0);
+        assert(built_houses_in_view==built_houses);
+        assert(house_roofs>0);
         // Step12: for ALL six source maps ensure every original active
         // creation-event marker fits, chooses only authored item IDs and
         // survives a no-loss ground snapshot (large levels are denser).
