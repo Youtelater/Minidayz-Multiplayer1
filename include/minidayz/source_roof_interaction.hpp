@@ -72,6 +72,29 @@ inline bool source_player_overlaps_world_sprite(
     },player_half,player_half);
 }
 
+// Original t193 PlayerBase mask, frame[10], from root Construct data.
+// t346 warmzone has no custom mask; its authored transformed rectangle
+// is tested against this mask, not the 2x2 bounding box.
+inline bool source_player_base_overlaps_wall(
+    const WorldPlacement& wall,WorldPoint player) noexcept {
+    if(!(wall.width>0.0f && wall.height>0.0f) ||
+       !std::isfinite(wall.angle) || !std::isfinite(player.x) ||
+       !std::isfinite(player.y))return false;
+    constexpr float xy[]={-0.833333015f,-0.833333015f,-0.682291985f,-0.947916508f,-0.500000000f,-1.00000000f,-0.302084029f,-0.947916508f,-0.166666985f,-0.833333015f,-0.0572919846f,-0.687500000f,0.00000000f,-0.500000000f,-0.0625000596f,-0.302084029f,-0.166665971f,-0.166666985f,-0.312500060f,-0.0625000596f,-0.500000000f,0.00000000f,-0.682291985f,-0.0572919846f,-0.833333015f,-0.166666985f,-0.947916508f,-0.322916985f,-1.00000000f,-0.500000000f,-0.947916508f,-0.682291985f};
+    const float a=wall.angle*0.01745329251994329577f;
+    const float cs=std::cos(a),sn=std::sin(a);
+    const float mirror=wall.scale_x<0.0f?-1.0f:1.0f;
+    const float cx=(0.5f-wall.origin_x)*wall.width;
+    const float cy=(0.5f-wall.origin_y)*wall.height;
+    return source_polygon_overlaps_box(sizeof(xy)/sizeof(float)/2,
+        [&](std::size_t i){
+            const float x=player.x+2.0f*xy[2*i]-wall.x;
+            const float y=player.y+2.0f*xy[2*i+1]-wall.y;
+            return WorldPoint{(x*cs+y*sn)*mirror-cx,
+                              -x*sn+y*cs-cy};
+        },wall.width*0.5f,wall.height*0.5f);
+}
+
 inline float source_roof_in_world_y(
     const WorldPlacement& roof,const SourceRoofMemberPoint& point) noexcept {
     const float a=roof.angle*0.01745329251994329577f;
