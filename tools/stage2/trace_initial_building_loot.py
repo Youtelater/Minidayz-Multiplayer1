@@ -27,6 +27,9 @@ for sh,events in p[6]:
  for e,anc in walk(events):
   if e[4]!=target:continue
   print("SOURCE_TRIGGER_ROOT",sh,json.dumps({"uid":e[4],"conds":e[5],"actions":e[6],"parent_uids":[x[4] for x in anc]},separators=(',',':'))[:6000])
+  print("SOURCE_TRIGGER_CHILDREN",len(e[7]),[c[4] for c in e[7][:30] if isinstance(c,list) and len(c)>4])
+  descendants=list(walk([e]))
+  print("SOURCE_TRIGGER_DESCENDANTS",len(descendants),[(n[4],len(n[6]),[a[:2] for a in n[6] if isinstance(a,list)]) for n,_ in descendants[:18]])
   counts=Counter()
   patterns=defaultdict(list)
   for node,parents in walk([e]):
