@@ -1424,6 +1424,33 @@ void check_generated_road_connections(const minidayz::WorldGrid& grid,
     }
 }
 
+void test_original_poi_random_half_open_boundaries() {
+    // Root generate_array_locations: check_X=floor(random(1,Map_size_X))
+    // and check_Y=floor(random(1,Map_size_Y)) (random upper exclusive).
+    // Array at check_X-1/check_Y-1 can never place a primary POI center
+    // in final grid column 15, or in final unsplit grid row 15.
+    constexpr std::uint16_t primary[] = {9,5,6,11,15,103,99,50,51};
+    constexpr std::uint32_t seeds[] = {
+        0u, 1u, 2u, 123456u, 0x10203040u, 0x55667788u, 0xffffffffu
+    };
+    for(std::uint8_t level=0;level<=5;++level) {
+        for(const auto seed:seeds) {
+            minidayz::WorldSystem world;
+            assert(world.initialize(seed));
+            assert(world.generate_procedural_grid(level,seed));
+            const auto& grid=world.grid();
+            for(const auto code:primary) {
+                assert(grid.at(grid.width()-1,0)!=code);
+                for(int y=0;y<grid.height();++y)
+                    assert(grid.at(grid.width()-1,y)!=code);
+                if(grid.height()==16)
+                    for(int x=0;x<grid.width();++x)
+                        assert(grid.at(x,15)!=code);
+            }
+        }
+    }
+}
+
 void test_every_source_level_quota() {
     for (std::uint8_t level = 0; level <= 5; ++level) {
         minidayz::WorldGenerationProfile profile{};
@@ -1869,6 +1896,7 @@ int main() {
     test_level_four_split_grid();
     test_retry_after_failed_world_travel();
     test_bunker_and_bridge_placement_reload();
+    test_original_poi_random_half_open_boundaries();
     test_every_source_level_quota();
     test_full_generation_all_source_maps();
     std::puts("World source regression tests passed.");

@@ -252,10 +252,15 @@ bool place_poi_count(WorldGrid& grid, std::uint8_t count, std::uint16_t code,
                      std::mt19937& rng, int min_y, int max_y) {
     if (count == 0) return true;
     if (grid.width() < 3 || min_y < 0 || max_y >= grid.height() || min_y > max_y) return false;
-    // Construct's random(1, Map_size_X/Y) includes both endpoints.
-    // The event then writes at check_X - 1 / check_Y - 1.
-    const std::uint32_t x_bound = grid.width();
-    const std::uint32_t y_bound = static_cast<std::uint32_t>(max_y - min_y + 2);
+    // Root generate_array_locations event 214943915460313 (and
+    // corresponding level branches) sets check_X=floor(random(1,Map_size_X))
+    // and check_Y=floor(random(1,Map_size_Y)), then writes Array at
+    // check_X-1/check_Y-1. Construct random() has an EXCLUSIVE upper
+    // limit: for Map_size_X=16, possible centers are columns 0..14,
+    // NOT 0..15. The previous inclusive range shifted POIs toward the
+    // outermost column/row, breaking original road and location placement.
+    const std::uint32_t x_bound = static_cast<std::uint32_t>(grid.width() - 1u);
+    const std::uint32_t y_bound = static_cast<std::uint32_t>(max_y - min_y + 1);
     const int max_attempts = static_cast<int>(grid.width()) *
                              static_cast<int>(grid.height()) * 64;
     for (std::uint8_t placed = 0; placed < count; ++placed) {
@@ -281,8 +286,8 @@ bool place_gas_station_count(WorldGrid& grid, std::uint8_t count,
     // verifies that the surrounding 3x3 Array cells are all zero.
     if (count == 0) return true;
     if (grid.width() < 3 || min_y < 1 || max_y >= grid.height()) return false;
-    const std::uint32_t x_bound = grid.width();
-    const std::uint32_t y_bound = static_cast<std::uint32_t>(max_y - min_y + 2);
+    const std::uint32_t x_bound = static_cast<std::uint32_t>(grid.width() - 1u);
+    const std::uint32_t y_bound = static_cast<std::uint32_t>(max_y - min_y + 1);
     const int max_attempts = static_cast<int>(grid.width()) *
                              static_cast<int>(grid.height()) * 64;
     for (std::uint8_t placed = 0; placed < count; ++placed) {
@@ -490,10 +495,10 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     seed_ = seed;
     rng_.seed(seed);
     const int first_min_y = 1;
-    // On split-map levels the original first-half event uses check_Y 1..15
-    // and stores at Y-1, leaving grid rows 15 and 16 as the separator.
-    const int first_max_y = static_cast<int>(profile.map_size_y) -
-                            (profile.second_half_start_y ? 2 : 1);
+    // Floor(random(1,Map_size_Y)) has an exclusive end; for 16 rows it
+    // yields check_Y 1..15 and stores at Y-1 -> rows 0..14.
+    // On split maps rows 15/16 remain the original separator.
+    const int first_max_y = static_cast<int>(profile.map_size_y) - 1;
     const std::uint8_t first_gas_stations = profile.second_half_start_y
         ? static_cast<std::uint8_t>(profile.gas_stations / 2)
         : profile.gas_stations;
@@ -526,9 +531,9 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
 
     if (profile.second_half_start_y != 0) {
         const int second_min_y = profile.second_half_start_y;
-        // The original second-half POI loop checks Y=18..32 and stores at Y-1,
-        // so the last occupied row is 31; row 32 is the unused boundary.
-        const int second_max_y = static_cast<int>(profile.grid_height) - 2;
+        // Original second-half random(18,Map_size_Y+17) yields 18..32,
+        // and Array writes at Y-1 -> rows 17..31; upper bound 33 excluded.
+        const int second_max_y = static_cast<int>(profile.grid_height) - 1;
         placed =
             place_poi_count(grid_, profile.second_half_villages, 9, rng_, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_militaries, 5, rng_, second_min_y, second_max_y) &&
