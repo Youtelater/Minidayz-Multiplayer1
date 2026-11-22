@@ -6,6 +6,7 @@
 - [x] Bridge and bunker loaders validate replacement placements before changing the world. Native regression checks record counts, reloads, alternate bunker coordinates, and preservation of existing features if a replacement is out of bounds.
 - [x] Checked point-of-interest quotas for eight seeds across all six map levels. The six full-generation cases check road presence and each bridge and bunker placement against the configured coordinates, with bunker slot weights checked as well. Native world tests passed.
 - [x] Bridge travel builds the destination before replacing the active map. A generation failure keeps the current map, survivor, loot, tents and stashes available. The bridge prompt offers a retry.
+- [x] Updated the spawn regression check for the travel function signature and checked that spawn uses the destination seed and level. The local fidelity and screen-depth checks passed.
 - [ ] Verify bridge travel and retry in the emulator, including memory use while both maps are allocated.
 - [ ] Conditional building placements, initial building loot dispatch and full map-generation parity remain open.
 

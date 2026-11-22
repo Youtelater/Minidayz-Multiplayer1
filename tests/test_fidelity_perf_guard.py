@@ -14,8 +14,9 @@ player=(ROOT/"source/player.cpp").read_text(encoding="utf-8")
 npc=(ROOT/"source/npc_system.cpp").read_text(encoding="utf-8")
 terrain=(ROOT/"source/terrain_scatter_render.cpp").read_text(encoding="utf-8")
 header=(ROOT/"include/minidayz/engine.hpp").read_text(encoding="utf-8")
-spawn=main.split("bool place_new_player_on_generated_map() noexcept {",1)[1].split(
+spawn=main.split("bool place_new_player_on_generated_map(",1)[1].split(
     "void begin_world_generation() noexcept {",1)[0]
+assert "destination.seed()" in spawn and "destination.generation_level()" in spawn
 assert "kNormalPlayerStartX" in spawn and "kNormalPlayerStartYBase" in spawn
 assert "kSnowPlayerStartXMin" in spawn and "kSnowPlayerStartY" in spawn
 assert "blocked(this," not in spawn and "local_offsets" not in spawn
