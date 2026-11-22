@@ -56,3 +56,20 @@ for idx,layout in enumerate(p[5]):
     high.append((inst[1],inst[2],round(x),round(y),round(w),round(h),round(opacity,2),round(angle,2)))
   if high:
    print("LARGE_MAP_SPRITES",json.dumps({"layer":li,"name":layer[0],"visible":layer[3] if len(layer)>3 else None,"instances":high[:50]},ensure_ascii=False))
+
+# Original Construct Tilemap 208/211/418/230 frame colors are not in obj[3]
+# Sprite animations; sample their canonical source PNG sheets separately.
+for tilepath in sorted((ROOT/"assets/gfx").glob("*tilemap.png")):
+ with Image.open(tilepath) as png:
+  rgba=png.convert("RGBA")
+  orig_size=rgba.size
+  rgba.thumbnail((128,128),Image.Resampling.NEAREST)
+  pix=list(rgba.getdata())
+  coverage=sum(1 for q in pix if q[3]>32)
+  purple=sum(1 for q in pix if q[3]>32 and q[0]>q[1]*1.35+20 and q[2]>q[1]*1.35+20 and q[0]>100 and q[2]>100)
+  semi=sum(1 for q in pix if 0<q[3]<245)
+  magenta_zero=sum(1 for q in pix if q[3]<2 and q[0]>q[1]*1.35+20 and q[2]>q[1]*1.35+20 and q[0]>100 and q[2]>100)
+  print("SOURCE_TILEMAP_COLOR",json.dumps({"png":tilepath.name,"dims":orig_size,
+      "purple_fraction":round(purple/max(1,coverage),4),
+      "translucent_fraction":round(semi/len(pix),4),
+      "magenta_transparent_fraction":round(magenta_zero/len(pix),4)}))
