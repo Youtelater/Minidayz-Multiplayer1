@@ -21,12 +21,15 @@ for label,code in (
     ("player over ground at source size","p.x,p.y,1.0f,1.0f,0.57f"),
     ("source layer grouping before draw","source_sort_visible_layer_order("),
     ("source within-layer depth","source_world_layer_depth("),
+    ("original tilemaps use the SAME source layer depths",
+     "world_source::source_world_layer_depth(map.layer,0,0)"),
     ("source order group update","if(visible_slot>=layer_end)"),
     ("launcher input neutral gate","boot_input_gate_.update(dt,menu_controls_held)"),
 ):
     source=engine if label in (
         "menu text foreground","bitmap font foreground","menu wood foreground",
-        "original floor background","original road over floor") else main
+        "original floor background","original road over floor",
+        "original tilemaps use the SAME source layer depths") else main
     assert code in source, f"3DS screen depth/input regression: {label}"
 # Opaque fallback panels must sit BEHIND the .05 menu-city art;
 # otherwise the menu background vanishes as soon as the depth order is fixed.

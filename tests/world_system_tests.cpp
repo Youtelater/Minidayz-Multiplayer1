@@ -244,6 +244,22 @@ void test_original_generated_house_companions() {
                foundation->runtime_uid);
         assert(world.placement(shadow)->linked_runtime_uid==
                foundation->runtime_uid);
+        // Original 347 shadow is a sprite on Map layer 9, not a
+        // generated dark rectangle. Its atlas frame, source scaling
+        // and original companion event opacity are preserved.
+        const auto* original_shadow=world.placement(shadow);
+        assert(original_shadow->layer==9);
+        assert(original_shadow->source_animation==0 &&
+               original_shadow->source_frame==0);
+        assert(original_shadow->width>0.0f && original_shadow->height>0.0f);
+        bool found_shadow_action=false;
+        for(const auto& action:world_source::kSourceHouseCompanionSpawns){
+            if(action.base_object!=h.base || action.variant!=h.variant ||
+               action.object!=347)continue;
+            assert(std::fabs(original_shadow->opacity-action.opacity)<0.0001f);
+            found_shadow_action=true;
+        }
+        assert(found_shadow_action);
         assert(world.placement(door)->source_frame==0);
         assert(world.placement(door)->width>0.0f);
         assert(world.placement(door)->height>0.0f);

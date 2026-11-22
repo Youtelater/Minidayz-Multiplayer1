@@ -7,6 +7,7 @@
 #include "minidayz/terrain_source_tile_flags.hpp"
 #include "minidayz/menu_bitmap_font.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
+#include "minidayz/source_world_layer_depth.hpp"
 #include "minidayz/generated/water_shore_source.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
@@ -558,7 +559,12 @@ bool Renderer::draw_original_environment_tilemaps(
   const int y1=std::min(static_cast<int>(map.rows),
       static_cast<int>(std::ceil((camera_y+height-map.y)/tile))+1);
   if(x1<=x0||y1<=y0)continue;
-  const float depth=std::clamp(0.12f+0.008f*map.layer,0.12f,0.47f);
+  // Tilemaps use the SAME Construct Map layer-to-Z conversion as sprites.
+  // The former independent 0.12+0.008*layer scale placed original layer-17
+  // tiles BEHIND layer-9 building shadows. Preserve the original source
+  // ordering (shadows 9, foundation 17, water 19) without fake shadow art.
+  // The base of a layer stays behind its same-layer placed sprites.
+  const float depth=world_source::source_world_layer_depth(map.layer,0,0);
   for(int row=y0;row<y1;++row)for(int col=x0;col<x1;++col){
    auto frame=map.cells[static_cast<std::size_t>(row)*
                          map.columns+static_cast<std::size_t>(col)];

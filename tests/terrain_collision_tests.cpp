@@ -83,6 +83,15 @@ int main() {
            source_world_layer_depth(20,0,1));
     assert(source_world_layer_depth(9,0,1) <
            source_world_layer_depth(17,0,1));
+    // Source Map Tilemap 211 is on Buildings_base (17), above source
+    // shadow 347 on Buildings_shadows (9). Water Tilemap 208 (19) is
+    // above both; sprite-depth and tilemap-depth must share one scale.
+    assert(source_world_layer_depth(9,0,1) <
+           source_world_layer_depth(17,0,0));
+    assert(source_world_layer_depth(17,0,0) <
+           source_world_layer_depth(17,0,1));
+    assert(source_world_layer_depth(17,0,1) <
+           source_world_layer_depth(19,0,0));
     assert(source_world_layer_depth(31,2,3)<0.57f);
     assert(source_world_layer_depth(41,0,1)>0.605f);
     // Original creation order is preserved among instances at the same
