@@ -62,6 +62,21 @@ int main(){
             }
         }
     }
+    // Build_mode(12) ghost Sprite573 frame12 uses ORIGINAL Construct
+    // collision vertices; this is a deliberately inset nonrectangular
+    // source mask, not the entire 37x21 frame bounding box.
+    const auto* ghost=stage1::source_building_collision_polygon(573,0,12);
+    assert(ghost && ghost->points==4);
+    const auto* ghost_geom=stage1::source_building_frame_geometry(573,0,12);
+    assert(ghost_geom && ghost_geom->width==37.0f &&
+           ghost_geom->height==21.0f);
+    assert(std::fabs(ghost_geom->origin_x-0.6f)<0.0001f);
+    assert(std::fabs(ghost_geom->origin_y-0.7f)<0.0001f);
+    const auto first=static_cast<std::size_t>(ghost->first)*2;
+    assert(std::fabs(stage1::kSourceBuildingCollisionXY[first]-
+                     (-0.3666666448f))<0.0001f);
+    assert(std::fabs(stage1::kSourceBuildingCollisionXY[first+1]-
+                     (-0.3199999928f))<0.0001f);
     // Original PlayerBase is a 16-vertex mask, not its enclosing square.
     WorldPlacement wall{};
     wall.object=346;wall.width=wall.height=0.1f;wall.scale_x=1.0f;

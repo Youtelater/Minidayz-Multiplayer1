@@ -20,7 +20,10 @@ for oid,obj in enumerate(objects):
         solid.add(oid)
 # Source-authored Map Buildings layers include many non-solid decorations.
 # Collect original building Sprite IDs, including non-solid overlap triggers.
-building=set((302,306,311,312,313,321,322,323,324,333,348,349,787))
+# Include original ghost object573 from Building_mode(12) Spawn action.
+# It has a custom frame12 polygon; rectangular picking changes house
+# placement eligibility and violates original sprite sheet coordinates.
+building=set((302,306,311,312,313,321,322,323,324,333,348,349,573,787,951))
 for layout in project[5]:
     if layout[0]!="Map":continue
     for layer in layout[6]:
