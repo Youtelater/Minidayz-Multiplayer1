@@ -31,6 +31,11 @@ for oi,o in enumerate(obj):
      crop.thumbnail((80,80),Image.Resampling.NEAREST)
      pixel=list(crop.getdata())
    except Exception:continue
+   if w>=100 and h>=100:
+    zero=[q for q in pixel if q[3]<4]
+    magenta_hidden=sum(1 for q in zero if q[0]>q[1]*1.35+20 and q[2]>q[1]*1.35+20 and q[0]>100 and q[2]>100)
+    if zero and magenta_hidden/max(1,len(pixel))>0.10:
+     print("HIDDEN_PURPLE_SPRITE",json.dumps({"object":oi,"animation":ai,"frame":fi,"w":w,"h":h,"sheet":path.name,"hidden_magenta_fraction":round(magenta_hidden/len(pixel),3)}))
    opaque=[t for t in pixel if t[3]>32]
    if not opaque:continue
    purples=[q for q in opaque if q[0]>q[1]*1.35+20 and q[2]>q[1]*1.35+20 and q[0]>100 and q[2]>100]
