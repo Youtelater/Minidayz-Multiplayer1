@@ -594,7 +594,8 @@ public:
         // and MUST be compared to its Construct MiniMap_legend/GUI events.
         const bool map_button_tap=input.touching && !touch_down_ &&
             input.touch.px>=258 && input.touch.py<14;
-        if((input.pressed & KEY_Y) || map_button_tap) {
+        if(!source_bed_build_.active &&
+           ((input.pressed & KEY_Y) || map_button_tap)) {
             map_open_=!map_open_;
             if(map_button_tap)touch_down_=true;
         }
@@ -1214,13 +1215,19 @@ public:
         // game tick; original WAV dispatch follows the committed change.
         advance_source_door_waits(dt);
         advance_source_furniture_wait(dt);
+        advance_source_bed_dismantle(dt);
+        advance_source_bed_build(input,dt);
         // Native A adapts original mobile marker506 interactions, without
         // inventing full Construct touchscreen pathfinding. A selected item
         // retains its own independent inventory-use action above.
         if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0 &&
-            !request_source_manual_door())
+            !source_bed_build_.active && !request_source_manual_door())
             request_source_furniture();
+        if ((input.pressed & KEY_X) && selected_inventory_slot_ < 0 &&
+            !source_bed_build_.active)
+            request_source_bed_dismantle();
         update_source_automatic_doors();
+        if(source_bed_build_.active)movement={};
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
         // Re-evaluate after movement for source-frame-1 closing transitions
@@ -3115,6 +3122,8 @@ private:
     // base PNG and cannot legitimately be treated as separate items.
     void rebuild_source_furniture() noexcept {
         source_furniture_indices_.clear();
+        source_bed_build_={};
+        source_bed_dismantle_={};
         source_pump_pending_={};
         source_bed_selected_uid_=0;
         source_furniture_feedback_seconds_=0.0f;
@@ -3227,6 +3236,158 @@ private:
                 (void)world_.set_placement_sprite_state(idx,0,frame,p->opacity);
             if(overlap)source_bed_selected_uid_=p->runtime_uid;
         }
+    }
+
+    // Native circle-pad/D-pad cursor replaces Construct's mobile touch
+    // Build-mode ghost position; all eligibility/mechanics come from root.
+    bool source_bed_build_site_valid(float x,float y) const noexcept {
+        using namespace minidayz::world_source;
+        if(!world_ready_ || !world_.bounds().contains({x,y}) ||
+           !source_bed_site_within_range(
+                player_.state().x,player_.state().y,x,y))return false;
+        minidayz::WorldPlacement ghost{};
+        ghost.layer=41; // original "Buildings" layer
+        ghost.object=kSourceBedGhostObject;
+        ghost.source_frame=kSourceBedGhostFrame;
+        ghost.width=kSourceBedGhostWidth;
+        ghost.height=kSourceBedGhostHeight;
+        ghost.origin_x=kSourceBedGhostOriginX;
+        ghost.origin_y=kSourceBedGhostOriginY;
+        ghost.opacity=1.0f;
+        ghost.x=x;ghost.y=y;
+        // Original 811103055423252 requires object573 collision overlap
+        // with wall zone346. Use source per-frame collision polygons.
+        for(std::size_t i=0;i<world_.placement_count();++i){
+            const auto* wall=world_.placement(i);
+            if(wall && wall->object==346 &&
+               source_house_sprites_overlap(ghost,*wall))return true;
+        }
+        return false;
+    }
+
+    bool begin_source_bed_craft(std::uint8_t variant) noexcept {
+        using namespace minidayz::world_source;
+        if(source_bed_build_.active ||
+           source_bed_dismantle_.runtime_uid ||
+           pending_craft_recipe_<minidayz::items::kSourceCraftRecipeCount ||
+           !source_bed_materials_available(inventory_,variant) ||
+           world_.capture_source_constructed_beds().size()>=kSourceMaxBeds)
+            return false;
+        const float x=player_.state().x+50.0f;
+        const float y=player_.state().y;
+        if(!world_.bounds().contains({x,y}))return false;
+        source_bed_build_={true,false,variant,x,y,0.0f};
+        crafting_open_=false;
+        selected_inventory_slot_=-1;
+        source_furniture_feedback_="BED GHOST: MOVE, A PLACE, B CANCEL";
+        source_furniture_feedback_seconds_=3.0f;
+        return true;
+    }
+
+    void advance_source_bed_build(const minidayz::InputState& input,
+                                  float dt) noexcept {
+        if(!source_bed_build_.active)return;
+        auto& build=source_bed_build_;
+        if(!build.confirmed){
+            if(input.pressed & KEY_B){build={};return;}
+            float mx=static_cast<float>(input.circle.dx)/156.0f;
+            float my=-static_cast<float>(input.circle.dy)/156.0f;
+            if(input.held & KEY_DLEFT)mx-=1.0f;
+            if(input.held & KEY_DRIGHT)mx+=1.0f;
+            if(input.held & KEY_DUP)my-=1.0f;
+            if(input.held & KEY_DDOWN)my+=1.0f;
+            const float speed=100.0f; // same native source 100 movement
+            build.x+=mx*std::max(0.0f,dt)*speed;
+            build.y+=my*std::max(0.0f,dt)*speed;
+            if(input.pressed & KEY_A){
+                if(source_bed_build_site_valid(build.x,build.y) &&
+                   minidayz::world_source::source_bed_materials_available(
+                       inventory_,build.variant)){
+                    build.confirmed=true;
+                    build.remaining=minidayz::world_source::kSourceBedBuildDelay;
+                    source_furniture_feedback_="BUILDING BED - ORIGINAL 3S";
+                }else source_furniture_feedback_="BED NEEDS HOUSE WALL + MATERIALS";
+                source_furniture_feedback_seconds_=3.0f;
+            }
+            return;
+        }
+        build.remaining-=std::max(0.0f,dt);
+        if(build.remaining>0.0f)return;
+        auto inventory_after=inventory_;
+        const auto x=build.x,y=build.y;
+        const bool valid=source_bed_build_site_valid(x,y);
+        const bool materials=
+            minidayz::world_source::source_bed_consume_materials(
+                inventory_after,build.variant);
+        if(valid && materials &&
+           world_.add_source_constructed_bed(x,y,build.variant)){
+            inventory_=inventory_after;
+            rebuild_source_furniture();
+            visibility_index_.rebuild(world_);
+            source_furniture_feedback_="BED BUILT FROM ORIGINAL MATERIALS";
+            stage2_audio_.play_crafting();
+        }else{
+            source_furniture_feedback_="BED BUILD CANCELLED: INVALID SITE";
+        }
+        source_furniture_feedback_seconds_=3.0f;
+        build={};
+    }
+
+    void request_source_bed_dismantle() noexcept {
+        if(source_bed_dismantle_.runtime_uid)return;
+        const minidayz::WorldPoint actor{player_.state().x,player_.state().y};
+        std::size_t chosen=world_.placement_count();
+        float distance=std::numeric_limits<float>::max();
+        for(auto idx:source_furniture_indices_){
+            const auto* bed=world_.placement(idx);
+            if(!bed || bed->object!=minidayz::world_source::kFurnitureBed ||
+               !minidayz::world_source::source_furniture_active(*bed) ||
+               bed->source_variable_0>1 ||
+               !minidayz::world_source::source_player_overlaps_world_sprite(
+                   *bed,actor,bed->origin_x,bed->origin_y))continue;
+            const float d=std::hypot(bed->x-actor.x,bed->y-actor.y);
+            if(d<distance){chosen=idx;distance=d;}
+        }
+        if(chosen==world_.placement_count())return;
+        const auto* bed=world_.placement(chosen);
+        source_bed_dismantle_={bed->runtime_uid,chosen,
+            minidayz::world_source::kSourceBedDismantleDelay};
+        source_furniture_feedback_="DISMANTLING BED - ORIGINAL 1S";
+        source_furniture_feedback_seconds_=3.0f;
+    }
+
+    void advance_source_bed_dismantle(float dt) noexcept {
+        if(!source_bed_dismantle_.runtime_uid)return;
+        source_bed_dismantle_.remaining-=std::max(0.0f,dt);
+        if(source_bed_dismantle_.remaining>0.0f)return;
+        const auto pending=source_bed_dismantle_;
+        source_bed_dismantle_={};
+        const auto* bed=world_.placement(pending.index);
+        if(!bed || bed->runtime_uid!=pending.runtime_uid ||
+           bed->object!=minidayz::world_source::kFurnitureBed ||
+           bed->opacity<=0.0f || bed->source_variable_0>1)return;
+        const auto material=minidayz::world_source::source_bed_hides(
+            static_cast<std::uint8_t>(bed->source_variable_0));
+        // Root Check_space_inventory gives back Woodpiles50 and the
+        // original Deer714 / Bear784 hide. Use ground if bag is full.
+        auto after_inventory=inventory_;
+        auto after_ground=ground_loot_;
+        const auto add=[&](std::uint16_t id) noexcept {
+            if(after_inventory.add(id,1))return true;
+            return after_ground.add({id,1,
+                minidayz::items::kUseSourceItemCondition,0},
+                bed->x,bed->y);
+        };
+        if(!material || !add(50) || !add(material)){
+            source_furniture_feedback_="BED RECOVERY: BAG/GROUND FULL";
+        }else if(world_.dismantle_source_bed(pending.index)){
+            inventory_=after_inventory;
+            ground_loot_=after_ground;
+            source_furniture_feedback_="BED DISMANTLED: MATERIALS RETURNED";
+            rebuild_source_furniture();
+            visibility_index_.rebuild(world_);
+        }else source_furniture_feedback_="BED DISMANTLE CANCELLED";
+        source_furniture_feedback_seconds_=3.0f;
     }
 
     void rebuild_source_automatic_doors() {
@@ -3688,6 +3849,19 @@ private:
         std::uint32_t index{};
         float seconds{};
     };
+    struct SourceBedBuild {
+        bool active{};
+        bool confirmed{};
+        std::uint8_t variant{};
+        float x{},y{},remaining{};
+    };
+    struct SourceBedDismantle {
+        std::uint64_t runtime_uid{};
+        std::size_t index{};
+        float remaining{};
+    };
+    SourceBedBuild source_bed_build_{};
+    SourceBedDismantle source_bed_dismantle_{};
     std::vector<std::uint32_t> source_furniture_indices_{};
     SourcePumpWait source_pump_pending_{};
     std::uint64_t source_bed_selected_uid_{};
