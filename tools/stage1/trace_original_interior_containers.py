@@ -63,3 +63,12 @@ for sheet,evs in p[6]:
    print('SOURCE_BOX_FAMILY',json.dumps({'uid':e[4],'anc':anc[-8:],
      'conditions':e[5],'actions':e[6]},separators=(',',':'),
      ensure_ascii=False)[:5000])
+
+for oid in (796,710,995,1029,314,241):
+ obj=objects[oid]
+ print('SOURCE_CONTAINER_OBJECT_DETAIL',json.dumps({'id':oid,'fields':[
+   (i,v if i not in (7,) else [
+     {'name':a[0], 'frame_count':len(a[7]) if len(a)>7 and isinstance(a[7],list) else None,
+      'frames':[fr[:10] for fr in a[7]][:3] if len(a)>7 and isinstance(a[7],list) else []}
+       for a in v if isinstance(a,list)])
+   for i,v in enumerate(obj)]},ensure_ascii=False,separators=(',',':'))[:13500])
