@@ -250,6 +250,9 @@ public:
 
     const WorldBounds& bounds() const noexcept { return bounds_; }
     std::uint32_t seed() const noexcept { return seed_; }
+    // Original location-generation RNG stream continues into the
+    // initial Trigger_spawn event family; never seed a guessed second stream.
+    std::mt19937& source_random() noexcept { return rng_; }
     bool initialized() const noexcept { return initialized_; }
 
 private:

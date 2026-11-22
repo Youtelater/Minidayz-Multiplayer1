@@ -1,4 +1,5 @@
 #include "minidayz/world.hpp"
+#include "minidayz/generated/original_initial_building_loot.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/location_event_runtime.hpp"
@@ -932,6 +933,18 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         });
         placements_.back().runtime_uid = runtime_id;
         placements_.back().instance_id = static_cast<std::uint64_t>(placements_.size());
+        // The source create_map_element action may directly Spawn Sprite218
+        // on a non-house landmark. Only the EXACT source event UID and
+        // SetInstanceVariable(0) grant a category and initial Trigger_spawn.
+        if(rule.object==218){
+            std::uint16_t category{};
+            if(items::source_initial_marker_event_category(rule.uid,category)){
+                placements_.back().source_variable_0=category;
+                placements_.back().source_loot_category=category;
+                placements_.back().source_initial_loot_trigger=
+                    items::source_event_triggers_initial_loot(rule.uid);
+            }
+        }
         // Root event 8279941300293499 / child 3903561981802149:
         // when Mapgen508.var3=0, Sprite442.var0=random(100,200).
         if(rule.object==world_source::kFurniturePump &&
@@ -1087,6 +1100,9 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                child.source_variable_0<=65535)
                 child.source_loot_category=static_cast<std::uint16_t>(
                     child.source_variable_0);
+            if(child.object==218 && child.source_loot_category!=0)
+                child.source_initial_loot_trigger=
+                    items::source_event_triggers_initial_loot(action.event_uid);
             // The visual door 349 reserves this link for its separately
             // spawned original Solid 348. Other house pieces remember
             // the original parent Sprite selected by command 73.

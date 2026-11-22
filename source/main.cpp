@@ -43,6 +43,7 @@
 #include "minidayz/source_rain_timer.hpp"
 #include "minidayz/source_loot_timer.hpp"
 #include "minidayz/original_timed_loot.hpp"
+#include "minidayz/original_initial_building_loot.hpp"
 #include "minidayz/generated/inventory_ui_art.hpp"
 #include "minidayz/generated/item_catalog.hpp"
 
@@ -256,6 +257,22 @@ public:
             }
             auto& generating = traveling ? *destination : world_;
             if (generating.generation_complete()) {
+                // Original Game_events calls Trigger_spawn for actual
+                // Sprite218 markers during create_map_element. Reproduce
+                // that INITIAL event once for a newly generated Map, before
+                // writing the first save. Continue restores existing ground
+                // loot and must never re-roll already looted buildings.
+                minidayz::items::GroundLootSystem generated_initial_loot{};
+                if(new_game_generation_ || traveling){
+                    const auto result=
+                        minidayz::items::source_spawn_initial_building_loot(
+                            generating,generated_initial_loot,
+                            generating.source_random());
+                    if(!result.complete()){
+                        fail_world_generation(traveling);
+                        return; // Never silently omit source loot at capacity.
+                    }
+                }
                 if ((new_game_generation_ || traveling) &&
                     !place_new_player_on_generated_map(generating, traveling)) {
                     fail_world_generation(traveling);
@@ -266,7 +283,7 @@ public:
                     world_level_ = generating.generation_level();
                     world_ = std::move(generating);
                     travel_.cancel();
-                    ground_loot_.clear();
+                    ground_loot_=std::move(generated_initial_loot);
                     tents_.clear();
                     stashes_.clear();
                     selected_inventory_slot_ = -1;
@@ -280,6 +297,8 @@ public:
                     footstep_elapsed_ = 0.0f;
                     save_elapsed_ = 0.0f;
                 }
+                if(new_game_generation_ && !traveling)
+                    ground_loot_=std::move(generated_initial_loot);
                 loading_world_ = false;
                 world_ready_ = true;
                 if (continue_world_visual_state_) {
