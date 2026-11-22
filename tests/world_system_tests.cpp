@@ -1522,6 +1522,13 @@ void test_full_generation_all_source_maps() {
         // Azahar no-building regression: a terrain-only successful map
         // cannot be called generated. Prove that real root category-7
         // house foundations and their indoor/roof companions exist.
+        std::size_t visible_house_layers=0;
+        std::size_t visible_house_frames=0;
+        float nearest_house_from_west=std::numeric_limits<float>::infinity();
+        const auto* source_layout=minidayz::stage1::find_layout("Map");
+        assert(source_layout);
+        const auto layout_index=static_cast<std::uint16_t>(
+            source_layout-minidayz::stage1::kLayoutTable);
         std::size_t built_houses=0, built_houses_in_view=0;
         std::size_t house_roofs=0, town_markers=0;
         minidayz::terrain::VisibleSourcePlacementIndex building_visibility;
@@ -1542,6 +1549,20 @@ void test_full_generation_all_source_maps() {
                 if(placement->source_uid!=root.event_uid ||
                    placement->object!=root.object)continue;
                 ++built_houses;
+                const auto* source_layer=minidayz::stage1::find_layer(
+                    layout_index,placement->layer);
+                const auto* source_object=minidayz::stage1::find_object(
+                    placement->object);
+                if(source_layer && source_layer->visible &&
+                   placement->layer<44 && placement->layer!=32 &&
+                   source_object && source_object->type==18 &&
+                   placement->opacity>0.0f) {
+                    ++visible_house_layers;
+                    if(placement->width>0.0f && placement->height>0.0f)
+                        ++visible_house_frames;
+                }
+                nearest_house_from_west=std::min(nearest_house_from_west,
+                    std::fabs(placement->x-600.0f));
                 building_visibility.query(placement->x-200.0f,
                     placement->y-120.0f,400.0f,240.0f,nearby);
                 if(std::find(nearby.begin(),nearby.end(),
@@ -1559,6 +1580,11 @@ void test_full_generation_all_source_maps() {
         assert(town_markers>0);
         assert(built_houses>0);
         assert(built_houses_in_view==built_houses);
+        std::printf("AZAHAR HOUSE DISPLAY level=%u visible_layers=%zu positive_sized_frames=%zu nearest_west_x=%.1f\\n",
+            static_cast<unsigned>(level),visible_house_layers,
+            visible_house_frames,nearest_house_from_west);
+        assert(visible_house_layers==built_houses);
+        assert(visible_house_frames==built_houses);
         assert(house_roofs>0);
         // Step12: for ALL six source maps ensure every original active
         // creation-event marker fits, chooses only authored item IDs and
