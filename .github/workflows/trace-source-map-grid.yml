@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'tools/stage1/trace_source_map_grid_parity.py'
+      - 'tools/stage1/audit_original_road_dispatch.py'
       - '.github/workflows/trace-source-map-grid.yml'
   workflow_dispatch:
 jobs:
