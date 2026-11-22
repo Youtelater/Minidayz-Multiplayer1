@@ -1,0 +1,15 @@
+name: Audit Original Interior Container Source
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/trace_original_interior_containers.py'
+      - '.github/workflows/trace-original-interior-containers.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trace exact original interior and container object events
+        run: python3 tools/stage1/trace_original_interior_containers.py

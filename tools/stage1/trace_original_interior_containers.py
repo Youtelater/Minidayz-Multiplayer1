@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""Root source Step11 audit: authored interior container objects and interactions.
+
+No secondary community/data overrides; emit exact Construct object/event ids.
+"""
+from pathlib import Path
+import json,sys,re,collections
+ROOT=Path(__file__).resolve().parents[2]
+sys.path.insert(0,str(ROOT/"tools"/"stage1"))
+from audit_original_world_exhaustive import decode
+p=decode((ROOT/"data.deobfuscated.js").read_bytes())
+objects=p[3]
+keywords=re.compile(r"container|cabinet|dresser|chest|locker|fridge|frigi|cupboard|shelf|storage|stash|box|crate|barrel|bed|wardrobe|furniture|table|drawer|safe|trunk|tent|case|loot|fridge",re.I)
+candidates={}
+for i,obj in enumerate(objects):
+ if isinstance(obj,list) and obj and isinstance(obj[0],str) and keywords.search(obj[0]):
+  candidates[i]=obj[0]
+  print("OBJECT",json.dumps({"id":i,"name":obj[0],"type":obj[1] if len(obj)>1 else None,"animations":[a[0] for a in obj[7] if isinstance(a,list) and a] if len(obj)>7 and isinstance(obj[7],list) else []},separators=(",",":"),ensure_ascii=False))
+print("OBJECT_CANDIDATE_COUNT",len(candidates))
+def walk(events,parents=()):
+ for e in events if isinstance(events,list) else []:
+  if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+  yield e,parents
+  yield from walk(e[7],parents+(e[4],))
+# Full event references to candidate objects in conditions/action targets.
+hits=collections.defaultdict(list)
+for sheet,events in p[6]:
+ for e,parents in walk(events):
+  cond=e[5] if isinstance(e[5],list) else []
+  acts=e[6] if isinstance(e[6],list) else []
+  touched=set(a[0] for a in cond+acts if isinstance(a,list) and a and isinstance(a[0],int) and a[0] in candidates)
+  if not touched:continue
+  for oid in touched:
+   hits[oid].append({"sheet":sheet,"uid":e[4],"parents":parents[-5:],
+     "conditions":cond,"actions":acts})
+for oid,name in candidates.items():
+ rec=hits.get(oid,[])
+ print("OBJECT_EVENT_COUNT",oid,name,len(rec))
+ for e in rec[:45]:
+  print("OBJECT_EVENT",oid,json.dumps(e,ensure_ascii=False,separators=(",",":"))[:3600])
