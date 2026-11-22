@@ -42,6 +42,10 @@ for oid,obj in enumerate(objects):
             path=str(frame[0]).lower().replace("\\","/")
             if path.startswith("images/b_") or "door" in path or "building" in path:
                 building.add(oid)
+# Include every original Solid object: procedural Spawn actions may place a
+# sprite on a Buildings layer even when no static Map instance exists.
+# This preserves authored polygons instead of silently using rectangles.
+building.update(solid)
 rows=[];vertices=[]
 def fmt(value):
     if not math.isfinite(value) or abs(value)>4:
