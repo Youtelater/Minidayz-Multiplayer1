@@ -1532,6 +1532,24 @@ void test_full_generation_all_source_maps() {
         assert(generated_trees >= (level >= 4 ? 3500u : 1000u));
         assert(all_trees>=generated_trees);
         assert(generated_trees>0);
+        // Trace any originally magenta editor/marker sprites which must not
+        // become giant visible world overlays. Sprite colors were checked
+        // against original root assets/gfx in audit_purple_world_sprites.py.
+        for(std::size_t pi=0;pi<world.placement_count();++pi){
+            const auto* pc=world.placement(pi);
+            if(!pc || pc->opacity<=0.0f || pc->layer>=44)continue;
+            switch(pc->object){
+            case 404: case 407: case 400: case 216: case 557:
+            case 646: case 225: case 706: case 128:
+                std::printf("AZAHAR_PURPLE_CANDIDATE level=%u obj=%u layer=%u w=%.1f h=%.1f alpha=%.2f x=%.1f y=%.1f\\n",
+                    static_cast<unsigned>(level),
+                    static_cast<unsigned>(pc->object),
+                    static_cast<unsigned>(pc->layer),pc->width,pc->height,
+                    pc->opacity,pc->x,pc->y);
+                break;
+            default:break;
+            }
+        }
         // Azahar no-building regression: a terrain-only successful map
         // cannot be called generated. Prove that real root category-7
         // house foundations and their indoor/roof companions exist.
