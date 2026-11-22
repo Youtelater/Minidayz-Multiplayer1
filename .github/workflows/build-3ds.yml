@@ -263,6 +263,10 @@ jobs:
           make clean
           make
 
+      - name: Assert exact original bed ghost and FX sprite coordinates
+        shell: bash
+        run: python3 tests/test_original_bed_source_contract.py
+
       - name: Test original furniture/fixture source rules
         shell: bash
         run: |
