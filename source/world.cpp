@@ -1007,14 +1007,17 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                     parent.object,parent.source_animation,
                     parent.source_frame,action.point_name,
                     action.point_index);
-                if(!point)continue; // Unsupported authored point: no guess.
-                const float angle=parent.angle*0.01745329251994329577f;
-                const float dx=parent.width*
-                    (point->x-point->origin_x)*
-                    (parent.scale_x<0.0f?-1.0f:1.0f);
-                const float dy=parent.height*(point->y-point->origin_y);
-                x=parent.x+dx*std::cos(angle)-dy*std::sin(angle);
-                y=parent.y+dx*std::sin(angle)+dy*std::cos(angle);
+                if (point) {
+                    const float angle = parent.angle * 0.01745329251994329577f;
+                    const float dx = parent.width * (point->x - point->origin_x) *
+                        (parent.scale_x < 0.0f ? -1.0f : 1.0f);
+                    const float dy = parent.height * (point->y - point->origin_y);
+                    x += dx * std::cos(angle) - dy * std::sin(angle);
+                    y += dx * std::sin(angle) + dy * std::cos(angle);
+                } else if (action.point_name && action.point_name[0]) {
+                    continue;
+                }
+                // Missing numeric points use the parent hotspot, as in loot placement.
             }
             if(!std::isfinite(x)||!std::isfinite(y))continue;
             const auto new_uid=(std::uint64_t{1}<<63) |

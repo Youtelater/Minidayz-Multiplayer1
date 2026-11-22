@@ -2,6 +2,7 @@
 
 - [x] Removed the roadside shelter feature added in `e3bc5f6`. An existing save from that revision can still contain its saved ground items.
 - [x] Retained the event walker and variant guard fixes. The loot placement regression pairs markers in generated order when an action ID is reused.
+- [x] Fixed companion placement for missing numeric attachment points. It uses the parent sprite hotspot, with authored frame points still used where present. Native world regression covers the variant 36 collider that uses this fallback.
 - [ ] Conditional building placements, initial building loot dispatch and full map-generation parity remain open.
 
 ## Part 2 — per-house roof and wall ownership correction

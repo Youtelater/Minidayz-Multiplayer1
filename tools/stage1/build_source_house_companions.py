@@ -250,14 +250,6 @@ map_layers={l[0].lower():l[0] for l in next(l for l in p[5] if l[0]=="Map")[6]}
 for r in loot_markers:r[4]=map_layers[r[4].lower()]
 parents={row[4] for row in rules} | {row[3] for row in loot_markers}
 
-# Original source may Spawn at numeric ImagePoint 1 even where the
-# author's sprite frame has NO custom imagepoints (e.g. 1323 var2=36).
-# Construct resolves such a missing numeric point to its hotspot/origin.
-# Generate that source-specific fallback only for real Spawn references;
-# never fabricate a named imagepoint or alter the original PNG/frame.
-origin_point_one_parents={
- row[4] for row in rules if row[8]==1 and not row[7]
-}
 # Object frame image points are relative to each source animation frame's
 # own hotspot; multiple image points may live in ONE PNG atlas rectangle.
 points=[]
@@ -270,9 +262,6 @@ for oid in sorted(parents):
    if len(fr)<10:continue
    origin_x,origin_y=fr[7],fr[8]
    if not isinstance(fr[9],list):continue
-   if not fr[9] and oid in origin_point_one_parents:
-    points.append((oid,ai,fi,1,"",origin_x,origin_y,
-                   origin_x,origin_y))
    for j,pt in enumerate(fr[9],1):
     if not isinstance(pt,list) or len(pt)<3:continue
     if not isinstance(pt[0],str):continue
