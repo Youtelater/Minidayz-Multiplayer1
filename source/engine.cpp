@@ -82,6 +82,7 @@ void Renderer::shutdown() noexcept {
 }
 void Renderer::begin_frame() noexcept {
  sprite_cache_misses_=0;
+ sprite_cache_drawn_this_frame_.fill(false);
  C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
  C2D_TargetClear(top_,C2D_Color32(12,16,18,255));
  C2D_TargetClear(bottom_,C2D_Color32(18,22,24,255));
@@ -184,9 +185,25 @@ void Renderer::unload_sheet(std::size_t slot) noexcept {
  sprite_cache_[slot]={};
 }
 void Renderer::unload_all() noexcept { for(std::size_t i=0;i<kMaxSheets;++i) unload_sheet(i); }
+// Never destroy a T3X referenced by this frame's queued GPU draw calls.
+// This bounds GPU memory while preventing silent house/roof texture reuse.
+std::size_t Renderer::choose_sprite_cache_slot() noexcept {
+ std::size_t candidate=kMaxSheets;
+ for(std::size_t offset=0;offset<kMaxSheets;++offset){
+  const auto i=(next_sprite_cache_+offset)%kMaxSheets;
+  if(sprite_cache_drawn_this_frame_[i])continue;
+  if(!sheets_[i]){candidate=i;break;}
+  if(candidate==kMaxSheets)candidate=i;
+ }
+ if(candidate==kMaxSheets)return candidate;
+ next_sprite_cache_=(candidate+1)%kMaxSheets;
+ unload_sheet(candidate);
+ return candidate;
+}
 bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx,float sy,float rotation,float depth,float opacity,float rgb_multiplier) noexcept {
  if(slot>=kMaxSheets||!sheets_[slot]||image>=C2D_SpriteSheetCount(sheets_[slot])) return false;
  if(!std::isfinite(opacity)||opacity<=0.0f)return true;
+ sprite_cache_drawn_this_frame_[slot]=true;
  C2D_Sprite sprite{}; C2D_SpriteFromSheet(&sprite,sheets_[slot],image); C2D_SpriteSetPos(&sprite,x,y);
  C2D_SpriteSetScale(&sprite,sx,sy); C2D_SpriteSetRotation(&sprite,rotation); C2D_SpriteSetDepth(&sprite,depth);
  if(rgb_multiplier<1.0f){
@@ -226,22 +243,21 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  }
  if(slot==kMaxSheets){
   ++sprite_cache_misses_;
-  slot=next_sprite_cache_++%kMaxSheets;
-  unload_sheet(slot);
+  slot=choose_sprite_cache_slot();
+  if(slot==kMaxSheets)return false; // all 32 pages already in GPU use
   char path[128];
   const int n=std::snprintf(path,sizeof(path),"romfs:/gfx/%s.t3x",sheet);
   if(n<=0||static_cast<std::size_t>(n)>=sizeof(path)||!load_sheet(slot,path)) return false;
   std::snprintf(sprite_cache_[slot].sheet,sizeof(sprite_cache_[slot].sheet),"%s",sheet);
   sprite_cache_[slot].slot=slot;
  }
- // Citro2D negative scales reverse texture UVs but keep geometry size
- // positive. Mirror the Construct hotspot too, or flipped world objects
- // appear displaced (and disagree with camera culling).
- const float draw_x=terrain::source_sprite_top_left(
-     x,selected->width,selected->origin_x,sx);
- const float draw_y=terrain::source_sprite_top_left(
-     y,selected->height,selected->origin_y,sy);
- return draw_sprite(slot,selected->image,draw_x,draw_y,
+ // Construct Sprite rotates about original active-frame hotspot (X,Y).
+ // Uncentered Citro2D rotates about draw origin; keep pivot and culling
+ // consistent using the same hotspot-corrected transform.
+ const auto origin=terrain::source_sprite_draw_origin(
+     x,y,selected->width,selected->height,
+     selected->origin_x,selected->origin_y,sx,sy,rotation);
+ return draw_sprite(slot,selected->image,origin.x,origin.y,
                      sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth,opacity,rgb_multiplier);
 }
 bool Renderer::draw_original_image(const char* original_png,float x,float y,
@@ -269,8 +285,8 @@ bool Renderer::draw_original_image(const char* original_png,float x,float y,
   }
  }
  if(slot==kMaxSheets){
-  slot=next_sprite_cache_++%kMaxSheets;
-  unload_sheet(slot);
+  slot=choose_sprite_cache_slot();
+  if(slot==kMaxSheets)return false;
   char path[192]{};
   const auto length=std::snprintf(path,sizeof(path),"romfs:/gfx/%s",
                                    selected->texture);
@@ -288,6 +304,7 @@ bool Renderer::draw_original_image(const char* original_png,float x,float y,
  C2D_SpriteSetScale(&sprite,width/sprite.params.pos.w,
                             height/sprite.params.pos.h);
  C2D_SpriteSetDepth(&sprite,depth);
+ sprite_cache_drawn_this_frame_[slot]=true;
  return C2D_DrawSprite(&sprite);
 }
 

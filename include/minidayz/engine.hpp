@@ -78,6 +78,8 @@ private:
   bool ground_load_attempted_{};bool ground_loaded_{}; std::uint8_t ground_active_level_{255}; C2D_SpriteSheet sheets_[kMaxSheets]{};
  struct SpriteCacheEntry { char sheet[128]{}; std::size_t slot{}; };
  SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{}; std::size_t sprite_cache_misses_{};
+ std::array<bool,kMaxSheets> sprite_cache_drawn_this_frame_{};
+ std::size_t choose_sprite_cache_slot() noexcept;
  C2D_Font debug_font_{}; C2D_TextBuf debug_buffer_{}; C2D_Text debug_text_{};
  float camera_x_{},camera_y_{}; bool initialized_{}; bool debug_ready_{};
 };

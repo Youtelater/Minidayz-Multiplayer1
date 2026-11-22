@@ -52,6 +52,13 @@ jobs:
             tests/source_building_polygon_tests.cpp -o /tmp/minidayz_building_collision
           /tmp/minidayz_building_collision
 
+      - name: Test original frame hotspots and rotated camera culling
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \\
+            tests/terrain_source_visibility_tests.cpp \\
+            -o terrain_source_visibility_tests
+          ./terrain_source_visibility_tests
+
       - name: Verify source-derived world sprite extents
         run: |
           python3 tools/stage1/build_world_source_extents.py --check
