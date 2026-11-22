@@ -1,0 +1,15 @@
+name: Trace Original Mapgen Placement and Array World Coordinates
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/trace_original_mapgen_coordinates.py'
+      - '.github/workflows/trace-original-mapgen-coordinates.yml'
+  workflow_dispatch:
+jobs:
+  original-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect original Mapgen514 create, positions and map-array event triggers
+        run: python3 tools/stage1/trace_original_mapgen_coordinates.py
