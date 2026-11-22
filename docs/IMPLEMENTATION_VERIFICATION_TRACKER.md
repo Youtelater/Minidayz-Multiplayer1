@@ -9,7 +9,8 @@
 - [x] Updated the spawn regression check for the travel function signature and checked that spawn uses the destination seed and level. The local fidelity and screen-depth checks passed.
 - [x] Native road tests check horizontal and vertical segments, intersections, and preservation of existing location cells across eight seeds on each of the six levels. The full native world suite passed.
 - [x] The native suite and 3DS executable build passed on `9c4279b`. Azahar verified New Game, Continue, all five forward bridge transitions, and the final-level travel limit using separate save fixtures. The transitions retained survivor health, and Continue reopened a save written after travel.
-- [ ] Force a destination-generation failure and verify retry in the emulator. Measure peak memory during travel on real 3DS hardware.
+- [x] Native travel regression forces a destination-generation failure, checks that the active world is preserved, and retries successfully. The staged loader also handles allocation failure while generating the destination.
+- [ ] Verify failure and retry in the emulator and measure peak memory on real 3DS hardware.
 - [ ] Conditional building placements, initial building loot dispatch and full map-generation parity remain open.
 
 ## Part 2 — per-house roof and wall ownership correction

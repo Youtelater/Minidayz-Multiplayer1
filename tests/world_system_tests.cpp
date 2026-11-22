@@ -1262,6 +1262,27 @@ void test_new_game_generates_visible_original_world() {
     }
 }
 
+void test_retry_after_failed_world_travel() {
+    minidayz::WorldSystem active;
+    assert(active.generate_from_source(123456u, "Map", 0));
+    const auto placements = active.placement_count();
+    const auto markers = active.map_marker_count();
+    minidayz::WorldTravel travel;
+    constexpr auto destination_seed = 606250596u;
+    assert(travel.begin(destination_seed, 255));
+    assert(!travel.advance());
+    assert(!travel.destination());
+    assert(active.seed() == 123456u && active.generation_level() == 0);
+    assert(active.placement_count() == placements && active.map_marker_count() == markers);
+
+    assert(travel.begin(destination_seed, 1));
+    for (int step = 0; step < 5; ++step) assert(travel.advance());
+    assert(travel.destination()->generation_complete());
+    assert(travel.destination()->seed() == destination_seed);
+    assert(travel.destination()->generation_level() == 1);
+    assert(active.seed() == 123456u && active.placement_count() == placements);
+}
+
 void test_bunker_and_bridge_placement_reload() {
     using namespace minidayz;
     WorldSystem world;
@@ -1528,6 +1549,7 @@ int main() {
     test_seed_reproducibility();
     test_new_game_generates_visible_original_world();
     test_level_four_split_grid();
+    test_retry_after_failed_world_travel();
     test_bunker_and_bridge_placement_reload();
     test_every_source_level_quota();
     test_full_generation_all_source_maps();

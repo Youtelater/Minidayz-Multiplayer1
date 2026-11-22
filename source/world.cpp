@@ -1401,4 +1401,27 @@ const WorldPlacement* WorldSystem::placement_by_instance_id(
     return placement_by_id(static_cast<std::uint32_t>(id));
 }
 
+bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level) noexcept {
+    cancel();
+    try {
+        auto candidate = std::make_unique<WorldSystem>();
+        if (!candidate->begin_source_generation(seed, "Map", level)) return false;
+        destination_ = std::move(candidate);
+        return true;
+    } catch (const std::bad_alloc&) {
+        return false;
+    }
+}
+
+bool WorldTravel::advance() noexcept {
+    if (!destination_) return false;
+    try {
+        if (destination_->advance_source_generation()) return true;
+    } catch (const std::bad_alloc&) {
+        // The active map still belongs to the caller.
+    }
+    cancel();
+    return false;
+}
+
 } // namespace minidayz

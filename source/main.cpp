@@ -245,22 +245,24 @@ public:
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
         if (loading_world_) {
-            auto& generating = travel_world_ ? *travel_world_ : world_;
-            if (!generating.advance_source_generation()) {
-                fail_world_generation();
+            auto* destination = travel_.destination();
+            const bool traveling = destination != nullptr;
+            if (!(traveling ? travel_.advance() : world_.advance_source_generation())) {
+                fail_world_generation(traveling);
                 return;
             }
+            auto& generating = traveling ? *destination : world_;
             if (generating.generation_complete()) {
-                if ((new_game_generation_ || travel_world_) &&
-                    !place_new_player_on_generated_map(generating, static_cast<bool>(travel_world_))) {
-                    fail_world_generation();
+                if ((new_game_generation_ || traveling) &&
+                    !place_new_player_on_generated_map(generating, traveling)) {
+                    fail_world_generation(traveling);
                     return;
                 }
-                if (travel_world_) {
+                if (traveling) {
                     world_seed_ = generating.seed();
                     world_level_ = generating.generation_level();
                     world_ = std::move(generating);
-                    travel_world_.reset();
+                    travel_.cancel();
                     ground_loot_.clear();
                     tents_.clear();
                     stashes_.clear();
@@ -1366,8 +1368,9 @@ public:
                 "PLACING SOURCE LOCATIONS", "ADDING BUNKERS",
                 "ADDING BRIDGES", "FINALIZING WORLD"
             };
-            const auto phase = travel_world_ ? travel_world_->generation_phase()
-                                             : world_.generation_phase();
+            const auto* destination = travel_.destination();
+            const auto phase = destination ? destination->generation_phase()
+                                           : world_.generation_phase();
             // Generation phases start at 1; phase 1 generates the road grid.
             const auto step = phase > 0 && phase <= 6 ? phase - 1 : 0;
             renderer.draw_text(steps[step], 26.0f, 112.0f, 0.32f);
@@ -3166,10 +3169,7 @@ private:
 
         // Keep the active world and its save state usable until the
         // destination has generated and accepted the survivor's spawn.
-        travel_world_.reset(new(std::nothrow) minidayz::WorldSystem);
-        if (!travel_world_ ||
-            !travel_world_->begin_source_generation(destination_seed, "Map", destination_level)) {
-            travel_world_.reset();
+        if (!travel_.begin(destination_seed, destination_level)) {
             travel_failed_ = true;
             return;
         }
@@ -3177,10 +3177,10 @@ private:
         loading_world_ = true;
     }
 
-    void fail_world_generation() noexcept {
+    void fail_world_generation(bool traveling = false) noexcept {
         loading_world_ = false;
-        if (travel_world_) {
-            travel_world_.reset();
+        if (traveling) {
+            travel_.cancel();
             travel_failed_ = true;
             return;
         }
@@ -3474,7 +3474,7 @@ private:
     minidayz::NpcSystem npcs_{};
     std::uint32_t world_seed_{};
     std::uint8_t world_level_{};
-    std::unique_ptr<minidayz::WorldSystem> travel_world_;
+    minidayz::WorldTravel travel_;
     bool travel_failed_{};
     bool continue_world_visual_state_{};
     float save_elapsed_{};

@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <random>
+#include <memory>
 #include <string_view>
 #include <vector>
 #include "minidayz/generated/location_template_source.hpp"
@@ -252,6 +253,19 @@ private:
     bool generation_is_map_{};
     bool generate_source_locations(std::uint8_t level);
     bool initialized_{};
+};
+
+// Hold the destination until all generation phases succeed. The caller can
+// discard or retry a failed load while continuing to use its active map.
+class WorldTravel {
+public:
+    bool begin(std::uint32_t seed, std::uint8_t level) noexcept;
+    bool advance() noexcept;
+    WorldSystem* destination() const noexcept { return destination_.get(); }
+    void cancel() noexcept { destination_.reset(); }
+
+private:
+    std::unique_ptr<WorldSystem> destination_;
 };
 
 } // namespace minidayz
