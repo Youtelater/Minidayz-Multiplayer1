@@ -1,0 +1,14 @@
+name: Trace Original Tree Visibility Behavior
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/trace_original_tree_visibility.py'
+      - '.github/workflows/trace-original-tree-visibility.yml'
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/stage1/trace_original_tree_visibility.py
