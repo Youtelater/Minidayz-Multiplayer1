@@ -49,6 +49,18 @@ inline bool source_initial_loot_chance(
     return rule.gate_kind==1?equal:!equal;
 }
 
+// Root Menu_Events starts item_unlock_lighter/plast/smoke/laser=0.
+// Original Spawn_drop swaps these four requested IDs to their exact
+// source-defined fallback items until their achievements are unlocked.
+// Source item351 has no Spawn_drop branch in the supplied Construct export.
+inline std::uint16_t source_initial_item_after_default_unlocks(
+    std::uint16_t requested) noexcept {
+    if(requested==kSourceUnspawnableItem)return 0;
+    std::uint16_t fallback{};
+    return source_initial_locked_fallback(requested,fallback)
+        ? fallback : requested;
+}
+
 inline InitialBuildingLootResult source_spawn_initial_loot_for_marker(
     GroundLootSystem& ground,const WorldPlacement& marker,
     std::mt19937& source_random) noexcept {
@@ -80,8 +92,9 @@ inline InitialBuildingLootResult source_spawn_initial_loot_for_marker(
          kSourceInitialBuildingLootItemCount)
         return InitialBuildingLootResult::not_applicable;
     const auto pick=source_initial_loot_choice_index(source_random(),choice->choices);
-    const auto item=kSourceInitialBuildingLootItems[choice->first+pick];
-    if(item==0)return InitialBuildingLootResult::no_drop; // Original no-drop choice.
+    const auto requested=kSourceInitialBuildingLootItems[choice->first+pick];
+    const auto item=source_initial_item_after_default_unlocks(requested);
+    if(item==0)return InitialBuildingLootResult::no_drop;
     if(!source_item_exists(item))return InitialBuildingLootResult::not_applicable;
     // Original Spawn_drop's round() of active Sprite218 hotspot X/Y.
     const float x=std::floor(marker.x+0.5f);
