@@ -54,8 +54,8 @@ jobs:
 
       - name: Test original frame hotspots and rotated camera culling
         run: |
-          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \\
-            tests/terrain_source_visibility_tests.cpp \\
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/terrain_source_visibility_tests.cpp \
             -o terrain_source_visibility_tests
           ./terrain_source_visibility_tests
 
