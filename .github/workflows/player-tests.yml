@@ -84,6 +84,7 @@ jobs:
           python3 tools/stage2/build_source_craft_events.py
           python3 tools/stage2/build_source_loot_catalog.py
           python3 tools/stage2/build_original_timed_loot.py
+          python3 tools/stage2/build_original_initial_building_loot.py
 
       - name: Compile World Regression Tests
         run: |
@@ -423,6 +424,14 @@ jobs:
 
       - name: Run Full Save/Load Roundtrip Regression Tests
         run: ./save_game_roundtrip_tests
+
+      - name: Compile and run source-exact initial building loot category tests
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp source/ground_loot.cpp \
+            tests/original_initial_building_loot_tests.cpp \
+            -o original_initial_building_loot_tests
+          ./original_initial_building_loot_tests
 
       - name: Compile Ground Loot Regression Tests
         run: |

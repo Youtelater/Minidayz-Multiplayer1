@@ -32,6 +32,7 @@ jobs:
           python3 tools/stage1/build_source_tree_impact_points.py
           python3 tools/stage1/build_source_family_members.py
           python3 tools/stage1/build_source_house_companions.py
+          python3 tools/stage2/build_original_initial_building_loot.py
           python3 tools/stage1/build_source_building_polygons.py
           python3 tools/stage1/build_source_roof_family_points.py
 
@@ -251,6 +252,17 @@ jobs:
         run: |
           set -euo pipefail
           python3 tests/test_world_terrain_render_contract.py
+
+      - name: Verify original building loot chance and weighted item tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage2/build_original_initial_building_loot.py
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            source/inventory.cpp source/ground_loot.cpp \
+            tests/original_initial_building_loot_tests.cpp \
+            -o /tmp/minidayz_original_building_loot
+          /tmp/minidayz_original_building_loot
 
       - name: Compile 3DS Executable
         shell: bash
