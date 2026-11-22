@@ -59,6 +59,31 @@ inline const char* source_bed_precheck_feedback(
     default:return "BED FOUND - SLEEP SYSTEM PENDING";
     }
 }
+
+// Original Count_sleep_hours Function source UID 974086311952240:
+// Starverate=Starving_current; +0.3 with hamster > 0;
+// Thirstrate=Thirsty_current; +0.3 with camel > 0;
+// limits=(stat-10)/rate*5; TimeAvalible=min(limits);
+// clamp TimeReturn_All=Timer_ALL+TimeAvalible/1.5 to 360 (6AM).
+inline float source_count_sleep_seconds(
+    std::uint16_t timer_all,float hunger,float thirst,
+    float starverate,float thirstrate,
+    std::uint8_t hamster_level,std::uint8_t camel_level) noexcept {
+    if(timer_all>1440 || !std::isfinite(hunger) || !std::isfinite(thirst) ||
+       !std::isfinite(starverate)||!std::isfinite(thirstrate) ||
+       hunger<10.0f||thirst<10.0f)return 0.0f;
+    const float foodrate=starverate+(hamster_level?0.3f:0.0f);
+    const float waterrate=thirstrate+(camel_level?0.3f:0.0f);
+    if(foodrate<=0.0f || waterrate<=0.0f)return 0.0f;
+    const float survival_seconds=std::min(
+        (hunger-10.0f)/foodrate*5.0f,
+        (thirst-10.0f)/waterrate*5.0f);
+    // Timer_ALL is original source minutes; each game minute=1.5s.
+    // Timer_ALL=1440 is an original one-frame midnight rollover state.
+    const float until_morning=(360.0f-static_cast<float>(
+        timer_all==1440?0:timer_all))*1.5f;
+    return std::max(0.0f,std::min(survival_seconds,until_morning));
+}
 // Original game events 903835777805920 resets bed951 to source
 // frame0; 948724703580895 selects source frame1 for player181 overlap.
 inline std::uint32_t source_bed_overlap_frame(

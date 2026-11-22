@@ -57,6 +57,11 @@ int main() {
     assert(bag.add(50,1) && bag.add(784,1));
     assert(source_bed_consume_materials(bag,1));
     assert(bag.count(50)==0 && bag.count(784)==0);
+    assert(source_count_sleep_seconds(300,50,50,0.75f,0.75f,0,0)==90.0f);
+    assert(source_count_sleep_seconds(360,50,50,0.75f,0.75f,0,0)==0.0f);
+    assert(source_count_sleep_seconds(0,100,100,1.0f,1.0f,0,0)==450.0f);
+    assert(source_count_sleep_seconds(0,100,100,1.0f,1.0f,1,1)<450.0f);
+    assert(source_count_sleep_seconds(0,9,100,0.75f,0.75f,0,0)==0.0f);
     assert(!source_bed_site_within_range(0,0,100,0));
     assert(source_bed_site_within_range(0,0,99,0));
     assert(source_bed_sleep_precheck(1441,0.0f,50,50)==
