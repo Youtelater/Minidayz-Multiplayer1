@@ -1589,10 +1589,57 @@ void test_level_four_split_grid() {
     }
 }
 
+
+void test_original_constructed_bed_journal_v4() {
+    using namespace minidayz;
+    constexpr const char* path="minidayz_constructed_beds_v4.bin";
+    constexpr const char* temp="minidayz_constructed_beds_v4.tmp";
+    WorldSystem original;
+    assert(original.generate_from_source(0x20261122u,"Map",0));
+    const auto baseline=original.placement_count();
+    assert(original.add_source_constructed_bed(8000.0f,6000.0f,0));
+    assert(original.add_source_constructed_bed(8070.0f,6000.0f,1));
+    assert(original.placement_count()==baseline+2);
+    const auto a=original.placement(baseline);
+    const auto b=original.placement(baseline+1);
+    assert(a && b && a->object==951 && b->object==951);
+    assert(a->source_constructed_bed && b->source_constructed_bed);
+    assert(a->width==37.0f && a->height==21.0f);
+    assert(a->origin_x==0.5f && a->origin_y==0.5f);
+    assert(a->source_variable_0==0 && b->source_variable_0==1);
+    assert(original.set_placement_sprite_state(baseline,0,1,1.0f));
+    // Frame1 is transient original proximity selection, not a separate bed.
+    assert(original.dismantle_source_bed(baseline+1));
+    assert(original.placement(baseline+1)->opacity==0.0f);
+    const auto beds=original.capture_source_constructed_beds();
+    assert(beds.size()==2 && beds[0].active && !beds[1].active);
+    assert(original.capture_sprite_states().empty());
+    assert(persistence::write_world_visual_state(original,0,path,temp));
+    WorldSystem restored;
+    assert(restored.generate_from_source(0x20261122u,"Map",0));
+    assert(persistence::read_world_visual_state(restored,0,path));
+    assert(restored.placement_count()==baseline+2);
+    const auto recovered=restored.capture_source_constructed_beds();
+    assert(recovered.size()==2);
+    assert(recovered[0].runtime_uid==beds[0].runtime_uid);
+    assert(recovered[1].runtime_uid==beds[1].runtime_uid);
+    assert(recovered[0].material_variant==0);
+    assert(recovered[1].material_variant==1 && !recovered[1].active);
+    assert(restored.placement(baseline)->source_frame==0);
+    assert(restored.placement(baseline+1)->opacity==0.0f);
+    assert(!restored.restore_source_constructed_beds(beds)); // no duplicates
+    const auto before=restored.placement_count();
+    assert(!restored.add_source_constructed_bed(8000.0f,6000.0f,2));
+    assert(restored.placement_count()==before);
+    std::remove(path);
+    std::remove(temp);
+}
+
 } // namespace
 
 int main() {
     test_source_furniture_and_pump();
+    test_original_constructed_bed_journal_v4();
     test_original_interaction_polygon_geometry();
     test_grid_semantics();
     test_source_world_instance_animation_state();
