@@ -5,6 +5,7 @@
 #include "minidayz/source_door_auto.hpp"
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
+#include "minidayz/original_initial_building_loot.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
@@ -1635,6 +1636,63 @@ void test_original_constructed_bed_journal_v4() {
     std::remove(temp);
 }
 
+void test_original_building_specific_loot_on_generated_world() {
+    using namespace minidayz;
+    using namespace minidayz::items;
+    WorldSystem world;
+    assert(world.generate_from_source(123456u,"Map",0));
+    std::size_t authored=0;
+    bool category9=false;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* marker=world.placement(i);
+        if(!marker || marker->object!=218 ||
+           !marker->source_initial_loot_trigger)continue;
+        ++authored;
+        assert(marker->source_variable_0==marker->source_loot_category);
+        assert(marker->source_loot_category>0);
+        category9|=marker->source_loot_category==9;
+    }
+    assert(authored>25);
+    assert(category9);
+    auto random=world.source_random();
+    GroundLootSystem ground;
+    const auto counts=source_spawn_initial_building_loot(world,ground,random);
+    assert(counts.complete());
+    assert(counts.attempted==authored);
+    assert(counts.spawned+counts.no_drop+counts.skipped==authored);
+    assert(counts.spawned>5 && counts.spawned==ground.count());
+    const auto snapshot=ground.snapshot();
+    GroundLootSystem restored;
+    assert(restored.restore(snapshot));
+    assert(restored.count()==ground.count());
+    for(std::size_t i=0;i<ground.count();++i){
+        const auto* item=ground.entry(i);
+        assert(item && source_item_exists(item->item.item_id));
+        bool original_position=false;
+        for(std::size_t j=0;j<world.placement_count();++j){
+            const auto* p=world.placement(j);
+            if(p && p->object==218 && p->source_initial_loot_trigger &&
+               std::floor(p->x+0.5f)==item->x &&
+               std::floor(p->y+0.5f)==item->y){
+                original_position=true;break;
+            }
+        }
+        assert(original_position);
+        assert(restored.entry(i)->item.item_id==item->item.item_id);
+    }
+    // Deterministic replay for equal source world RNG state, not per-item
+    // guessed seeds. The real scene calls this only for new/traveled worlds.
+    GroundLootSystem replay;
+    auto again=world.source_random();
+    const auto replay_counts=source_spawn_initial_building_loot(world,replay,again);
+    assert(replay_counts.spawned==counts.spawned);
+    for(std::size_t i=0;i<ground.count();++i) {
+        assert(replay.entry(i)->item.item_id==ground.entry(i)->item.item_id);
+        assert(replay.entry(i)->x==ground.entry(i)->x);
+        assert(replay.entry(i)->y==ground.entry(i)->y);
+    }
+}
+
 } // namespace
 
 int main() {
@@ -1653,6 +1711,7 @@ int main() {
     test_category4_variant40_building_spawns();
     test_location_state_gates_existing_placement();
     test_original_house_loot_marker_spawns();
+    test_original_building_specific_loot_on_generated_world();
     test_every_source_mapped_house_spawn_chain();
     test_live_original_automatic_doors();
     test_original_roof_family_and_transparency();
