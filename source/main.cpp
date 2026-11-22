@@ -1222,6 +1222,7 @@ public:
         // game tick; original WAV dispatch follows the committed change.
         advance_source_door_waits(dt);
         advance_source_furniture_wait(dt);
+        advance_source_sleep_wait(dt);
         advance_source_bed_dismantle(dt);
         advance_source_bed_build(input,dt);
         // Native A adapts original mobile marker506 interactions, without
@@ -3178,6 +3179,7 @@ private:
         source_furniture_indices_.clear();
         source_bed_build_={};
         source_bed_dismantle_={};
+        source_sleep_={};
         source_pump_pending_={};
         source_bed_selected_uid_=0;
         source_furniture_feedback_seconds_=0.0f;
@@ -3223,6 +3225,57 @@ private:
                 day_night_.snapshot().timer_all,source_weather_exposure_,
                 player_.state().hunger,player_.state().thirst);
             source_furniture_feedback_=source_bed_precheck_feedback(precheck);
+            if(precheck==SourceBedSleepPrecheck::passed_known_conditions) {
+                bool sheltered=false;
+                const minidayz::WorldPoint player_pos{
+                    player_.state().x,player_.state().y};
+                // Root UID 145774090408998 requires collision with the
+                // actual wall trigger 346 unless source perk_cn is active.
+                // That perk is not yet represented, so do not invent it.
+                for(const auto i:source_house_wall_indices_){
+                    const auto* wall=world_.placement(i);
+                    if(wall && source_player_overlaps_world_sprite(
+                        *wall,player_pos,wall->origin_x,wall->origin_y)){
+                        sheltered=true;break;
+                    }
+                }
+                if(!sheltered) {
+                    source_furniture_feedback_="SLEEP RESTRICTED: NEED SHELTER";
+                } else if(player_.state().bleeding>0.0f ||
+                          player_.state().infection>0.0f) {
+                    // Preserve source var22/35 medical exclusion rather
+                    // than granting sleep through an unported condition.
+                    source_furniture_feedback_="SLEEP RESTRICTED: WOUNDED";
+                } else {
+                    bool danger=false;
+                    for(std::size_t n=0;n<npcs_.count();++n){
+                        const auto* npc=npcs_.actor(n);
+                        if(npc && npc->alive &&
+                           std::hypot(npc->x-player_pos.x,
+                                      npc->y-player_pos.y)<300.0f){
+                            danger=true;break;
+                        }
+                    }
+                    if(danger){
+                        source_furniture_feedback_="SLEEP RESTRICTED: NEARBY THREAT";
+                    }else{
+                        const auto rules=preview_rules_;
+                        const auto time=source_count_sleep_seconds(
+                            day_night_.snapshot().timer_all,
+                            player_.state().hunger,player_.state().thirst,
+                            rules.hunger_drain_per_second*5.0f,
+                            rules.thirst_drain_per_second*5.0f,
+                            perks_.level(minidayz::items::SourcePerk::hamster),
+                            perks_.level(minidayz::items::SourcePerk::camel));
+                        if(time>=1.5f && std::isfinite(time)) {
+                            source_sleep_={p->runtime_uid,1.0f,time};
+                            source_furniture_feedback_="SLEEP APPROVED - FADING";
+                        }else{
+                            source_furniture_feedback_="SLEEP RESTRICTED: NO TIME";
+                        }
+                    }
+                }
+            }
             source_furniture_feedback_seconds_=3.0f;
             return;
         }
@@ -3441,6 +3494,60 @@ private:
             rebuild_source_furniture();
             visibility_index_.rebuild(world_);
         }else source_furniture_feedback_="BED DISMANTLE CANCELLED";
+        source_furniture_feedback_seconds_=3.0f;
+    }
+
+    // Root Bed_activated waits 1 original second before GotoSleep.
+    // Do not advance time until the approval and source Count_sleep_hours
+    // branch have both succeeded. Original 5s stat loops are discrete.
+    void advance_source_sleep_wait(float dt) noexcept {
+        if(!source_sleep_.runtime_uid || !std::isfinite(dt) || dt<0.0f)
+            return;
+        source_sleep_.remaining-=dt;
+        if(source_sleep_.remaining>0.0f)return;
+        const auto pending=source_sleep_;
+        source_sleep_={};
+        if(!player_.state().alive || !world_ready_)return;
+        bool bed_valid=false;
+        for(const auto index:source_furniture_indices_){
+            const auto* bed=world_.placement(index);
+            if(bed && bed->runtime_uid==pending.runtime_uid &&
+               minidayz::world_source::source_furniture_active(*bed)){
+                bed_valid=true;break;
+            }
+        }
+        if(!bed_valid)return;
+        const auto steps=static_cast<unsigned>(
+            std::floor(pending.sleep_seconds/5.0f));
+        const auto minutes=static_cast<unsigned>(
+            std::floor(pending.sleep_seconds/1.5f));
+        // Source UID 985925996128270: repeat floor(sleep_seconds/5).
+        for(unsigned i=0;i<steps && player_.state().alive;++i){
+            (void)player_.update_survival(5.0f,preview_rules_);
+            if(perks_.level(minidayz::items::SourcePerk::camel)>0)
+                player_.adjust_thirst(
+                    -preview_rules_.thirst_drain_per_second*5.0f*0.1f,
+                    preview_rules_.max_thirst);
+            if(perks_.level(minidayz::items::SourcePerk::hamster)>0)
+                player_.adjust_hunger(
+                    -preview_rules_.hunger_drain_per_second*5.0f*0.1f,
+                    preview_rules_.max_hunger);
+            const float sweethome=perks_.source_sweethome_needs_gain();
+            if(sweethome>0.0f) {
+                player_.adjust_hunger(sweethome,preview_rules_.max_hunger);
+                player_.adjust_thirst(sweethome,preview_rules_.max_thirst);
+            }
+            (void)player_.apply_source_body_temperature_tick(
+                source_weather_exposure_);
+        }
+        // Root 717349066493382: floor(sleep_seconds/1.5) time ticks.
+        (void)day_night_.update(static_cast<float>(minutes)*1.5f);
+        source_temperature_initialized_=false;
+        stage2_audio_.set_environment_ambience(
+            !day_night_.day_mode(),world_level_==4);
+        source_furniture_feedback_=player_.state().alive?
+            "WOKE UP - ORIGINAL SURVIVAL TICKS":
+            "SLEEP ENDED - SURVIVOR DIED";
         source_furniture_feedback_seconds_=3.0f;
     }
 
@@ -3916,6 +4023,12 @@ private:
     };
     SourceBedBuild source_bed_build_{};
     SourceBedDismantle source_bed_dismantle_{};
+    struct SourceSleepWait {
+        std::uint64_t runtime_uid{};
+        float remaining{};
+        float sleep_seconds{};
+    };
+    SourceSleepWait source_sleep_{};
     std::vector<std::uint32_t> source_furniture_indices_{};
     SourcePumpWait source_pump_pending_{};
     std::uint64_t source_bed_selected_uid_{};
