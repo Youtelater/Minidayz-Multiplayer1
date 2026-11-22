@@ -11,5 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify original road anchors and split-map loop bounds
+        run: python3 tools/stage1/audit_original_road_dispatch.py
       - name: Trace exact original Map generation entry events and array indexing
         run: python3 tools/stage1/trace_source_map_grid_parity.py
