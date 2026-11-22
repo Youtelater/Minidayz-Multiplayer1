@@ -477,3 +477,8 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - Related audit documents: `docs/ORIGINAL_PARITY_REVIEW.md`, `docs/original-world-state-audit.md` (where present).
 
 **Completion rule:** never label a system 100% complete based only on compiling, an asset inventory, or a few successful screenshots.
+
+## Part 2 collision extraction follow-up — 2026-11-21
+
+- Commit `883fcfa32e4df3e43a2b29578d467f8175036b5f` expands the original frame polygon and geometry extraction to every object identified with the source Solid behavior, including procedural building spawns absent from static Map instances. No synthetic vertices added.
+- Native CI and 3DS build verification pending; emulator parity remains open. Do not mark building collisions complete yet.
