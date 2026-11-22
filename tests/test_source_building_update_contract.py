@@ -34,6 +34,8 @@ checks={
  "original roof every 0.1 seconds": "source_roof_elapsed_<0.1f" in scene and "source_roof_elapsed_,0.1f" in scene,
  "roof depth and wall-zone use original frame data": all(s in scene+roof for s in ("source_house_roof_decision(","source_roof_depth_world_y(","source_player_overlaps_world_sprite(","set_placement_layer(")),
  "original reciprocal house picks": all(s in scene for s in ("6583602733022543","4153213040695326","7058744064425045","reverse_pick_matches=picked==index","reverse_pick_matches &&")),
+ "original wall and door overlap picks": all(s in scene for s in ("source_house_sprites_overlap(*candidate,*wall)","source_house_sprites_overlap(*door,*roof)","source_house_sprites_overlap(*door,*wall)")),
+ "original Tint and player Outline states": all(s in scene for s in ("source_foundation_tint_[base_index]","source_player_outline_=decision.foundation_top","source_family_contains(1064,source_skin_object)")),
  "family 1041 has separate half-second event": "source_interior_elapsed_>=0.5f" in scene,
  "source roof reset on new generation": "source_roof_background_layer_=0xffff;" in scene,
  "mirrored solid building collision": "if(scale_x<0.0f)local_x=-local_x;" in collision,

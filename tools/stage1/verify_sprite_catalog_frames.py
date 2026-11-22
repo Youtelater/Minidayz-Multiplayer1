@@ -12,7 +12,7 @@ import re
 from collections import OrderedDict, Counter
 from pathlib import Path
 from PIL import Image
-from build_sprite_catalog import ident, MAX_FRAMES_PER_ATLAS
+from build_sprite_catalog import ident, MAX_FRAMES_PER_ATLAS, original_player_outline
 
 ROOT=Path(__file__).resolve().parents[2]
 SOURCE=ROOT/"data/stage1/construct_project_parsed.json"
@@ -26,6 +26,32 @@ def main():
     project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-",
         SOURCE.read_text(encoding="utf-8-sig")))["project"]
     objects=project[3]
+    outline_objects=set(next(f[1:] for f in project[4] if f[0]==1064))
+    assert project[14] is False, "Original Outline port assumes source point sampling"
+    foundation_objects=set(next(f[1:] for f in project[4] if f[0]==1048))
+    expected_tint=set()
+    expected_outline=set()
+    for layout in project[5]:
+        for layer in layout[6]:
+            for instance in layer[14] if len(layer)>14 and isinstance(layer[14],list) else []:
+                if instance[1] in foundation_objects:
+                    assert instance[0][12]==[[0.5,0.5,0.5]], "Original foundation Tint parameters changed"
+                    expected_tint.add(instance[1])
+                if instance[1] in outline_objects:
+                    assert instance[0][12]==[[255,255,255,0,0]], "Original player Outline parameters changed"
+                    expected_outline.add(instance[1])
+    assert expected_tint==foundation_objects and expected_outline==outline_objects
+    # Verify the exact eight-neighbour shader at the original pixel grid.
+    probe=Image.new("RGBA",(5,5),(0,0,0,0))
+    probe.putpixel((2,2),(255,255,255,255))
+    effect=original_player_outline(probe)
+    assert effect.size==probe.size
+    for y in range(5):
+        for x in range(5):
+            assert effect.getpixel((x,y))==((255,255,255,255) if max(abs(x-2),abs(y-2))<=1 else (0,0,0,0))
+    # Root WebGL premultiplied alpha conversion must preserve the shader formula.
+    partial=Image.new("RGBA",(3,3),(100,150,200,128))
+    assert original_player_outline(partial).getpixel((1,1))==(50,75,100,128)
     frames_by_sheet=OrderedDict()
     expected=[]
     for oi,obj in enumerate(objects):
@@ -108,6 +134,13 @@ def main():
                 verified_pages.add(name)
     if missing:
         raise SystemExit("Missing/empty sprite atlas pages: "+", ".join(missing[:15]))
+    effect_pages={atlas+"_outline.t3x" for oi,ai,fi,idx,atlas in expected if oi in outline_objects}
+    assert effect_pages, "Source player effect frames missing"
+    for name in effect_pages:
+        effect_texture=OUT/name
+        if not effect_texture.is_file() or not effect_texture.stat().st_size:
+            raise SystemExit("Missing source Outline effect atlas "+name)
+    print(f"Verified all {len(effect_pages)} original player Outline atlas pages")
     result={
         "status":"source_mapping_verified",
         "construct_sprite_frame_references":len(expected),
