@@ -10,6 +10,7 @@
 - [x] Native road tests check horizontal and vertical segments, intersections, and preservation of existing location cells across eight seeds on each of the six levels. The full native world suite passed.
 - [x] The native suite and 3DS executable build passed on `9c4279b`. Azahar verified New Game, Continue, all five forward bridge transitions, and the final-level travel limit using separate save fixtures. The transitions retained survivor health, and Continue reopened a save written after travel.
 - [x] Native travel regression forces a destination-generation failure, checks that the active world is preserved, and retries successfully. The staged loader also handles allocation failure while generating the destination.
+- [x] The 3DS build passed on `f0e2d2a`. Azahar retested the first bridge crossing on that executable. A native fault-injection check also verified retry after allocation failure during setup and generation.
 - [ ] Verify failure and retry in the emulator and measure peak memory on real 3DS hardware.
 - [ ] Conditional building placements, initial building loot dispatch and full map-generation parity remain open.
 
