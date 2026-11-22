@@ -144,12 +144,34 @@ for e,parents in walk(game):
         if not(isinstance(a,list) and len(a)>5 and a[1] in (73,94) and
             a[5] and a[5][0]==[4,218]):continue
         following=e[6][i+1:]
-        source_events.append((e[4],any(is_trigger(x) for x in following),
-                              any(x[:2]==[218,88] for x in following)))
+        for j,nxt in enumerate(following):
+            if isinstance(nxt,list) and len(nxt)>5 and nxt[1] in (73,94) and (
+                    nxt[5] and nxt[5][0]==[4,218]):
+                following=following[:j]
+                break
+        sets=[x for x in following if isinstance(x,list) and len(x)>5 and
+              x[:2]==[218,88] and x[5][0]==[10,0]]
+        category=None
+        if sets and len(sets[0][5])>1 and sets[0][5][1][0]==7:
+            try:
+                values=literal(sets[0][5][1][1])
+                if len(values)==1:category=values[0]
+            except SystemExit:
+                pass
+        source_events.append((e[4],category,any(is_trigger(x) for x in following)))
 if len(source_events)<160:raise SystemExit("Source building marker creation coverage shrank")
 # These are conservative event-level tags for native Mapgen/companion creations.
 # Do not tag authored root Map editor markers or markers without an original call.
-trigger_event_uids=sorted({uid for uid,hit,category_set in source_events if hit and category_set})
+trigger_event_uids=sorted({uid for uid,cat,hit in source_events if hit and cat is not None})
+consistent_event_categories={}
+for uid,cat,hit in source_events:
+    if cat is None:continue
+    if uid in consistent_event_categories and consistent_event_categories[uid]!=cat:
+        consistent_event_categories[uid]=None
+    elif uid not in consistent_event_categories:
+        consistent_event_categories[uid]=cat
+source_event_category_rows=sorted((uid,cat) for uid,cat in consistent_event_categories.items()
+                                  if cat is not None)
 
 def cpp(data,group):
     out=[]
@@ -180,7 +202,18 @@ lines+=["};",
         "inline constexpr std::uint64_t kSourceInitialMarkerCreationEventUIDs[]={"]
 lines+=["    "+", ".join(str(uid)+"ULL" for uid in trigger_event_uids[i:i+6])+","
         for i in range(0,len(trigger_event_uids),6)]
-lines+=["};","inline bool source_event_triggers_initial_loot(std::uint64_t uid) noexcept {",
+lines+=["};",
+        "struct SourceInitialMarkerCategoryEvent {std::uint64_t event_uid;std::uint16_t category;};",
+        f"inline constexpr std::size_t kSourceInitialMarkerCategoryEventCount={len(source_event_category_rows)};",
+        "inline constexpr SourceInitialMarkerCategoryEvent kSourceInitialMarkerCategoryEvents[]={"]
+for uid,category in source_event_category_rows:
+    lines.append(f" {{{uid}ULL,{category}}},")
+lines+=["};","inline bool source_initial_marker_event_category(std::uint64_t uid,",
+        " std::uint16_t& category) noexcept {",
+        " for(const auto& value:kSourceInitialMarkerCategoryEvents)",
+        "  if(value.event_uid==uid){category=value.category;return true;}",
+        " return false;}",
+        "inline bool source_event_triggers_initial_loot(std::uint64_t uid) noexcept {",
         " for(const auto value:kSourceInitialMarkerCreationEventUIDs)if(value==uid)return true;",
         " return false;}","} // namespace minidayz::items",""]
 HEADER.parent.mkdir(parents=True,exist_ok=True)
