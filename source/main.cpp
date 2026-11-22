@@ -2563,6 +2563,8 @@ public:
                 // Keep the placement and UID for source achievements/
                 // proximity logic, but never submit its pixels to the GPU.
                 if (minidayz::world_source::source_world_logic_marker_not_art(
+                        placement->object) ||
+                    minidayz::world_source::source_world_preview_needs_live_event(
                         placement->object)) continue;
                 const auto* source_layer = source_map
                     ? minidayz::stage1::find_layer(

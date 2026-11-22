@@ -3,17 +3,38 @@
 
 namespace minidayz::world_source {
 
-// Original Construct t404 / ach_city_counter-sheet0.png is a 2x2
-// MAGENTA gameplay counter marker. Source Map generation creates
-// 1000x1000 instances on Buildings layer 41 to track achievement areas.
-// These are not scenery: rendering their pixels covers entire towns and
-// hides the player in a purple square. Preserve WorldPlacement state,
-// original location and UID for game events; skip only the pixel draw.
-// Intentionally do not hide other IDs without matching root-source proof.
+// Root original Construct object IDs and canonical assets/gfx mappings.
+// These are *gameplay/event instances*, not scenery. Keep every source
+// placement, source UID, source frame, mask, collision and saved world state.
+// Only the automatic top-screen world sprite pass must skip their PIXELS.
+// 181 player_collision_base; 193 player_base; 218 spawn_loot_point;
+// 345 obst_base (red collision silhouettes); 346 warmzone (wall trigger);
+// 348 big_obstacle_base (neon green hitbox silhouettes);
+// 404 ach_city_counter (1000x1000 magenta region overlay);
+// 508 map_element; 514 mapgen; 857 polygon_target_base;
+// 984 collision_checker_general. All mapped to canonical root source frames.
 inline constexpr std::uint16_t kSourceNonvisualCityCounter=404;
 constexpr bool source_world_logic_marker_not_art(
     std::uint16_t object) noexcept {
-    return object==kSourceNonvisualCityCounter;
+    switch(object){
+    case 181: case 193: case 218:
+    case 345: case 346: case 348:
+    case 404: case 508: case 514:
+    case 857: case 984:
+        return true;
+    default:
+        return false;
+    }
 }
 
+// build_ghost-sheet0 (571) and build_ghost_obstacle-sheet0/1 (573)
+// are *real* source animation frames, but only drawn under the original
+// GUI/Building mode event conditions. Their Map layout instances are staged
+// outside the playfield at opacity 0. A native, active construction preview
+// is explicitly drawn in WorldPreviewScene::render(), never by this generic
+// WorldPlacement pass. Do NOT remove the original PNGs or their source atlas.
+constexpr bool source_world_preview_needs_live_event(
+    std::uint16_t object) noexcept {
+    return object==571 || object==573;
+}
 } // namespace minidayz::world_source

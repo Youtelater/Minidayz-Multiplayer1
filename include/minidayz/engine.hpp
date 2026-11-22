@@ -17,6 +17,9 @@ public:
  bool initialize() noexcept; void shutdown() noexcept;
  void begin_frame() noexcept; void begin_screen(gfxScreen_t screen) noexcept; void end_frame() noexcept;
  std::size_t sprite_cache_misses() const noexcept { return sprite_cache_misses_; }
+ // Requests that couldn't be drawn: missing source frames, failed textures,
+ // or >32 distinct in-use GPU atlas pages in the same rendered frame.
+ std::size_t sprite_cache_failed_draws() const noexcept { return sprite_cache_failed_draws_; }
  void load_debug_overlay(std::uint64_t frame, float delta, const InputState& input, bool scene_active) noexcept;
  void draw_debug_overlay() noexcept;
  void draw_solid_rect(float x,float y,float width,float height,u32 color,float depth=0.5f) noexcept;
@@ -77,7 +80,7 @@ private:
   std::vector<GroundMap> ground_maps_{};std::uint32_t ground_tile_pixels_{};std::uint32_t ground_pages_{};
   bool ground_load_attempted_{};bool ground_loaded_{}; std::uint8_t ground_active_level_{255}; C2D_SpriteSheet sheets_[kMaxSheets]{};
  struct SpriteCacheEntry { char sheet[128]{}; std::size_t slot{}; };
- SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{}; std::size_t sprite_cache_misses_{};
+ SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{}; std::size_t sprite_cache_misses_{}; std::size_t sprite_cache_failed_draws_{};
  std::array<bool,kMaxSheets> sprite_cache_drawn_this_frame_{};
  std::size_t choose_sprite_cache_slot() noexcept;
  C2D_Font debug_font_{}; C2D_TextBuf debug_buffer_{}; C2D_Text debug_text_{};

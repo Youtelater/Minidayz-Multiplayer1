@@ -59,6 +59,9 @@ jobs:
             -o terrain_source_visibility_tests
           ./terrain_source_visibility_tests
 
+      - name: Verify original invisible collider masks and building-mode-only sprites
+        run: python3 tests/test_source_visual_role_contract.py
+
       - name: Verify source-derived world sprite extents
         run: |
           python3 tools/stage1/build_world_source_extents.py --check

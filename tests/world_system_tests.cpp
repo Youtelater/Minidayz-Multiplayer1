@@ -1537,6 +1537,17 @@ void test_full_generation_all_source_maps() {
         // achievement city-counter sprite, but its original world logic
         // needs the 1000x1000 placement and UID intact.
         assert(minidayz::world_source::source_world_logic_marker_not_art(404));
+        // Root sprites used for collision, spawn markers, opaque editor
+        // masks and nonvisual player position are never scenery art.
+        for(const auto marker:{181,193,218,345,346,348,508,514,857,984})
+            assert(minidayz::world_source::source_world_logic_marker_not_art(
+                static_cast<std::uint16_t>(marker)));
+        // The neon green original ghost sprites stay available ONLY to the
+        // explicitly event-activated construction preview renderer.
+        assert(minidayz::world_source::source_world_preview_needs_live_event(571));
+        assert(minidayz::world_source::source_world_preview_needs_live_event(573));
+        assert(!minidayz::world_source::source_world_preview_needs_live_event(349));
+        assert(!minidayz::world_source::source_world_logic_marker_not_art(347));
         assert(!minidayz::world_source::source_world_logic_marker_not_art(321));
         assert(!minidayz::world_source::source_world_logic_marker_not_art(349));
         assert(!minidayz::world_source::source_world_logic_marker_not_art(184));

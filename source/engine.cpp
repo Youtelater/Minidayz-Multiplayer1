@@ -82,6 +82,7 @@ void Renderer::shutdown() noexcept {
 }
 void Renderer::begin_frame() noexcept {
  sprite_cache_misses_=0;
+ sprite_cache_failed_draws_=0;
  sprite_cache_drawn_this_frame_.fill(false);
  C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
  C2D_TargetClear(top_,C2D_Color32(12,16,18,255));
@@ -222,13 +223,16 @@ bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,fl
  return C2D_DrawSpriteTinted(&sprite,&tint);
 }
 bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float sx,float sy,float depth,float rotation,float opacity,float rgb_multiplier,bool outline) noexcept {
+ // A source Sprite with zero opacity is a logic-only mask or hidden
+ // editor template. Never allocate GPU texture pages for invisible pixels.
+ if(std::isfinite(opacity) && opacity<=0.0f)return true;
  const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,animation,frame};
  const auto* begin=stage1::kSpriteFrames;
  const auto* end=begin+stage1::kSpriteFrameCount;
  const auto* found=std::lower_bound(begin,end,key,[](const stage1::SpriteFrameDef& item,const auto& wanted){
   return std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{item.object,item.animation,item.frame}<wanted;
  });
- if(found==end||found->object!=object||found->animation!=animation||found->frame!=frame) return false;
+ if(found==end||found->object!=object||found->animation!=animation||found->frame!=frame){++sprite_cache_failed_draws_;return false;}
  const auto* selected=found;
  char effect_sheet[128]{};
  const char* sheet=selected->sheet;
@@ -244,10 +248,10 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  if(slot==kMaxSheets){
   ++sprite_cache_misses_;
   slot=choose_sprite_cache_slot();
-  if(slot==kMaxSheets)return false; // all 32 pages already in GPU use
+  if(slot==kMaxSheets){++sprite_cache_failed_draws_;return false;} // all 32 pages already in GPU use
   char path[128];
   const int n=std::snprintf(path,sizeof(path),"romfs:/gfx/%s.t3x",sheet);
-  if(n<=0||static_cast<std::size_t>(n)>=sizeof(path)||!load_sheet(slot,path)) return false;
+  if(n<=0||static_cast<std::size_t>(n)>=sizeof(path)||!load_sheet(slot,path)){++sprite_cache_failed_draws_;return false;}
   std::snprintf(sprite_cache_[slot].sheet,sizeof(sprite_cache_[slot].sheet),"%s",sheet);
   sprite_cache_[slot].slot=slot;
  }
@@ -286,12 +290,12 @@ bool Renderer::draw_original_image(const char* original_png,float x,float y,
  }
  if(slot==kMaxSheets){
   slot=choose_sprite_cache_slot();
-  if(slot==kMaxSheets)return false;
+  if(slot==kMaxSheets){++sprite_cache_failed_draws_;return false;}
   char path[192]{};
   const auto length=std::snprintf(path,sizeof(path),"romfs:/gfx/%s",
                                    selected->texture);
   if(length<=0||static_cast<std::size_t>(length)>=sizeof(path)||
-     !load_sheet(slot,path))return false;
+     !load_sheet(slot,path)){++sprite_cache_failed_draws_;return false;}
   std::snprintf(sprite_cache_[slot].sheet,
                 sizeof(sprite_cache_[slot].sheet),"%s",selected->texture);
   sprite_cache_[slot].slot=slot;
@@ -838,11 +842,12 @@ void Engine::render() noexcept {
   // A high reload count identifies thrashing of the 32 resident sprite
   // sheets; frame time distinguishes CPU/GPU slowdown from move speed.
   renderer_.reset_camera();
-  char metrics[96]{};
+  char metrics[128]{};
   const float fps=measured_frame_seconds_>0.0f?1.0f/measured_frame_seconds_:0.0f;
-  std::snprintf(metrics,sizeof(metrics),"FPS %.1f  DT %.0fms  TEX LOADS %lu",
+  std::snprintf(metrics,sizeof(metrics),"FPS %.1f DT %.0fms TEX LOADS %lu DROPS %lu",
     static_cast<double>(fps),static_cast<double>(measured_frame_seconds_*1000.0f),
-    static_cast<unsigned long>(renderer_.sprite_cache_misses()));
+    static_cast<unsigned long>(renderer_.sprite_cache_misses()),
+    static_cast<unsigned long>(renderer_.sprite_cache_failed_draws()));
   renderer_.draw_solid_rect(0.0f,0.0f,400.0f,17.0f,
                             C2D_Color32(14,18,15,238),0.88f);
   renderer_.draw_text(metrics,4.0f,2.0f,0.37f);
