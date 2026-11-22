@@ -698,7 +698,7 @@ public:
         }
         if (crafting_open_ && touch_pressed && input.touch.py >= 223) {
             const std::size_t pages =
-                (minidayz::items::kSourceCraftRecipeCount + kCraftPageSize - 1) /
+                (minidayz::items::kSourceCraftRecipeCount + 2 + kCraftPageSize - 1) /
                 kCraftPageSize;
             if (input.touch.px < 110 && crafting_page_ > 0)
                 --crafting_page_;
@@ -711,7 +711,14 @@ public:
                 static_cast<std::size_t>((input.touch.py - 99) / 40);
             const auto* source_recipe =
                 minidayz::items::source_craft_recipe(recipe);
-            if (source_recipe &&
+            if (recipe >= minidayz::items::kSourceCraftRecipeCount &&
+                recipe < minidayz::items::kSourceCraftRecipeCount+2) {
+                const auto variant=static_cast<std::uint8_t>(
+                    recipe-minidayz::items::kSourceCraftRecipeCount);
+                crafting_feedback_=begin_source_bed_craft(variant)
+                    ? CraftFeedback::none : CraftFeedback::missing_or_full;
+                crafting_feedback_elapsed_=0.0f;
+            } else if (source_recipe &&
                 pending_craft_recipe_ >= minidayz::items::kSourceCraftRecipeCount) {
                 if (source_recipe->delay_seconds > 0.0f) {
                     if (minidayz::items::can_craft_from_inventory(
@@ -2045,7 +2052,7 @@ public:
             renderer.draw_solid_rect(8.0f, 89.0f, 304.0f, 133.0f,
                                      C2D_Color32(22, 31, 25, 255));
             const std::size_t page_count =
-                (minidayz::items::kSourceCraftRecipeCount + kCraftPageSize - 1) /
+                (minidayz::items::kSourceCraftRecipeCount + 2 + kCraftPageSize - 1) /
                 kCraftPageSize;
             char page_header[60]{};
             std::snprintf(page_header, sizeof(page_header),
@@ -2056,6 +2063,36 @@ public:
             for (std::size_t row = 0; row < kCraftPageSize; ++row) {
                 const std::size_t i = crafting_page_ * kCraftPageSize + row;
                 const auto* recipe = minidayz::items::source_craft_recipe(i);
+                if (!recipe && i>=minidayz::items::kSourceCraftRecipeCount &&
+                    i<minidayz::items::kSourceCraftRecipeCount+2) {
+                    const auto variant=static_cast<std::uint8_t>(
+                        i-minidayz::items::kSourceCraftRecipeCount);
+                    const float y=99.0f+static_cast<float>(row)*40.0f;
+                    const bool ready=minidayz::world_source::
+                        source_bed_materials_available(inventory_,variant);
+                    renderer.draw_solid_rect(12.0f,y,296.0f,36.0f,
+                        ready?C2D_Color32(65,95,64,255)
+                             :C2D_Color32(49,56,49,255));
+                    // Source object951 frame0, original 37x21 bed image,
+                    // never a guessed inventory icon or a whole PNG sheet.
+                    (void)renderer.draw_source_sprite(951,0,0,
+                        27.0f,y+17.0f,0.65f,0.65f,0.54f);
+                    renderer.draw_text(variant?"BUILD BED (BEAR HIDE)":
+                        "BUILD BED (DEERSKIN)",43.0f,y+2.0f,0.24f);
+                    renderer.draw_text(ready?"READY":"NEED",
+                        263.0f,y+2.0f,0.19f);
+                    char ingredients[100]{};
+                    std::snprintf(ingredients,sizeof(ingredients),
+                        "WOOD 50: %u/1 + HIDE %u: %u/1",
+                        static_cast<unsigned>(inventory_.count(50)),
+                        static_cast<unsigned>(
+                            minidayz::world_source::source_bed_hides(variant)),
+                        static_cast<unsigned>(inventory_.count(
+                            minidayz::world_source::source_bed_hides(variant))));
+                    renderer.draw_text(ingredients,43.0f,y+19.0f,0.18f);
+                    renderer.draw_text("PLACE",265.0f,y+26.0f,0.16f);
+                    continue;
+                }
                 if (!recipe) continue;
                 const float y = 99.0f + static_cast<float>(row) * 40.0f;
                 const bool ready = minidayz::items::can_craft_from_inventory(
@@ -2546,6 +2583,23 @@ public:
                     // Original art was not loaded: do not draw a fake object.
                     // Missing source atlas frames are audited during CI.
                 }
+            }
+
+            // The original Building_mode(12) spawns object573 Ghost frame12
+            // on Buildings layer41; use its exact original atlas rectangle.
+            if(source_bed_build_.active) {
+                const auto& ghost=source_bed_build_;
+                const bool valid=source_bed_build_site_valid(ghost.x,ghost.y);
+                (void)renderer.draw_source_sprite(
+                    minidayz::world_source::kSourceBedGhostObject,0,
+                    minidayz::world_source::kSourceBedGhostFrame,
+                    ghost.x,ghost.y,1.0f,1.0f,
+                    minidayz::world_source::source_world_layer_depth(41,0,1),
+                    0.0f,valid?0.90f:0.45f);
+                renderer.draw_text(ghost.confirmed?
+                    "BED: BUILDING (3s)":
+                    valid?"A PLACE / B CANCEL":"NEAR HOUSE WALL: A CHECK",
+                    ghost.x-45.0f,ghost.y-34.0f,0.18f);
             }
 
             // Source bridge and bunker spawn events create terrain features
