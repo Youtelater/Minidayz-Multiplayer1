@@ -40,8 +40,8 @@ for sheet,events in p[6]:
     print("ROAD_GRID_DECL",sheet,n[:7],"ancestors",anc[-5:])
    elif n[0]==0:
     for a in n[6]:
-     if isinstance(a,list) and len(a)>5 and a[:2]==[-1,41] and a[5] and
-        len(a[5][0])>1 and a[5][0] in ([11,"Map_size_X"],[11,"Map_size_Y"]):
+     if (isinstance(a,list) and len(a)>5 and a[:2]==[-1,41] and a[5]
+         and len(a[5][0])>1 and a[5][0] in ([11,"Map_size_X"],[11,"Map_size_Y"])):
       print("ROAD_GRID_SET_X",sheet,n[4],json.dumps(a[5],separators=(',',':')))
     variables(n[7],anc+(n[4],))
  variables(events)
