@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <limits>
 #include <initializer_list>
+#include <utility>
 #include <unordered_set>
 
 namespace {
@@ -1289,6 +1290,40 @@ void test_bunker_and_bridge_placement_reload() {
     assert(small.feature(1)->position.x == 25.0f);
 }
 
+// Road cells must lie between the first pair of anchors on each axis.
+void check_generated_road_connections(const minidayz::WorldGrid& grid,
+                                      const minidayz::WorldGenerationProfile& profile) {
+    const auto anchor = [](std::uint16_t code) {
+        return code == 6 || code == 9 || code == 11 || code == 15 || code == 103;
+    };
+    const auto find_pair = [&](int length, const auto& cell_at) {
+        int first = -1;
+        for (int i = 0; i < length; ++i) {
+            if (!anchor(cell_at(i))) continue;
+            if (first >= 0) return std::pair<int, int>{first, i};
+            first = i;
+        }
+        return std::pair<int, int>{-1, -1};
+    };
+    for (int y = 0; y < grid.height(); ++y) {
+        const auto horizontal = find_pair(grid.width(), [&](int x) { return grid.at(x, y); });
+        const int offset = profile.second_half_start_y && y >= profile.second_half_start_y - 1
+            ? profile.second_half_start_y - 1 : 0;
+        for (int x = 0; x < grid.width(); ++x) {
+            const auto vertical = find_pair(profile.map_size_y,
+                [&](int row) { return grid.at(x, row + offset); });
+            const int row = y - offset;
+            const bool east_west = x > horizontal.first && x < horizontal.second;
+            const bool north_south = x < profile.map_size_y &&
+                row > vertical.first && row < vertical.second;
+            const auto cell = grid.at(x, y);
+            if (cell != 0 && cell != 12 && cell != 13 && cell != 14) continue;
+            assert(cell == (east_west && north_south ? 14 :
+                            east_west ? 13 : north_south ? 12 : 0));
+        }
+    }
+}
+
 void test_every_source_level_quota() {
     for (std::uint8_t level = 0; level <= 5; ++level) {
         minidayz::WorldGenerationProfile profile{};
@@ -1302,6 +1337,7 @@ void test_every_source_level_quota() {
             assert(world.initialize(seed));
             assert(world.generate_procedural_grid(level, seed));
             assert(world.build_map_markers(level, seed));
+            check_generated_road_connections(world.grid(), profile);
 
             const auto total = [](std::uint8_t first, std::uint8_t second) {
                 return static_cast<std::size_t>(first) + second;

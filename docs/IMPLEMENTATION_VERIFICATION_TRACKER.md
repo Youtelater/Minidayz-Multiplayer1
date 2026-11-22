@@ -7,6 +7,7 @@
 - [x] Checked point-of-interest quotas for eight seeds across all six map levels. The six full-generation cases check road presence and each bridge and bunker placement against the configured coordinates, with bunker slot weights checked as well. Native world tests passed.
 - [x] Bridge travel builds the destination before replacing the active map. A generation failure keeps the current map, survivor, loot, tents and stashes available. The bridge prompt offers a retry.
 - [x] Updated the spawn regression check for the travel function signature and checked that spawn uses the destination seed and level. The local fidelity and screen-depth checks passed.
+- [x] Native road tests check horizontal and vertical segments, intersections, and preservation of existing location cells across eight seeds on each of the six levels. The full native world suite passed.
 - [ ] Verify bridge travel and retry in the emulator, including memory use while both maps are allocated.
 - [ ] Conditional building placements, initial building loot dispatch and full map-generation parity remain open.
 
