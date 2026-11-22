@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'tools/stage2/trace_initial_building_loot.py'
+      - 'tools/stage2/build_original_initial_building_loot.py'
       - '.github/workflows/trace-original-building-loot.yml'
   workflow_dispatch:
 jobs:
@@ -11,5 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Extract exact original Construct event tree
+        run: |
+          python3 tools/stage1/reassemble_snapshot.py
+          python3 tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
+      - name: Verify original item ID fallback and weighted building loot extraction
+        run: python3 tools/stage2/build_original_initial_building_loot.py
       - name: Trace original Trigger_spawn category ancestry and Spawn_drop
         run: python3 tools/stage2/trace_initial_building_loot.py
