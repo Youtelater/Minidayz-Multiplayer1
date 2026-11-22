@@ -30,7 +30,15 @@ inline std::size_t source_initial_loot_choice_index(std::uint32_t draw,
 inline bool source_initial_loot_chance(
     const SourceInitialBuildingLootRule& rule,std::uint32_t draw) noexcept {
     if(rule.gate_kind==0)return true;
-    if(rule.gate_kind==3)return false; // Else uses preceding gate decision.
+    if(rule.gate_kind==3)return false;
+    if(rule.gate_kind==4) {
+        // Original round(random(1,100)) == 55. Construct's uniform
+        // source expression is continuous from 1 inclusive to 100
+        // exclusive, then rounded. Do not replace this with choose(95).
+        const double uniform=static_cast<double>(draw)/4294967296.0;
+        const double value=1.0+99.0*uniform;
+        return std::floor(value+0.5)==rule.gate_target;
+    } // Else uses preceding gate decision.
     if(rule.gate_kind!=1 && rule.gate_kind!=2)return false;
     if(!rule.gate_choices ||
        static_cast<std::size_t>(rule.gate_first)+rule.gate_choices>
