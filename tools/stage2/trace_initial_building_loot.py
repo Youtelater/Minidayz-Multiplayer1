@@ -12,7 +12,7 @@ def walk(events,anc=()):
  for e in events if isinstance(events,list) else ():
   if isinstance(e,list) and len(e)>=7 and e[0]==0:
    yield e,anc
-   yield from walk(e[7],anc+(e,))
+   if len(e)>7:yield from walk(e[7],anc+(e,))
 def isdrop(a):
  return isinstance(a,list) and len(a)>5 and a[:2]==[189,69] and a[5] and a[5][0]==[1,[2,"Spawn_drop"]]
 def extract(cond):
