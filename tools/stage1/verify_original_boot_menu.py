@@ -90,7 +90,17 @@ assert "if(screen==GFX_TOP)" in engine, "Bottom-screen menu must never scroll wi
 assert "C2D_ViewTranslate(-camera_x_,-camera_y_)" in engine
 assert "if(!debug_ready_||!value" not in engine, "Text cannot disappear when emulator system font is unavailable"
 assert "void Renderer::draw_text" in engine and "menu::ui_font_glyph" in engine
-assert "WorldPreviewScene scene(has_saved_game ? &restored : nullptr);" in main
-assert "engine.set_scene(&scene)" in main
+# World scene and expanded SavedGame can now exceed the 3DS thread's
+# small stack. Both the old stack path and heap-owned path start on the
+# SAME menu and give Continue the same SavedGame* argument.
+stack_scene=(
+    "WorldPreviewScene scene(has_saved_game ? &restored : nullptr);" in main and
+    "engine.set_scene(&scene)" in main)
+heap_scene=(
+    "std::unique_ptr<SavedGame> restored(new(std::nothrow) SavedGame{});" in main and
+    "load_saved_game(*restored)" in main and
+    "WorldPreviewScene(has_saved_game ? restored.get() : nullptr)" in main and
+    "engine.set_scene(scene.get())" in main)
+assert stack_scene or heap_scene, "Menu scene must use authoritative save for Continue"
 print("PASS: original root Construct artwork bundled, scene starts on menu, "
       "and both save states expose New Game / Continue correctly")
