@@ -2886,7 +2886,7 @@ private:
             }
         }
         source_roof_elapsed_=source_interior_elapsed_=0.0f;
-        source_overlapping_house_uids_.clear();
+        source_overlapping_wall_indices_.clear();
     }
 
     void update_source_house_roofs(float dt) noexcept {
@@ -2918,13 +2918,11 @@ private:
 
         // Retain the picked wall instances, not a global boolean: an
         // adjacent building must not inherit another house's wall zone.
-        source_overlapping_house_uids_.clear();
+        source_overlapping_wall_indices_.clear();
         for(const auto i:source_house_wall_indices_){
             const auto* wall=world_.placement(i);
             if(wall && source_player_base_overlaps_wall(*wall,player_pos)){
-                const auto owner=wall->house_base_runtime_uid?
-                    wall->house_base_runtime_uid:wall->parent_runtime_uid;
-                if(owner)source_overlapping_house_uids_.push_back(owner);
+                source_overlapping_wall_indices_.push_back(i);
             }
         }
         bool sheltered=false;
@@ -2952,14 +2950,34 @@ private:
             }
             const auto* base=world_.placement(base_index);
             const bool has_base=base!=nullptr;
-            const bool touching_wall=has_base &&
-                std::find(source_overlapping_house_uids_.begin(),
-                          source_overlapping_house_uids_.end(),
-                          base->runtime_uid)!=source_overlapping_house_uids_.end();
-            sheltered=sheltered || (overlap && touching_wall);
-            const auto decision=source_house_roof_decision(
+            // Original 8794469330826744 selects foundations by actual
+            // overlap with the picked 346 wall-zone, not generated UIDs.
+            const bool player_in_wall=!source_overlapping_wall_indices_.empty();
+            bool touching_wall=false;
+            if(overlap && player_in_wall){
+                for(const auto w:source_overlapping_wall_indices_){
+                    const auto* wall=world_.placement(w);
+                    if(!wall)continue;
+                    for(const auto j:source_house_foundation_indices_){
+                        const auto* candidate=world_.placement(j);
+                        if(candidate && source_house_sprites_overlap(*candidate,*wall)){
+                            touching_wall=true;
+                            break;
+                        }
+                    }
+                    if(touching_wall)break;
+                }
+            }
+            sheltered=sheltered || (overlap && player_in_wall);
+            auto decision=source_house_roof_decision(
                 *roof,*frame,player_pos,has_base,touching_wall);
-            if(overlap && !touching_wall && base){
+            // The wall-zone branch does not evaluate the outside thresholds.
+            if(overlap && player_in_wall){
+                decision.opacity=touching_wall?0.0f:roof->opacity;
+                decision.move_background=touching_wall ||
+                    roof->layer==source_roof_background_layer_;
+            }
+            if(overlap && !player_in_wall && base){
                 const auto* anim=source_roof_foundation_animations(base->object);
                 if(anim && base->source_animation!=anim->out_animation)
                     (void)world_.set_placement_sprite_state(
@@ -2989,22 +3007,31 @@ private:
                 }
                 reverse_pick_matches=picked==index;
             }
-            if(base && reverse_pick_matches &&
+            if(base && reverse_pick_matches && !player_in_wall &&
                (overlap || base->layer==source_roof_base_top_layer_)){
                 const auto base_layer=decision.foundation_top?
                     source_roof_base_top_layer_:source_roof_base_layer_;
                 if(base_layer!=0xffff && base->layer!=base_layer)
                     (void)world_.set_placement_layer(base_index,base_layer);
             }
-            // Source 6437471853562815 / 7764770537466591: a door
-            // associated with this roof is opaque outside its wall zone,
-            // and 25% in the wall zone. Apply only to linked house doors.
-            if(has_base){
+            // Original events 6437471853562815 / 7764770537466591
+            // pick door 349 by mask overlap with the roof or wall-zone.
+            if(overlap && (!player_in_wall || touching_wall)){
                 for(const auto i:source_door_indices_){
                     const auto* door=world_.placement(i);
-                    if(!door || (door->parent_runtime_uid!=roof->runtime_uid &&
-                        door->house_base_runtime_uid!=base->runtime_uid))continue;
-                    const float opacity=overlap && touching_wall?0.25f:1.0f;
+                    if(!door)continue;
+                    bool picked=!player_in_wall &&
+                        source_house_sprites_overlap(*door,*roof);
+                    if(player_in_wall){
+                        for(const auto w:source_overlapping_wall_indices_){
+                            const auto* wall=world_.placement(w);
+                            if(wall && source_house_sprites_overlap(*door,*wall)){
+                                picked=true;break;
+                            }
+                        }
+                    }
+                    if(!picked)continue;
+                    const float opacity=player_in_wall?0.25f:1.0f;
                     if(std::fabs(door->opacity-opacity)>0.001f)
                         (void)world_.set_placement_sprite_state(
                             i,door->source_animation,door->source_frame,opacity);
@@ -3300,7 +3327,7 @@ private:
         source_roof_indices_.clear();
         source_house_interior_indices_.clear();
         source_house_wall_indices_.clear();
-        source_overlapping_house_uids_.clear();
+        source_overlapping_wall_indices_.clear();
         source_roof_elapsed_=0.0f;
         source_roof_background_layer_=0xffff;
         loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_);
@@ -3467,7 +3494,7 @@ private:
     std::vector<std::uint32_t> source_house_interior_indices_{};
     std::vector<std::uint32_t> source_house_wall_indices_{};
     std::vector<std::uint32_t> source_house_foundation_indices_{};
-    std::vector<std::uint64_t> source_overlapping_house_uids_{};
+    std::vector<std::uint32_t> source_overlapping_wall_indices_{};
     float source_roof_elapsed_{};
     float source_interior_elapsed_{};
     std::uint16_t source_roof_buildings_layer_{0xffff};
