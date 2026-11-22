@@ -1777,7 +1777,7 @@ public:
         // items. These are the actual player state values, not guessed effects.
         char survival_labels[96]{};
         std::snprintf(survival_labels, sizeof(survival_labels),
-                      "T %.1f   BLEED %.1f   INFECT %.1f",
+                      "T %.1f  B %.1f  I %.1f",
                       static_cast<double>(stats.temperature),
                       static_cast<double>(stats.bleeding),
                       static_cast<double>(stats.infection));
