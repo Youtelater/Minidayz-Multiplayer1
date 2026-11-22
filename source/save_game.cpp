@@ -36,6 +36,22 @@ static_assert(sizeof(LegacyEquipmentSnapshotV3) == 14, "v3 equipment snapshot AB
 
 // The old v5 layout is read as a complete struct, preserving C++ alignment
 // padding between EquipmentSnapshot and GroundLootSnapshot.
+// All v5-v20 native saves wrote exactly 64 ground-item cells.
+// Keep their disk ABI untouched while v21 expands the room for original
+// building loot. The old fixed-size array is part of the on-disk format.
+struct LegacyGroundLootSnapshotV20 {
+    std::array<minidayz::items::GroundLootEntry,64> entries{};
+    std::uint16_t count{};
+};
+inline minidayz::items::GroundLootSnapshot migrate_ground_v20(
+    const LegacyGroundLootSnapshotV20& old) noexcept {
+    minidayz::items::GroundLootSnapshot out{};
+    out.count=old.count;
+    for(std::size_t i=0;i<old.entries.size();++i)
+        out.entries[i]=old.entries[i];
+    return out;
+}
+
 struct SavedGameV5 {
     std::uint32_t magic{};
     std::uint32_t version{};
@@ -43,7 +59,7 @@ struct SavedGameV5 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
 };
 
 // Version 7 persisted timed medical item actions, before perk progression.
@@ -54,7 +70,7 @@ struct SavedGameV7 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
 };
@@ -75,7 +91,7 @@ struct SavedGameV8 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     LegacyPerkSnapshotV8 perks{};
@@ -91,7 +107,7 @@ struct SavedGameV9 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
@@ -105,7 +121,7 @@ struct SavedGameV11 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
@@ -120,7 +136,7 @@ struct SavedGameV12 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
@@ -136,7 +152,7 @@ struct SavedGameV14 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
@@ -154,7 +170,7 @@ struct SavedGameV15 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
@@ -172,7 +188,7 @@ struct SavedGameV16 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
@@ -189,7 +205,7 @@ struct SavedGameV17 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
@@ -207,7 +223,7 @@ struct SavedGameV19 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
@@ -221,17 +237,37 @@ struct SavedGameV19 {
     std::uint8_t world_level{};
 };
 static_assert(offsetof(SavedGameV19,world_level)==
-              offsetof(SavedGame,world_level),
+              offsetof(SavedGameV20,world_level),
               "v19 world level offset changed; do not corrupt existing saves");
+// Exact preceding v20 on-disk representation (64 ground loot entries).
+struct SavedGameV20 {
+    std::uint32_t magic{},version{},seed{};
+    minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
+    minidayz::items::TentStorageSnapshot tents{};
+    minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
+    minidayz::items::SourcePerkSnapshot perks{};
+    minidayz::items::SatchelSnapshot satchel{};
+    minidayz::items::EquipmentFractionSnapshot equipment_fraction{};
+    minidayz::items::StashStorageSnapshot stashes{};
+    minidayz::items::SourceDayNightSnapshot source_time{};
+    minidayz::items::SourceRainTimerSnapshot source_rain{};
+    minidayz::items::SourceLootTimerSnapshot source_loot{};
+    PendingCraftSnapshot pending_craft{};
+    std::uint8_t world_level{};
+    minidayz::items::QuickPistolSnapshot quick_pistol{};
+};
 // SavedGameV19 ends with alignment padding. The four-byte v20 quick
 // pistol can fit inside that padding without enlarging the struct; its
 // position is validated here, and the versioned loader never interprets
 // old padding as an equipped handgun.
-static_assert(offsetof(SavedGame,quick_pistol)>
+static_assert(offsetof(SavedGameV20,quick_pistol)>
               offsetof(SavedGameV19,world_level),
               "v20 quick slot must follow the old world level byte");
 static_assert(offsetof(SavedGame,quick_pistol)+
-              sizeof(minidayz::items::QuickPistolSnapshot)<=sizeof(SavedGame),
+              sizeof(minidayz::items::QuickPistolSnapshot)<=sizeof(SavedGameV20),
               "v20 quick slot must fit inside the new save layout");
 
 // v18 persisted pending crafting but not the active source map level.
@@ -240,7 +276,7 @@ struct SavedGameV18 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
@@ -272,7 +308,7 @@ struct SavedGameV6 {
     minidayz::PlayerState player{};
     minidayz::items::InventorySnapshot inventory{};
     minidayz::items::EquipmentSnapshot equipment{};
-    minidayz::items::GroundLootSnapshot ground_loot{};
+    LegacyGroundLootSnapshotV20 ground_loot{};
     minidayz::items::TentStorageSnapshot tents{};
 };
 
@@ -372,7 +408,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player = old.player;
             candidate.inventory = old.inventory;
             candidate.equipment = old.equipment;
-            candidate.ground_loot = old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents = {};
         }
     } else if (header_ok && candidate.version == 6u) {
@@ -384,7 +420,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player = old.player;
             candidate.inventory = old.inventory;
             candidate.equipment = old.equipment;
-            candidate.ground_loot = old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents = old.tents;
             candidate.pending_item_use = {};
         }
@@ -397,7 +433,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player = old.player;
             candidate.inventory = old.inventory;
             candidate.equipment = old.equipment;
-            candidate.ground_loot = old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents = old.tents;
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks = {};
@@ -411,7 +447,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player = old.player;
             candidate.inventory = old.inventory;
             candidate.equipment = old.equipment;
-            candidate.ground_loot = old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents = old.tents;
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks.experience_points = old.perks.experience_points;
@@ -429,7 +465,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player = old.player;
             candidate.inventory = old.inventory;
             candidate.equipment = old.equipment;
-            candidate.ground_loot = old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents = old.tents;
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks = old.perks;
@@ -444,7 +480,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player = old.player;
             candidate.inventory = old.inventory;
             candidate.equipment = old.equipment;
-            candidate.ground_loot = old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents = old.tents;
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks = old.perks;
@@ -459,7 +495,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player = old.player;
             candidate.inventory = old.inventory;
             candidate.equipment = old.equipment;
-            candidate.ground_loot = old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents = old.tents;
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks = old.perks;
@@ -477,7 +513,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player = old.player;
             candidate.inventory = old.inventory;
             candidate.equipment = old.equipment;
-            candidate.ground_loot = old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents = old.tents;
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks = old.perks;
@@ -494,7 +530,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player=old.player;
             candidate.inventory=old.inventory;
             candidate.equipment=old.equipment;
-            candidate.ground_loot=old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents=old.tents;
             candidate.pending_item_use=old.pending_item_use;
             candidate.perks=old.perks;
@@ -512,7 +548,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player=old.player;
             candidate.inventory=old.inventory;
             candidate.equipment=old.equipment;
-            candidate.ground_loot=old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents=old.tents;
             candidate.pending_item_use=old.pending_item_use;
             candidate.perks=old.perks;
@@ -531,7 +567,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player = old.player;
             candidate.inventory = old.inventory;
             candidate.equipment = old.equipment;
-            candidate.ground_loot = old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents = old.tents;
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks = old.perks;
@@ -551,7 +587,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player = old.player;
             candidate.inventory = old.inventory;
             candidate.equipment = old.equipment;
-            candidate.ground_loot = old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents = old.tents;
             candidate.pending_item_use = old.pending_item_use;
             candidate.perks = old.perks;
@@ -573,7 +609,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.player=old.player;
             candidate.inventory=old.inventory;
             candidate.equipment=old.equipment;
-            candidate.ground_loot=old.ground_loot;
+            candidate.ground_loot = migrate_ground_v20(old.ground_loot);
             candidate.tents=old.tents;
             candidate.pending_item_use=old.pending_item_use;
             candidate.perks=old.perks;
@@ -586,6 +622,29 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.pending_craft=old.pending_craft;
             candidate.world_level=old.world_level;
             candidate.quick_pistol={};
+        }
+    } else if (header_ok && candidate.version == 20u) {
+        SavedGameV20 old{};
+        body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
+                  std::fread(&old, sizeof(old), 1, file) == 1;
+        if (body_ok) {
+            candidate.seed=old.seed;
+            candidate.player=old.player;
+            candidate.inventory=old.inventory;
+            candidate.equipment=old.equipment;
+            candidate.ground_loot=migrate_ground_v20(old.ground_loot);
+            candidate.tents=old.tents;
+            candidate.pending_item_use=old.pending_item_use;
+            candidate.perks=old.perks;
+            candidate.satchel=old.satchel;
+            candidate.equipment_fraction=old.equipment_fraction;
+            candidate.stashes=old.stashes;
+            candidate.source_time=old.source_time;
+            candidate.source_rain=old.source_rain;
+            candidate.source_loot=old.source_loot;
+            candidate.pending_craft=old.pending_craft;
+            candidate.world_level=old.world_level;
+            candidate.quick_pistol=old.quick_pistol;
         }
     } else if (header_ok && candidate.version == kSaveVersion) {
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&

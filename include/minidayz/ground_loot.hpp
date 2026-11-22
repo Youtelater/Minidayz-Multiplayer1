@@ -8,7 +8,9 @@
 
 namespace minidayz::items {
 
-inline constexpr std::size_t kMaximumGroundLootItems = 64;
+// Native bounded snapshot capacity, not an original gameplay loot cap.
+// Initial source house creation may place more than 64 independent drops.
+inline constexpr std::size_t kMaximumGroundLootItems = 512;
 
 struct GroundLootEntry {
     GroundItem item{};

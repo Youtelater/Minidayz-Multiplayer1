@@ -16,7 +16,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 20u;
+inline constexpr std::uint32_t kSaveVersion = 21u;
 // Preserve the original Construct wait when a craft is interrupted by autosave.
 struct PendingCraftSnapshot {
     std::uint16_t recipe_index{0xffffu};

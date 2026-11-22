@@ -9,6 +9,16 @@ using namespace minidayz;
 using namespace minidayz::items;
 using namespace minidayz::persistence;
 
+// v5-v20 ground loot on-disk structure: 64 entries, independent of v21.
+struct PreviousGroundLootV20 {
+    std::array<GroundLootEntry,64> entries{};
+    std::uint16_t count{};
+    PreviousGroundLootV20& operator=(const GroundLootSnapshot& value) noexcept {
+        count=value.count;
+        for(std::size_t i=0;i<entries.size();++i)entries[i]=value.entries[i];
+        return *this;
+    }
+};
 struct PreviousSaveV5 {
     std::uint32_t magic{kSaveMagic};
     std::uint32_t version{5};
@@ -16,7 +26,7 @@ struct PreviousSaveV5 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
 };
 
 struct PreviousSaveV6 {
@@ -26,7 +36,7 @@ struct PreviousSaveV6 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
 };
 
@@ -38,7 +48,7 @@ struct PreviousSaveV7 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
     ItemUseRuntimeSnapshot pending_item_use{};
 };
@@ -50,7 +60,7 @@ struct PreviousSaveV9 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
     ItemUseRuntimeSnapshot pending_item_use{};
     SourcePerkSnapshot perks{};
@@ -65,7 +75,7 @@ struct PreviousSaveV11 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
     ItemUseRuntimeSnapshot pending_item_use{};
     SourcePerkSnapshot perks{};
@@ -80,7 +90,7 @@ struct PreviousSaveV12 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
     ItemUseRuntimeSnapshot pending_item_use{};
     SourcePerkSnapshot perks{};
@@ -96,7 +106,7 @@ struct PreviousSaveV14 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
     ItemUseRuntimeSnapshot pending_item_use{};
     SourcePerkSnapshot perks{};
@@ -113,7 +123,7 @@ struct PreviousSaveV15 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
     ItemUseRuntimeSnapshot pending_item_use{};
     SourcePerkSnapshot perks{};
@@ -131,7 +141,7 @@ struct PreviousSaveV16 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
     ItemUseRuntimeSnapshot pending_item_use{};
     SourcePerkSnapshot perks{};
@@ -148,7 +158,7 @@ struct PreviousSaveV17 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
     ItemUseRuntimeSnapshot pending_item_use{};
     SourcePerkSnapshot perks{};
@@ -173,7 +183,7 @@ struct PreviousSaveV8 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
     ItemUseRuntimeSnapshot pending_item_use{};
     LegacyPerkSnapshotV8ForTest perks{};
@@ -238,7 +248,7 @@ struct PreviousSaveV19 {
     PlayerState player{};
     InventorySnapshot inventory{};
     EquipmentSnapshot equipment{};
-    GroundLootSnapshot ground_loot{};
+    PreviousGroundLootV20 ground_loot{};
     TentStorageSnapshot tents{};
     ItemUseRuntimeSnapshot pending_item_use{};
     SourcePerkSnapshot perks{};
@@ -250,6 +260,27 @@ struct PreviousSaveV19 {
     SourceLootTimerSnapshot source_loot{};
     PendingCraftSnapshot pending_craft{};
     std::uint8_t world_level{};
+};
+
+// v20 save has the original 64-cell array and the four-byte quick-pistol.
+struct PreviousSaveV20 {
+    std::uint32_t magic{kSaveMagic},version{20},seed{};
+    PlayerState player{};
+    InventorySnapshot inventory{};
+    EquipmentSnapshot equipment{};
+    PreviousGroundLootV20 ground_loot{};
+    TentStorageSnapshot tents{};
+    ItemUseRuntimeSnapshot pending_item_use{};
+    SourcePerkSnapshot perks{};
+    SatchelSnapshot satchel{};
+    EquipmentFractionSnapshot equipment_fraction{};
+    StashStorageSnapshot stashes{};
+    SourceDayNightSnapshot source_time{};
+    SourceRainTimerSnapshot source_rain{};
+    SourceLootTimerSnapshot source_loot{};
+    PendingCraftSnapshot pending_craft{};
+    std::uint8_t world_level{};
+    QuickPistolSnapshot quick_pistol{};
 };
 
 int main() {
@@ -841,7 +872,7 @@ int main() {
     assert(restored.perks.camel_level == 0 && restored.perks.hamster_level == 0);
     assert(restored.perks.perk_cost == 100);
 
-    // MP quick pistol survives the v20 save and retains fractional wear.
+    // MP quick pistol survives the v21 save and retains fractional wear.
     InventorySystem quick_inventory;
     EquipmentSystem quick_equipment;
     assert(quick_inventory.add(151,1,0,79,21));
@@ -849,7 +880,7 @@ int main() {
     assert(write_saved_game_to_paths(123,player,quick_inventory,
         quick_equipment,ground,tents,kFile,kTemp));
     assert(load_saved_game_from_path(restored,kFile));
-    assert(restored.version==20u);
+    assert(restored.version==kSaveVersion);
     assert(restored.quick_pistol.item_id==151);
     assert(restored.quick_pistol.condition==79);
     assert(restored.quick_pistol.fractional_loss==21);
@@ -870,6 +901,42 @@ int main() {
         assert(std::fclose(f)==0);
         assert(!load_saved_game_from_path(restored,kFile));
     }
+    // Legacy v20 must migrate all 64 cells and the quick-pistol without
+    // changing the saved on-disk field offsets or losing item conditions.
+    PreviousSaveV20 old20{};
+    old20.seed=125;
+    old20.player=player;
+    old20.inventory=inventory.snapshot();
+    old20.equipment=equipment.snapshot();
+    old20.equipment_fraction=equipment.fraction_snapshot();
+    old20.satchel=inventory.satchel_snapshot();
+    old20.ground_loot=ground.snapshot();
+    old20.tents=tents.snapshot();
+    old20.world_level=3;
+    old20.quick_pistol={};
+    {
+        auto* f=std::fopen(kFile,"wb");
+        assert(f&&std::fwrite(&old20,sizeof(old20),1,f)==1);
+        assert(std::fclose(f)==0);
+    }
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==20u && restored.seed==125);
+    assert(restored.world_level==3);
+    assert(restored.ground_loot.count==ground.count());
+    assert(restored.ground_loot.entries[0].item.item_id==11);
+    assert(restored.ground_loot.entries[64].item.empty());
+    // New v21 capacity can save more than 64 distinct original world drops.
+    GroundLootSystem many;
+    for(std::size_t i=0;i<300;++i)
+        assert(many.add({11,1,kUseSourceItemCondition},
+                        150.0f+static_cast<float>(i),600.0f));
+    assert(write_saved_game_to_paths(126,player,inventory,equipment,many,
+                                    tents,kFile,kTemp));
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==kSaveVersion);
+    assert(restored.ground_loot.count==300);
+    assert(restored.ground_loot.entries[299].x==449.0f);
+
     // Old v19 native saves must still load byte-for-byte, with no quick
     // pistol equipped. Their equipment layout must not be reinterpreted.
     PreviousSaveV19 old19{};
