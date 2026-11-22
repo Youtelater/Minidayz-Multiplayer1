@@ -299,6 +299,12 @@ jobs:
           set -euo pipefail
           python3 tools/stage1/verify_sprite_catalog_frames.py
 
+      - name: Verify original house and interior sprites are packed in RomFS
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_original_house_render_assets.py
+
       - name: Audit all 1854 original PNGs against Construct frames and T3X
         shell: bash
         run: |
