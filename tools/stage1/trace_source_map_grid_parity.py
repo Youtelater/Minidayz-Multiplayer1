@@ -38,3 +38,27 @@ for sheet,events in p[6]:
        "actions",json.dumps(c[6],ensure_ascii=False,separators=(',',':'))[:3100])
     children(c[7],depth+1)
   children(e[7])
+
+print("ROOT_ORIGINAL_MAPGEN_LAYOUT")
+for layout in p[5]:
+ if layout[0]!="Map":continue
+ for layer in layout[6]:
+  for inst in layer[14] if len(layer)>14 and isinstance(layer[14],list) else []:
+   if len(inst)>2 and inst[1] in (514,518,525,230):
+    print("MAPGEN_TEMPLATE",inst[1],layer[0],json.dumps(inst,separators=(',',':'))[:2200])
+targets_set=set(targets.values())
+for sheet,events in p[6]:
+ for e,anc in walk(events):
+  if e[4] not in targets_set:continue
+  name=next(k for k,v in targets.items() if v==e[4])
+  if name in ("generate_mapgen_toelements","generate_array_tomap"):
+   print("ROOT_CHILD_RAW",name,json.dumps(e[7][0],ensure_ascii=False,separators=(',',':'))[:16000])
+  relevant=[]
+  for node,nanc in walk(e[7],(e[4],)):
+   for action in node[6] if isinstance(node[6],list) else []:
+    if not isinstance(action,list) or len(action)<6:continue
+    if action[0] in (514,518,525) or (action[0]==-1 and action[1] in (94,41,122)) or (action[0]==189 and action[1]==69):
+     relevant.append((node[4],tuple(nanc[-4:]),action[0],action[1],action[5]))
+  print("ROOT_ACTION_SUMMARY",name,len(relevant))
+  for uid,ancestor,obj,cmd,params in relevant[:85]:
+   print("ROOT_ACTION",name,uid,"parent",ancestor,"obj",obj,"cmd",cmd,"params",json.dumps(params,ensure_ascii=False,separators=(',',':'))[:3200])
