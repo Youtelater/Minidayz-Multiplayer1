@@ -1,4 +1,5 @@
 #include "minidayz/source_building_polygon_collision.hpp"
+#include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 #include <cassert>
@@ -61,6 +62,17 @@ int main(){
             }
         }
     }
+    // Original PlayerBase is a 16-vertex mask, not its enclosing square.
+    WorldPlacement wall{};
+    wall.object=346;wall.width=wall.height=0.1f;wall.scale_x=1.0f;
+    wall.x=-1.05f;wall.y=-1.05f;
+    assert(source_player_base_overlaps_wall(wall,{0,0}));
+    wall.x=-1.99f;wall.y=-1.99f;
+    assert(!source_player_base_overlaps_wall(wall,{0,0}));
+    wall.x=-1.0f;wall.y=-1.0f;wall.angle=45.0f;
+    assert(source_player_base_overlaps_wall(wall,{0,0}));
+    wall.x=20.0f;
+    assert(!source_player_base_overlaps_wall(wall,{0,0}));
     WorldPlacement missing{};
     missing.object=9999;
     missing.width=missing.height=20.0f;
