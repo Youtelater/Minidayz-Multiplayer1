@@ -19,7 +19,9 @@ for label,code in (
     ("floor title background","0.0f, 0.0f, 400.0f, 240.0f, 0.05f"),
     ("inventory under HUD","0.0f, 0.0f, 320.0f, 240.0f, 0.05f"),
     ("player over ground at source size","p.x,p.y,1.0f,1.0f,0.57f"),
-    ("world placements ordered forward","0.15f + 0.0125f * static_cast<float>(placement->layer)"),
+    ("source layer grouping before draw","source_sort_visible_layer_order("),
+    ("source within-layer depth","source_world_layer_depth("),
+    ("source order group update","if(visible_slot>=layer_end)"),
     ("launcher input neutral gate","boot_input_gate_.update(dt,menu_controls_held)"),
 ):
     source=engine if label in (
