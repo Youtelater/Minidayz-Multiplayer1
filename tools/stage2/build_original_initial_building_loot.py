@@ -150,6 +150,75 @@ for required in (1,2,9,15,19,23,44,101,102,103,104,105):
     if required not in (r[0] for r in rows):
         raise SystemExit(f"Original required category {required} missing")
 
+# Root Spawn_drop function 5418835019314848 does not directly create
+# every item ID. Four achievement-locked items have exact alternate item
+# creation in an Else branch; 351 has no source branch and must not appear.
+# Map both cases from the authoritative root event and the original MP
+# object lookup, never guess another item's texture or ID.
+spawn_function=find(5418835019314848)
+menu=next(sh[1] for sh in project[6] if sh[0]=="Menu_Events")
+original_item_map=(ROOT/"mp_itemtable.js").read_text(encoding="utf-8-sig")
+original_item_map=re.sub(r"\\\\u([0-9a-fA-F]{4})",
+  lambda m:chr(int(m.group(1),16)),original_item_map)
+start=original_item_map.find("MDZItemTable")
+first=original_item_map.find("{",start)
+last=original_item_map.find("}",first)
+if start<0 or first<0 or last<0:raise SystemExit("Missing root multiplayer sprite table")
+object_to_item={}
+for match in re.finditer(r'(\\d+)\\s*:\\s*"(t\\d+)"',original_item_map[first+1:last]):
+    original_item_id=int(match.group(1))
+    original_object_name=match.group(2)
+    original_oid=int(original_object_name[1:])
+    if original_oid in object_to_item:raise SystemExit("Multiple item IDs for original sprite")
+    object_to_item[original_oid]=original_item_id
+
+def direct_created_object(event):
+    source=[a[5][0][1] for a in event[6] if isinstance(a,list) and len(a)>5
+        and a[:2]==[-1,94] and a[5] and a[5][0][0]==4]
+    return source[0] if len(source)==1 else None
+
+direct_ids=set()
+special=[]
+for event in spawn_function[7]:
+    if not isinstance(event,list) or len(event)<7 or event[0]!=0:continue
+    conditions=[c for c in event[5] if c[:2]==[189,112] and len(c)>9]
+    if len(conditions)!=1 or not conditions[0][9][2]==[7,[0,conditions[0][9][2][1][1]]]:
+        continue
+    requested=int(conditions[0][9][2][1][1])
+    object_id=direct_created_object(event)
+    if object_id is not None:
+        direct_ids.add(requested)
+        continue
+    if requested not in (118,119,124,125):continue
+    children=event[7] if len(event)>7 else []
+    if len(children)!=2:raise SystemExit(f"Original locked item {requested} source changed")
+    first_branch,else_branch=children
+    predicates=first_branch[5]
+    if len(predicates)!=1 or predicates[0][:2]!=[-1,46] or (
+       predicates[0][9][1]!=[8,0] or predicates[0][9][2]!=[7,[0,1]]):
+        raise SystemExit("Original special loot unlock guard changed")
+    unlock=predicates[0][9][0][1]
+    if unlock not in ("item_unlock_plast","item_unlock_smoke",
+                      "item_unlock_laser","item_unlock_lighter"):
+        raise SystemExit("Unknown source unlock flag")
+    if else_branch[5][0][:2]!=[-1,70]:
+        raise SystemExit("Missing original special loot Else branch")
+    unlocked_object=direct_created_object(first_branch)
+    fallback_object=direct_created_object(else_branch)
+    fallback_item=object_to_item.get(fallback_object)
+    if not unlocked_object or not fallback_item:
+        raise SystemExit(f"Missing original locked loot fallback for item {requested}")
+    defaults=[v for v in menu if isinstance(v,list) and len(v)>2 and
+              v[0]==1 and v[1]==unlock]
+    if len(defaults)!=1 or defaults[0][2]!=0:
+        raise SystemExit(f"Original unlock flag {unlock} not default 0")
+    special.append((requested,fallback_item,unlocked_object,unlock))
+if len(special)!=4:
+    raise SystemExit("Original achievement-lock loot fallback coverage changed")
+missing=set(flat_choices)-direct_ids-{r[0] for r in special}
+if missing!={351} or 351 in direct_ids:
+    raise SystemExit(f"Original unsupported initial Spawn_drop IDs changed: {missing}")
+
 # Root create_map_element marker spawn event UIDs with an in-event call
 # to Trigger_spawn, used only for the *non-house-marker* creation pathways.
 # House marker actions are already tracked individually, including the two
@@ -226,7 +295,22 @@ lines+=["};",
         "inline constexpr SourceInitialMarkerCategoryEvent kSourceInitialMarkerCategoryEvents[]={"]
 for uid,category in source_event_category_rows:
     lines.append(f" {{{uid}ULL,{category}}},")
-lines+=["};","inline bool source_initial_marker_event_category(std::uint64_t uid,",
+lines+=["};",
+        "struct SourceInitialSpecialItemReplacement {",
+        " std::uint16_t requested_id,fallback_item,unlocked_object;",
+        "};",
+        f"inline constexpr std::size_t kSourceInitialSpecialItemCount={len(special)};",
+        "inline constexpr SourceInitialSpecialItemReplacement kSourceInitialSpecialItems[]={"]
+for request,fallback,unlocked,_ in sorted(special):
+    lines.append(f" {{{request},{fallback},{unlocked}}},")
+lines+=["};",
+        "inline bool source_initial_locked_fallback(std::uint16_t id,",
+        " std::uint16_t& fallback) noexcept {",
+        " for(const auto& rule:kSourceInitialSpecialItems)",
+        "  if(rule.requested_id==id){fallback=rule.fallback_item;return true;}",
+        " return false;}",
+        "inline constexpr std::uint16_t kSourceUnspawnableItem=351;",
+        "inline bool source_initial_marker_event_category(std::uint64_t uid,",
         " std::uint16_t& category) noexcept {",
         " for(const auto& value:kSourceInitialMarkerCategoryEvents)",
         "  if(value.event_uid==uid){category=value.category;return true;}",
@@ -240,3 +324,4 @@ print("SOURCE ORIGINAL INITIAL LOOT",len(rows),"branches",
       len({r[0] for r in rows}),"categories",len(flat_choices),"weighted item choices",
       len(flat_gates),"chance values",len(trigger_event_uids),"source marker-creation event UIDs")
 print("SOURCE CHANCE EXAMPLE: house9",[(r[0],r[7],r[8]) for r in rows if r[0]==9])
+print("SOURCE ROOT SPAWN_DROP UNLOCKED DEFAULT FALLBACKS",special,"unspawnable",sorted(missing))
