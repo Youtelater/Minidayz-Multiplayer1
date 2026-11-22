@@ -10,7 +10,7 @@ p=decode((ROOT/"data.deobfuscated.js").read_bytes())
 target=7952760861768009
 def walk(events,anc=()):
  for e in events if isinstance(events,list) else ():
-  if isinstance(e,list) and len(e)>7 and e[0]==0:
+  if isinstance(e,list) and len(e)>=7 and e[0]==0:
    yield e,anc
    yield from walk(e[7],anc+(e,))
 def isdrop(a):
