@@ -58,6 +58,14 @@ struct WorldSpriteState {
     std::uint64_t source_variable_0{~std::uint64_t{0}};
 };
 
+// Exact Construct 573.SpawnAnotherObject(951,items_on_ground,0) record.
+struct SourceConstructedBed {
+    std::uint64_t runtime_uid{};
+    float x{},y{};
+    std::uint8_t material_variant{}; // bear_pi 0=Deerskin 714, 1=Bear Hide 784
+    bool active{true};
+};
+
 struct WorldMapMarker {
     std::uint8_t cell_x{};
     std::uint8_t cell_y{};
@@ -106,6 +114,7 @@ struct WorldPlacement {
     std::uint64_t source_variable_1{};
     // Source Trigger_spawn was called immediately after setting this marker.
     bool source_initial_loot_trigger{};
+    bool source_constructed_bed{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
@@ -218,6 +227,11 @@ public:
     bool set_placement_layer(std::size_t index,
                              std::uint16_t layer) noexcept;
     bool set_source_pump_water(std::size_t index,std::uint64_t water) noexcept;
+    bool add_source_constructed_bed(float x,float y,std::uint8_t bear_pi) noexcept;
+    bool dismantle_source_bed(std::size_t index) noexcept;
+    std::vector<SourceConstructedBed> capture_source_constructed_beds() const;
+    bool restore_source_constructed_beds(
+        const std::vector<SourceConstructedBed>& beds) noexcept;
     // Capture only sprite states different from the generated original.
     // No 3DS rendering resources are needed; replay validates every frame.
     std::vector<WorldSpriteState> capture_sprite_states() const;
@@ -249,6 +263,7 @@ private:
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
     std::vector<WorldSpriteState> original_sprite_states_{};
+    std::size_t authored_placement_count_{};
 
     std::size_t source_location_spawn_count_{};
     std::uint8_t generation_phase_{};

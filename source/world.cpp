@@ -410,6 +410,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();
+    authored_placement_count_=0;
     source_location_spawn_count_ = 0;
     generation_phase_ = 0;
     generation_level_ = 0;
@@ -459,6 +460,7 @@ bool WorldSystem::advance_source_generation() {
         // Save the generated baseline for change-only snapshots. This runs
         // after ALL source location/bunker/bridge creation has completed.
         original_sprite_states_.clear();
+        authored_placement_count_=placements_.size();
         original_sprite_states_.reserve(placements_.size());
         for (const auto& p : placements_)
             original_sprite_states_.push_back({
@@ -1248,6 +1250,74 @@ bool WorldSystem::set_source_pump_water(
     return true;
 }
 
+bool WorldSystem::add_source_constructed_bed(
+    float x,float y,std::uint8_t bear_pi) noexcept {
+    if(!generation_complete() || !generation_is_map_ ||
+       !bounds_.contains({x,y}) || bear_pi>1 ||
+       original_sprite_states_.size()!=placements_.size() ||
+       placements_.size()>=100000)return false;
+    const auto* map=stage1::find_layout("Map");
+    if(!map)return false;
+    const auto layout_index=static_cast<std::uint16_t>(map-stage1::kLayoutTable);
+    const auto layer=find_layer_index_by_name(layout_index,"items_on_ground");
+    if(layer==0xffff)return false;
+    const auto frames=stage1::animations_for_object(world_source::kFurnitureBed);
+    if(!frames.data || frames.size==0 || frames.data[0].frames<2)return false;
+    // Original object951 frame0: 37x21 with (0.5,0.5) hotspot.
+    const std::uint64_t uid=(std::uint64_t{1}<<63) |
+        static_cast<std::uint64_t>(placements_.size()+1);
+    placements_.push_back({layer,world_source::kFurnitureBed,0,
+        x,y,0.0f,37.0f,21.0f,0.0f,1.0f,1.0f,0.5f,0.5f,0,0});
+    auto& p=placements_.back();
+    p.runtime_uid=uid;
+    p.instance_id=placements_.size();
+    p.source_variable_0=bear_pi;
+    p.source_constructed_bed=true;
+    original_sprite_states_.push_back({uid,p.object,0,0,1.0f,p.layer,bear_pi});
+    return true;
+}
+
+bool WorldSystem::dismantle_source_bed(std::size_t index) noexcept {
+    if(!generation_complete() || index>=placements_.size())return false;
+    const auto& p=placements_[index];
+    if(p.object!=world_source::kFurnitureBed ||
+       p.layer!=world_source::kFurnitureLayer || p.opacity<=0.0f ||
+       p.source_variable_0>1)return false;
+    // Preserve stable runtime UIDs of doors, buildings and all other beds.
+    return set_placement_sprite_state(index,0,0,0.0f);
+}
+
+std::vector<SourceConstructedBed> WorldSystem::capture_source_constructed_beds() const {
+    std::vector<SourceConstructedBed> result;
+    if(!generation_complete())return result;
+    for(const auto& p:placements_)if(p.source_constructed_bed){
+        result.push_back({p.runtime_uid,p.x,p.y,
+            static_cast<std::uint8_t>(p.source_variable_0),p.opacity>0.0f});
+    }
+    return result;
+}
+
+bool WorldSystem::restore_source_constructed_beds(
+    const std::vector<SourceConstructedBed>& beds) noexcept {
+    if(!generation_complete() || !generation_is_map_ ||
+       beds.size()>256 ||
+       original_sprite_states_.size()!=placements_.size() ||
+       placements_.size()!=authored_placement_count_)return false;
+    // Validate all source-created bed records before changing active world.
+    for(std::size_t i=0;i<beds.size();++i){
+        const auto& b=beds[i];
+        const auto id=(std::uint64_t{1}<<63) |
+            static_cast<std::uint64_t>(authored_placement_count_+i+1);
+        if(b.runtime_uid!=id || b.material_variant>1 ||
+           !bounds_.contains({b.x,b.y}))return false;
+    }
+    for(const auto& b:beds){
+        if(!add_source_constructed_bed(b.x,b.y,b.material_variant))return false;
+        if(!b.active && !dismantle_source_bed(placements_.size()-1))return false;
+    }
+    return true;
+}
+
 bool WorldSystem::set_linked_door_solid_present(
     std::size_t door_index,bool present) noexcept {
     if(door_index>=placements_.size())return false;
@@ -1319,6 +1389,7 @@ std::vector<WorldSpriteState> WorldSystem::capture_sprite_states() const {
         original_sprite_states_.size() != placements_.size()) return result;
     for (std::size_t i=0;i<placements_.size();++i) {
         const auto& p=placements_[i];
+        if(p.source_constructed_bed)continue; // full dynamic records in save
         const auto& base=original_sprite_states_[i];
         if (p.source_animation==base.animation &&
             p.source_frame==base.frame && p.opacity==base.opacity &&
