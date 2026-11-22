@@ -2915,14 +2915,13 @@ private:
         // 193 is the authored 2x2 PlayerBase with hotspot (1,1);
         // 181 is the separate 30x30 collision Sprite. The original
         // wall-zone condition uses 193, NOT the 30px collision rectangle.
-        const minidayz::WorldPoint actor_base{player_pos.x-1.0f,player_pos.y-1.0f};
+
         // Retain the picked wall instances, not a global boolean: an
         // adjacent building must not inherit another house's wall zone.
         source_overlapping_house_uids_.clear();
         for(const auto i:source_house_wall_indices_){
             const auto* wall=world_.placement(i);
-            if(wall && source_player_overlaps_world_sprite(
-                    *wall,actor_base,wall->origin_x,wall->origin_y,1.0f)){
+            if(wall && source_player_base_overlaps_wall(*wall,player_pos)){
                 const auto owner=wall->house_base_runtime_uid?
                     wall->house_base_runtime_uid:wall->parent_runtime_uid;
                 if(owner)source_overlapping_house_uids_.push_back(owner);
