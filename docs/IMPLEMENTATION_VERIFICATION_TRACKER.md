@@ -529,3 +529,11 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - [x] Source pump rules for Mapgen.var3=0 initialize water random(100,200); original events 7034863253908448 / 2626558775459672, 2-second wait and 25-unit thirst replenishment with depleted stock. Native state validates water0..200.
 - [x] World visual sidecar v3 persists pump variable0 alongside original instance frame/opacity/layer; v1/v2 read remains supported; original PNG atlas unchanged. Native fixture tests and 3DS workflow test step added.
 - [ ] Wire original controller/touchscreen furniture and pump interactions into the live WorldPreviewScene, including original wait timer and bed sleep guards; validate CI and Azahar. Furniture gameplay is NOT yet complete.
+
+
+### World Part 2 / Step 10 — live source pump and bed interaction wiring
+
+- [x] Source A input resolves actual Map-layer 18 Sprite442/Sprite951 with the original 181 collider against active frame polygons; requires no selected inventory item, preserving the original manual door's existing priority. Invisible Rain layer 44 editor bed is rejected.
+- [x] Real water pumps: native A starts root event UID 7034863253908448, waits original 2 seconds, then consumes up to 25 water and replenishes player thirst without exceeding 100, using existing WorldSystem source object mutation and v3 save. Exhaustion and full-thirst cases do not consume water. Pending event validates the same runtime UID and resets when traveling/new game.
+- [x] Bed Sprite951 selects original atlas animation0/frame1 upon native interaction and resets to frame0 when leaving original sprite overlap. This is original root interaction event UID 948724703580895 / reset UID 903835777805920, not guessed bed texture coordinates.
+- [ ] Complete original `SleepApproved`, time-skipping `GotoSleep`, Building-mode bed placement and deconstruction before full Step 10 signoff. Do NOT invent a sleep reward or time skip while source conditions remain unported.

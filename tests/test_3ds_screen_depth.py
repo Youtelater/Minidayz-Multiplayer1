@@ -21,6 +21,8 @@ for label,code in (
     ("player over ground at source size","p.x,p.y,1.0f,1.0f,0.57f"),
     ("source layer grouping before draw","source_sort_visible_layer_order("),
     ("source within-layer depth","source_world_layer_depth("),
+    ("source fixture dispatch after door priority","request_source_furniture();"),
+    ("source pump 2-second wait","advance_source_furniture_wait(dt);"),
     ("original tilemaps use the SAME source layer depths",
      "world_source::source_world_layer_depth(map.layer,0,0)"),
     ("source order group update","if(visible_slot>=layer_end)"),

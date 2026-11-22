@@ -9,6 +9,7 @@
 #include "minidayz/source_door_solid.hpp"
 #include "minidayz/source_building_polygon_collision.hpp"
 #include "minidayz/source_roof_interaction.hpp"
+#include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
 #include "minidayz/generated/source_roof_foundation_animations.hpp"
 #include "minidayz/source_world_proximity.hpp"
@@ -292,6 +293,7 @@ public:
                 visibility_index_.rebuild(world_);
                 rebuild_source_automatic_doors();
                 rebuild_source_house_roofs();
+                rebuild_source_furniture();
                 npc_ready_ = npcs_.initialize(world_);
                 new_game_generation_ = false;
                 menu_active_ = false;
@@ -1211,9 +1213,13 @@ public:
         // before changing door 349 frame. Complete those waits once per
         // game tick; original WAV dispatch follows the committed change.
         advance_source_door_waits(dt);
-        // Physical A adapts the original mobile movement-marker door action.
-        if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0)
-            request_source_manual_door();
+        advance_source_furniture_wait(dt);
+        // Native A adapts original mobile marker506 interactions, without
+        // inventing full Construct touchscreen pathfinding. A selected item
+        // retains its own independent inventory-use action above.
+        if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0 &&
+            !request_source_manual_door())
+            request_source_furniture();
         update_source_automatic_doors();
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
@@ -1222,6 +1228,9 @@ public:
         // sounds when both checks observe the same state.
         update_source_automatic_doors();
         update_source_house_roofs(dt);
+        update_source_furniture_bed_frame();
+        source_furniture_feedback_seconds_=
+            std::max(0.0f,source_furniture_feedback_seconds_-std::max(0.0f,dt));
         // Play the original material-specific WAV only after moving.
         const float dx=player_.state().x-old_x;
         const float dy=player_.state().y-old_y;
@@ -2293,6 +2302,14 @@ public:
         renderer.draw_text("PAGE <",14.0f,226.0f,0.25f);
         renderer.draw_text("CRAFT",132.0f,226.0f,0.30f);
         renderer.draw_text(page_label,213.0f,226.0f,0.23f);
+        if(!crafting_open_ && !storage_open_ && !perks_open_ &&
+           source_furniture_feedback_seconds_>0.0f &&
+           source_furniture_feedback_ && *source_furniture_feedback_){
+            renderer.draw_solid_rect(12.0f,140.0f,296.0f,23.0f,
+                                     C2D_Color32(39,63,46,230));
+            renderer.draw_text(source_furniture_feedback_,
+                               16.0f,144.0f,0.29f);
+        }
         if(near_source_bridge_exit()){
             renderer.draw_solid_rect(18.0f, 104.0f, 284.0f, 21.0f,
                                      C2D_Color32(39, 63, 46, 230));
@@ -3091,6 +3108,120 @@ private:
         if(rain_timer_.active())stage2_audio_.set_rain_sheltered(sheltered);
     }
 
+
+    // The source does not encode arbitrary furniture searches: actual
+    // buildable beds and water pumps are separate Sprite951 / Sprite442.
+    // The house interior furniture is often painted into a single original
+    // base PNG and cannot legitimately be treated as separate items.
+    void rebuild_source_furniture() noexcept {
+        source_furniture_indices_.clear();
+        source_pump_pending_={};
+        source_bed_selected_uid_=0;
+        source_furniture_feedback_seconds_=0.0f;
+        source_furniture_feedback_="";
+        for(std::size_t i=0;i<world_.placement_count();++i){
+            const auto* p=world_.placement(i);
+            if(p && minidayz::world_source::source_furniture_active(*p))
+                source_furniture_indices_.push_back(
+                    static_cast<std::uint32_t>(i));
+        }
+    }
+
+    // Called when A is pressed with no inventory selection, after the
+    // original manual door event has had priority.
+    void request_source_furniture() noexcept {
+        using namespace minidayz::world_source;
+        const minidayz::WorldPoint actor{
+            player_.state().x,player_.state().y};
+        std::size_t chosen=world_.placement_count();
+        float best=std::numeric_limits<float>::max();
+        for(auto idx:source_furniture_indices_){
+            const auto* p=world_.placement(idx);
+            if(!p || !source_furniture_active(*p))continue;
+            if(!source_player_overlaps_world_sprite(*p,actor,
+                    p->origin_x,p->origin_y))continue;
+            const float d=std::hypot(p->x-actor.x,p->y-actor.y);
+            if(d<best){best=d;chosen=idx;}
+        }
+        if(chosen==world_.placement_count())return;
+        const auto* p=world_.placement(chosen);
+        if(p->object==kFurnitureBed){
+            // Root event 948724703580895 chooses bed Sprite951 frame1
+            // in the interaction picker; it is the SECOND frame in the
+            // original bed-sheet0.png atlas, not a new artwork sheet.
+            if(world_.set_placement_sprite_state(chosen,0,1,p->opacity))
+                source_bed_selected_uid_=p->runtime_uid;
+            // The original SleepApproved/GotoSleep hierarchy is separate:
+            // do not skip days, heal or fake sleep without its full guards.
+            source_furniture_feedback_="BED FOUND - SLEEP SYSTEM PENDING";
+            source_furniture_feedback_seconds_=3.0f;
+            return;
+        }
+        if(p->object!=kFurniturePump)return;
+        if(source_pump_pending_.runtime_uid)return;
+        if(p->source_variable_0==0){
+            source_furniture_feedback_="WATER PUMP EMPTY";
+        }else if(player_.state().thirst>=kPumpThirstMax){
+            source_furniture_feedback_="THIRST ALREADY FULL";
+        }else{
+            // Original pump branch contains System Wait(2): don't add
+            // thirst before the wait or grant two drinks from one press.
+            source_pump_pending_={
+                p->runtime_uid,static_cast<std::uint32_t>(chosen),
+                kPumpUseDelay};
+            source_furniture_feedback_="DRINKING FROM WATER PUMP";
+        }
+        source_furniture_feedback_seconds_=3.0f;
+    }
+
+    void advance_source_furniture_wait(float dt) noexcept {
+        if(!source_pump_pending_.runtime_uid || !std::isfinite(dt) ||
+           dt<0.0f || !player_.state().alive)return;
+        source_pump_pending_.seconds-=dt;
+        if(source_pump_pending_.seconds>0.0f)return;
+        const auto waiting=source_pump_pending_;
+        source_pump_pending_={};
+        const auto* p=world_.placement(waiting.index);
+        if(!p || p->runtime_uid!=waiting.runtime_uid ||
+           !minidayz::world_source::source_furniture_active(*p) ||
+           p->object!=minidayz::world_source::kFurniturePump)return;
+        const auto use=minidayz::world_source::source_pump_draw(
+            player_.state().thirst,p->source_variable_0);
+        if(!use.can_use || use.consumed>p->source_variable_0)return;
+        // Commit the exact original object's water once, THEN update the
+        // source player thirst. This mutation also goes into the v3 world
+        // save sidecar instead of resetting all pumps on Continue.
+        if(world_.set_source_pump_water(waiting.index,
+                p->source_variable_0-use.consumed)){
+            player_.adjust_thirst(use.thirst_gain,
+                minidayz::world_source::kPumpThirstMax);
+            source_furniture_feedback_="DRANK ORIGINAL PUMP WATER";
+            source_furniture_feedback_seconds_=3.0f;
+        }
+    }
+
+    void update_source_furniture_bed_frame() noexcept {
+        if(!source_bed_selected_uid_)return;
+        const minidayz::WorldPoint actor{
+            player_.state().x,player_.state().y};
+        for(auto idx:source_furniture_indices_){
+            const auto* p=world_.placement(idx);
+            if(!p || p->object!=minidayz::world_source::kFurnitureBed ||
+               p->runtime_uid!=source_bed_selected_uid_)continue;
+            // Root Sprite951 reset event 903835777805920 selects frame0
+            // when the bed interaction is no longer picked.
+            if(!minidayz::world_source::source_furniture_active(*p) ||
+               !minidayz::world_source::source_player_overlaps_world_sprite(
+                   *p,actor,p->origin_x,p->origin_y)){
+                (void)world_.set_placement_sprite_state(
+                    idx,0,0,p->opacity);
+                source_bed_selected_uid_=0;
+            }
+            return;
+        }
+        source_bed_selected_uid_=0;
+    }
+
     void rebuild_source_automatic_doors() {
         source_door_indices_.clear();
         for(std::size_t i=0;i<world_.placement_count();++i){
@@ -3128,7 +3259,7 @@ private:
     // Mobile GUI original marker506 type 2 arrives at the selected door.
     // On 3DS, A while overlapping a door replaces mobile marker arrival;
     // it is not a reproduction of the original touchscreen pathfinding.
-    void request_source_manual_door() noexcept {
+    bool request_source_manual_door() noexcept {
         using namespace minidayz::world_source;
         const minidayz::WorldPoint actor{player_.state().x,player_.state().y};
         std::size_t best=source_door_indices_.size();
@@ -3144,7 +3275,7 @@ private:
             const float d=std::hypot(p->x-actor.x,p->y-actor.y);
             if(d<distance){distance=d;best=slot;}
         }
-        if(best==source_door_indices_.size())return;
+        if(best==source_door_indices_.size())return false;
         const auto index=source_door_indices_[best];
         const auto* p=world_.placement(index);
         const auto* frame=source_door_point(p->source_animation,p->source_frame);
@@ -3156,6 +3287,7 @@ private:
             (void)world_.set_linked_door_solid_present(index,false);
         source_door_waits_[best]={effect,p->runtime_uid,0.01f,true};
         source_door_changed_this_tick_[best]=1u;
+        return true;
     }
 
     void advance_source_door_waits(float dt) noexcept {
@@ -3297,6 +3429,11 @@ private:
         source_temperature_initialized_ = false;
         source_weather_exposure_ = 0.0f;
         source_body_tick_elapsed_ = 0.0f;
+        source_furniture_indices_.clear();
+        source_pump_pending_={};
+        source_bed_selected_uid_=0;
+        source_furniture_feedback_="";
+        source_furniture_feedback_seconds_=0.0f;
         last_source_warmth_ = 0.0f;
         last_source_snowborn_level_ = 0;
         inventory_page_ = 0;
@@ -3539,6 +3676,16 @@ private:
         float seconds{};
         bool manual{};
     };
+    struct SourcePumpWait {
+        std::uint64_t runtime_uid{};
+        std::uint32_t index{};
+        float seconds{};
+    };
+    std::vector<std::uint32_t> source_furniture_indices_{};
+    SourcePumpWait source_pump_pending_{};
+    std::uint64_t source_bed_selected_uid_{};
+    const char* source_furniture_feedback_="";
+    float source_furniture_feedback_seconds_{};
     std::vector<std::uint32_t> source_door_indices_{};
     std::vector<std::uint8_t> source_door_changed_this_tick_{};
     std::vector<SourceDoorWait> source_door_waits_{};
