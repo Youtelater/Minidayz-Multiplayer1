@@ -331,7 +331,7 @@ public:
                 menu_active_ = false;
                 stage2_audio_.set_environment_ambience(
                     !day_night_.day_mode(),world_level_==4);
-                if (rain_timer_.active()) stage2_audio_.start_rain_loop(kSourceDefaultRainsLevel==2);
+                if (rain_timer_.active()) stage2_audio_.start_rain_loop(world_level_==4);
                 else stage2_audio_.stop_rain_loop();
                 // Only overwrite the existing save after a new world succeeds.
                 has_saved_game_ = write_scene_save();
@@ -478,8 +478,7 @@ public:
                             stage2_audio_.set_environment_ambience(
                                 !day_night_.day_mode(),world_level_==4);
                             if(rain_timer_.active())
-                                stage2_audio_.start_rain_loop(
-                                    kSourceDefaultRainsLevel==2);
+                                stage2_audio_.start_rain_loop(world_level_==4);
                         }
                     }
                 }
@@ -1213,7 +1212,7 @@ public:
         (void)rain_timer_.update(rain_dt,kSourceDefaultRainsLevel,false,rain_choice);
         if (was_raining != rain_timer_.active()) {
             source_temperature_initialized_=false;
-            if (rain_timer_.active()) stage2_audio_.start_rain_loop(kSourceDefaultRainsLevel==2);
+            if (rain_timer_.active()) stage2_audio_.start_rain_loop(world_level_==4);
             else stage2_audio_.stop_rain_loop();
         }
         const float current_source_warmth = equipment_.temperature_offset();

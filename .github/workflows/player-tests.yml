@@ -391,6 +391,9 @@ jobs:
             tests/source_rain_event_tests.cpp -o source_rain_event_tests
           ./source_rain_event_tests
 
+      - name: Check weather-loop sample matches winter world instead of rain eligibility
+        run: python3 tests/test_weather_audio_source_dispatch.py
+
       - name: Test Original Update_Stats Weather Phase Overrides
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
