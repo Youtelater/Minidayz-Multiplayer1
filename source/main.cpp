@@ -9,6 +9,7 @@
 #include "minidayz/source_door_solid.hpp"
 #include "minidayz/source_building_polygon_collision.hpp"
 #include "minidayz/source_roof_interaction.hpp"
+#include "minidayz/source_world_layer_depth.hpp"
 #include "minidayz/generated/source_roof_foundation_animations.hpp"
 #include "minidayz/source_world_proximity.hpp"
 #include "minidayz/source_map_overlay.hpp"
@@ -2422,9 +2423,30 @@ public:
                 : 0;
             visibility_index_.query(camera_x,camera_y,view_w,view_h,
                                     visible_world_placements_);
-            for (const auto i : visible_world_placements_) {
-                const auto* placement = world_.placement(i);
-                if (!placement || placement->layer >= 44) continue;
+            // Construct paints by Map layer and then instance creation order.
+            // The source roof events can move an instance between layers:
+            // sort the currently visible instances AFTER updating their layer.
+            minidayz::world_source::source_sort_visible_layer_order(
+                visible_world_placements_,[&](std::uint32_t id) noexcept {
+                    const auto* placed=world_.placement(id);
+                    return placed?placed->layer:std::uint16_t{0xffff};
+                });
+            std::size_t layer_begin=0,layer_end=0;
+            for(std::size_t visible_slot=0;
+                visible_slot<visible_world_placements_.size();++visible_slot) {
+                const auto i=visible_world_placements_[visible_slot];
+                const auto* placement=world_.placement(i);
+                if(!placement || placement->layer>=44)continue;
+                if(visible_slot>=layer_end){
+                    layer_begin=visible_slot;
+                    layer_end=visible_slot+1;
+                    while(layer_end<visible_world_placements_.size()){
+                        const auto* next=world_.placement(
+                            visible_world_placements_[layer_end]);
+                        if(!next || next->layer!=placement->layer)break;
+                        ++layer_end;
+                    }
+                }
                 // The original Map layers 44+ contain Rain/NVG/night,
                 // browser/mobile GUI controls, and event triggers. These
                 // cannot be painted as static world sprites on the 3DS:
@@ -2483,12 +2505,13 @@ public:
                         placement->angle*0.01745329251994329577f,
                         camera_x,camera_y,view_w,view_h)) continue;
                 } // Keep unknown frame dimensions visible for diagnostics.
-                // Manic Emu confirms larger Z is in front. Keep source
-                // layer 31 (background buildings) behind player .57 and
-                // source layers 41-43 (foreground buildings/trees) above.
-                const float layer_depth = std::clamp(
-                    0.15f + 0.0125f * static_cast<float>(placement->layer),
-                    0.15f, 0.80f);
+                // Manic Emu confirms larger Z is in front. The original
+                // Map 31 Buildings_bg stays behind the player, while 41
+                // Buildings and 43 Trees stay above. Distinct depths also
+                // preserve the original insertion order WITHIN each layer
+                // instead of relying on undefined equal-depth GPU ordering.
+                const float layer_depth=minidayz::world_source::source_world_layer_depth(
+                    placement->layer,visible_slot-layer_begin,layer_end-layer_begin);
                 if (!renderer.draw_source_sprite(placement->object,
                         placement->source_animation, placement->source_frame,
                         px, py, sx, sy, layer_depth,
