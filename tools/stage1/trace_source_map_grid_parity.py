@@ -62,3 +62,21 @@ for sheet,events in p[6]:
   print("ROOT_ACTION_SUMMARY",name,len(relevant))
   for uid,ancestor,obj,cmd,params in relevant[:85]:
    print("ROOT_ACTION",name,uid,"parent",ancestor,"obj",obj,"cmd",cmd,"params",json.dumps(params,ensure_ascii=False,separators=(',',':'))[:3200])
+
+for sheet,events in p[6]:
+ for e,_ in walk(events):
+  if e[4] not in (921061167763666,484111970403648):continue
+  name="roads_1" if e[4]==921061167763666 else "roads_2"
+  def all_conditions(nodes,depth=0):
+   for node in nodes if isinstance(nodes,list) else ():
+    if not isinstance(node,list) or len(node)<8 or node[0]!=0:continue
+    conds=[c for c in node[5] if isinstance(c,list) and len(c)>9 and
+      (c[0]==518 or (c[0]==-1 and ("518" in repr(c) or "anotherX" in repr(c))))]
+    acts=[a for a in node[6] if isinstance(a,list) and len(a)>5 and
+      (a[0]==518 or a[0]==514)]
+    if conds or acts:
+     print("ROOT_ROAD_DETAIL",name,depth,node[4],
+      "conds",json.dumps(conds,separators=(",",":"))[:4200],
+      "actions",json.dumps(acts,separators=(",",":"))[:4200])
+    all_conditions(node[7],depth+1)
+  all_conditions(e[7])
