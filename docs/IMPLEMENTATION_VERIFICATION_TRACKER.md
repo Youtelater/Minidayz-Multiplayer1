@@ -695,3 +695,10 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 
 - [x] New root source trace [#45082804980](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45082804980) enumerates the original `Mapgen` Sprite514's runtime actions: **42** SetInstanceVariable actions (Construct opcode88), **two** SetPosition actions (opcode47) and one SpawnAnotherObject action (opcode73) in unrelated Quest logic. The two original SetPosition events are UID `1131020651387518` and UID `156278692855564`, both assigning `Mapgen.X+500, Mapgen.Y+500` under Map generation. Sprite508, not 514, is the source of dozens of original tree/building SpawnAnotherObject events. Distinguish sprite movement from other world-array marker creation; do not invent a fixed world anchor.
 - [ ] Native `generate_source_locations` still uses C++ bounds/grid-derived cell centers, not demonstrated execution of the original Sprite514 position-setting event sequence. No source-exact replacement can be certified from the isolated action trace alone; root ancestor conditions and original runtime object iteration need execution-level verification. Keep this a Step 2 blocker, rather than claiming the source map is identical just because generated house counts are nonzero.
+
+
+### Procedural terrain source condition correction (2026-11-22)
+
+- [x] The original `build_procedural_environment.py` incorrectly interpreted *every* Sprite514 variable compare as marker code. Corrected extraction to only accept Sprite514 **slot 0** literal equality, excluding source grid-X/Y slots 1/2. This prevents unrelated 3DS terrain artwork on the wrong location type.
+- [x] Preserved original per-level `CurrentLevel` source guards as `TerrainScatterRule.level_mask`. The renderer only paints those source branches on levels where their original ancestor comparisons permit them. Native and root-source tests added.
+- [ ] Original browser random call order, procedural water/ground-level SetTile effects, withheld perk branches and visual-in-Azahar verification remain unresolved; do not call overall Step 2 pixel-identical.

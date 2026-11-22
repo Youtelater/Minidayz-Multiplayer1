@@ -62,6 +62,50 @@ def choices(node):
     except (IndexError,TypeError,KeyError):
         return None
 
+
+# Source Sprite514 slot 0 is the marker type. Slots 1 and 2 are grid
+# coordinates and MUST NOT be used to select terrain/scatter artwork.
+def original_literal(p):
+    if isinstance(p,list) and len(p)==2 and p[0]==7 and isinstance(p[1],list) and \
+       len(p[1])==2 and p[1][0]==0 and isinstance(p[1][1],(int,float)):
+        return p[1][1]
+    return None
+
+def source_marker_codes(conditions):
+    values=set()
+    for condition in conditions:
+        if not isinstance(condition,list) or len(condition)<=9 or condition[:2]!=[514,71]:
+            continue
+        params=condition[9]
+        if len(params)!=3 or params[0]!=[10,0] or params[1]!=[8,0]: continue
+        code=original_literal(params[2])
+        if isinstance(code,int) and 0<=code<=65535: values.add(code)
+    return sorted(values)
+
+def source_comparison(op,a,b):
+    return (a==b,a!=b,a<b,a<=b,a>b,a>=b)[op]
+
+def source_level_mask(ancestry):
+    mask=0x3f
+    for event in ancestry:
+        rules=[]
+        for c in event[5] if isinstance(event[5],list) else ():
+            if not isinstance(c,list) or len(c)<=9 or c[:2]!=[-1,46]: continue
+            args=c[9]
+            if len(args)!=3 or args[0]!=[11,"CurrentLevel"]: continue
+            op=args[1][1] if isinstance(args[1],list) and args[1][0]==8 else None
+            value=original_literal(args[2])
+            if not isinstance(op,int) or op<0 or op>5 or value is None:
+                return 0
+            rules.append(sum(1<<lv for lv in range(6) if source_comparison(op,lv,value)))
+        if rules:
+            # Construct's event[2] is the OR-block flag.
+            mask_for_node=0 if bool(event[2]) else 0x3f
+            for rule in rules:
+                mask_for_node=mask_for_node|rule if bool(event[2]) else mask_for_node&rule
+            mask&=mask_for_node
+    return mask
+
 def main():
     project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",
         PROJECT.read_text(encoding="utf-8-sig")))["project"]
@@ -78,18 +122,14 @@ def main():
                 conds=[condition for node in ancestry for condition in
                        (node[5] if len(node)>5 and isinstance(node[5],list) else [])
                        if isinstance(condition,list) and len(condition)>9]
-                markers=[]
-                for condition in conds:
-                    if condition[0]==514 and condition[1]==71:
-                        try:
-                            value=condition[9][2][1][1]
-                            if isinstance(value,int):
-                                markers.append(value)
-                        except (IndexError,TypeError):
-                            pass
+                markers=source_marker_codes(conds)
                 func=any(condition[0]==189 and condition[1]==40 and
                          "create_map_location" in str(condition[9]) for condition in conds)
                 if not func or not markers:
+                    continue
+                level_mask=source_level_mask(ancestry)
+                if not level_mask:
+                    rejected.append((action[3],"source CurrentLevel excludes all supported maps"))
                     continue
                 # Original CurrentLevel/perk_dao branches have a matching
                 # Else. Keep the ordinary branch until perk state is wired.
@@ -112,15 +152,15 @@ def main():
                     rejected.append((action[3],"unsupported source expression"))
                     continue
                 for marker in sorted(set(markers)):
-                    rules.append((marker,repeat,*x,*y,tiles,action[3]))
+                    rules.append((marker,repeat,*x,*y,tiles,action[3],level_mask))
     if len(rules)<45:
         raise SystemExit(f"Only {len(rules)} location scatter rules extracted; source changed")
     palette=[]
     entries=[]
-    for marker,repeat,xlo,xhi,ylo,yhi,tiles,uid in rules:
+    for marker,repeat,xlo,xhi,ylo,yhi,tiles,uid,level_mask in rules:
         offset=len(palette)
         palette.extend(tiles)
-        entries.append((marker,repeat,xlo,xhi,ylo,yhi,offset,len(tiles),uid))
+        entries.append((marker,repeat,xlo,xhi,ylo,yhi,offset,len(tiles),uid,level_mask))
     OUT.parent.mkdir(parents=True,exist_ok=True)
     lines=["#pragma once","#include <cstddef>","#include <cstdint>",
            "namespace minidayz::stage1 {",
@@ -128,7 +168,7 @@ def main():
            "struct TerrainScatterRule {",
            " std::uint16_t marker, repeat, x_min, x_max, y_min, y_max;",
            " std::uint32_t tile_offset; std::uint16_t tile_count;",
-           " std::uint64_t source_action_uid;",
+           " std::uint64_t source_action_uid; std::uint8_t level_mask;",
            "};",
            "inline constexpr std::uint16_t kTerrainScatterChoices[]={"]
     lines.extend(" "+str(v)+"," for v in palette)

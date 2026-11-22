@@ -15,6 +15,7 @@ int main() {
         assert(rule.tile_count > 0);
         assert(rule.tile_offset + rule.tile_count <= kTerrainScatterChoiceCount);
         assert(rule.source_action_uid != 0);
+        assert(rule.level_mask != 0 && (rule.level_mask & ~0x3fu) == 0);
         markers.insert(rule.marker);
         for (std::uint32_t n=0;n<rule.tile_count;++n) {
             // All source texture choices reference object 230's original

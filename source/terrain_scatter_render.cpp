@@ -59,7 +59,8 @@ bool Renderer::draw_source_procedural_environment(
    state^=static_cast<std::uint32_t>(marker->marker_type)*0x27d4eb2du;
    std::minstd_rand rng(state?state:1u);
    for(const auto& rule:stage1::kTerrainScatterRules){
-    if(rule.marker!=marker->marker_type)continue;
+    if(rule.marker!=marker->marker_type ||
+       !(rule.level_mask & (std::uint8_t{1} << world.generation_level())))continue;
     patch->has_source_rule=true;
     if(rule.x_min>=rule.x_max||rule.y_min>=rule.y_max||
        rule.x_max>kPatchCells||rule.y_max>kPatchCells||
