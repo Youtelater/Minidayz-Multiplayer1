@@ -1,0 +1,15 @@
+name: Audit Original Mapgen to Location Dispatch
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/audit_original_mapgen_dispatch.py'
+      - '.github/workflows/audit-original-mapgen-dispatch.yml'
+  workflow_dispatch:
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit exact Construct map-to-Mapgen event dispatch
+        run: python3 tools/stage1/audit_original_mapgen_dispatch.py
