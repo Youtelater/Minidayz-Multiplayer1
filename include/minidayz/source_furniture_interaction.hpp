@@ -1,5 +1,6 @@
 #pragma once
 #include "minidayz/world.hpp"
+#include "minidayz/inventory.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -85,5 +86,55 @@ inline SourcePumpDraw source_pump_draw(float thirst,
     draw.thirst_gain=gain;
     draw.can_use=draw.consumed>0;
     return draw;
+}
+
+// Verified root Craft_bed/Craft_bed1 -> Building_mode(12):
+// woodpiles item50 + deerskin714 / bear hide784. The source spawns bed951,
+// NOT a third invented backpack item. The ingredient mutation is atomic.
+inline constexpr std::uint16_t kSourceBedWoodpiles=50;
+inline constexpr std::uint16_t kSourceBedDeerskin=714;
+inline constexpr std::uint16_t kSourceBedBearHide=784;
+inline constexpr float kSourceBedBuildDelay=3.0f;
+inline constexpr float kSourceBedDismantleDelay=1.0f;
+inline constexpr float kSourceBedPlaceRadius=100.0f;
+inline constexpr std::uint16_t kSourceBedGhostObject=573;
+inline constexpr std::uint32_t kSourceBedGhostFrame=12;
+inline constexpr float kSourceBedGhostWidth=37.0f;
+inline constexpr float kSourceBedGhostHeight=21.0f;
+inline constexpr float kSourceBedGhostOriginX=0.6f;
+inline constexpr float kSourceBedGhostOriginY=0.7f;
+inline constexpr std::size_t kSourceMaxBeds=256;
+
+inline std::uint16_t source_bed_hides(std::uint8_t bear_pi) noexcept {
+    return bear_pi==0 ? kSourceBedDeerskin:
+        bear_pi==1 ? kSourceBedBearHide:std::uint16_t{0};
+}
+inline bool source_bed_materials_available(
+    const items::InventorySystem& inventory,std::uint8_t bear_pi) noexcept {
+    const auto hide=source_bed_hides(bear_pi);
+    return hide && inventory.count(kSourceBedWoodpiles)>=1 &&
+           inventory.count(hide)>=1;
+}
+inline bool source_bed_consume_materials(
+    items::InventorySystem& inventory,std::uint8_t bear_pi) noexcept {
+    if(!source_bed_materials_available(inventory,bear_pi))return false;
+    auto changed=inventory;
+    for(const auto item_id:{kSourceBedWoodpiles,source_bed_hides(bear_pi)}){
+        bool removed=false;
+        for(std::size_t i=0;i<changed.capacity();++i){
+            const auto* slot=changed.slot(i);
+            if(slot && !slot->empty() && slot->item_id==item_id &&
+               changed.remove(i,1)){removed=true;break;}
+        }
+        if(!removed)return false;
+    }
+    inventory=changed;
+    return true;
+}
+inline bool source_bed_site_within_range(float player_x,float player_y,
+                                          float ghost_x,float ghost_y) noexcept {
+    return std::isfinite(player_x)&&std::isfinite(player_y) &&
+        std::isfinite(ghost_x)&&std::isfinite(ghost_y) &&
+        std::hypot(player_x-ghost_x,player_y-ghost_y)<kSourceBedPlaceRadius;
 }
 } // namespace minidayz::world_source

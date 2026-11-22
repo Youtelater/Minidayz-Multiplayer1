@@ -42,6 +42,23 @@ int main() {
            SourceBedSleepPrecheck::dehydrated);
     assert(source_bed_sleep_precheck(0,0.0f,10.0f,10.0f)==
            SourceBedSleepPrecheck::passed_known_conditions);
+    // Two original Bed recipes, exact source IDs and atomic item use.
+    items::InventorySystem bag;
+    assert(bag.add(50,1));
+    assert(bag.add(714,1));
+    assert(!source_bed_materials_available(bag,1));
+    assert(source_bed_materials_available(bag,0));
+    const auto old=bag.snapshot();
+    assert(!source_bed_consume_materials(bag,1));
+    assert(bag.snapshot().capacity==old.capacity &&
+           bag.count(50)==1 && bag.count(714)==1);
+    assert(source_bed_consume_materials(bag,0));
+    assert(bag.count(50)==0 && bag.count(714)==0);
+    assert(bag.add(50,1) && bag.add(784,1));
+    assert(source_bed_consume_materials(bag,1));
+    assert(bag.count(50)==0 && bag.count(784)==0);
+    assert(!source_bed_site_within_range(0,0,100,0));
+    assert(source_bed_site_within_range(0,0,99,0));
     assert(source_bed_sleep_precheck(1441,0.0f,50,50)==
            SourceBedSleepPrecheck::invalid);
 }
