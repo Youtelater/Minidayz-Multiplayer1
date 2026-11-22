@@ -109,6 +109,17 @@ def source_level_mask(ancestry):
 def main():
     project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",
         PROJECT.read_text(encoding="utf-8-sig")))["project"]
+    # Derive Tilemap230's exact Map layer from the original Construct export.
+    # Generated ground scatter must share that layer with authored cells.
+    original_map=next((lay for lay in project[5] if lay[0]=="Map"),None)
+    if original_map is None:
+        raise SystemExit("Original Construct Map layout missing")
+    ground_layers={index for index,layer in enumerate(original_map[6])
+        for inst in (layer[14] if len(layer)>14 and isinstance(layer[14],list) else [])
+        if isinstance(inst,list) and len(inst)>1 and inst[1]==230}
+    if len(ground_layers)!=1:
+        raise SystemExit(f"Expected one original Map Tilemap230 layer, got {ground_layers}")
+    source_scatter_layer=ground_layers.pop()
     rules=[]
     rejected=[]
     for sheet in project[6]:
@@ -165,6 +176,7 @@ def main():
     lines=["#pragma once","#include <cstddef>","#include <cstdint>",
            "namespace minidayz::stage1 {",
            "// Original source object 230, 30px cells, created at hotspot minus 500px.",
+           f"inline constexpr std::uint16_t kSourceScatterGroundLayer={source_scatter_layer};",
            "struct TerrainScatterRule {",
            " std::uint16_t marker, repeat, x_min, x_max, y_min, y_max;",
            " std::uint32_t tile_offset; std::uint16_t tile_count;",

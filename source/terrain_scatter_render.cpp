@@ -1,6 +1,7 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/generated/terrain_scatter_source.hpp"
+#include "minidayz/source_world_layer_depth.hpp"
 
 #include <array>
 #include <cmath>
@@ -112,7 +113,9 @@ bool Renderer::draw_source_procedural_environment(
    C2D_SpriteSetPos(&sprite,xx,yy);
    C2D_SpriteSetScale(&sprite,kSourceTile/sprite.params.pos.w,
                               kSourceTile/sprite.params.pos.h);
-   C2D_SpriteSetDepth(&sprite,0.17f);
+   // Source generated tiles and authored Tilemap230 share Map layer Z.
+   C2D_SpriteSetDepth(&sprite,world_source::source_world_layer_depth(
+       stage1::kSourceScatterGroundLayer,0,0));
    if(!C2D_DrawSprite(&sprite))return false;
   }
  }
