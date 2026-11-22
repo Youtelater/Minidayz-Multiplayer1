@@ -76,3 +76,9 @@ Original **real** artwork must still render: wall/exterior house321, visible doo
 Source event, object, and Map-template checks now produce
 `audit-output/graphics/full_original_visual_role_inventory.json` covering **all 1,854 canonical PNGs**, not only assets referenced by sprite animations. For each file, it records original Construct object IDs, authored frame count, Map-template count, source event action-reference count, and safe role flags (nonvisual gameplay marker, conditional construction preview, visible/hidden template, or requires runtime analysis). Tilemap/texture references remain separate from sprite animation frames. This register cannot prove every later gameplay event is implemented, and does not mislabel unreferenced images as unused.
 
+
+
+## Source register verification (additional regression)
+
+- [Audit Original Visual Sprite Roles #45078718183](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45078718183): **PASS**, includes **all 1,854 canonical PNGs** in an auditable per-file report and all **14,505** original source Construct frame references. The source-driven categories are **1,736** animation-linked, **43** independent tilemap/texture-linked, and **75** without a directly mapped Construct animation or explicit texture reference. This classification does not infer that any given PNG is always rendered or never used.
+- Original source role, static world sprite masking, and atlas packaging form the completed code-level Step 1 audit baseline. Full animation-event execution and pixel output must be checked during the corresponding gameplay steps and deferred emulator integration; they are not substantiated by source files alone.
