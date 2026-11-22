@@ -2586,6 +2586,17 @@ public:
                 }
             }
 
+            // Root event 622329722190205 also emits the original
+            // object317 from test_bullet_hit-sheet0.png on Buildings41,
+            // before Wait(1) and item50/hide restitution.
+            if(source_bed_dismantle_.runtime_uid) {
+                const auto* dying=world_.placement(source_bed_dismantle_.index);
+                if(dying && dying->runtime_uid==source_bed_dismantle_.runtime_uid)
+                    (void)renderer.draw_source_sprite(317,0,0,
+                        dying->x,dying->y,1.0f,1.0f,
+                        minidayz::world_source::source_world_layer_depth(41,0,1));
+            }
+
             // The original Building_mode(12) spawns object573 Ghost frame12
             // on Buildings layer41; use its exact original atlas rectangle.
             if(source_bed_build_.active) {
@@ -3462,6 +3473,12 @@ private:
         const auto* bed=world_.placement(chosen);
         source_bed_dismantle_={bed->runtime_uid,chosen,
             minidayz::world_source::kSourceBedDismantleDelay};
+        // Source UID 622329722190205 selects a random original chop
+        // sample before its Wait(1), and spawns 317 at the bed hotspot.
+        const auto noise=static_cast<std::uint32_t>(
+            (bed->runtime_uid ^ world_seed_) & 3ULL);
+        stage2_audio_.play_original_world_sound(
+            static_cast<minidayz::OriginalWorldSound>(noise));
         source_furniture_feedback_="DISMANTLING BED - ORIGINAL 1S";
         source_furniture_feedback_seconds_=3.0f;
     }
