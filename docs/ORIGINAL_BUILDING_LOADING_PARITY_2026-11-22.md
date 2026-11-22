@@ -42,3 +42,11 @@
 - If the corrected build still fails to display houses at a town, inspect **T3X load failures**, page-capacity overflow and Citro2D resource limits first. Do not fabricate buildings, change original probabilities or relocate the original survivor spawn as a workaround.
 
 **Conclusion:** The original content and the core create/attach/draw pipeline are deliberately source-derived, but the overall runtime is **not yet demonstrably identical**. The 3DS has different graphics loading, random-number execution and screen/camera constraints. Emulator pixel parity remains open; automated code and asset checks cannot replace it.
+
+## Automated verification completed
+
+- [Native System Regression Tests — PASS, audit head](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45067295696): original house generation, all native world/player regression tests and the newly wired source hotspot/viewport tests.
+- [3DS Executable Build — PASS, audit head](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45067295697): built and uploaded the corrected `.3dsx` using the original game assets.
+- [Original Graphics Audit — PASS](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45067045933): original sprite/texture source audit.
+
+These results establish **source and compilation correctness for the checked cases**, not full browser/3DS gameplay identity. Azahar and physical-device visual checks remain intentionally deferred to final integration.
