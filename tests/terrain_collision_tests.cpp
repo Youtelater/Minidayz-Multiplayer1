@@ -1,7 +1,10 @@
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_source_collision.hpp"
+#include "minidayz/source_world_layer_depth.hpp"
 #include <cassert>
 #include <cstdint>
+#include <cstring>
+#include <vector>
 
 int main() {
     minidayz::terrain::SolidTerrainMap map{};
@@ -52,5 +55,49 @@ int main() {
     assert(!source_solid_sprite_contains(
         100.0f,200.0f,20.0f,10.0f,0.0f,0.0f,90.0f,
         103.0f,205.0f));
+    // Root Construct Map is layout 2; these are its authored layer IDs.
+    // Check the extraction tables, not a guessed order based on screen Y.
+    auto original_map_layer=[](const char* name){
+        for(const auto& layer:minidayz::stage1::kLayerTable)
+            if(layer.layout==2 && std::strcmp(layer.name,name)==0)
+                return layer.index;
+        return std::uint16_t{0xffff};
+    };
+    assert(original_map_layer("Buildings_shadows")==9);
+    assert(original_map_layer("Buildings_base")==17);
+    assert(original_map_layer("Buildings_base_top")==20);
+    assert(original_map_layer("Buildings_bg")==31);
+    assert(original_map_layer("player")==32);
+    assert(original_map_layer("Buildings")==41);
+    assert(original_map_layer("Trees")==43);
+    using minidayz::world_source::source_world_layer_depth;
+    // Reverse-order drawing at equal depth used to hide roofs and doors.
+    assert(source_world_layer_depth(31,0,3) <
+           source_world_layer_depth(31,1,3));
+    assert(source_world_layer_depth(31,1,3) <
+           source_world_layer_depth(31,2,3));
+    assert(source_world_layer_depth(31,2,3) <
+           source_world_layer_depth(32,0,1));
+    assert(source_world_layer_depth(17,0,1) <
+           source_world_layer_depth(20,0,1));
+    assert(source_world_layer_depth(9,0,1) <
+           source_world_layer_depth(17,0,1));
+    assert(source_world_layer_depth(31,2,3)<0.57f);
+    assert(source_world_layer_depth(41,0,1)>0.605f);
+    // Original creation order is preserved among instances at the same
+    // source layer; a roof moved from Buildings -> Buildings_bg is
+    // immediately placed in its new depth group on the next render.
+    std::uint16_t layers[]={41,31,41,9,31};
+    std::vector<std::uint32_t> order{0,1,2,3,4};
+    auto sort=[&](){
+        minidayz::world_source::source_sort_visible_layer_order(
+            order,[&](std::uint32_t id){return layers[id];});
+    };
+    sort();
+    assert((order==std::vector<std::uint32_t>{3,1,4,0,2}));
+    layers[0]=31; // original House_transparenting layer change
+    order={0,1,2,3,4};
+    sort();
+    assert((order==std::vector<std::uint32_t>{3,0,1,4,2}));
     return 0;
 }
