@@ -25,3 +25,23 @@ for sheet,events in p[6]:
 print("MAPGEN_SOURCE_ACTION_COUNT",len(hits))
 for hit in hits[:140]:
  print("MAPGEN_SOURCE_ACTION",json.dumps(hit,ensure_ascii=False,separators=(',',':'))[:5400])
+
+from collections import Counter
+print("MAPGEN_DIRECT_ACTIONS")
+all_actions=[]
+for sheet,events in p[6]:
+ for e,anc,groups in walk(events):
+  for a in e[6] if isinstance(e[6],list) else ():
+   if not isinstance(a,list) or len(a)<6:continue
+   if a[0] not in (514,508) and not (a[:2]==[-1,94]):continue
+   all_actions.append((sheet,e[4],anc,groups,a))
+print("MAPGEN_ACTION_COMMAND_HISTOGRAM",
+ json.dumps({str(k):v for k,v in sorted(Counter((a[0],a[1]) for _,_,_,_,a in all_actions).items())},
+  ensure_ascii=False))
+for sheet,uid,anc,groups,a in all_actions:
+ interesting=((a[0]==514 and a[1]!=88) or
+   (a[0]==508 and a[1] in (73,88,132,137,163)) or
+   (a[:2]==[-1,94] and len(a[5])>0 and a[5][0] in ([4,514],[4,508])))
+ if not interesting:continue
+ print("MAPGEN_POSITION_ACTION",json.dumps({"uid":uid,"sheet":sheet,
+    "anc":anc[-5:],"groups":groups[-4:],"action":a},separators=(",",":"))[:4600])
