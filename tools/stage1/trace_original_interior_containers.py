@@ -12,10 +12,19 @@ p=decode((ROOT/"data.deobfuscated.js").read_bytes())
 objects=p[3]
 keywords=re.compile(r"container|cabinet|dresser|chest|locker|fridge|frigi|cupboard|shelf|storage|stash|box|crate|barrel|bed|wardrobe|furniture|table|drawer|safe|trunk|tent|case|loot|fridge",re.I)
 candidates={}
+print('SAMPLE_OBJECT_NAMES',[(i,str(obj[0])[:80]) for i,obj in enumerate(objects[:55]) if isinstance(obj,list) and obj])
 for i,obj in enumerate(objects):
- if isinstance(obj,list) and obj and isinstance(obj[0],str) and keywords.search(obj[0]):
-  candidates[i]=obj[0]
-  print("OBJECT",json.dumps({"id":i,"name":obj[0],"type":obj[1] if len(obj)>1 else None,"animations":[a[0] for a in obj[7] if isinstance(a,list) and a] if len(obj)>7 and isinstance(obj[7],list) else []},separators=(",",":"),ensure_ascii=False))
+ if not isinstance(obj,list) or not obj:continue
+ sheets=set()
+ if len(obj)>7 and isinstance(obj[7],list):
+  for anim in obj[7]:
+   if isinstance(anim,list) and len(anim)>7 and isinstance(anim[7],list):
+    for fr in anim[7]:
+     if isinstance(fr,list) and fr and isinstance(fr[0],str):sheets.add(fr[0])
+ matched=sorted(x for x in sheets if keywords.search(x))
+ if (isinstance(obj[0],str) and keywords.search(obj[0])) or matched:
+  candidates[i]=str(obj[0])
+  print("OBJECT",json.dumps({"id":i,"name":obj[0],"sheets":matched[:15],"type":obj[1] if len(obj)>1 else None,"animations":[a[0] for a in obj[7] if isinstance(a,list) and a] if len(obj)>7 and isinstance(obj[7],list) else []},separators=(",",":"),ensure_ascii=False))
 print("OBJECT_CANDIDATE_COUNT",len(candidates))
 def walk(events,parents=()):
  for e in events if isinstance(events,list) else []:
