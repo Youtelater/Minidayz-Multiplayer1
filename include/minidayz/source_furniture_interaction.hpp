@@ -58,6 +58,13 @@ inline const char* source_bed_precheck_feedback(
     default:return "BED FOUND - SLEEP SYSTEM PENDING";
     }
 }
+// Original game events 903835777805920 resets bed951 to source
+// frame0; 948724703580895 selects source frame1 for player181 overlap.
+inline std::uint32_t source_bed_overlap_frame(
+    const WorldPlacement& bed,bool player_overlaps) noexcept {
+    return bed.object==kFurnitureBed && source_furniture_active(bed) &&
+           player_overlaps ? 1u : 0u;
+}
 struct SourcePumpDraw {
     std::uint16_t consumed{};
     float thirst_gain{};

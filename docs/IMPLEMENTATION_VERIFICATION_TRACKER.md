@@ -555,3 +555,10 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - Original bed dismantle event **622329722190205** spawns object317, waits **1 second**, returns item **50** and item **714 or 784** according to bed variable0, and destroys bed951. This has other equipment/perk and original inventory overflow guards; do not grant rewards without them.
 - Original source `Bed_activated` event **760795525771502** checks survival/night/temperature/perk/nearby enemies before `GotoSleep` event **242979671087187**; count available sleep hours is `Count_sleep_hours` event **974086311952240** and advances all dependent survival/time effects. A shortcut that only changes clock or health would not be source-equivalent. Source `perk_sleep` 10-second interaction event **422434553865245** is distinct from actual `GotoSleep`, and cannot be treated as a complete sleep implementation.
 - These source events are the remaining Step 10 porting contract. The currently passing code only implements source bed detection/original frame and source water pump use/persistence. Do not check the entire Furniture Interactions step until construction, sleep, dismantling, regression tests and emulator verification are completed.
+
+
+### Part 2 / Step 10 — original automatic bed selection frame (2026-11-22)
+
+- [x] Root Game_events 903835777805920 resets bed951 to frame0; overlap event 948724703580895 changes original bed sprite to frame1 when the player181 overlaps. Native frame highlight previously required manually pressing A and could not show the original proximity selection.
+- [x] Live source furniture update now synchronizes every active bed's original frame0/frame1 with player collision each tick, rejects editor bed on Rain layer44, and preserves existing A input interaction. Native test cases cover original frame selection and disabled/invisible layers. Uses original bed atlas, no guessed sprite coordinates.
+- [ ] Test original visuals in Azahar/physical 3DS and complete full source sleep/deconstruction/placement events before Step 10 100% completion.

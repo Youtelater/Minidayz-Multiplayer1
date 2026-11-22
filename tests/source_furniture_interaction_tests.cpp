@@ -15,6 +15,15 @@ int main() {
     assert(source_pump_draw(15.0f,3).consumed==3);
     assert(!source_pump_draw(100.0f,70).can_use);
     assert(!source_pump_draw(50.0f,0).can_use);
+    bed.opacity=1.0f;
+    assert(source_bed_overlap_frame(bed,true)==1);
+    assert(source_bed_overlap_frame(bed,false)==0);
+    bed.layer=44;
+    assert(source_bed_overlap_frame(bed,true)==0);
+    bed.layer=kFurnitureLayer;bed.opacity=0.0f;
+    assert(source_bed_overlap_frame(bed,true)==0);
+    bed.object=kFurniturePump;bed.opacity=1.0f;
+    assert(source_bed_overlap_frame(bed,true)==0);
     // Root SleepApproved rejects daytime, freezing source temperature,
     // player var13 (hunger) <10 and var14 (thirst) <10.
     assert(source_bed_sleep_precheck(361,0.0f,50,50)==

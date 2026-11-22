@@ -3207,25 +3207,26 @@ private:
     }
 
     void update_source_furniture_bed_frame() noexcept {
-        if(!source_bed_selected_uid_)return;
         const minidayz::WorldPoint actor{
             player_.state().x,player_.state().y};
+        // Root events 903835777805920 / 948724703580895 reset
+        // every 951 to frame0, then highlight overlapping 951 at frame1.
+        // The original does not require pressing A to show bed selection.
+        source_bed_selected_uid_=0;
         for(auto idx:source_furniture_indices_){
             const auto* p=world_.placement(idx);
-            if(!p || p->object!=minidayz::world_source::kFurnitureBed ||
-               p->runtime_uid!=source_bed_selected_uid_)continue;
-            // Root Sprite951 reset event 903835777805920 selects frame0
-            // when the bed interaction is no longer picked.
-            if(!minidayz::world_source::source_furniture_active(*p) ||
-               !minidayz::world_source::source_player_overlaps_world_sprite(
-                   *p,actor,p->origin_x,p->origin_y)){
-                (void)world_.set_placement_sprite_state(
-                    idx,0,0,p->opacity);
-                source_bed_selected_uid_=0;
-            }
-            return;
+            if(!p || p->object!=minidayz::world_source::kFurnitureBed)
+                continue;
+            const bool overlap=
+                minidayz::world_source::source_furniture_active(*p) &&
+                minidayz::world_source::source_player_overlaps_world_sprite(
+                    *p,actor,p->origin_x,p->origin_y);
+            const auto frame=minidayz::world_source::source_bed_overlap_frame(
+                *p,overlap);
+            if(p->source_frame!=frame || p->source_animation!=0)
+                (void)world_.set_placement_sprite_state(idx,0,frame,p->opacity);
+            if(overlap)source_bed_selected_uid_=p->runtime_uid;
         }
-        source_bed_selected_uid_=0;
     }
 
     void rebuild_source_automatic_doors() {
