@@ -45,3 +45,37 @@ for sheet,uid,anc,groups,a in all_actions:
  if not interesting:continue
  print("MAPGEN_POSITION_ACTION",json.dumps({"uid":uid,"sheet":sheet,
     "anc":anc[-5:],"groups":groups[-4:],"action":a},separators=(",",":"))[:4600])
+
+print("ORIGINAL_MAP_FUNCTION_CALLS")
+wants={"generate_array_locations","generate_array_roads_1","generate_array_roads_2","generate_array_tomap","generate_mapgen_toelements","generate_location","create_map_location","create_map_element"}
+for sheet,events in p[6]:
+ for e,anc,groups in walk(events):
+  for a in e[6] if isinstance(e[6],list) else ():
+   if not isinstance(a,list) or len(a)<6 or a[:2]!=[189,69]:continue
+   vals=a[5]
+   if not vals or not isinstance(vals[0],list) or len(vals[0])<2:continue
+   fn=vals[0][1]
+   if not isinstance(fn,list) or len(fn)<2 or fn[0]!=2 or fn[1] not in wants:continue
+   print("MAP_FN_CALL",fn[1],"sheet",sheet,"uid",e[4],"ancestor",anc[-6:],
+     "conditions",json.dumps(e[5],separators=(',',':'))[:2600],
+     "actions",json.dumps(e[6],separators=(',',':'))[:3400])
+print("ORIGINAL_MAPGEN_POSITION_ANCESTRY")
+positions={1131020651387518,156278692855564}
+for sheet,events in p[6]:
+ for e,anc,groups in walk(events):
+  if e[4] not in positions:continue
+  print("MAPGEN_POS_UID",e[4],"anc",anc)
+  for wanted in anc:
+   for x,xc,xg in walk(events):
+    if x[4]==wanted:
+     print("MAPGEN_POS_PARENT",wanted,"conditions",json.dumps(x[5],separators=(',',':'))[:3000],
+       "actions",json.dumps(x[6],separators=(',',':'))[:3000])
+     break
+  print("MAPGEN_POS_EVENT",json.dumps(e,separators=(',',':'))[:10000])
+print("MAPGEN_SPRITE_INSTANCES")
+for lay in p[5]:
+ if lay[0]!="Map":continue
+ for layer in lay[6]:
+  for i in layer[14] if len(layer)>14 and isinstance(layer[14],list) else ():
+   if len(i)>2 and i[1] in (514,508,518,525):
+    print("MAPGEN_SPRITE",i[1],layer[0],json.dumps(i,separators=(',',':'))[:4200])
