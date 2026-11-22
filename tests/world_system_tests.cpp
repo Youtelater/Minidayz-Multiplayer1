@@ -1279,6 +1279,43 @@ void test_seed_reproducibility() {
 // New Game must not reuse an old, static Map. Confirm that two different
 // seeds change the original-generated grid AND populate the display layers
 // with original Construct sprites that the 3DS world renderer can draw.
+void test_generated_original_exterior_roofs_visible_in_world() {
+    // Original city/piano exteriors from the root Construct object pairs
+    // must be present as *playable* generated placements. Counting only
+    // invisible zed_resp triggers is not evidence that buildings appear.
+    constexpr std::uint32_t seeds[]={0x10203040u,123456u};
+    for(const auto seed:seeds) {
+        minidayz::WorldSystem world;
+        assert(world.generate_from_source(seed,"Map",0));
+        std::size_t roofs=0;
+        std::size_t mapped_roofs=0;
+        minidayz::terrain::VisibleSourcePlacementIndex index;
+        index.rebuild(world);
+        for(std::size_t i=0;i<world.placement_count();++i) {
+            const auto* p=world.placement(i);
+            if(!p || p->object<321 || p->object>333)continue;
+            if(p->object!=321 && p->object!=322 && p->object!=323 &&
+               p->object!=324 && p->object!=333)continue;
+            if(!(p->opacity>0.0f) || p->layer>=44 ||
+               !world.bounds().contains({p->x,p->y}))continue;
+            const auto* frame=minidayz::stage1::source_building_frame_geometry(
+                p->object,p->source_animation,p->source_frame);
+            assert(frame && frame->width>0.0f && frame->height>0.0f);
+            ++roofs;
+            std::vector<std::uint32_t> visible;
+            // Index must keep an original-sized roof accessible where
+            // the player camera is actually looking at its hotspot.
+            index.query(p->x-200.0f,p->y-120.0f,400.0f,240.0f,visible);
+            if(std::find(visible.begin(),visible.end(),
+               static_cast<std::uint32_t>(i))!=visible.end())++mapped_roofs;
+        }
+        std::printf("ORIGINAL GENERATED EXTERIOR ROOFS seed=%u renderable=%zu indexed=%zu\\n",
+                    static_cast<unsigned>(seed),roofs,mapped_roofs);
+        assert(roofs>0);
+        assert(mapped_roofs==roofs);
+    }
+}
+
 void test_new_game_generates_visible_original_world() {
     minidayz::WorldSystem first, second;
     assert(first.generate_from_source(0x10203040u, "Map", 0));
@@ -1896,6 +1933,7 @@ int main() {
     test_source_profiles();
     test_original_map_layout_and_descriptors();
     test_seed_reproducibility();
+    test_generated_original_exterior_roofs_visible_in_world();
     test_new_game_generates_visible_original_world();
     test_level_four_split_grid();
     test_retry_after_failed_world_travel();
