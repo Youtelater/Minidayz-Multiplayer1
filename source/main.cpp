@@ -2937,31 +2937,19 @@ private:
             if(!frame)continue;
             const bool overlap=source_player_overlaps_world_sprite(
                 *roof,player_pos,frame->origin_x,frame->origin_y);
-            // Normal source 1048 pick uses the roof's position, not
-            // player overlap with the foundation's *solid wall* mask.
-            // Prefer the actual source-generated parent at this position;
-            // for editor placements use the nearest source family member.
+            // Root event 6583602733022543 (System Pick nearest 1048)
+            // selects the foundation at the roof's X/Y. Do not substitute
+            // the procedural parent UID for this source picking condition.
             if(!overlap && roof->opacity==1.0f &&
                roof->layer==source_roof_background_layer_)continue;
             std::size_t base_index=world_.placement_count();
-            const auto parent=roof->house_base_runtime_uid?
-                roof->house_base_runtime_uid:roof->linked_runtime_uid;
-            if(parent&(std::uint64_t{1}<<63)){
-                const auto id=parent&~(std::uint64_t{1}<<63);
-                const auto* p=world_.placement_by_instance_id(id);
-                if(p && p->runtime_uid==parent &&
-                   minidayz::stage1::source_family_contains(1048,p->object))
-                    base_index=static_cast<std::size_t>(id-1);
-            }
-            if(base_index==world_.placement_count() && overlap){
-                float best=std::numeric_limits<float>::max();
-                for(const auto i:source_house_foundation_indices_){
-                    const auto* p=world_.placement(i);
-                    if(!p)continue;
-                    const float dx=p->x-roof->x,dy=p->y-roof->y;
-                    const float d=dx*dx+dy*dy;
-                    if(d<best){best=d;base_index=i;}
-                }
+            float best=std::numeric_limits<float>::max();
+            for(const auto i:source_house_foundation_indices_){
+                const auto* p=world_.placement(i);
+                if(!p)continue;
+                const float dx=p->x-roof->x,dy=p->y-roof->y;
+                const float d=dx*dx+dy*dy;
+                if(d<best){best=d;base_index=i;}
             }
             const auto* base=world_.placement(base_index);
             const bool has_base=base!=nullptr;
@@ -2985,7 +2973,25 @@ private:
                 source_roof_background_layer_:source_roof_buildings_layer_;
             if(roof_layer!=0xffff && roof->layer!=roof_layer)
                 (void)world_.set_placement_layer(index,roof_layer);
-            if(base && (overlap || base->layer==source_roof_base_top_layer_)){
+            // Root events 4153213040695326 / 7058744064425045
+            // pick the nearest roof to the selected foundation again.
+            // Do not change another house's foundation layer if that
+            // reverse pick selects a different roof.
+            bool reverse_pick_matches=false;
+            if(base){
+                float nearest=std::numeric_limits<float>::max();
+                std::size_t picked=world_.placement_count();
+                for(const auto i:source_roof_indices_){
+                    const auto* candidate=world_.placement(i);
+                    if(!candidate)continue;
+                    const float dx=candidate->x-base->x,dy=candidate->y-base->y;
+                    const float d=dx*dx+dy*dy;
+                    if(d<nearest){nearest=d;picked=i;}
+                }
+                reverse_pick_matches=picked==index;
+            }
+            if(base && reverse_pick_matches &&
+               (overlap || base->layer==source_roof_base_top_layer_)){
                 const auto base_layer=decision.foundation_top?
                     source_roof_base_top_layer_:source_roof_base_layer_;
                 if(base_layer!=0xffff && base->layer!=base_layer)
