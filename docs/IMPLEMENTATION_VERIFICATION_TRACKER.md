@@ -528,7 +528,9 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - [x] Root original Construct object951 (`bed-sheet0.png`, frames0/1), source bed Build-mode event 125247805541322; original object442 (`waterpump-sheet0.png`), map generation UID 8279941300293499. Actual furniture instances are on Map layer18. Rain layer44 bed is a source editor template, not active furniture.
 - [x] Source pump rules for Mapgen.var3=0 initialize water random(100,200); original events 7034863253908448 / 2626558775459672, 2-second wait and 25-unit thirst replenishment with depleted stock. Native state validates water0..200.
 - [x] World visual sidecar v3 persists pump variable0 alongside original instance frame/opacity/layer; v1/v2 read remains supported; original PNG atlas unchanged. Native fixture tests and 3DS workflow test step added.
-- [ ] Wire original controller/touchscreen furniture and pump interactions into the live WorldPreviewScene, including original wait timer and bed sleep guards; validate CI and Azahar. Furniture gameplay is NOT yet complete.
+- [x] Source 3DS A control dispatch, pump wait timer and source-bed atlas frame selection implemented on main commit `d067b5c40df17247f4da847c4b687721049f0422`. The source pump native waits exactly 2 seconds; it is not an immediate refill.
+- [x] **Automated verification passed on the implementation commit:** [Native System Regression Tests #45053654405](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45053654405), [Build 3DS Executable #45053654425](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45053654425) including `.3dsx` upload, and [Original Graphics Audit #45053654415](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45053654415).
+- [ ] Complete source Building-mode bed crafting/placement, original SleepApproved/GotoSleep hierarchy, deconstruction/material returns, and Azahar/physical 3DS gameplay verification. Source-correct Step 10 is **partially implemented and must not be marked fully complete**.
 
 
 ### World Part 2 / Step 10 — live source pump and bed interaction wiring
