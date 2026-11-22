@@ -57,3 +57,6 @@ for sheet,e,anc in all_ev:
   if isinstance(a,list) and len(a)>5 and a[0] in (514,518) and a[1] in (53,73,88,192,199,200,210,211):
    if e[4] in (1131020651387518,156278692855564):continue
    print("MAPGEN_REFERENCE",sheet,e[4],anc[-4:],json.dumps(a,separators=(",",":"))[:1700])
+
+print("ORIGINAL_SPRITE345_BEHAVIORS",json.dumps(project[3][345][8],ensure_ascii=False,separators=(",",":"))[:4000])
+print("ORIGINAL_SPRITE345_NAME",project[3][345][0])
