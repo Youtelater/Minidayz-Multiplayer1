@@ -17,7 +17,7 @@ The existing [Original Graphics and Sprite Sheets CI](../.github/workflows/audit
 | PNGs without a direct Construct animation-frame reference | 75 |
 | Referenced source PNG basenames missing from assets/gfx | 0 |
 
-**Important:** `T3X present` does *not* mean the object should appear in gameplay, or that its original conditions are wired. `no_frame_mapping` does not prove an asset is unused; other runtime paths and tilemaps may use it. The graphics audit also records 17 original source frame rectangles that overlap (but extend outside) their canonical source PNG. These need source padding/atlas output verification; cropping is not evidence that they are errors.
+**Important:** `T3X present` does *not* mean the object should appear in gameplay, or that its original conditions are wired. `no_frame_mapping` does not prove an asset is unused; other runtime paths and tilemaps may use it. The graphics audit also records 17 original source frame rectangles that overlap (but extend outside) their canonical source PNG. The independent 3DS build validator now confirms **32** intentionally off-edge original frame rectangles have transparent padding in the packed atlases (build #45073236616); they are source-layout geometry, not unconverted frames.
 
 ## Runtime visibility is conditional, not “draw every PNG”
 
@@ -57,6 +57,15 @@ Original **real** artwork must still render: wall/exterior house321, visible doo
 
 **3DS build and native tests:** required after any rendering change. Their success does not prove pixel-identical gameplay.
 
-**Known important risks:** 3DS graphics memory and the 32 active sprite atlas pages; 17 partially out-of-sheet original frame rectangles; offscreen source Map templates versus source-generated instances; original environment Tilemap patches, conditional visual effects, and UI all still need exact runtime and Azahar parity checks. Do not label the entire graphics engine “100% source-identical” until these checks are closed.
+**Known important risks:** 3DS graphics memory and the 32 active sprite atlas pages; actual 3DS draws with up to 32 active GPU sprite atlas pages; offscreen source Map templates versus source-generated instances; original environment Tilemap patches, conditional visual effects, and UI all still need exact runtime and Azahar parity checks. Do not label the entire graphics engine “100% source-identical” until these checks are closed.
 
 **User-approved testing plan:** run gameplay in Azahar after code/source corrections; visual issues not yet observed in the newest build must stay unverified.
+
+
+## Source and build verification evidence
+
+- [Original visual-role source trace #45073042851](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45073042851) — source role and Building mode event ancestry audit passed.
+- [Original Graphics and Sprite Sheets #45073236623](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45073236623) — all 1,854 PNGs present, 14,505 original source frames indexed, 0 absent source PNG references.
+- [Native System Regression Tests #45073236585](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45073236585) — player/world native tests passed, including 15 original root sprite role mappings, conditional green ghost usage and no always-on world mask sprites.
+- [3DS executable build #45073236616](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45073236616) — success; original frame mapping validator checked **14,505 frames**, **1,812 converted atlas pages**, **1,735 source-frame sheets**, **32 off-edge frames transparently padded**.
+- Gameplay in Azahar on the new build has **not yet been verified**. Passing these jobs is proof of source/table/build-level checks, not a claim of perfect rendering on screen.
