@@ -21,7 +21,7 @@ for e in walk(root[7]):
    if len(param)>1 and param[0]==11 and param[1] in expressions:
     expressions[param[1]].add(repr(a[5][1]))
 for key in ("check_X","check_Y"):
- expected="[7, [19, 80, [[19, 95, [[0, 1], [23, 'Map_size_"+("X" if key=="check_X" else "Y")+"']]]]]]]"
+ expected=repr([7,[19,80,[[19,95,[[0,1],[23,"Map_size_"+("X" if key=="check_X" else "Y")]]]]]])
  assert expected in expressions[key], (key,len(expressions[key]),list(expressions[key])[:5])
 source=(ROOT/"source/world.cpp").read_text()
 assert "grid.width() - 1u" in source
