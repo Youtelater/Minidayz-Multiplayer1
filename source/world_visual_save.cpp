@@ -8,7 +8,8 @@
 namespace minidayz::persistence {
 namespace {
 constexpr std::uint32_t kMagic=0x5357444du; // "MDWS" little-endian
-constexpr std::uint32_t kVersion=2u; // adds original roof source layer
+constexpr std::uint32_t kVersion=3u; // source variable0 reserve
+constexpr std::uint32_t kPreviousVersion=2u; // source layer
 constexpr std::uint32_t kLegacyVersion=1u;
 constexpr std::uint32_t kMaxChanges=100000u;
 constexpr std::uint32_t kFnvBasis=2166136261u;
@@ -49,8 +50,8 @@ std::uint32_t extend_hash(std::uint32_t hash,
         hash=(hash^bytes[i])*kFnvPrime;
     return hash;
 }
-std::array<unsigned char,24> encode(const WorldSpriteState& item) noexcept {
-    std::array<unsigned char,24> b{};
+std::array<unsigned char,32> encode(const WorldSpriteState& item) noexcept {
+    std::array<unsigned char,32> b{};
     pack64(b.data(),item.runtime_uid);
     pack32(b.data()+8,static_cast<std::uint32_t>(item.object) |
                         (static_cast<std::uint32_t>(item.animation)<<16));
@@ -60,10 +61,11 @@ std::array<unsigned char,24> encode(const WorldSpriteState& item) noexcept {
     std::memcpy(&opacity_bits,&item.opacity,4);
     pack32(b.data()+16,opacity_bits);
     pack32(b.data()+20,item.layer);
+    pack64(b.data()+24,item.source_variable_0);
     return b;
 }
-WorldSpriteState decode(const std::array<unsigned char,24>& b,
-                        bool legacy) noexcept {
+WorldSpriteState decode(const std::array<unsigned char,32>& b,
+                        std::uint32_t version) noexcept {
     WorldSpriteState item{};
     item.runtime_uid=unpack64(b.data());
     const auto combined=unpack32(b.data()+8);
@@ -72,7 +74,10 @@ WorldSpriteState decode(const std::array<unsigned char,24>& b,
     item.frame=unpack32(b.data()+12);
     const auto bits=unpack32(b.data()+16);
     std::memcpy(&item.opacity,&bits,4);
-    item.layer=legacy?0xffff:static_cast<std::uint16_t>(unpack32(b.data()+20));
+    item.layer=version==kLegacyVersion?0xffff:
+        static_cast<std::uint16_t>(unpack32(b.data()+20));
+    item.source_variable_0=version==kVersion?unpack64(b.data()+24)
+        :~std::uint64_t{0};
     return item;
 }
 }
@@ -114,7 +119,8 @@ bool read_world_visual_state(WorldSystem& world,std::uint8_t level,
     bool ok=read32(file,magic)&&read32(file,version)&&
         read32(file,seed)&&read32(file,saved_level)&&read32(file,count);
     if(!ok || magic!=kMagic ||
-       (version!=kVersion && version!=kLegacyVersion) || seed!=world.seed() ||
+       (version!=kVersion && version!=kPreviousVersion &&
+        version!=kLegacyVersion) || seed!=world.seed() ||
        saved_level!=level || count>kMaxChanges ||
        count>world.placement_count()) {
         std::fclose(file);
@@ -124,14 +130,15 @@ bool read_world_visual_state(WorldSystem& world,std::uint8_t level,
     changes.reserve(count);
     auto hash=kFnvBasis;
     for(std::uint32_t i=0;i<count;++i) {
-        std::array<unsigned char,24> row{};
-        const auto bytes=version==kLegacyVersion?20u:24u;
+        std::array<unsigned char,32> row{};
+        const auto bytes=version==kLegacyVersion?20u:
+            version==kPreviousVersion?24u:32u;
         if(std::fread(row.data(),1,bytes,file)!=bytes) {
             ok=false;
             break;
         }
         hash=extend_hash(hash,row.data(),bytes);
-        changes.push_back(decode(row,version==kLegacyVersion));
+        changes.push_back(decode(row,version));
     }
     std::uint32_t expected{};
     if(ok)ok=read32(file,expected)&&expected==hash &&

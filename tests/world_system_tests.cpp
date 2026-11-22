@@ -4,6 +4,7 @@
 #include "minidayz/source_world_event_effects.hpp"
 #include "minidayz/source_door_auto.hpp"
 #include "minidayz/source_roof_interaction.hpp"
+#include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
@@ -31,6 +32,40 @@ std::size_t count_code(const minidayz::WorldGrid& grid, std::uint16_t code) {
         for (int x = 0; x < grid.width(); ++x)
             if (grid.at(x, y) == code) ++count;
     return count;
+}
+
+void test_source_furniture_and_pump() {
+    using namespace minidayz;
+    using namespace minidayz::world_source;
+    const auto frames=stage1::animations_for_object(kFurnitureBed);
+    assert(frames.data && frames.size && frames.data[0].frames==2);
+    WorldPlacement bed{};
+    bed.object=kFurnitureBed;bed.layer=44;bed.width=37;bed.height=21;
+    bed.runtime_uid=5;bed.opacity=1.0f;
+    assert(!source_furniture_active(bed));
+    bed.layer=kFurnitureLayer;
+    assert(source_furniture_active(bed));
+    assert(source_pump_draw(50.0f,150).consumed==25);
+    assert(source_pump_draw(98.0f,70).consumed==2);
+    assert(source_pump_draw(50.0f,7).consumed==7);
+    assert(!source_pump_draw(100.0f,150).can_use);
+    assert(!source_pump_draw(50.0f,0).can_use);
+    WorldSystem world;
+    assert(world.initialize(0x95549514u));
+    assert(world.load_source_layout("Map"));
+    const auto start=world.placement_count();
+    assert(world.expand_map_element(3,2,0,{4500.0f,4500.0f},0.0)>0);
+    std::size_t pump=world.placement_count();
+    for(auto i=start;i<world.placement_count();++i)
+        if(world.placement(i)->object==kFurniturePump){pump=i;break;}
+    assert(pump<world.placement_count());
+    const auto* source=world.placement(pump);
+    assert(source_furniture_active(*source));
+    assert(source->source_variable_0>=100 && source->source_variable_0<=200);
+    assert(world.set_source_pump_water(pump,70));
+    assert(world.placement(pump)->source_variable_0==70);
+    assert(!world.set_source_pump_water(pump,201));
+    assert(!world.set_source_pump_water(world.placement_count(),5));
 }
 
 void test_original_interaction_polygon_geometry() {
@@ -1557,6 +1592,7 @@ void test_level_four_split_grid() {
 } // namespace
 
 int main() {
+    test_source_furniture_and_pump();
     test_original_interaction_polygon_geometry();
     test_grid_semantics();
     test_source_world_instance_animation_state();

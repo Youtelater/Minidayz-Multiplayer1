@@ -521,3 +521,11 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - [x] Added regression assertions for shadow9 < tilemap17 < sprite17 < water19, exact source object347 frame/opacity in five original house spawn chains, and a Python guard preventing return of the independent tilemap depth scale.
 - [x] **Automated verification PASS** for code commit `066fc8bd62c9116308fdfc562fdf77e974e81f5e`: [Native System Regression Tests #45051311143](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45051311143) (world-tests and player-tests success), [Build 3DS Executable #45051311113](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45051311113) (compiled and uploaded `.3dsx` successfully), and [Original Graphics Audit #45051311162](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45051311162) (success). Step 9 depth reconciliation is complete at the source-code and automated-test level.
 - [ ] **Emulator / hardware gate:** compare original Sprite347 shadows in Azahar and on a physical Nintendo 3DS, including overlaps with layer-17 Tilemap211, water layer19, opacity and named imagepoint-derived stretch. Do not claim emulator parity or complete Part 2 until visually checked.
+
+
+### World Part 2 / Step 10 — source furniture and fixture implementation (2026-11-22)
+
+- [x] Root original Construct object951 (`bed-sheet0.png`, frames0/1), source bed Build-mode event 125247805541322; original object442 (`waterpump-sheet0.png`), map generation UID 8279941300293499. Actual furniture instances are on Map layer18. Rain layer44 bed is a source editor template, not active furniture.
+- [x] Source pump rules for Mapgen.var3=0 initialize water random(100,200); original events 7034863253908448 / 2626558775459672, 2-second wait and 25-unit thirst replenishment with depleted stock. Native state validates water0..200.
+- [x] World visual sidecar v3 persists pump variable0 alongside original instance frame/opacity/layer; v1/v2 read remains supported; original PNG atlas unchanged. Native fixture tests and 3DS workflow test step added.
+- [ ] Wire original controller/touchscreen furniture and pump interactions into the live WorldPreviewScene, including original wait timer and bed sleep guards; validate CI and Azahar. Furniture gameplay is NOT yet complete.

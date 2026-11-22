@@ -6,6 +6,7 @@
 #include "minidayz/generated/source_door_points.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
+#include "minidayz/source_furniture_interaction.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -462,7 +463,7 @@ bool WorldSystem::advance_source_generation() {
         for (const auto& p : placements_)
             original_sprite_states_.push_back({
                 p.runtime_uid,p.object,p.source_animation,
-                p.source_frame,p.opacity,p.layer});
+                p.source_frame,p.opacity,p.layer,p.source_variable_0});
     }
     return true;
 }
@@ -929,6 +930,12 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         });
         placements_.back().runtime_uid = runtime_id;
         placements_.back().instance_id = static_cast<std::uint64_t>(placements_.size());
+        // Root event 8279941300293499 / child 3903561981802149:
+        // when Mapgen508.var3=0, Sprite442.var0=random(100,200).
+        if(rule.object==world_source::kFurniturePump &&
+           var1==3 && var2==2 && var3==0.0)
+            placements_.back().source_variable_0=
+                std::uniform_int_distribution<std::uint64_t>(100,200)(rng_);
 
         // A root Construct map-element "house" is a SEQUENCE of Sprite
         // Spawn-another-object actions, not one Building-base texture.
@@ -1230,6 +1237,17 @@ bool WorldSystem::set_placement_layer(
     return true;
 }
 
+bool WorldSystem::set_source_pump_water(
+    std::size_t index,std::uint64_t water) noexcept {
+    if(!initialized_ || index>=placements_.size() ||
+       water>world_source::kPumpMaxWater)return false;
+    auto& p=placements_[index];
+    if(p.object!=world_source::kFurniturePump ||
+       p.layer!=world_source::kFurnitureLayer)return false;
+    p.source_variable_0=water;
+    return true;
+}
+
 bool WorldSystem::set_linked_door_solid_present(
     std::size_t door_index,bool present) noexcept {
     if(door_index>=placements_.size())return false;
@@ -1304,9 +1322,10 @@ std::vector<WorldSpriteState> WorldSystem::capture_sprite_states() const {
         const auto& base=original_sprite_states_[i];
         if (p.source_animation==base.animation &&
             p.source_frame==base.frame && p.opacity==base.opacity &&
-            p.layer==base.layer) continue;
+            p.layer==base.layer &&
+            p.source_variable_0==base.source_variable_0) continue;
         result.push_back({p.runtime_uid,p.object,p.source_animation,
-                          p.source_frame,p.opacity,p.layer});
+                          p.source_frame,p.opacity,p.layer,p.source_variable_0});
     }
     return result;
 }
@@ -1340,6 +1359,9 @@ bool WorldSystem::restore_sprite_states(
         const auto frames=stage1::animations_for_object(state.object);
         if (!frames.data || state.animation>=frames.size ||
             state.frame>=frames.data[state.animation].frames) return false;
+        if(state.object==world_source::kFurniturePump &&
+           state.source_variable_0!=~std::uint64_t{0} &&
+           state.source_variable_0>world_source::kPumpMaxWater)return false;
         if(state.layer!=0xffff){
             const auto* map=stage1::find_layout("Map");
             if(!map)return false;
@@ -1357,6 +1379,7 @@ bool WorldSystem::restore_sprite_states(
         placed.source_frame=baseline.frame;
         placed.opacity=baseline.opacity;
         placed.layer=baseline.layer;
+        placed.source_variable_0=baseline.source_variable_0;
     }
     for(const auto& state:states)
         for(auto& p:placements_)
@@ -1366,6 +1389,8 @@ bool WorldSystem::restore_sprite_states(
                 p.source_frame=state.frame;
                 p.opacity=state.opacity;
                 if(state.layer!=0xffff)p.layer=state.layer;
+                if(state.source_variable_0!=~std::uint64_t{0})
+                    p.source_variable_0=state.source_variable_0;
                 break;
             }
     // Companion visibility is derived from its linked source door frame.

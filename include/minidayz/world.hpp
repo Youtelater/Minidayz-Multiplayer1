@@ -54,6 +54,8 @@ struct WorldSpriteState {
     // Keep this layer state in the versioned world save. 0xffff is the
     // legacy v1 snapshot sentinel: retain generated source layer.
     std::uint16_t layer{0xffff};
+    // Original source variable0 for fixtures; old v1/v2 save sentinel.
+    std::uint64_t source_variable_0{~std::uint64_t{0}};
 };
 
 struct WorldMapMarker {
@@ -215,6 +217,7 @@ public:
     // Sprite state and source UID remain unchanged.
     bool set_placement_layer(std::size_t index,
                              std::uint16_t layer) noexcept;
+    bool set_source_pump_water(std::size_t index,std::uint64_t water) noexcept;
     // Capture only sprite states different from the generated original.
     // No 3DS rendering resources are needed; replay validates every frame.
     std::vector<WorldSpriteState> capture_sprite_states() const;
