@@ -1261,6 +1261,34 @@ void test_new_game_generates_visible_original_world() {
     }
 }
 
+void test_bunker_and_bridge_placement_reload() {
+    using namespace minidayz;
+    WorldSystem world;
+    assert(world.initialize(42));
+    assert(world.load_source_bunker_spawns());
+    assert(world.load_source_bridge_elements());
+    assert(world.feature_count(WorldFeatureKind::Bunker) == stage1::kBunkerSpawnSourceCount);
+    assert(world.feature_count(WorldFeatureKind::Bridge) == stage1::kBridgeElementSourceCount);
+    const auto normal = world.feature(0)->position;
+    assert(world.load_source_bunker_spawns(true));
+    assert(world.feature_count(WorldFeatureKind::Bunker) == stage1::kBunkerSpawnSourceCount);
+    const auto alternate = world.feature(stage1::kBridgeElementSourceCount)->position;
+    assert(alternate.x == normal.x + 16900.0f);
+    assert(alternate.y == normal.y);
+    assert(world.load_source_bridge_elements());
+    assert(world.feature_count(WorldFeatureKind::Bridge) == stage1::kBridgeElementSourceCount);
+
+    WorldSystem small;
+    assert(small.initialize(42, {3600.0f, 20000.0f}));
+    assert(small.add_feature({WorldFeatureKind::Bunker, {20.0f, 30.0f}}));
+    assert(small.add_feature({WorldFeatureKind::Bridge, {25.0f, 35.0f}}));
+    assert(!small.load_source_bunker_spawns());
+    assert(!small.load_source_bridge_elements());
+    assert(small.feature_count() == 2);
+    assert(small.feature(0)->position.x == 20.0f);
+    assert(small.feature(1)->position.x == 25.0f);
+}
+
 void test_every_source_level_quota() {
     for (std::uint8_t level = 0; level <= 5; ++level) {
         minidayz::WorldGenerationProfile profile{};
@@ -1438,6 +1466,7 @@ int main() {
     test_seed_reproducibility();
     test_new_game_generates_visible_original_world();
     test_level_four_split_grid();
+    test_bunker_and_bridge_placement_reload();
     test_every_source_level_quota();
     test_full_generation_all_source_maps();
     std::puts("World source regression tests passed.");

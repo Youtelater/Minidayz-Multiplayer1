@@ -830,9 +830,8 @@ bool WorldSystem::create_source_door_companions() {
 
 bool WorldSystem::load_source_bunker_spawns(bool map_fs) {
     if (!initialized_) return false;
-    features_.erase(std::remove_if(features_.begin(), features_.end(),
-        [](const WorldFeature& item) { return item.kind == WorldFeatureKind::Bunker; }),
-        features_.end());
+    std::vector<WorldFeature> replacements;
+    replacements.reserve(stage1::kBunkerSpawnSourceCount);
     constexpr float origin_x=2306.0f, origin_y=17464.0f, alternate_offset_x=16900.0f;
     for (const auto& source : stage1::kBunkerSpawnSource) {
         const WorldPoint pos{origin_x+source.x+(map_fs?alternate_offset_x:0.0f),
@@ -840,25 +839,34 @@ bool WorldSystem::load_source_bunker_spawns(bool map_fs) {
         if (!bounds_.contains(pos)) return false;
         const std::uint32_t source_value =
             (static_cast<std::uint32_t>(source.slot) << 16) | source.weight;
-        features_.push_back({WorldFeatureKind::Bunker,pos,source.uid,source.kind,
+        replacements.push_back({WorldFeatureKind::Bunker,pos,source.uid,source.kind,
                              18,975,0,0,0,source_value});
     }
+    features_.reserve(features_.size() + replacements.size());
+    features_.erase(std::remove_if(features_.begin(), features_.end(),
+        [](const WorldFeature& item) { return item.kind == WorldFeatureKind::Bunker; }),
+        features_.end());
+    features_.insert(features_.end(), replacements.begin(), replacements.end());
     return true;
 }
 
 bool WorldSystem::load_source_bridge_elements() {
     if (!initialized_) return false;
-    features_.erase(std::remove_if(features_.begin(), features_.end(),
-        [](const WorldFeature& item) { return item.kind == WorldFeatureKind::Bridge; }),
-        features_.end());
+    std::vector<WorldFeature> replacements;
+    replacements.reserve(stage1::kBridgeElementSourceCount);
     for (const auto& source : stage1::kBridgeElementSource) {
         const WorldPoint pos{static_cast<float>(source.x),static_cast<float>(source.y)};
         if (!bounds_.contains(pos)) return false;
         const std::uint32_t variant =
             (static_cast<std::uint32_t>(source.family) << 1) | (source.enabled?1u:0u);
-        features_.push_back({WorldFeatureKind::Bridge,pos,source.uid,variant,
+        replacements.push_back({WorldFeatureKind::Bridge,pos,source.uid,variant,
                              41,source.object,0,0,0,source.element});
     }
+    features_.reserve(features_.size() + replacements.size());
+    features_.erase(std::remove_if(features_.begin(), features_.end(),
+        [](const WorldFeature& item) { return item.kind == WorldFeatureKind::Bridge; }),
+        features_.end());
+    features_.insert(features_.end(), replacements.begin(), replacements.end());
     return true;
 }
 
