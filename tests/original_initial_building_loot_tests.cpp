@@ -10,6 +10,13 @@ int main() {
     assert(kSourceInitialBuildingLootRuleCount==49);
     assert(kSourceInitialBuildingLootItemCount>300);
     assert(kSourceInitialMarkerCreationEventCount>5);
+    assert(kSourceInitialSpecialItemCount==4);
+    assert(source_initial_item_after_default_unlocks(118)==18); // bandage
+    assert(source_initial_item_after_default_unlocks(119)==21); // grenade
+    assert(source_initial_item_after_default_unlocks(124)==76); // RDS
+    assert(source_initial_item_after_default_unlocks(125)==24); // matches
+    assert(source_initial_item_after_default_unlocks(351)==0); // no source handler
+    assert(source_initial_item_after_default_unlocks(19)==19);
     std::uint16_t previous=0;
     bool has_house9=false,has_house19=false,has_else23=false;
     for(const auto& source:kSourceInitialBuildingLootRules) {
