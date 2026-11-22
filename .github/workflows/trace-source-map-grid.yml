@@ -1,0 +1,15 @@
+name: Trace Root Source Map Generation Entry Points
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/trace_source_map_grid_parity.py'
+      - '.github/workflows/trace-source-map-grid.yml'
+  workflow_dispatch:
+jobs:
+  original-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trace exact original Map generation entry events and array indexing
+        run: python3 tools/stage1/trace_source_map_grid_parity.py
