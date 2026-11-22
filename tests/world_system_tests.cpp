@@ -1406,7 +1406,11 @@ void check_generated_road_connections(const minidayz::WorldGrid& grid,
         return std::pair<int, int>{-1, -1};
     };
     for (int y = 0; y < grid.height(); ++y) {
-        const auto horizontal = find_pair(grid.width(), [&](int x) { return grid.at(x, y); });
+        // Original generate_array_roads_1 only repeats Map_size_X rows;
+        // the 33-row late maps do not get a second horizontal pass.
+        const auto horizontal = y < grid.width() ?
+            find_pair(grid.width(), [&](int x) { return grid.at(x, y); }) :
+            std::pair<int,int>{-1,-1};
         const int offset = profile.second_half_start_y && y >= profile.second_half_start_y - 1
             ? profile.second_half_start_y - 1 : 0;
         for (int x = 0; x < grid.width(); ++x) {

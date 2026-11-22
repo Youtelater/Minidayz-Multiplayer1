@@ -159,8 +159,11 @@ bool is_road_anchor(std::uint16_t code) noexcept {
 }
 
 void generate_source_roads(WorldGrid& grid, std::uint8_t level, std::uint8_t active_y_count) {
-    // generate_array_roads_1: connect the first two source road anchors in each row.
-    for (int row = 0; row < grid.height(); ++row) {
+    // Root function generate_array_roads_1 (UID 921061167763666)
+    // repeats Map_size_X (=16) rows, even on the 16x33 split-map worlds.
+    // Only generate_array_roads_2 makes an additional pass at Y+17.
+    // The previous grid.height() loop invented second-half horizontal roads.
+    for (int row = 0; row < grid.width() && row < grid.height(); ++row) {
         int first = -1;
         int second = -1;
         for (int x = 0; x < grid.width(); ++x) {

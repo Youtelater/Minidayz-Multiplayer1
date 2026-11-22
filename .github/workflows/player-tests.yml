@@ -96,6 +96,9 @@ jobs:
           python3 tools/stage2/build_original_timed_loot.py
           python3 tools/stage2/build_original_initial_building_loot.py
 
+      - name: Verify original road source predicates and split-map row bounds
+        run: python3 tools/stage1/audit_original_road_dispatch.py
+
       - name: Verify original map-array random bounds against root Construct
         run: python3 tests/test_original_world_poi_bounds.py
 

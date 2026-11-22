@@ -674,3 +674,10 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - [x] Compared root `generate_array_locations` event UID `6938246402369311`, including nested level branch `214943915460313`, to native `WorldSystem::place_poi_count`. Exact root expression is `floor(random(1, Map_size_X/Y))`, then Array write at `check_X - 1` / `check_Y - 1`. Original Construct `random` upper endpoint is **exclusive**; native previously included it and could place primary POI centers on the last column or last unsplit row, shifting roads and location coordinates.
 - [x] Corrected original last-column/row exclusions, the first/split half max bounds, and the same gas-station POI center sampling while preserving original five-cell footprint writes. Added root-source expression parity Python test and native multi-level/multi-seed boundary coverage.
 - [ ] Original JS RNG seed/state and draw ordering, mapgen-to-world cell coordinates, exact array-to-location activation, all original terrain SetTile effects, and Azahar pixel output are independent parity gates; do not confuse source-bound correctness with 100% map equivalence.
+
+
+### Step 2 exact source road generation row ranges (2026-11-22)
+
+- [x] Traced the original root `generate_array_roads_1` (UID `921061167763666`) and `generate_array_roads_2` (UID `484111970403648`) event trees. Their five Array518 road-anchor codes exactly match native `{6,9,11,15,103}` in both horizontal and vertical source guards. Original `Map_size_X`/`Map_size_Y` are 16 by default (a challenge mode temporarily sets 3, then 16).
+- [x] Found native late-level error: horizontal generator looped across **all 33 grid rows**, while original horizontal `Repeat(Map_size_X)` stops at row 15. Only the vertical source function adds a second pass at `Y+17`. Stopped inventing second-half horizontal roads, kept the authentic vertical second-half pass, updated world road adjacency regression and root source guard check.
+- [ ] Original browser PRNG/call ordering and the exact Mapgen sprite world positions remain separate parity items; source road-code/loop parity does not prove final Azahar road rendering matches.

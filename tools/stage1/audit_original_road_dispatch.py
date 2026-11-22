@@ -45,4 +45,10 @@ for sheet,events in p[6]:
       print("ROAD_GRID_SET_X",sheet,n[4],json.dumps(a[5],separators=(',',':')))
     variables(n[7],anc+(n[4],))
  variables(events)
-print("PASS original road array anchor source extraction")
+# Root Map-size defaults are 16; challenge/test flags may explicitly
+# set them to 3, then restore 16. The ordinary 16x33 map still uses the
+# original 16-row horizontal pass and second-half vertical Y+17 pass.
+world_source=(ROOT/"source/world.cpp").read_text(encoding="utf-8")
+assert "for (int row = 0; row < grid.width() && row < grid.height(); ++row)" in world_source
+assert "if (level >= 4) add_vertical_roads(17);" in world_source
+print("PASS original road array anchor source extraction and split-map axis bounds")
