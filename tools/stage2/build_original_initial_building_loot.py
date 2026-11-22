@@ -158,14 +158,14 @@ for required in (1,2,9,15,19,23,44,101,102,103,104,105):
 spawn_function=find(5418835019314848)
 menu=next(sh[1] for sh in project[6] if sh[0]=="Menu_Events")
 original_item_map=(ROOT/"mp_itemtable.js").read_text(encoding="utf-8-sig")
-original_item_map=re.sub(r"\\\\u([0-9a-fA-F]{4})",
+original_item_map=re.sub(r"\\u([0-9a-fA-F]{4})",
   lambda m:chr(int(m.group(1),16)),original_item_map)
 start=original_item_map.find("MDZItemTable")
 first=original_item_map.find("{",start)
 last=original_item_map.find("}",first)
 if start<0 or first<0 or last<0:raise SystemExit("Missing root multiplayer sprite table")
 object_to_item={}
-for match in re.finditer(r'(\\d+)\\s*:\\s*"(t\\d+)"',original_item_map[first+1:last]):
+for match in re.finditer(r'(\d+)\s*:\s*"(t\d+)"',original_item_map[first+1:last]):
     original_item_id=int(match.group(1))
     original_object_name=match.group(2)
     original_oid=int(original_object_name[1:])
