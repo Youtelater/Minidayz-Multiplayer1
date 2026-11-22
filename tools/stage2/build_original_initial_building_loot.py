@@ -59,10 +59,17 @@ def parse_gate(e):
         if c[:2]!=[-1,51]:raise SystemExit("Unknown loot child predicate "+str(c)[:200])
         if len(c[9])!=3 or c[9][1] not in ([8,0],[8,1]) or c[9][2][0]!=7:
             raise SystemExit("Unknown loot chance operator "+str(c[9]))
-        vals=literal(c[9][0][1])
+        lhs=c[9][0][1]
         rhs=literal(c[9][2][1])
         if len(rhs)!=1:raise SystemExit("Unknown source chance comparator")
-        gates.append((1 if c[9][1]==[8,0] else 2,vals,rhs[0]))
+        # Original category17 uses round(random(1,100))==55, NOT
+        # choose(1,...,100). Capture this exact AST separately.
+        if lhs==[19,80,[[19,95,[[0,1],[0,100]]]]]:
+            if c[9][1]!=[8,0]:raise SystemExit("Unexpected round(random()) comparison")
+            gates.append((4,[],rhs[0]))
+        else:
+            vals=literal(lhs)
+            gates.append((1 if c[9][1]==[8,0] else 2,vals,rhs[0]))
     if len(gates)>1:raise SystemExit("Compound random gate not independently ported")
     return gates[0] if gates else (0,[],0)
 
@@ -184,7 +191,7 @@ lines=["#pragma once","#include <cstddef>","#include <cstdint>",
        " std::uint16_t first,choices,gate_first,gate_choices;",
        " std::int16_t gate_target;std::uint8_t gate_kind;",
        "};",
-       "// gate_kind 0=always, 1=choose(...) equals N, 2=not equals, 3=Else.",
+       "// gate_kind 0=always,1=choose==N,2=choose!=N,3=Else,4=round(random(1,100))==N.",
        f"inline constexpr std::size_t kSourceInitialBuildingLootRuleCount={len(rows)};",
        f"inline constexpr std::size_t kSourceInitialBuildingLootItemCount={len(flat_choices)};",
        "inline constexpr std::uint16_t kSourceInitialBuildingLootItems[]={"]
