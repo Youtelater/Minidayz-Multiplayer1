@@ -73,6 +73,22 @@ int main(){
     assert(source_player_base_overlaps_wall(wall,{0,0}));
     wall.x=20.0f;
     assert(!source_player_base_overlaps_wall(wall,{0,0}));
+    // Original 346 has no custom frame mask. Use actual transformed
+    // overlap, independent of procedural parent and house UID.
+    WorldPlacement zone{};
+    zone.object=346;zone.width=zone.height=20.0f;zone.scale_x=1.0f;
+    zone.origin_x=zone.origin_y=0.5f;
+    WorldPlacement other=zone;
+    other.x=4.0f;other.angle=37.0f;other.scale_x=-1.0f;
+    assert(source_house_sprites_overlap(zone,other));
+    assert(source_house_sprites_overlap(other,zone));
+    other.x=100.0f;
+    assert(!source_house_sprites_overlap(zone,other));
+    other.x=0.0f;other.width=other.height=2.0f;
+    assert(source_house_sprites_overlap(zone,other));
+    assert(source_house_sprites_overlap(other,zone));
+    other.width=0.0f;
+    assert(!source_house_sprites_overlap(zone,other));
     WorldPlacement missing{};
     missing.object=9999;
     missing.width=missing.height=20.0f;
