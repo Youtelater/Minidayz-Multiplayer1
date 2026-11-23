@@ -2704,6 +2704,59 @@ void test_original_building_specific_loot_on_generated_world() {
     }
 }
 
+// Screenshot-reproduction seed from the player's actual Manic Emu map.
+// All visible original world sprite states must resolve to source-authored
+// animation/frame data; a successful .3dsx build does not check this.
+void test_reported_world_seed_original_frame_integrity() {
+    using namespace minidayz;
+    constexpr std::uint32_t kReportedSeed=0x8D45D166u;
+    WorldSystem world{};
+    assert(world.generate_from_source(kReportedSeed,"Map",0));
+    std::size_t visible_art=0,invalid_frames=0,trees=0,cars=0;
+    const auto* map=stage1::find_layout("Map");
+    assert(map);
+    const auto layout_id=static_cast<std::uint16_t>(
+        map-stage1::kLayoutTable);
+    for(std::size_t i=0;i<world.placement_count();++i) {
+        const auto* p=world.placement(i);
+        if(!p||p->opacity<=0.0f||p->layer==32||p->layer>=44||
+           world_source::source_world_logic_marker_not_art(p->object)||
+           world_source::source_world_preview_needs_live_event(p->object))
+            continue;
+        const auto* def=stage1::find_object(p->object);
+        const auto* layer=stage1::find_layer(layout_id,p->layer);
+        if(!def||def->type!=18||!layer||!layer->visible||
+           std::strstr(layer->name,"respawn")||
+           std::strstr(layer->name,"_resp")||
+           std::strstr(layer->name,"points"))continue;
+        ++visible_art;
+        const auto animations=stage1::animations_for_object(p->object);
+        if(p->source_animation>=animations.size ||
+           !animations.data ||
+           p->source_frame>=animations.data[p->source_animation].frames) {
+            if(invalid_frames<15)std::fprintf(stderr,
+                "SOURCE WORLD FRAME MISSING id=%u layer=%u a=%u f=%u uid=%llu\n",
+                static_cast<unsigned>(p->object),
+                static_cast<unsigned>(p->layer),
+                static_cast<unsigned>(p->source_animation),
+                static_cast<unsigned>(p->source_frame),
+                static_cast<unsigned long long>(p->runtime_uid));
+            ++invalid_frames;
+        }
+        if(p->object==184||p->object==207||p->object==209||
+           p->object==210||p->object==576||
+           p->object==577||p->object==581)++trees;
+        if(p->object==241)++cars;
+    }
+    std::printf("USER SEED %08X source_art=%zu trees=%zu "
+                "car_trunks=%zu invalid_source_frames=%zu placements=%zu\n",
+                kReportedSeed,visible_art,trees,cars,
+                invalid_frames,world.placement_count());
+    assert(visible_art>100);
+    assert(trees>10);
+    assert(invalid_frames==0 && "original world sprite frame not in source");
+}
+
 } // namespace
 
 int main() {
@@ -2736,6 +2789,7 @@ int main() {
     test_generated_object_instance_ids();
     test_source_profiles();
     test_original_map_layout_and_descriptors();
+    test_reported_world_seed_original_frame_integrity();
     test_seed_reproducibility();
     test_source_scatter_reproduction_and_layout_replacement();
     test_original_perk_dao_world_scatter_branch();
