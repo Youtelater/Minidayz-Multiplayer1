@@ -33,6 +33,7 @@
 #include <initializer_list>
 #include <utility>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace {
 
@@ -1019,6 +1020,43 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
         0.6875f,0.55f,false)==0.6875f);
     minidayz::terrain::SourceObstacleIndex tree_index{};
     tree_index.rebuild(world);
+    // Verify EVERY procedurally placed original tree species, not just
+    // the first Sprite207. The original create_map_element attaches
+    // Sprite345 frame10 at the tree's authored Imagepoint1. If the
+    // broadphase misses either linked object, players walk through trees.
+    std::unordered_map<std::uint64_t,std::size_t> tree_uid_to_index;
+    for(std::size_t i=0;i<world.placement_count();++i) {
+        const auto* placed=world.placement(i);
+        if(placed && placed->runtime_uid)
+            tree_uid_to_index.emplace(placed->runtime_uid,i);
+    }
+    std::size_t verified_original_trunks=0;
+    for(std::size_t i=0;i<world.placement_count();++i) {
+        const auto* visible=world.placement(i);
+        if(!visible || visible->layer!=43 || visible->source_uid==0 ||
+           visible->source_frame!=0 ||
+           !source_tree_impact_point(visible->object))continue;
+        assert(visible->linked_runtime_uid!=0);
+        const auto companion=tree_uid_to_index.find(visible->linked_runtime_uid);
+        assert(companion!=tree_uid_to_index.end());
+        const auto* trunk=world.placement(companion->second);
+        assert(trunk && trunk->object==345 && trunk->source_frame==10);
+        assert(trunk->linked_runtime_uid==visible->runtime_uid);
+        float expected_x{},expected_y{};
+        assert(minidayz::terrain::source_standing_tree_trunk_position(
+            *visible,expected_x,expected_y));
+        assert(std::fabs(trunk->x-expected_x)<0.05f);
+        assert(std::fabs(trunk->y-expected_y)<0.05f);
+        assert(minidayz::terrain::source_standing_tree_trunk_contains(
+            *visible,trunk->x,trunk->y));
+        const auto& colliders=tree_index.candidates(trunk->x,trunk->y);
+        assert(std::find(colliders.begin(),colliders.end(),
+            static_cast<std::uint32_t>(i))!=colliders.end());
+        assert(std::find(colliders.begin(),colliders.end(),
+            static_cast<std::uint32_t>(companion->second))!=colliders.end());
+        ++verified_original_trunks;
+    }
+    assert(verified_original_trunks>=100);
     const auto& trunk_candidates=tree_index.candidates(hitbox->x,hitbox->y);
     assert(std::find(trunk_candidates.begin(),trunk_candidates.end(),
          static_cast<std::uint32_t>(tree))!=trunk_candidates.end());
