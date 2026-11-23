@@ -19,7 +19,7 @@ spawn=main.split("bool place_new_player_on_generated_map(",1)[1].split(
 assert "destination.source_random()" in spawn and "destination.generation_level()" in spawn
 assert "destination.seed() ^" not in spawn
 assert "static_cast<double>(source_rng())/4294967296.0" in spawn
-assert "std::uniform_real_distribution" not in spawn
+assert "std::uniform_real_distribution<" not in spawn
 assert "kNormalPlayerStartX" in spawn and "kNormalPlayerStartYBase" in spawn
 assert "kSnowPlayerStartXMin" in spawn and "kSnowPlayerStartY" in spawn
 assert "blocked(this," not in spawn and "local_offsets" not in spawn
