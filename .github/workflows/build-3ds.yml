@@ -280,6 +280,9 @@ jobs:
             -o /tmp/minidayz_original_building_loot
           /tmp/minidayz_original_building_loot
 
+      - name: Build exact root PlayerBase source event catalog
+        run: python3 tools/stage1/build_player_speed_event_catalog.py
+
       - name: Verify original Regen level-2 speed event
         run: python3 tests/test_original_regen_speed_source.py
 
