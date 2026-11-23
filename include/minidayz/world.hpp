@@ -188,9 +188,9 @@ public:
 
     bool initialize(std::uint32_t seed, WorldBounds bounds = {}) noexcept;
     bool generate_from_source(std::uint32_t seed, std::string_view layout_name = "Map",
-                              std::uint8_t level = 0);
+                              std::uint8_t level = 0, std::uint8_t perk_dao = 0);
     bool begin_source_generation(std::uint32_t seed, std::string_view layout_name = "Map",
-                                 std::uint8_t level = 0);
+                                 std::uint8_t level = 0, std::uint8_t perk_dao = 0);
     bool advance_source_generation();
     std::uint8_t generation_phase() const noexcept { return generation_phase_; }
     bool generation_complete() const noexcept { return generation_phase_ == 6; }
@@ -264,6 +264,7 @@ public:
         return source_scatter_patches_;
     }
     std::uint8_t generation_level() const noexcept { return generation_level_; }
+    std::uint8_t generation_perk_dao() const noexcept { return generation_perk_dao_; }
 
     const WorldBounds& bounds() const noexcept { return bounds_; }
     std::uint32_t seed() const noexcept { return seed_; }
@@ -289,6 +290,7 @@ private:
     std::size_t source_location_spawn_count_{};
     std::uint8_t generation_phase_{};
     std::uint8_t generation_level_{};
+    std::uint8_t generation_perk_dao_{};
     bool generation_is_map_{};
     bool generate_source_locations(std::uint8_t level);
     bool build_source_scatter_patch(std::size_t marker_index);

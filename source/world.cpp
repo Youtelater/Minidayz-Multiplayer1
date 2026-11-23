@@ -513,6 +513,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     source_location_spawn_count_ = 0;
     generation_phase_ = 0;
     generation_level_ = 0;
+    generation_perk_dao_ = 0;
     generation_is_map_ = false;
     initialized_ = true;
     return true;
@@ -520,12 +521,14 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
 
 bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           std::string_view name,
-                                          std::uint8_t level) {
+                                          std::uint8_t level,
+                                          std::uint8_t perk_dao) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
     }
     generation_level_ = level;
+    generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
     generation_phase_ = 1;
     return true;
@@ -573,8 +576,8 @@ bool WorldSystem::advance_source_generation() {
 }
 
 bool WorldSystem::generate_from_source(std::uint32_t seed, std::string_view name,
-                                       std::uint8_t level) {
-    if (!begin_source_generation(seed, name, level)) return false;
+                                       std::uint8_t level, std::uint8_t perk_dao) {
+    if (!begin_source_generation(seed, name, level, perk_dao)) return false;
     while (!generation_complete()) {
         if (!advance_source_generation()) return false;
     }
@@ -797,6 +800,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     // An authored Map layout is not a fully generated procedural world.
     // Replacing a layout must invalidate its old terrain and phase state.
     generation_phase_=0;
+    generation_perk_dao_=0;
     generation_is_map_=false;
     placements_.reserve(range.size);
     features_.reserve(range.size + stage1::kBunkerSpawnSourceCount +
@@ -849,6 +853,9 @@ bool WorldSystem::build_source_scatter_patch(std::size_t marker_index) {
     for(const auto& rule:stage1::kTerrainScatterRules){
         if(rule.marker!=marker.marker_type ||
            !(rule.level_mask&(std::uint8_t{1}<<generation_level_)))continue;
+        const bool special=generation_level_==4 && generation_perk_dao_==5;
+        if((rule.perk_gate==1 && !special)||
+           (rule.perk_gate==2 && special))continue;
         if(rule.repeat==0 || rule.x_min>=rule.x_max ||
            rule.y_min>=rule.y_max || rule.x_max>kSide ||
            rule.y_max>kSide || rule.tile_count==0 ||
@@ -1539,6 +1546,7 @@ void WorldSystem::reset() noexcept {
     source_location_spawn_count_ = 0;
     generation_phase_ = 0;
     generation_level_ = 0;
+    generation_perk_dao_ = 0;
     generation_is_map_ = false;
     seed_ = 0;
     initialized_ = false;

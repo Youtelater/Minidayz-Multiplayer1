@@ -1845,6 +1845,49 @@ void test_seed_reproducibility() {
     }
 }
 
+void test_original_perk_dao_world_scatter_branch() {
+    // Root UIDs 606281189890536 / 982873373809928 /
+    // 990933237254084 select perk_dao==5 AND CurrentLevel==4.
+    // Their immediately following Else nodes select ordinary art.
+    std::size_t special_count=0,else_count=0;
+    for(const auto& rule:minidayz::stage1::kTerrainScatterRules){
+        if(rule.perk_gate==1){
+            ++special_count;
+            assert(rule.level_mask==(1u<<4));
+            assert(rule.repeat==200);
+        } else if(rule.perk_gate==2)++else_count;
+        else assert(rule.perk_gate==0);
+    }
+    assert(special_count>=4 && else_count>=4);
+    constexpr std::uint32_t seed=0x45abc123u;
+    minidayz::WorldSystem ordinary,perked;
+    assert(ordinary.generate_from_source(seed,"Map",4,0));
+    assert(perked.generate_from_source(seed,"Map",4,5));
+    assert(ordinary.generation_perk_dao()==0);
+    assert(perked.generation_perk_dao()==5);
+    assert(ordinary.map_marker_count()==perked.map_marker_count());
+    for(std::size_t i=0;i<ordinary.map_marker_count();++i){
+        const auto* a=ordinary.map_marker(i);
+        const auto* b=perked.map_marker(i);
+        assert(a&&b&&a->marker_type==b->marker_type);
+    }
+    bool changed=ordinary.source_scatter_patches().size()!=
+                 perked.source_scatter_patches().size();
+    const auto& left=ordinary.source_scatter_patches();
+    const auto& right=perked.source_scatter_patches();
+    for(std::size_t i=0;i<left.size()&&i<right.size();++i){
+        if(left[i].marker_index!=right[i].marker_index ||
+           left[i].tiles.size()!=right[i].tiles.size()){
+            changed=true;continue;
+        }
+        for(std::size_t k=0;k<left[i].tiles.size();++k)
+            if(left[i].tiles[k].local_index!=right[i].tiles[k].local_index ||
+               left[i].tiles[k].original_frame!=right[i].tiles[k].original_frame)
+                changed=true;
+    }
+    assert(changed);
+}
+
 void test_source_scatter_reproduction_and_layout_replacement() {
     // Original ground scatter must follow the same world seed, regardless
     // of camera movement or whether the renderer exists.
@@ -1951,7 +1994,7 @@ void test_new_game_generates_visible_original_world() {
             bool source_rule=false;
             for(const auto& rule:minidayz::stage1::kTerrainScatterRules)
                 if(rule.marker==marker->marker_type &&
-                   (rule.level_mask&mask))source_rule=true;
+                   (rule.level_mask&mask) && rule.perk_gate!=1)source_rule=true;
             assert(source_rule);
             std::uint16_t previous=0;
             bool first=true;
@@ -2244,7 +2287,9 @@ void test_full_generation_all_source_maps() {
             bool eligible=false;
             for(const auto& rule:minidayz::stage1::kTerrainScatterRules)
                 if(rule.marker==marker->marker_type &&
-                   (rule.level_mask&level_mask)){eligible=true;break;}
+                   (rule.level_mask&level_mask) && rule.perk_gate!=1){
+                    eligible=true;break;
+                }
             if(eligible)++eligible_source_scatter;
         }
         const auto& scatter=world.source_scatter_patches();
@@ -2688,6 +2733,7 @@ int main() {
     test_original_map_layout_and_descriptors();
     test_seed_reproducibility();
     test_source_scatter_reproduction_and_layout_replacement();
+    test_original_perk_dao_world_scatter_branch();
     test_generated_original_exterior_roofs_visible_in_world();
     test_new_game_generates_visible_original_world();
     test_level_four_split_grid();

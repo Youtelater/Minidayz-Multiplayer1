@@ -106,6 +106,32 @@ def source_level_mask(ancestry):
             mask&=mask_for_node
     return mask
 
+def original_perk5(node):
+    """Exact root condition: CurrentLevel==4 AND perk_dao==5."""
+    level=perk=False
+    for c in node[5] if len(node)>5 and isinstance(node[5],list) else []:
+        if not isinstance(c,list) or len(c)<=9 or c[:2]!=[-1,46]:continue
+        args=c[9]
+        if len(args)!=3:continue
+        if args[0]==[11,"CurrentLevel"] and args[1]==[8,0] and original_literal(args[2])==4:
+            level=True
+        if args[0]==[11,"perk_dao"]:
+            if args[1]!=[8,0] or original_literal(args[2])!=5:
+                raise SystemExit(f"Unexpected original perk condition {args}")
+            perk=True
+    return level and perk
+
+def source_perk_gate(ancestry):
+    # 0 = ordinary, 1 = special original perk5 branch, 2 = its Else.
+    for i,node in enumerate(ancestry):
+        if original_perk5(node):return 1
+        if i>0 and any(isinstance(c,list) and c[:2]==[-1,70] for c in node[5]):
+            siblings=ancestry[i-1][7]
+            slot=next((j for j,c in enumerate(siblings) if c is node),None)
+            if slot is not None and slot>0 and original_perk5(siblings[slot-1]):
+                return 2
+    return 0
+
 def main():
     project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",
         PROJECT.read_text(encoding="utf-8-sig")))["project"]
@@ -122,6 +148,7 @@ def main():
     source_scatter_layer=ground_layers.pop()
     rules=[]
     rejected=[]
+    special_visits=[]
     for sheet in project[6]:
         if sheet[0]!="Game_events":
             continue
@@ -142,42 +169,8 @@ def main():
                 if not level_mask:
                     rejected.append((action[3],"source CurrentLevel excludes all supported maps"))
                     continue
-                # Original CurrentLevel/perk_dao branches have a matching
-                # Else. Keep the ordinary branch until perk state is wired.
-                special=any(condition[0]==-1 and condition[1]==46 and
-                            "perk_dao" in str(condition[9]) for condition in conds)
-                if special:
-                    # Retain the exact root condition/SetTile evidence for
-                    # future perk-enabled world generation. Diagnostics are
-                    # source UIDs and literal original expressions only,
-                    # never a guessed native substitution.
-                    perk_node_i=next(i for i,node in enumerate(ancestry)
-                        if any(isinstance(c,list) and len(c)>9 and
-                               c[:2]==[-1,46] and
-                               "perk_dao" in str(c[9]) for c in node[5]))
-                    perk_node=ancestry[perk_node_i]
-                    siblings=(ancestry[perk_node_i-1][7]
-                        if perk_node_i>0 else sheet[1])
-                    sibling_branches=[{"uid":branch[4],
-                        "conds":branch[5]} for branch in siblings
-                        if isinstance(branch,list) and len(branch)>6
-                        and branch[0]==0]
-                    print("SOURCE_TERRAIN_PERK_BRANCH",
-                        json.dumps({"action_uid":action[3],
-                            "event_uid":event[4],
-                            "marker_codes":markers,
-                            "repeat_from_parents":[c[9] for c in conds
-                                if c[:2]==[-1,123]],
-                            "perk_parent":perk_node[4],
-                            "perk_sibling_branches":sibling_branches,
-                            "ancestry_uids":[node[4] for node in ancestry],
-                            "conditions":[node[5] for node in ancestry
-                                if any(isinstance(c,list) and len(c)>9 and
-                                       c[:2]==[-1,46] and
-                                       "perk_dao" in str(c[9]) for c in node[5])],
-                            "params":action[5]},separators=(",",":"))[:12000])
-                    rejected.append((action[3],"special perk branch"))
-                    continue
+                perk_gate=source_perk_gate(ancestry)
+                if perk_gate==1:special_visits.append(action[3])
                 repeat=1
                 for condition in conds:
                     if condition[0]==-1 and condition[1]==123:
@@ -192,27 +185,23 @@ def main():
                     rejected.append((action[3],"unsupported source expression"))
                     continue
                 for marker in sorted(set(markers)):
-                    rules.append((marker,repeat,*x,*y,tiles,action[3],level_mask))
+                    rules.append((marker,repeat,*x,*y,tiles,action[3],level_mask,perk_gate))
     if len(rules)<45:
         raise SystemExit(f"Only {len(rules)} location scatter rules extracted; source changed")
-    # The regular original new-game terrain must have zero silently
-    # unimplemented actions. All four currently unsupported SetTile visits
-    # are guarded by the SOURCE perk_dao character perk branch, which is
-    # not active in the ordinary new-game generator. If an unconditional
-    # source action stops decoding, fail the build rather than drawing an
-    # invented replacement tile or incorrectly claiming map parity.
-    expected_perk_only=(991152536617746,725601334342355,
-                        511216400465073,511216400465073)
-    if (len(rejected)!=len(expected_perk_only) or
-        sorted(uid for uid,_ in rejected)!=sorted(expected_perk_only) or
-        any(reason!="special perk branch" for _,reason in rejected)):
-        raise SystemExit(f"New ordinary original SetTile actions not decoded: {rejected!r}")
+    expected=(991152536617746,725601334342355,
+              511216400465073,511216400465073)
+    if sorted(special_visits)!=sorted(expected):
+        raise SystemExit(f"Changed original perk-dao SetTile actions: {special_visits}")
+    if rejected:
+        raise SystemExit(f"Unimplemented original world SetTile actions: {rejected}")
+    if not any(row[-1]==2 for row in rules):
+        raise SystemExit("Original perk-dao sibling Else not found")
     palette=[]
     entries=[]
-    for marker,repeat,xlo,xhi,ylo,yhi,tiles,uid,level_mask in rules:
+    for marker,repeat,xlo,xhi,ylo,yhi,tiles,uid,level_mask,perk_gate in rules:
         offset=len(palette)
         palette.extend(tiles)
-        entries.append((marker,repeat,xlo,xhi,ylo,yhi,offset,len(tiles),uid,level_mask))
+        entries.append((marker,repeat,xlo,xhi,ylo,yhi,offset,len(tiles),uid,level_mask,perk_gate))
     OUT.parent.mkdir(parents=True,exist_ok=True)
     lines=["#pragma once","#include <cstddef>","#include <cstdint>",
            "namespace minidayz::stage1 {",
@@ -221,7 +210,7 @@ def main():
            "struct TerrainScatterRule {",
            " std::uint16_t marker, repeat, x_min, x_max, y_min, y_max;",
            " std::uint32_t tile_offset; std::uint16_t tile_count;",
-           " std::uint64_t source_action_uid; std::uint8_t level_mask;",
+           " std::uint64_t source_action_uid; std::uint8_t level_mask,perk_gate;",
            "};",
            "inline constexpr std::uint16_t kTerrainScatterChoices[]={"]
     lines.extend(" "+str(v)+"," for v in palette)
@@ -235,7 +224,7 @@ def main():
     OUT.write_text("\n".join(lines)+"\n",encoding="utf-8")
     print(f"Original environment scatter: {len(entries)} marker rules, "
           f"{len(palette)} weighted source frames, "
-          f"{len(rejected)} conditional/unsupported actions withheld")
+          f"{len(special_visits)} source perk5 actions and {len(rejected)} unsupported actions")
     if rejected:
         print("Withheld source action UIDs:",", ".join(str(uid) for uid,_ in rejected))
         # Never silently substitute invented scenery for an event whose
