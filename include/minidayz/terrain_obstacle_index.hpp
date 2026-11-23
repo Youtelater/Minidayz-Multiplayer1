@@ -43,8 +43,11 @@ public:
             // layer-only gate discarded ALL these trunk hitboxes.
             const bool standalone_tree=
                 std::strcmp(layer->name,"Trees")==0 &&
-                world_source::source_tree_impact_point(p->object)!=nullptr &&
-                p->source_frame==0 && p->opacity>0.0f;
+                p->opacity>0.0f &&
+                ((world_source::source_tree_impact_point(p->object)!=nullptr &&
+                  p->source_frame==0) ||
+                 (p->object==210 && world_source::source_tree_block_frame(
+                     p->source_frame)!=nullptr));
             const bool barrier=standalone_tree ||
                                std::strcmp(layer->name,"Obstacles")==0 ||
                                std::strcmp(layer->name,"Obstacle_enviroment")==0 ||

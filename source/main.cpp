@@ -4145,9 +4145,12 @@ private:
             // entire visible tree canopy. The linked 345 companion still
             // participates in collision independently.
             if (std::strcmp(layer->name,"Trees")==0 &&
-                minidayz::world_source::source_tree_impact_point(
-                    placement->object)!=nullptr) {
+                (minidayz::world_source::source_tree_impact_point(
+                    placement->object)!=nullptr ||
+                 placement->object==210)) {
                 if(minidayz::terrain::source_standing_tree_trunk_contains(
+                        *placement,x,y) ||
+                   minidayz::terrain::source_tree_block_solid_contains(
                         *placement,x,y))return true;
                 continue;
             }
