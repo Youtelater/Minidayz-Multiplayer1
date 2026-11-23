@@ -53,6 +53,31 @@ for oid,obj in enumerate(objects):
 # sprite on a Buildings layer even when no static Map instance exists.
 # This preserves authored polygons instead of silently using rectangles.
 building.update(solid)
+# Source Game_events creates car-trunk Sprite241 as a CHILD of multiple
+# distinct wrecked-car sprites (Sprite213/212/487/...), often on a layer
+# OTHER THAN static Map Buildings. If their original frame geometry isn't
+# loaded, the native Spawn chain sees 0x0 parents, drops its children, and
+# every searchable car trunk disappears. Discover the exact parent IDs
+# from root Construct SpawnAnotherObject(241) actions, never a guessed list.
+def original_event_nodes(nodes):
+ for e in nodes if isinstance(nodes,list) else []:
+  if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+  yield e
+  if len(e)>7:yield from original_event_nodes(e[7])
+source_car_parents=set()
+for sheet,events in project[6]:
+ if sheet!="Game_events":continue
+ for e in original_event_nodes(events):
+  for a in e[6] if isinstance(e[6],list) else []:
+   if (isinstance(a,list) and len(a)>5 and a[1]==73 and
+       isinstance(a[5],list) and a[5] and a[5][0]==[4,241] and
+       isinstance(a[0],int) and 0<=a[0]<len(objects)):
+    source_car_parents.add(a[0])
+if not source_car_parents:raise SystemExit("Missing original Sprite241 wreck-parent spawns")
+building.update(source_car_parents)
+building.add(241)
+print("Original source car wreck parent frame geometry:",
+      len(source_car_parents),"source parent objects")
 rows=[];vertices=[]
 def fmt(value):
     if not math.isfinite(value) or abs(value)>4:
