@@ -3391,7 +3391,11 @@ private:
         // the wood/metal door opening sounds or a guessed car-door sound.
         stage2_audio_.play_original_world_sound(
             minidayz::OriginalWorldSound::carTrunkOpen);
-        // Exact original car-open action adds expierence_points += 2.
+        // Original Game_events Sprite241 searched: cue "open" before
+        // the conditional 1041-overlap loot/XP branch. Play the source
+        // WAV, not the wood-door sample.
+        stage2_audio_.play_original_world_sound(
+            minidayz::OriginalWorldSound::carTrunkOpen);
         (void)perks_.award_experience(2);
         source_furniture_feedback_=outcome==Result::found
             ?"CAR TRUNK: LOOT FOUND":"CAR TRUNK: EMPTY";
