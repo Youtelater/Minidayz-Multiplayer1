@@ -2357,11 +2357,12 @@ const WorldPlacement* WorldSystem::placement_by_instance_id(
     return placement_by_id(static_cast<std::uint32_t>(id));
 }
 
-bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level) noexcept {
+bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level,
+                        std::uint8_t perk_dao) noexcept {
     cancel();
     try {
         auto candidate = std::make_unique<WorldSystem>();
-        if (!candidate->begin_source_generation(seed, "Map", level)) return false;
+        if (!candidate->begin_source_generation(seed, "Map", level, perk_dao)) return false;
         destination_ = std::move(candidate);
         return true;
     } catch (const std::bad_alloc&) {

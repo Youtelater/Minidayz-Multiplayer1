@@ -1865,6 +1865,11 @@ void test_original_perk_dao_world_scatter_branch() {
     assert(perked.generate_from_source(seed,"Map",4,5));
     assert(ordinary.generation_perk_dao()==0);
     assert(perked.generation_perk_dao()==5);
+    minidayz::WorldTravel travel;
+    assert(travel.begin(seed,4,5));
+    assert(travel.destination()!=nullptr);
+    assert(travel.destination()->generation_perk_dao()==5);
+    travel.cancel();
     assert(ordinary.map_marker_count()==perked.map_marker_count());
     for(std::size_t i=0;i<ordinary.map_marker_count();++i){
         const auto* a=ordinary.map_marker(i);

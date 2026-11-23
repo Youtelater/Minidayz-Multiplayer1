@@ -304,7 +304,8 @@ private:
 // discard or retry a failed load while continuing to use its active map.
 class WorldTravel {
 public:
-    bool begin(std::uint32_t seed, std::uint8_t level) noexcept;
+    bool begin(std::uint32_t seed, std::uint8_t level,
+               std::uint8_t perk_dao = 0) noexcept;
     bool advance() noexcept;
     WorldSystem* destination() const noexcept { return destination_.get(); }
     void cancel() noexcept { destination_.reset(); }
