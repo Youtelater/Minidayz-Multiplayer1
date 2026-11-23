@@ -5,6 +5,7 @@ on:
     paths:
       - 'tools/parity/audit_original_port_coverage.py'
       - 'data/parity/verified_original_events.json'
+      - 'data/parity/verified_original_actions.json'
       - 'tests/test_original_port_coverage.py'
       - '.github/workflows/original-source-parity-gate.yml'
       - 'data.deobfuscated.js'
