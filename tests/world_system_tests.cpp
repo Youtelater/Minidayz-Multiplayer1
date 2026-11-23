@@ -2894,6 +2894,12 @@ void test_reported_world_seed_original_frame_integrity() {
     // Keep the source table as the authority for ALL future generated
     // high-layer world sprites, instead of forgetting to add another
     // manually entered exception every time an original frame is found.
+    // Never accept unrecognized Construct numeric operators as true:
+    // the native executor explicitly supports source 0..5 and wildcard255.
+    // All generated root Mapgen predicates must remain inside that set.
+    for(const auto& rule:stage1::kWorldElementSpawnSource)
+        for(const auto op:{rule.var1_op,rule.var2_op,rule.var3_op,rule.var6_op})
+            assert(op<=5 || op==255);
     std::size_t original_high_art=0;
     for(const auto& item:stage1::kWorldElementSpawnSource){
         if(std::strcmp(item.layer_name,"night")!=0 &&
