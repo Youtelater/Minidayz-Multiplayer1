@@ -48,6 +48,14 @@ assert 0<=start<actor<player<world, "source actor must be rendered before world 
 assert main.index("source_tree_render_depth(",world)>world, "world draw depth still controls original layering"
 assert main.index("draw_equipped_layer(held_item,true",player)<world, "held source overlay must be resident"
 assert main.count("        // Match original Construct Map layer 32 (player)")==1, "duplicate player draw"
+# Original Map weather/night sprite layers must composite above all gameplay
+# layers. Earlier hardcoded .14/.16 rendered both overlays behind the world.
+assert main.index("if (rain_timer_.active()) {",world)>world
+source_rain=main.index("source_world_layer_depth(44,0,0)",world)
+source_night=main.index("source_world_layer_depth(46,0,0)",world)
+assert source_rain>world and source_night>source_rain, "rain44 must precede night46"
+assert "camera_x, camera_y, view_w, view_h, 0.14f" not in main
+assert "camera_x, camera_y, view_w, view_h, 0.16f" not in main
 assert "float depth=0.5f" in (ROOT/"include/minidayz/engine.hpp").read_text(encoding="utf-8")
 assert "kSkinPrevious{18, 145, 154, 191}" in menu
 assert "kNewGameButton=kMenuRows[1]" in menu

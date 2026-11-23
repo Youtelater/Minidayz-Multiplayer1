@@ -2947,23 +2947,27 @@ public:
                 loot->x, loot->y, 18.0f, 18.0f, 0.54f);
         }
 
-        // The original Map has separate night (46) and Rain (44) layers.
-        // They are runtime effects, not static map placements. Draw the
-        // actual Construct overlay art only in the corresponding source
-        // day/night and rain state, fitted to the 400x240 upper display.
-        if (!day_night_.day_mode()) {
-            (void)renderer.draw_source_sprite_fitted(
-                minidayz::stage1::kOriginalNightOverlayArt.object,
-                minidayz::stage1::kOriginalNightOverlayArt.animation,
-                minidayz::stage1::kOriginalNightOverlayArt.frame,
-                camera_x, camera_y, view_w, view_h, 0.16f);
-        }
+        // Original Map Rain44 is below night46 but above terrain, houses,
+        // tree canopy and survivor32..39. The old 0.14/0.16 GPU depths
+        // incorrectly put both screen overlays BEHIND the scene; the
+        // original source PNG alpha must composite over actual world art.
+        // Submit in source layer order (Rain44, then night46), using the
+        // same depth conversion as original Map world placements.
         if (rain_timer_.active()) {
             (void)renderer.draw_source_sprite_fitted(
                 minidayz::stage1::kOriginalRainFadeArt.object,
                 minidayz::stage1::kOriginalRainFadeArt.animation,
                 minidayz::stage1::kOriginalRainFadeArt.frame,
-                camera_x, camera_y, view_w, view_h, 0.14f);
+                camera_x, camera_y, view_w, view_h,
+                minidayz::world_source::source_world_layer_depth(44,0,0));
+        }
+        if (!day_night_.day_mode()) {
+            (void)renderer.draw_source_sprite_fitted(
+                minidayz::stage1::kOriginalNightOverlayArt.object,
+                minidayz::stage1::kOriginalNightOverlayArt.animation,
+                minidayz::stage1::kOriginalNightOverlayArt.frame,
+                camera_x, camera_y, view_w, view_h,
+                minidayz::world_source::source_world_layer_depth(46,0,0));
         }
     }
 

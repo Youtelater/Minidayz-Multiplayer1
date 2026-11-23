@@ -54,6 +54,10 @@ int main() {
     const float trees=source_world_layer_depth(43,0,1);
     assert(background<player && player<equipment);
     assert(equipment<foreground && foreground<trees);
+    const float rain=source_world_layer_depth(44,0,0);
+    const float night=source_world_layer_depth(46,0,0);
+    assert(trees<rain && rain<night);
+
     // Every within-layer index is strictly below the next source layer,
     // including crowded visible slices in large original town clusters.
     assert(source_world_layer_depth(41,5000,10000)<
