@@ -64,9 +64,9 @@ void test_source_furniture_and_pump() {
     assert(pump<world.placement_count());
     const auto* source=world.placement(pump);
     assert(source_furniture_active(*source));
-    // Original floor(random(100,200)) excludes 200. The same seed
+    // Original choose(100,200) produces exactly 100 or 200. The same seed
     // must consume the same uint32 draw on GCC, Clang and devkitARM.
-    assert(source->source_variable_0>=100 && source->source_variable_0<200);
+    assert(source->source_variable_0==100 || source->source_variable_0==200);
     WorldSystem replay;
     assert(replay.initialize(0x95549514u));
     assert(replay.load_source_layout("Map"));

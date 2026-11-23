@@ -717,10 +717,9 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - [ ] Native fixes do not prove original runtime trunk collision polygon or fallen-tree collision state parity; those require source `Hitting_obstacles` event and original mask comparison before 100% gameplay certification.
 
 
-### Step 2 original source random consumption: map pump and determinism (2026-11-22)
+### Step 2 original source pump choice semantics (2026-11-22)
 
-- [x] Original root `create_map_element` pump Sprite442 var0 uses `random(100,200)` (half-open float, native water amount stored as integer). Previous native `std::uniform_int_distribution<std::uint64_t>(100,200)` incorrectly included 200 and standard library choices differed between hosts. Use the same explicit deterministic `source_random_bounded` helper already used for POI sampling; produce source-equivalent truncated values **100–199**, never 200. Native world test now also verifies replay of this water-pump state from the same seed; root event bound contract added to CI. This is one source-predicate fix and not a claim that the broader JavaScript random stream and event ordering are identical.
-
+- [x] Root-original `create_map_element` event **3903561981802149** assigns pump Sprite442 var0 with `choose(100,200)`, which is **not** `random(100,200)`. Its source AST is `[19,82,[[0,100],[0,200]]]`. The old native code rolled any integer from 100 to 200, which was incorrect. The replacement explicitly uses `source_random_bounded(rng_,2)` to select exactly 100 or 200 and ensures deterministic replay on 3DS and host tests. Contract tests verify the exact original AST, not guessed event names. This does not prove the entire game's PRNG call order matches the browser.
 
 ### Step 2 critical source-audit parser correction — seven-field original Construct events (2026-11-22)
 

@@ -967,11 +967,11 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             }
         }
         // Root event 8279941300293499 / child 3903561981802149:
-        // when Mapgen508.var3=0, Sprite442.var0=random(100,200).
+        // when Mapgen508.var3=0, Sprite442.var0=choose(100,200).
         if(rule.object==world_source::kFurniturePump &&
            var1==3 && var2==2 && var3==0.0)
             placements_.back().source_variable_0=
-                100u + source_random_bounded(rng_, 100u);
+                100u + 100u * source_random_bounded(rng_, 2u);
 
         // A root Construct map-element "house" is a SEQUENCE of Sprite
         // Spawn-another-object actions, not one Building-base texture.

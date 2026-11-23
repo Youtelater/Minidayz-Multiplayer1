@@ -18,8 +18,9 @@ original=[(e[4],a) for _,ev in p[6] for e in walk(ev)
  and a[0]==442 and a[1]==88
  and "100" in str(a[5]) and "200" in str(a[5])]
 assert [uid for uid,_ in original]==[3903561981802149], original
+assert original[0][1][5][1]==[7,[19,82,[[0,100],[0,200]]]]
 print("ROOT_PUMP_RANDOM_EVENTS", [uid for uid,_ in original])
 source=(ROOT/"source/world.cpp").read_text()
-assert "100u + source_random_bounded(rng_, 100u)" in source
+assert "100u + 100u * source_random_bounded(rng_, 2u)" in source
 assert "uniform_int_distribution<std::uint64_t>(100,200)" not in source
-print("PASS source pump random(100,200): half-open 100..199 and cross-toolchain deterministic")
+print("PASS source pump choose(100,200): exactly 100 or 200 and cross-toolchain deterministic")
