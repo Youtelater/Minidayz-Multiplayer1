@@ -34,6 +34,9 @@ assert 'std::strcmp(source_layer.name,"asphalt")==0' in road
 assert 'source_world_layer_depth(' in road
 assert 'C2D_SpriteSetDepth(&sprite,road_depth)' in road
 assert 'world_source::mapgen_road_band(' in road
+assert "mapgen_duplicate_crossing_tile(" in road
+assert "mapgen_duplicate_crossing_tile(" in (
+    root/"include/minidayz/source_mapgen_geometry.hpp").read_text(encoding="utf-8")
 assert 'for(int row=0;row<grid.height();++row)' in road
 assert 'bounds.width/grid.width()' not in road
 assert 'draw_source_procedural_environment(' in main

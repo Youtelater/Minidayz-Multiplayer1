@@ -16,6 +16,22 @@ constexpr MapgenHotspot mapgen_hotspot(int array_x,int array_y) noexcept {
 }
 // Source horizontal Array roads become physically vertical (world Y)
 // because Sprite514's array axes are transposed on the Map layout.
+// A source code14 cell means both road axes occupy the same world-space
+// 60px junction. Draw the Array-horizontal (world-vertical) band there;
+ // suppress the duplicate tile from the perpendicular band. Otherwise the
+// two different source-atlas UVs depth-fight at the same Construct Map
+// asphalt Z and visibly flicker while the player walks past.
+constexpr bool mapgen_duplicate_crossing_tile(
+    std::uint16_t code,bool array_horizontal,int array_x,int array_y,
+    float tile_world_x,float tile_width,float road_width) noexcept {
+ if(code!=14 || array_horizontal || !(tile_width>0.0f) ||
+    !(road_width>0.0f))return false;
+ const auto center=mapgen_hotspot(array_x,array_y);
+ constexpr float epsilon=0.01f;
+ return tile_world_x>=center.x-road_width*0.5f-epsilon &&
+        tile_world_x+tile_width<=center.x+road_width*0.5f+epsilon;
+}
+
 constexpr terrain::RoadBand mapgen_road_band(
  std::uint16_t code,bool array_horizontal,int array_x,int array_y,
  float road_width) noexcept {

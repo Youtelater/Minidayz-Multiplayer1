@@ -44,5 +44,17 @@ int main() {
         14,false,3,2,60.0f).valid());
     assert(!minidayz::world_source::mapgen_road_band(
         12,true,3,2,60.0f).valid());
+    // Original code14 is an intersection, not two source-road tiles
+    // depth-fighting over each other in the same 60px square.
+    const auto junction=minidayz::world_source::mapgen_road_band(
+        14,false,3,2,60.0f);
+    assert(minidayz::world_source::mapgen_duplicate_crossing_tile(
+        14,false,3,2,junction.x+480.0f,60.0f,60.0f));
+    assert(!minidayz::world_source::mapgen_duplicate_crossing_tile(
+        14,false,3,2,junction.x+420.0f,60.0f,60.0f));
+    assert(!minidayz::world_source::mapgen_duplicate_crossing_tile(
+        14,true,3,2,junction.x+480.0f,60.0f,60.0f));
+    assert(!minidayz::world_source::mapgen_duplicate_crossing_tile(
+        13,false,3,2,junction.x+480.0f,60.0f,60.0f));
     return 0;
 }
