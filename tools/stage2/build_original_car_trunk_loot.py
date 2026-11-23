@@ -80,7 +80,8 @@ records=[]
 for uid,frames in SOURCE_BRANCHES:
  candidates=[(e,parents) for sheet,e,parents in events if
    sheet=="Game_events" and e[4]==uid and gate_is_base(e) and
-   7711324247664447 in [a[4] for a in parents]]
+   any(a[4] in (7711324247664447,1792234758292318)
+       for a in parents)]
  if len(candidates)!=1:
   raise SystemExit(f"Original map-car source branch {uid}: {len(candidates)}")
  event,parents=candidates[0]
