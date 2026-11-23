@@ -4143,23 +4143,31 @@ private:
     // (random(1000,16500),373).
     // Never retry, snap to a road, or shift the position on collision:
     // those extra rules changed the original starting position.
-    bool place_new_player_on_generated_map(const minidayz::WorldSystem& destination,
+    bool place_new_player_on_generated_map(minidayz::WorldSystem& destination,
                                            bool traveling) noexcept {
         const auto& bounds=destination.bounds();
         if(!(bounds.width>0.0f && bounds.height>0.0f))return false;
-        std::mt19937 rng(destination.seed() ^ 0x73506177u);
+        // Original Construct Start events (PlayerBase193.SetPosition) use
+        // the SAME global Math.random stream as map creation and loot.
+        // The old XOR-reseeded private std::uniform_real_distribution
+        // made each new survivor's position independent from the actual
+        // generated world and relied on non-Construct distribution rules.
+        // Continue never re-rolls this source spawn; it restores save XY.
+        auto& source_rng=destination.source_random();
+        const double unit=static_cast<double>(source_rng())/4294967296.0;
         const bool snow=destination.generation_level()==
             minidayz::stage1::kSnowPlayerStartLevel;
-        const float range=std::max(0.0f,bounds.height-
+        const double range=std::max(0.0,
+            static_cast<double>(bounds.height)-
             minidayz::stage1::kNormalPlayerStartLayoutMargin);
-        std::uniform_real_distribution<float> random_normal_y(0.0f,range);
-        std::uniform_real_distribution<float> random_snow_x(
-            minidayz::stage1::kSnowPlayerStartXMin,
-            minidayz::stage1::kSnowPlayerStartXMax);
-        const float px=snow?random_snow_x(rng):
-            minidayz::stage1::kNormalPlayerStartX;
+        const float px=snow?
+            static_cast<float>(minidayz::stage1::kSnowPlayerStartXMin+
+                unit*(minidayz::stage1::kSnowPlayerStartXMax-
+                      minidayz::stage1::kSnowPlayerStartXMin))
+            :minidayz::stage1::kNormalPlayerStartX;
         const float py=snow?minidayz::stage1::kSnowPlayerStartY:
-            minidayz::stage1::kNormalPlayerStartYBase+random_normal_y(rng);
+            static_cast<float>(
+                minidayz::stage1::kNormalPlayerStartYBase+unit*range);
         if(!std::isfinite(px)||!std::isfinite(py))return false;
         auto state=traveling?player_.state():make_initial_state();
         state.x=px;
