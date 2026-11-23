@@ -32,6 +32,7 @@
 #include "minidayz/source_equipment_animation.hpp"
 #include "minidayz/source_player_layers.hpp"
 #include "minidayz/source_player_altmove.hpp"
+#include "minidayz/source_energy_drink_boost.hpp"
 #include "minidayz/source_player_base_geometry.hpp"
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
@@ -135,6 +136,8 @@ public:
         }
         if (restored && !item_use_runtime_.restore(restored->pending_item_use))
             item_use_runtime_.clear();
+        if (restored && !source_energy_drink_.restore(restored->source_energy_seconds))
+            source_energy_drink_.clear();
         if (restored && !perks_.restore(restored->perks)) perks_.clear();
         // Preview-only movement tuning. Source-equivalent values still need
         // to be supplied by the gameplay rules port.
@@ -197,6 +200,7 @@ public:
         if(!rain_timer_.restore(restored->source_rain))return false;
         if(!loot_timer_.restore(restored->source_loot))return false;
         if(!item_use_runtime_.restore(restored->pending_item_use))return false;
+        if(!source_energy_drink_.restore(restored->source_energy_seconds))return false;
         if(!perks_.restore(restored->perks))return false;
         pending_craft_recipe_=restored->pending_craft.recipe_index;
         pending_craft_seconds_=restored->pending_craft.seconds_remaining;
@@ -222,6 +226,20 @@ public:
         (void)minidayz::menu::save_menu_preferences(prefs);
     }
 
+    bool use_original_inventory_item(std::size_t slot,bool secondary) noexcept {
+        const auto* item=inventory_.slot(slot);
+        if(!item || item->empty())return false;
+        const auto item_id=item->item_id;
+        const bool used=minidayz::items::use_item_from_inventory(
+            inventory_,slot,player_,preview_rules_,secondary,
+            perks_.item_use_flags(),&item_use_runtime_);
+        // Game_events item_activate(63) is the original Edrink boost;
+        // a failed item activation must never create a free speed buff.
+        (void)source_energy_drink_.on_successful_item_use(
+            item_id,secondary,used);
+        return used;
+    }
+
     bool write_scene_save() noexcept {
         minidayz::persistence::PendingCraftSnapshot craft{};
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount &&
@@ -232,7 +250,7 @@ public:
         if (!write_saved_game(world_seed_, player_.state(), inventory_,
             equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_,
             &stashes_, &day_night_, &rain_timer_, &loot_timer_, &craft,
-            world_level_)) return false;
+            world_level_, &source_energy_drink_)) return false;
         // The existing v20 survivor save remains backward-compatible.
         // Persist changed original object frames separately, with the same
         // seed/level and a checksum. Do not report Save success unless
@@ -717,9 +735,8 @@ public:
             if (deploy_storage) {
                 (void)deploy_source_storage(selected_index);
             } else {
-                (void)minidayz::items::use_item_from_inventory(
-                    inventory_, selected_index, player_, preview_rules_,
-                    (input.pressed & KEY_X) != 0, perks_.item_use_flags(), &item_use_runtime_);
+                (void)use_original_inventory_item(
+                    selected_index,(input.pressed & KEY_X) != 0);
             }
             const auto* selected = inventory_.slot(
                 static_cast<std::size_t>(selected_inventory_slot_));
@@ -920,9 +937,8 @@ public:
                              item->item_id == minidayz::items::kOriginalSuppliesStashItemId))
                             (void)deploy_source_storage(selected);
                         else
-                            (void)minidayz::items::use_item_from_inventory(
-                                inventory_, selected, player_, preview_rules_,
-                                action == 1, perks_.item_use_flags(), &item_use_runtime_);
+                            (void)use_original_inventory_item(selected,
+                                action == 1);
                     } else if (action == 2) {
                         const std::uint16_t item_id = item->item_id;
                         if (ground_loot_.drop_from_inventory(
@@ -1159,9 +1175,7 @@ public:
                         item->item_id == minidayz::items::kOriginalSuppliesStashItemId)
                         (void)deploy_source_storage(source);
                     else
-                        (void)minidayz::items::use_item_from_inventory(
-                            inventory_, source, player_, preview_rules_,
-                            false, perks_.item_use_flags(), &item_use_runtime_);
+                        (void)use_original_inventory_item(source,false);
                     item = inventory_.slot(source);
                     if (!item || item->empty()) selected_inventory_slot_ = -1;
                 }
@@ -1324,6 +1338,10 @@ public:
             perks_.source_runner_speed_bonus());
         speed_effects.regen_bonus=perks_.level(
             minidayz::items::SourcePerk::regen)>0 ? 10.0f : 0.0f;
+        // Root PlayerBase variable 4 is +15 only while the original
+        // 60-second Edrink timer is active (source UID435941792839578).
+        source_energy_drink_.update(dt);
+        speed_effects.energy_boost=source_energy_drink_.bonus();
         const float source_speed=
             minidayz::stage1::source_player_altmove_max_speed(speed_effects);
         preview_rules_.walk_speed=source_speed;
@@ -4104,6 +4122,7 @@ private:
         rain_timer_.reset();
         loot_timer_.reset();
         item_use_runtime_.clear();
+        source_energy_drink_.clear();
         perks_.clear();
         source_temperature_initialized_ = false;
         source_weather_exposure_ = 0.0f;
@@ -4467,6 +4486,7 @@ private:
     minidayz::items::SourceRainTimer rain_timer_{};
     minidayz::items::SourceLootTimer loot_timer_{};
     minidayz::items::ItemUseRuntime item_use_runtime_{};
+    minidayz::stage1::SourceEnergyDrinkBoost source_energy_drink_{};
     minidayz::items::SourcePerkSystem perks_{};
     minidayz::Stage2Audio stage2_audio_{};
     minidayz::PlayerRules preview_rules_{};
