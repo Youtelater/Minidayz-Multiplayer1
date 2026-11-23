@@ -718,7 +718,10 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
  // On the final map, the second ground theme starts at logical row 18.
  const float second_half_x=(source_level==5 && grid.height()==33)
      ? world_source::mapgen_hotspot(0,18).x : 1.0e30f;
- const float road_width=stage1::kOriginalFloorTileSize;
+ // Original 1066.SetTileRange paints 17x2 / 2x17 rectangles;
+ // never collapse this into one source tile of pavement.
+ const float road_width=world_source::source_road_painted_width(
+     stage1::kOriginalFloorTileSize);
  if(!(road_width>0.0f))return false;
  // Original Map asphalt is a separate Construct layer, before
  // ground_enviroment. Resolve the source layer rather than choosing
