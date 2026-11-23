@@ -15,6 +15,8 @@ int main() {
     assert(!source_solid_tile_contains(208,water,0.2f,0.2f));
     assert(source_solid_tile_contains(208,water,0.5f,0.5f));
     assert(!source_solid_tile_contains(208,kTileEmpty,0.8f,0.8f));
+    assert(!source_solid_tile_contains(418,water,0.8f,0.8f));
+
 
     // The three original tile transforms must rotate the COLLISION mask
     // with the same flags that rotate original water/forest artwork.
