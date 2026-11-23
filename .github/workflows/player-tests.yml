@@ -150,6 +150,9 @@ jobs:
       - name: Verify original water-pump random bounds and stable native source draw
         run: python3 tests/test_original_world_pump_rng.py
 
+      - name: Trace original straight-road texture rectangle actions
+        run: python3 tests/test_original_road_paint_geometry.py
+
       - name: Verify original road source predicates and split-map row bounds
         run: python3 tools/stage1/audit_original_road_dispatch.py
 
