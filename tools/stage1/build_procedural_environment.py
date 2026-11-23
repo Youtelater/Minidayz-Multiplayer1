@@ -197,6 +197,10 @@ def main():
           f"{len(rejected)} conditional/unsupported actions withheld")
     if rejected:
         print("Withheld source action UIDs:",", ".join(str(uid) for uid,_ in rejected))
+        # Never silently substitute invented scenery for an event whose
+        # original source predicates or coordinates are not yet decoded.
+        for uid,reason in rejected:
+            print(f"SOURCE_TERRAIN_WITHHELD action_uid={uid} reason={reason}")
 
 if __name__=="__main__":
     main()
