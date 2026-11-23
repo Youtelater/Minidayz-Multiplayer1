@@ -132,11 +132,46 @@ cars={"authority":"root data.deobfuscated.js; original object 241",
       "source_event_occurrences":len(car_entries),"branches":car_entries}
 (out/"original_car_loot_event_manifest.json").write_text(
  json.dumps(cars,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+# Full action-occasion ledger: a verified event does not automatically
+# prove each of its original action side-effects is implemented.
+# Index nested ordinal path + action index, NEVER a UID alone (UIDs repeat).
+import gzip
+action_count=0
+action_keys=set()
+with (out/"every_original_event.jsonl").open("r",encoding="utf-8") as source_events:
+ with gzip.open(out/"every_original_action.jsonl.gz","wt",encoding="utf-8") as sink:
+  for raw in source_events:
+   event=json.loads(raw)
+   for action_index,action in enumerate(event["actions"]):
+    action_key=event["key"]+"#"+str(action_index)
+    if action_key in action_keys:
+     raise AssertionError("Duplicate original action occurrence "+action_key)
+    action_keys.add(action_key)
+    action_count+=1
+    sink.write(json.dumps({
+      "action_key":action_key,"event_key":event["key"],
+      "event_uid":event["uid"],"sheet":event["sheet"],
+      "original_event_path":event["path"],
+      "action_index":action_index,
+      "action_uid":action[3] if isinstance(action,list) and len(action)>3 else None,
+      "original_action":action,
+      "inherited_conditions":event["inherited_conditions"],
+      "own_conditions":event["conditions"],
+      "parent_event_uids":event["parent_uids"],
+      "group_path":event["groups"],
+      "verification":event["verification"],
+      "native_action_parity":"not_individually_verified"
+    },separators=(",",":"),ensure_ascii=False)+"\n")
+if action_count!=stats["actions"] or action_count!=63289:
+ raise AssertionError(f"Original action occurrence loss {action_count}/{stats['actions']}")
+print("FULL_ORIGINAL_ACTION_LEDGER",action_count,"individually indexed source actions")
+
 summary={
  "source":"root data.deobfuscated.js",
  "source_sha256":hashlib.sha256(source.read_bytes()).hexdigest(),
  "status_semantics":"A decoded event is NOT implemented or tested without explicit mapping.",
- "counts":dict(stats),"car_spawn_drop_event_occurrences":len(car_entries),
+ "counts":dict(stats),"action_occurrences_indexed":action_count,
+ "car_spawn_drop_event_occurrences":len(car_entries),
  "car_system_3ds_implementation_verified":False,
  "unverified_groups":dict(unverified_by_group.most_common()),
  "sheet_event_counts":dict(sheets),
