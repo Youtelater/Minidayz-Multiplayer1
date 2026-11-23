@@ -270,6 +270,31 @@ static_assert(offsetof(SavedGameV20,quick_pistol)+
               sizeof(minidayz::items::QuickPistolSnapshot)<=sizeof(SavedGameV20),
               "v20 quick slot must fit inside the new save layout");
 
+// Exact v21 native save layout, before persisting the original Edrink
+// PlayerBase var4 timer. Keep the prefix unchanged for old Continue files.
+struct SavedGameV21 {
+    std::uint32_t magic{},version{},seed{};
+    minidayz::PlayerState player{};
+    minidayz::items::InventorySnapshot inventory{};
+    minidayz::items::EquipmentSnapshot equipment{};
+    minidayz::items::GroundLootSnapshot ground_loot{};
+    minidayz::items::TentStorageSnapshot tents{};
+    minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
+    minidayz::items::SourcePerkSnapshot perks{};
+    minidayz::items::SatchelSnapshot satchel{};
+    minidayz::items::SatchelSnapshot satchel{};
+    minidayz::items::EquipmentFractionSnapshot equipment_fraction{};
+    minidayz::items::StashStorageSnapshot stashes{};
+    minidayz::items::SourceDayNightSnapshot source_time{};
+    minidayz::items::SourceRainTimerSnapshot source_rain{};
+    minidayz::items::SourceLootTimerSnapshot source_loot{};
+    PendingCraftSnapshot pending_craft{};
+    std::uint8_t world_level{};
+    minidayz::items::QuickPistolSnapshot quick_pistol{};
+};
+static_assert(offsetof(SavedGame,source_energy_seconds)==sizeof(SavedGameV21),
+    "v22 Edrink timer must follow the complete v21 native file");
+
 // v18 persisted pending crafting but not the active source map level.
 struct SavedGameV18 {
     std::uint32_t magic{},version{},seed{};
@@ -646,6 +671,14 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.world_level=old.world_level;
             candidate.quick_pistol=old.quick_pistol;
         }
+    } else if (header_ok && candidate.version == 21u) {
+        SavedGameV21 old{};
+        body_ok=std::fseek(file,0,SEEK_SET)==0 &&
+                std::fread(&old,sizeof(old),1,file)==1;
+        if(body_ok) {
+            std::memcpy(&candidate,&old,sizeof(old));
+            candidate.source_energy_seconds=0.0f;
+        }
     } else if (header_ok && candidate.version == kSaveVersion) {
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
@@ -658,7 +691,9 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
         std::isfinite(candidate.player.x) && std::isfinite(candidate.player.y) &&
         candidate.player.x >= 0.0f && candidate.player.y >= 0.0f &&
         candidate.player.x <= minidayz::WorldSystem::kSourceMapWidth &&
-        candidate.player.y <= minidayz::WorldSystem::kSourceMapHeight;
+        candidate.player.y <= minidayz::WorldSystem::kSourceMapHeight &&
+        minidayz::stage1::SourceEnergyDrinkBoost::valid(
+            candidate.source_energy_seconds);
     if (!header_and_body_valid) return false;
     if (candidate.version < 14u) {
         // Earlier native saves stored the GLOBAL preview weather exposure
@@ -728,13 +763,15 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       const minidayz::items::SourceRainTimer* source_rain,
                       const minidayz::items::SourceLootTimer* source_loot,
                       const PendingCraftSnapshot* pending_craft,
-                      std::uint8_t world_level) noexcept {
+                      std::uint8_t world_level,
+                      const stage1::SourceEnergyDrinkBoost* source_energy) noexcept {
     if (!target_path || !temporary_path || !target_path[0] || !temporary_path[0] ||
         std::strcmp(target_path, temporary_path) == 0 || seed == 0 ||
         world_level > 5u) return false;
     SavedGame save{};
     save.seed = seed;
     save.world_level = world_level;
+    save.source_energy_seconds=source_energy?source_energy->remaining():0.0f;
     save.player = player;
     save.inventory = inventory.snapshot();
     save.satchel = inventory.satchel_snapshot();
@@ -755,7 +792,9 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     save.perks = perks ? perks->snapshot() : minidayz::items::SourcePerkSnapshot{};
     // Reject an invalid or corrupt in-memory snapshot before touching the
     // temporary file. The existing valid save must remain intact.
-    if (!std::isfinite(save.player.x) || !std::isfinite(save.player.y) ||
+    if (!minidayz::stage1::SourceEnergyDrinkBoost::valid(
+            save.source_energy_seconds) ||
+        !std::isfinite(save.player.x) || !std::isfinite(save.player.y) ||
         save.player.x < 0.0f || save.player.y < 0.0f ||
         save.player.x > minidayz::WorldSystem::kSourceMapWidth ||
         save.player.y > minidayz::WorldSystem::kSourceMapHeight)
@@ -823,13 +862,14 @@ bool write_saved_game(std::uint32_t seed,
                       const items::SourceRainTimer* source_rain,
                       const items::SourceLootTimer* source_loot,
                       const PendingCraftSnapshot* pending_craft,
-                      std::uint8_t world_level) noexcept {
+                      std::uint8_t world_level,
+                      const stage1::SourceEnergyDrinkBoost* source_energy) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     return write_saved_game_to_paths(seed, player, inventory, equipment,
                                     ground_loot, tents, kSavePath, kSaveTempPath,
                                     item_use, perks, stashes, source_time, source_rain, source_loot,
-                                    pending_craft, world_level);
+                                    pending_craft, world_level,source_energy);
 }
 
 } // namespace minidayz::persistence
