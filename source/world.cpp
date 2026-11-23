@@ -1015,9 +1015,16 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             // UID for house 312; the source event's actual variant/base
             // predicate is authoritative and avoids missing its roof.
             if(action.variant!=var2 || action.base_object!=rule.object)continue;
-            // Category 4 scenery is distinct from category 7 houses;
-            // its exact original event UID also preserves nested variant guards.
-            if((var1==4 || var1==6) && action.event_uid!=rule.uid)continue;
+            // Category 4 has repeated subtype variants and needs its
+            // exact source event UID. Category 6 car-wreck primaries come
+            // from a parent var2 branch, but their Sprite241/345/348
+            // SpawnAnotherObject actions occur in a NESTED child event:
+            // that child's UID is necessarily different. Comparing
+            // action.event_uid to the parent's cached rule.uid silently
+            // omitted every original car/trunk companion. Category 6
+            // source branches have a distinct (var2, base_object) pair,
+            // so matching both is the original branch picker.
+            if(var1==4 && action.event_uid!=rule.uid)continue;
             auto parent_index=placements_.size();
             for(auto it=spawned.rbegin();it!=spawned.rend();++it){
                 if(it->first==action.parent_object){
