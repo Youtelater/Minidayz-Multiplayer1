@@ -19,6 +19,9 @@ jobs:
       - name: Generate Construct family membership used by native collision headers
         run: python3 tools/stage1/build_source_family_members.py
 
+      - name: Trace original PlayerBase movement event effects
+        run: python3 tools/stage1/trace_original_player_movement.py
+
       - name: Compile Player Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
