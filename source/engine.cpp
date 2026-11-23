@@ -679,7 +679,9 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
  // Original Map asphalt is a separate Construct layer, before
  // ground_enviroment. Resolve the source layer rather than choosing
  // an arbitrary 3DS Z such as 0.10, which can break layer ordering.
- const auto* original_map=stage1::find_layout("Map");
+ const stage1::LayoutDef* original_map=nullptr;
+ for(const auto& layout:stage1::kLayoutTable)
+  if(std::strcmp(layout.name,"Map")==0){original_map=&layout;break;}
  if(!original_map)return false;
  const auto original_layout=static_cast<std::uint16_t>(
       original_map-stage1::kLayoutTable);
