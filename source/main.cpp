@@ -27,6 +27,7 @@
 #include "minidayz/generated/player_spawn_source.hpp"
 #include "minidayz/player_equipment_visual.hpp"
 #include "minidayz/source_player_layers.hpp"
+#include "minidayz/source_player_altmove.hpp"
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/inventory.hpp"
@@ -1269,6 +1270,19 @@ public:
             request_source_bed_dismantle();
         update_source_automatic_doors();
         if(source_bed_build_.active)movement={};
+        // Source PlayerBase193 AltMove MaxSpeed UID156884066447061.
+        // Apply only the verified runtime modifiers currently provided by
+        // their original event subsystems. Remaining original damage,
+        // terrain and equipment modifiers are not silently fabricated.
+        minidayz::stage1::SourcePlayerAltMoveModifiers speed_effects{};
+        speed_effects.runner_bonus=static_cast<float>(
+            perks_.source_runner_speed_bonus());
+        speed_effects.regen_bonus=perks_.level(
+            minidayz::items::SourcePerk::regen)>0 ? 10.0f : 0.0f;
+        const float source_speed=
+            minidayz::stage1::source_player_altmove_max_speed(speed_effects);
+        preview_rules_.walk_speed=source_speed;
+        preview_rules_.run_speed=source_speed;
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
         // Re-evaluate after movement for source-frame-1 closing transitions

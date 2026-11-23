@@ -779,3 +779,9 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - [x] Removed hardcoded 3DS depths `0.57f`, `0.575f` .. `0.605f` for player character and wearables. Source Map defines player/equipment at layers **32..39**; now draw with `source_world_layer_depth` to preserve correct depth against Buildings_bg layer 31, Buildings layer 41, and neighboring world objects.
 - [x] Added source-parsed Map layer-name contract, native layer-order assertions, and updated screen depth regression. The original sprites and atlas frame coordinates remain unchanged.
 - [ ] Original event-based movement speed and animation switching, runtime collision fidelity, and actual Azahar visual verification are separate gates for completing Step 4.
+
+
+### Step 4 — PlayerBase193 source AltMove speed parity (2026-11-22)
+- [x] Decoded original Game_events > Animations action UID `156884066447061` (event `6013847730477848`). Construct sets MaxSpeed to `100 - PlayerBase.var6 - PlayerBase.var7 + PlayerBase.var4 + PlayerBase.var3 + PlayerBase.var5 + PlayerBase.var8`; not an invented 72/108 walk-run pair. Added native source-ordered formula, source-AST contract, and C++ edge tests.
+- [x] Source runner perk events add +5/+15 (PlayerBase variable3), perk_regen branch +10 (variable5); verified perk systems now contribute during player movement, and are not applied to NPCs. B retains original run pose selection without guessing a speed multiplier.
+- [ ] Other original source movement modifiers (terrain variable7, Edrink timer variable4, hit/wire variable6, equipment variable8) depend on systems audited in survival/combat/items steps; the exact original events are recorded but cannot be claimed fully implemented merely by keeping zero defaults.

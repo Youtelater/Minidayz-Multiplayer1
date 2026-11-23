@@ -1,5 +1,6 @@
 #include "minidayz/player.hpp"
 #include "minidayz/source_player_layers.hpp"
+#include "minidayz/source_player_altmove.hpp"
 #include "minidayz/generated/stage1_data.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 
@@ -22,6 +23,18 @@ int main() {
         assert(source_player_layer_depth(i) <
                source_player_layer_depth(i+1));
 
+    // Exact Construct PlayerBase193 AltMove source expression:
+    // 100-var6-var7+var4+var3+var5+var8, before native collision.
+    minidayz::stage1::SourcePlayerAltMoveModifiers v{};
+    assert(minidayz::stage1::source_player_altmove_max_speed(v)==100.0f);
+    v.runner_bonus=5.0f;
+    assert(minidayz::stage1::source_player_altmove_max_speed(v)==105.0f);
+    v.runner_bonus=15.0f; v.regen_bonus=10.0f; v.energy_boost=15.0f;
+    assert(minidayz::stage1::source_player_altmove_max_speed(v)==140.0f);
+    v.damage_slowdown=50.0f; v.terrain_slowdown=45.0f;
+    assert(minidayz::stage1::source_player_altmove_max_speed(v)==45.0f);
+    v.damage_slowdown=200.0f;
+    assert(minidayz::stage1::source_player_altmove_max_speed(v)==0.0f);
     const auto novice_rules = source_survival_rules(SurvivalDifficulty::novice);
     const auto regular_rules = source_survival_rules(SurvivalDifficulty::regular);
     const auto veteran_rules = source_survival_rules(SurvivalDifficulty::veteran);
