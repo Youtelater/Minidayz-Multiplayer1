@@ -58,3 +58,11 @@ for node,parents,groups in walk(sheets["Game_events"]):
      "groups":groups[-4:],"conds":node[5],"action":a},separators=(",",":"))[:2400])
    count+=1
 print("PLAYER_BASE_MOD_COUNT",count)
+
+print("PLAYER_BASE_FRAME_GEOMETRY")
+for oid in (193,679):
+ for i,a in enumerate(p[3][oid][7]):
+  if not isinstance(a,list) or len(a)<8 or not isinstance(a[7],list):continue
+  for frame in a[7][:1]:
+   print("PLAYER_FRAME",oid,i,json.dumps(frame,ensure_ascii=False,separators=(",",":"))[:4700])
+print("PLAYER_NATIVE_SPEED_SOURCE_ACTION",156884066447061)
