@@ -230,6 +230,9 @@ public:
     // Original collision-on-796 transition: frame1 and instance bool1
     // must change together, exactly once per source box instance.
     bool open_source_bunker_lootbox(std::size_t index) noexcept;
+    // Original car trunk Sprite241 is destroyed on first search even if
+    // its 50% loot roll fails; keep a stable save-state identity.
+    bool mark_source_car_trunk_searched(std::size_t index) noexcept;
     bool add_source_constructed_bed(float x,float y,std::uint8_t bear_pi) noexcept;
     bool dismantle_source_bed(std::size_t index) noexcept;
     std::vector<SourceConstructedBed> capture_source_constructed_beds() const;
