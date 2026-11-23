@@ -202,8 +202,53 @@ def trace_extra(nodes,anc=()):
             if not isinstance(a,list) or len(a)<6 or a[3] not in additional_leg_ids:
                 continue
             assert a[:2]==[1066,202] and a[5][4]==[0,[0,15]]
-            seen_extra.add(a[3])
             conditions=e[5] if isinstance(e[5],list) else []
+            assert e[2] and all(c[:2]==[518,203] for c in conditions)
+            assert all(c[9][2]==[8,0] for c in conditions)
+            source_base=12 if a[3] in {
+                4140793207746288,1609283690277773,
+                7388915329079069,9705891230602422
+            } else 13
+            source_arm={
+                4140793207746288:0,1609283690277773:1,
+                7388915329079069:2,9705891230602422:3,
+                6009205636428013:0,2753364281434062:1,
+                1939245565475465:2,4493044907863185:3,
+            }[a[3]]
+            allowed={9,6,4,12,13,14,5,11,15,103}
+            if source_base==12 and source_arm in (0,1):
+                allowed.remove(12)
+            if source_base==13 and source_arm in (2,3):
+                allowed.remove(13)
+            found={c[9][3][1][1] for c in conditions}
+            assert len(conditions)==len(allowed) and found==allowed, (
+                f"Original source road {source_base} extension guard changed")
+            expected_coord={
+                0:[[0,[5,[21,514,False,None,2],[0,1]]],
+                   [0,[21,514,False,None,1]]],
+                1:[[0,[4,[21,514,False,None,2],[0,1]]],
+                   [0,[21,514,False,None,1]]],
+                2:[[0,[21,514,False,None,2]],
+                   [0,[5,[21,514,False,None,1],[0,1]]]],
+                3:[[0,[21,514,False,None,2]],
+                   [0,[4,[21,514,False,None,1],[0,1]]]],
+            }[source_arm]
+            assert all(c[9][:2]==expected_coord for c in conditions)
+            expected_rect={
+                0:[[0,[4,[23,"TilemapspotX"],[0,8]]],
+                   [0,[23,"TilemapspotY"]],[0,[0,2]],[0,[0,9]]],
+                1:[[0,[4,[23,"TilemapspotX"],[0,8]]],
+                   [0,[4,[23,"TilemapspotY"],[0,8]]],
+                   [0,[0,2]],[0,[0,9]]],
+                2:[[0,[23,"TilemapspotX"]],
+                   [0,[4,[23,"TilemapspotY"],[0,8]]],
+                   [0,[0,9]],[0,[0,2]]],
+                3:[[0,[4,[23,"TilemapspotX"],[0,8]]],
+                   [0,[4,[23,"TilemapspotY"],[0,8]]],
+                   [0,[0,9]],[0,[0,2]]],
+            }[source_arm]
+            assert a[5][:4]==expected_rect
+            seen_extra.add(a[3])
             print("SOURCE_ROAD_EXTRA_LEG",json.dumps({
                 "uid":a[3],"event":e[4],
                 "or_block":e[2],
