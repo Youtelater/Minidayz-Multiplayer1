@@ -28,7 +28,7 @@ def cpp_float(value: float) -> str:
 
 def render() -> str:
     original = SOURCE.read_text(encoding="utf-8-sig")
-    original = re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)", "-", original)
+    original = re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)", "-", original)
     project = json.loads(original)["project"]
     objects = project[3]
     rows = []
