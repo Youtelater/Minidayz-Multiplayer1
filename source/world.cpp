@@ -1,4 +1,5 @@
 #include "minidayz/world.hpp"
+#include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/generated/original_initial_building_loot.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
@@ -656,10 +657,11 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             const auto& marker = map_markers_[
                 static_cast<std::size_t>(y) * grid_.width() + x];
             const std::uint16_t code = marker.marker_type;
-            const WorldPoint hotspot{
-                static_cast<float>((static_cast<double>(x) + 0.5) * cell_width),
-                static_cast<float>((static_cast<double>(y) + 0.5) * cell_height)
-            };
+            // Original Mapgen514 physical position is transposed and
+            // uses 1020px pitch, not normalized world-layout cell centres.
+            const auto source_hotspot=world_source::mapgen_hotspot(x,y);
+            const WorldPoint hotspot{source_hotspot.x,source_hotspot.y};
+            if(!bounds_.contains(hotspot))return false;
 
             // The root game's create_map_location reads Array 525 after
             // each generate_location() call. Rows 0, 1, 2, 3, 5 and 6
