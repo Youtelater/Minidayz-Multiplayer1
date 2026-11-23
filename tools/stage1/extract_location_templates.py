@@ -320,6 +320,82 @@ def main():
     operation_output = OUTPUT.with_name("location_array_operation_source.hpp")
     operation_output.write_text("\n".join(operation_lines), encoding="utf-8")
 
+    # The original village/city branch stores several consecutive authored
+    # placement records with Set-at-XY(x=Array525.At(0), y=1/2/3/0).
+    # A direct translation repeatedly overwrites the same column, and
+    # SetSize(Array525.At(0),6/8,1) then truncates the records. Preserve
+    # each original authored group at its own ordinal column, keeping the
+    # exact original object variants, coordinates, action order, expressions
+    # and RNG calls. This restores authored *grouping*, not random density.
+    town_codes={4,6,9,16,17,21}
+    town_uids={uid for uid,codes,_,_,_ in rows if town_codes.intersection(codes)}
+    grouped={}
+    per_branch={}
+    original_index='[20,525,222,false,null,[[0,0]]]'
+    for branch_uid in town_uids:
+        ops=[op for op in array_operation_rows if op[0]==branch_uid]
+        slot=-1
+        for _,_,action_uid,action_id,p0,p1,p2 in ops:
+            if p0!=original_index:
+                continue
+            if action_id==199:
+                if json.loads(p1)==[0,1]:
+                    slot+=1
+                if slot<0:
+                    raise SystemExit(f"Source town {branch_uid} writes before its first record")
+                grouped[action_uid]=(slot,False,branch_uid)
+            elif action_id==210:
+                if slot<1:
+                    raise SystemExit(f"Source town {branch_uid} has fewer than two authored records")
+                grouped[action_uid]=(slot+1,True,branch_uid)
+        per_branch[branch_uid]=slot+1
+    if len(per_branch)!=6 or any(count<2 for count in per_branch.values()):
+        raise SystemExit(f"Unexpected original settlement descriptor counts {per_branch}")
+    slot_rows=[]
+    for branch_uid,event_uid,object_index,action_id,first_parameter,
+        param_count,raw_call in action_rows:
+        raw=json.loads(raw_call)
+        if len(raw)<4:
+            continue
+        match=grouped.get(raw[3])
+        if match and match[2]==branch_uid and object_index==525:
+            slot_rows.append((first_parameter,match[0],match[1],branch_uid,raw[3]))
+    if len(slot_rows)!=len(grouped):
+        raise SystemExit(f"Lost source group actions: got {len(slot_rows)} of {len(grouped)}")
+    slot_rows.sort()
+    group_lines=[
+        "#pragma once","#include <cstddef>","#include <cstdint>",
+        "namespace minidayz::stage1 {",
+        "// Strictly original generate_location source Array525 actions,",
+        "// preserving every authored town building slot, not arbitrary density.",
+        "struct LocationTownGroupAction {",
+        " std::uint32_t first_parameter;",
+        " std::uint16_t ordinal;bool resize;",
+        " std::uint64_t branch_uid,action_uid;};",
+        f"inline constexpr std::size_t kLocationTownGroupActionCount={len(slot_rows)};",
+        "inline constexpr LocationTownGroupAction kLocationTownGroupActions[]={"]
+    for first,ordinal,resize,branch_uid,action_uid in slot_rows:
+        group_lines.append(f" {{{first}u,{ordinal},{str(resize).lower()},{branch_uid}ULL,{action_uid}ULL}},")
+    group_lines.extend([
+        "};",
+        "inline const LocationTownGroupAction* location_town_group_action(",
+        " std::uint32_t first_parameter) noexcept {",
+        " std::size_t lo=0,hi=kLocationTownGroupActionCount;",
+        " while(lo<hi){const auto mid=lo+(hi-lo)/2;",
+        "  if(kLocationTownGroupActions[mid].first_parameter<first_parameter)",
+        "    lo=mid+1;else hi=mid;}",
+        " if(lo<kLocationTownGroupActionCount &&",
+        "    kLocationTownGroupActions[lo].first_parameter==first_parameter)",
+        "    return &kLocationTownGroupActions[lo];",
+        " return nullptr;}",
+        "} // namespace minidayz::stage1",""])
+    group_output=OUTPUT.with_name("location_town_group_source.hpp")
+    group_output.write_text("\n".join(group_lines),encoding="utf-8")
+    print("Original authored grouped town placement slots:",
+          {uid:per_branch[uid] for uid in sorted(town_uids)},
+          "exact action mappings:",len(slot_rows))
+
+
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
     spawn_output = OUTPUT.with_name("location_spawn_source.hpp")
