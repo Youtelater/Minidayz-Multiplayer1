@@ -90,5 +90,24 @@ report={
 dest=ROOT/"audit-output/player/original_player_speed_events.json"
 dest.parent.mkdir(parents=True,exist_ok=True)
 dest.write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+# Log the real Tilemap family and the complete var7 event ancestry. This
+# prevents guessing from the object ID alone when wiring original slowdown.
+family1066=next((family for family in project[4]
+                 if isinstance(family,list) and family and family[0]==1066),None)
+if not family1066:
+    raise SystemExit("Original tilemap family1066 missing from root project")
+print("ORIGINAL_PLAYER_TERRAIN_FAMILY_1066",
+      json.dumps(family1066,ensure_ascii=False,separators=(",",":")))
+for row in records:
+    if row["target"] not in ("instance_var7","instance_var6"):
+        continue
+    print("ORIGINAL_PLAYER_SPEED_GUARD",
+          json.dumps({
+              "target":row["target"],
+              "event_path":row["event_path"],"action_uid":row["action_uid"],
+              "groups":row["source_group_chain"],
+              "ancestors":row["ancestor_events"],
+              "conditions":row["conditions"],"action":row["action"],
+          },ensure_ascii=False,separators=(",",":")))
 print("ORIGINAL_PLAYER_SPEED_EVENT_CATALOG",json.dumps(report["totals"],sort_keys=True))
 print("SOURCE_EVENT_CATALOG",dest)
