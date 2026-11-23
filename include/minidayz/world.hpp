@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <random>
@@ -71,6 +72,12 @@ struct WorldMapMarker {
     std::uint8_t cell_y{};
     std::uint16_t source_code{};
     std::uint16_t marker_type{};
+};
+// Sparse original Tilemap230 SetTile result for one Mapgen514 location.
+struct WorldScatterTile { std::uint16_t local_index{}, original_frame{}; };
+struct WorldScatterPatch {
+    std::size_t marker_index{};
+    std::vector<WorldScatterTile> tiles{};
 };
 
 struct WorldPlacement {
@@ -252,6 +259,10 @@ public:
     const WorldGrid& grid() const noexcept { return grid_; }
     const WorldMapMarker* map_marker(std::size_t index) const noexcept;
     std::size_t map_marker_count() const noexcept { return map_markers_.size(); }
+    // The world generator, never camera visibility, determines source tiles.
+    const std::vector<WorldScatterPatch>& source_scatter_patches() const noexcept {
+        return source_scatter_patches_;
+    }
     std::uint8_t generation_level() const noexcept { return generation_level_; }
 
     const WorldBounds& bounds() const noexcept { return bounds_; }
@@ -269,6 +280,7 @@ private:
     std::mt19937 rng_{};
     WorldGrid grid_{};
     std::vector<WorldMapMarker> map_markers_{};
+    std::vector<WorldScatterPatch> source_scatter_patches_{};
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
     std::vector<WorldSpriteState> original_sprite_states_{};
@@ -279,6 +291,7 @@ private:
     std::uint8_t generation_level_{};
     bool generation_is_map_{};
     bool generate_source_locations(std::uint8_t level);
+    bool build_source_scatter_patch(std::size_t marker_index);
     bool generate_source_crash_sites();
     bool generate_source_road_vehicles();
     bool generate_source_radiation_sites();

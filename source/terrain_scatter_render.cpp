@@ -4,96 +4,36 @@
 #include "minidayz/generated/terrain_scatter_source.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
 
-#include <array>
-#include <cmath>
+#include <cstddef>
 #include <cstdint>
-#include <random>
 
 namespace minidayz {
 
-// The source create_map_location function creates ground_enviroment (230)
-// at HotspotX-500, HotspotY-500, then issues Repeat/SetTile actions using
-// floor(random(...)) for 30-pixel source cells. This renderer preserves the
-// source marker branches, weighted choose() tiles, repeat counts and positions.
-// Rare perk-dependent branches remain excluded by the source extractor.
+// Root Tilemap230 SetTile choices are painted during world generation.
+// Moving the camera must not consume random numbers or re-roll terrain.
 bool Renderer::draw_source_procedural_environment(
     const WorldSystem& world,float camera_x,float camera_y,
     float view_width,float view_height) noexcept {
  if(!world.generation_complete()||world.map_marker_count()==0)return true;
  if(view_width<=0.0f||view_height<=0.0f)return false;
- const auto& grid=world.grid();
- if(!grid.width()||!grid.height())return false;
- constexpr float kSourceTile=30.0f;
- constexpr float kHalfPatch=500.0f;
+ constexpr float kSourceTile=30.0f, kHalfPatch=500.0f;
  constexpr int kPatchCells=33;
- constexpr std::uint16_t kEmpty=0xffffu;
- const auto view_right=camera_x+view_width;
- const auto view_bottom=camera_y+view_height;
- for(std::size_t index=0;index<world.map_marker_count();++index){
-  const WorldMapMarker* marker=world.map_marker(index);
-  if(!marker)continue;
-  // Original Tilemap230 patch is Sprite514 hotspot minus 500px.
-  const auto source_hotspot=world_source::mapgen_hotspot(
+ const float view_right=camera_x+view_width;
+ const float view_bottom=camera_y+view_height;
+ for(const auto& patch:world.source_scatter_patches()){
+  const auto* marker=world.map_marker(patch.marker_index);
+  if(!marker)return false;
+  const auto center=world_source::mapgen_hotspot(
       marker->cell_x,marker->cell_y);
-  const float left=source_hotspot.x-kHalfPatch;
-  const float top=source_hotspot.y-kHalfPatch;
+  const float left=center.x-kHalfPatch;
+  const float top=center.y-kHalfPatch;
   if(left>=view_right||top>=view_bottom||
      left+kPatchCells*kSourceTile<=camera_x||
      top+kPatchCells*kSourceTile<=camera_y)continue;
-  ScatterCacheEntry* patch=nullptr;
-  for(auto& candidate:scatter_cache_)
-   if(candidate.valid && candidate.seed==world.seed() &&
-      candidate.level==world.generation_level() &&
-      candidate.marker_index==index &&
-      candidate.marker_type==marker->marker_type &&
-      candidate.cell_x==marker->cell_x &&
-      candidate.cell_y==marker->cell_y){patch=&candidate;break;}
-  if(!patch){
-   patch=&scatter_cache_[next_scatter_cache_++%kScatterCacheEntries];
-   // Build the source-derived SetTile patch once on cache miss, then
-   // reuse the exact result on every frame and while the camera pans.
-   patch->valid=false;
-   patch->cells.fill(kEmpty);
-   patch->has_source_rule=false;
-   std::uint32_t state=world.seed()^0x9e3779b9u;
-   state^=static_cast<std::uint32_t>(marker->cell_x+1)*0x85ebca6bu;
-   state^=static_cast<std::uint32_t>(marker->cell_y+1)*0xc2b2ae35u;
-   state^=static_cast<std::uint32_t>(marker->marker_type)*0x27d4eb2du;
-   std::minstd_rand rng(state?state:1u);
-   for(const auto& rule:stage1::kTerrainScatterRules){
-    if(rule.marker!=marker->marker_type ||
-       !(rule.level_mask & (std::uint8_t{1} << world.generation_level())))continue;
-    patch->has_source_rule=true;
-    if(rule.x_min>=rule.x_max||rule.y_min>=rule.y_max||
-       rule.x_max>kPatchCells||rule.y_max>kPatchCells||
-       rule.tile_count==0||
-       rule.tile_offset+rule.tile_count>stage1::kTerrainScatterChoiceCount)
-     return false;
-    std::uniform_int_distribution<int> xdist(rule.x_min,rule.x_max-1);
-    std::uniform_int_distribution<int> ydist(rule.y_min,rule.y_max-1);
-    std::uniform_int_distribution<unsigned> choose(0,rule.tile_count-1);
-    for(std::uint16_t n=0;n<rule.repeat;++n){
-     const int x=xdist(rng);
-     const int y=ydist(rng);
-     const auto frame=stage1::kTerrainScatterChoices[
-         rule.tile_offset+choose(rng)];
-     patch->cells[static_cast<std::size_t>(y)*kPatchCells+x]=frame;
-    }
-   }
-   patch->seed=world.seed();
-   patch->level=world.generation_level();
-   patch->marker_index=index;
-   patch->marker_type=marker->marker_type;
-   patch->cell_x=marker->cell_x;
-   patch->cell_y=marker->cell_y;
-   patch->valid=true;
-  }
-  if(!patch->has_source_rule)continue;
-  // The generated 30px tile art shares the exact object-230 original
-  // sheet with authored ground environment tiles, not a replacement PNG.
-  for(int y=0;y<kPatchCells;++y)for(int x=0;x<kPatchCells;++x){
-   const auto frame=patch->cells[static_cast<std::size_t>(y)*kPatchCells+x];
-   if(frame==kEmpty)continue;
+  for(const auto& tile:patch.tiles){
+   if(tile.local_index>=kPatchCells*kPatchCells)return false;
+   const int x=tile.local_index%kPatchCells;
+   const int y=tile.local_index/kPatchCells;
    const float xx=left+x*kSourceTile, yy=top+y*kSourceTile;
    if(xx>=view_right||yy>=view_bottom||
       xx+kSourceTile<=camera_x||yy+kSourceTile<=camera_y)continue;
@@ -106,6 +46,7 @@ bool Renderer::draw_source_procedural_environment(
     }
     detail_sheets_[3]=sheet;
    }
+   const auto frame=tile.original_frame;
    if(frame>=C2D_SpriteSheetCount(detail_sheets_[3]))return false;
    C2D_Sprite sprite{};
    C2D_SpriteFromSheet(&sprite,detail_sheets_[3],frame);
@@ -113,7 +54,6 @@ bool Renderer::draw_source_procedural_environment(
    C2D_SpriteSetPos(&sprite,xx,yy);
    C2D_SpriteSetScale(&sprite,kSourceTile/sprite.params.pos.w,
                               kSourceTile/sprite.params.pos.h);
-   // Source generated tiles and authored Tilemap230 share Map layer Z.
    C2D_SpriteSetDepth(&sprite,world_source::source_world_layer_depth(
        stage1::kSourceScatterGroundLayer,0,0));
    if(!C2D_DrawSprite(&sprite))return false;

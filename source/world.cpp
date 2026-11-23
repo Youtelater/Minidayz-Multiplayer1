@@ -3,6 +3,7 @@
 #include "minidayz/generated/original_initial_building_loot.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
+#include "minidayz/generated/terrain_scatter_source.hpp"
 #include "minidayz/location_event_runtime.hpp"
 #include "minidayz/generated/source_tree_impact_points.hpp"
 #include "minidayz/generated/source_door_points.hpp"
@@ -17,6 +18,7 @@
 #include "minidayz/source_radiation_zone.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <random>
@@ -567,6 +569,7 @@ bool WorldSystem::generate_from_source(std::uint32_t seed, std::string_view name
 bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t seed) {
     if (!initialized_) return false;
     map_markers_.clear();
+    source_scatter_patches_.clear();
     WorldGenerationProfile profile{};
     if (!source_world_profile(level, profile) ||
         !grid_.resize(profile.map_size_x, profile.grid_height)) return false;
@@ -614,6 +617,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
 bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
     if (!initialized_ || grid_.width() == 0 || grid_.height() == 0) return false;
     map_markers_.clear();
+    source_scatter_patches_.clear();
     map_markers_.reserve(static_cast<std::size_t>(grid_.width()) * grid_.height());
     (void)seed; // The source uses one global random stream across generation stages.
     WorldGenerationProfile profile{};
@@ -808,6 +812,48 @@ bool WorldSystem::load_source_layout(std::string_view name) {
 }
 
 
+// Reproduce root-extracted Tilemap230 SetTile repetitions and weighted
+// frame choices during each Mapgen514 event, in the shared world RNG stream.
+// Camera-dependent minstd_rand hashes never existed in original gameplay.
+// Source branches not yet decoded by the strict extractor are not invented.
+bool WorldSystem::build_source_scatter_patch(std::size_t marker_index) {
+    if(marker_index>=map_markers_.size() || generation_level_>=6)return false;
+    constexpr std::size_t kSide=33, kCells=kSide*kSide;
+    constexpr std::uint16_t kEmpty=0xffffu;
+    const auto marker=map_markers_[marker_index];
+    std::array<std::uint16_t,kCells> cells{};
+    cells.fill(kEmpty);
+    bool has_source_rule=false;
+    for(const auto& rule:stage1::kTerrainScatterRules){
+        if(rule.marker!=marker.marker_type ||
+           !(rule.level_mask&(std::uint8_t{1}<<generation_level_)))continue;
+        if(rule.repeat==0 || rule.x_min>=rule.x_max ||
+           rule.y_min>=rule.y_max || rule.x_max>kSide ||
+           rule.y_max>kSide || rule.tile_count==0 ||
+           rule.tile_offset+rule.tile_count>
+               stage1::kTerrainScatterChoiceCount)return false;
+        has_source_rule=true;
+        for(std::uint16_t n=0;n<rule.repeat;++n){
+            const std::size_t x=rule.x_min+source_random_bounded(
+                rng_,static_cast<std::uint32_t>(rule.x_max-rule.x_min));
+            const std::size_t y=rule.y_min+source_random_bounded(
+                rng_,static_cast<std::uint32_t>(rule.y_max-rule.y_min));
+            const auto choice=source_random_bounded(
+                rng_,static_cast<std::uint32_t>(rule.tile_count));
+            cells[y*kSide+x]=stage1::kTerrainScatterChoices[
+                rule.tile_offset+choice];
+        }
+    }
+    if(!has_source_rule)return true;
+    WorldScatterPatch patch{};
+    patch.marker_index=marker_index;
+    for(std::size_t i=0;i<kCells;++i)
+        if(cells[i]!=kEmpty)
+            patch.tiles.push_back({static_cast<std::uint16_t>(i),cells[i]});
+    source_scatter_patches_.push_back(std::move(patch));
+    return true;
+}
+
 bool WorldSystem::generate_source_locations(std::uint8_t level) {
     if (!initialized_ || grid_.width() == 0 || grid_.height() == 0) return false;
     const auto* layout = stage1::find_layout("Map");
@@ -838,6 +884,8 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
     // all grassland, forest, and other procedurally placed world objects.
     if (map_markers_.size() !=
         static_cast<std::size_t>(grid_.width()) * grid_.height()) return false;
+    source_scatter_patches_.clear();
+    source_scatter_patches_.reserve(map_markers_.size());
     std::size_t added = 0;
     for (int y = 0; y < grid_.height(); ++y) {
         for (int x = 0; x < grid_.width(); ++x) {
@@ -902,6 +950,9 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
                     WorldPoint{static_cast<float>(raw_x),
                                static_cast<float>(raw_y)}, element_state);
             }
+            const std::size_t marker_index=
+                static_cast<std::size_t>(y)*grid_.width()+x;
+            if(!build_source_scatter_patch(marker_index))return false;
         }
     }
 
@@ -1457,6 +1508,7 @@ bool WorldSystem::load_source_bridge_elements() {
 void WorldSystem::reset() noexcept {
     grid_.clear();
     map_markers_.clear();
+    source_scatter_patches_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();
