@@ -76,5 +76,82 @@ int main() {
     assert(point_on_mapgen_road(12,cell,c.x+200.0f,c.y+60.0f,source_width));
     assert(!point_on_mapgen_road(12,cell,c.x+200.0f,c.y-31.0f,source_width));
     assert(!point_on_mapgen_road(12,cell,c.x+200.0f,c.y+90.0f,source_width));
+    // Source code14's four half-roads are each guarded by a different
+    // Array518 neighbor. Original permitted values are 9,6,4,12,13,14,
+    // 5,11,15,103, not "any nonzero".
+    struct OriginalArray {
+        std::uint16_t code[3][3]{};
+        std::uint16_t at(int x,int y) const noexcept {
+            return x>=0&&x<3&&y>=0&&y<3?code[y][x]:0;
+        }
+    } grid{};
+    grid.code[1][1]=14;
+    // A source junction with no eligible neighbors must draw NO road.
+    for(int segment=0;segment<4;++segment)
+        assert(!source_grid_road_segment(grid,1,1,segment,source_width).valid());
+    assert(!source_grid_road_contains(grid,1,1,
+           mapgen_hotspot(1,1).x,mapgen_hotspot(1,1).y,source_width));
+    static_assert(source_road_neighbor_permits_junction(9));
+    static_assert(source_road_neighbor_permits_junction(6));
+    static_assert(source_road_neighbor_permits_junction(4));
+    static_assert(source_road_neighbor_permits_junction(12));
+    static_assert(source_road_neighbor_permits_junction(13));
+    static_assert(source_road_neighbor_permits_junction(14));
+    static_assert(source_road_neighbor_permits_junction(5));
+    static_assert(source_road_neighbor_permits_junction(11));
+    static_assert(source_road_neighbor_permits_junction(15));
+    static_assert(source_road_neighbor_permits_junction(103));
+    static_assert(!source_road_neighbor_permits_junction(0));
+    static_assert(!source_road_neighbor_permits_junction(7));
+    static_assert(!source_road_neighbor_permits_junction(100));
+    // Sprite514.var2 +/-1 is the original Array X axis (WORLD Y).
+    grid.code[1][0]=9;
+    grid.code[1][2]=6;
+    // Sprite514.var1 +/-1 is Array Y (WORLD X).
+    grid.code[0][1]=4;
+    grid.code[2][1]=103;
+    const auto center=mapgen_hotspot(1,1);
+    const auto upper=source_grid_road_segment(grid,1,1,0,source_width);
+    const auto lower=source_grid_road_segment(grid,1,1,1,source_width);
+    const auto left=source_grid_road_segment(grid,1,1,2,source_width);
+    const auto right=source_grid_road_segment(grid,1,1,3,source_width);
+    assert(upper.valid() && upper.x==center.x-30.0f &&
+           upper.y==center.y-510.0f &&
+           upper.width==120.0f && upper.height==540.0f);
+    assert(lower.valid() && lower.x==center.x-30.0f &&
+           lower.y==center.y-30.0f &&
+           lower.width==120.0f && lower.height==540.0f);
+    assert(left.valid() && left.x==center.x-510.0f &&
+           left.y==center.y-30.0f &&
+           left.width==540.0f && left.height==120.0f);
+    assert(right.valid() && right.x==center.x-30.0f &&
+           right.y==center.y-30.0f &&
+           right.width==540.0f && right.height==120.0f);
+    assert(source_grid_road_contains(grid,1,1,
+           center.x,center.y-300.0f,source_width));
+    assert(source_grid_road_contains(grid,1,1,
+           center.x,center.y+300.0f,source_width));
+    assert(source_grid_road_contains(grid,1,1,
+           center.x-300.0f,center.y,source_width));
+    assert(source_grid_road_contains(grid,1,1,
+           center.x+300.0f,center.y,source_width));
+    assert(!source_grid_road_contains(grid,1,1,
+           center.x+300.0f,center.y+300.0f,source_width));
+    // Overlapping original source half-roads share two tile15 cells:
+    // the native depth renderer must not submit duplicates.
+    assert(source_grid_road_tile_was_drawn(grid,1,1,1,
+           center.x-30.0f,center.y-30.0f,source_tile,source_width));
+    assert(source_grid_road_tile_was_drawn(grid,1,1,2,
+           center.x-30.0f,center.y-30.0f,source_tile,source_width));
+    assert(!source_grid_road_tile_was_drawn(grid,1,1,2,
+           center.x-300.0f,center.y-30.0f,source_tile,source_width));
+    // Disabling ONE source neighbor cannot erase the three other arms.
+    grid.code[1][0]=7;
+    assert(!source_grid_road_segment(grid,1,1,0,source_width).valid());
+    assert(source_grid_road_segment(grid,1,1,1,source_width).valid());
+    assert(!source_grid_road_contains(grid,1,1,
+           center.x,center.y-300.0f,source_width));
+    assert(source_grid_road_contains(grid,1,1,
+           center.x,center.y+300.0f,source_width));
     return 0;
 }
