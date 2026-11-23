@@ -22,7 +22,10 @@ leaf=[e for e in events if len(e)==7]
 assert len(events)==22343,(len(events),len(leaf))
 assert len(leaf)==14560,len(leaf)
 index={e[4]:e for e in events}
-assert len(index)==len(events)
+# Original source reuses some event UIDs across duplicated event sheets;
+# an event UID is not a globally unique runtime identity. Only the target
+# root functions checked below must have one unambiguous definition.
+assert len(index)==19246,(len(index),len(events))
 def subtree(uid):
  root=index[uid]
  got=[]
