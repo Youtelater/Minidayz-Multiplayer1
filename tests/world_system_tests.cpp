@@ -711,7 +711,7 @@ void test_original_tree_block_variants_and_solid_companions() {
     assert(world.initialize(0x210348u));
     for(std::uint8_t variant=7;variant<=10;++variant){
         const auto* spec=minidayz::world_source::source_tree_block_variant(variant);
-        assert(spec && spec->tree_frame==variant-7);
+        assert(spec && spec->tree_frame==static_cast<std::uint32_t>(variant-7u));
         const auto first=world.placement_count();
         assert(world.expand_map_element(1,variant,0,
             {8000.0f+variant*350.0f,8000.0f},0.0)==1);
