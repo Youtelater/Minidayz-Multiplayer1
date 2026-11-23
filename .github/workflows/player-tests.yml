@@ -24,6 +24,9 @@ jobs:
       - name: Trace original PlayerBase movement event effects
         run: python3 tools/stage1/trace_original_player_movement.py
 
+      - name: Verify source PlayerBase variable8 has no invented equipment speed bonus
+        run: python3 tests/test_original_player_variable8_source.py
+
       - name: Compile Player Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
