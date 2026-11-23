@@ -62,13 +62,16 @@ def walk_events(events):
   if isinstance(e,list) and len(e)>=7 and e[0]==0:
    yield e
    yield from walk_events(e[7] if len(e)>7 else [])
-by_uid={e[4]:e for sheet,events in p[6] for e in walk_events(events)}
+# Event UIDs can occur in nested leaf branches as well as the parent.
+# Select the exact Mapgen508.var2 predicate; do not overwrite by UID.
+block_events=[e for sheet,items in p[6] for e in walk_events(items)]
 block_rows=[]
 for variant,uid in BLOCK_BRANCHES:
- e=by_uid.get(uid)
- if not e or not any(c[:2]==[508,71] and len(c)>9 and
-     c[9][-1]==[7,[0,variant]] for c in e[5]):
-  raise SystemExit(f"Original tree_block branch/condition changed {variant}:{uid}")
+ e=next((entry for entry in block_events if entry[4]==uid and
+     any(c[:2]==[508,71] and len(c)>9 and
+         c[9][-1]==[7,[0,variant]] for c in entry[5])),None)
+ if not e:
+  raise SystemExit(f"Original tree_block source event changed {variant}:{uid}")
  actions=e[6]
  if not any(a[:2]==[508,73] and a[5][0]==[4,210] for a in actions):
   raise SystemExit(f"Original Sprite210 spawn missing in branch {uid}")
