@@ -473,6 +473,9 @@ jobs:
       - name: Verify Source PlayerBase Collision Geometry
         run: python3 tests/test_original_playerbase_collision.py
 
+      - name: Verify original Regen level-2 speed event
+        run: python3 tests/test_original_regen_speed_source.py
+
       - name: Verify Exact Original Player AltMove Speed Expression
         run: python3 tests/test_original_player_altmove.py
 
