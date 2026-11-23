@@ -1,6 +1,7 @@
 #include "minidayz/player.hpp"
 #include "minidayz/source_player_layers.hpp"
 #include "minidayz/source_player_altmove.hpp"
+#include "minidayz/source_equipment_animation.hpp"
 #include "minidayz/source_player_base_geometry.hpp"
 #include "minidayz/generated/stage1_data.hpp"
 #include "minidayz/terrain_source_collision.hpp"
@@ -23,6 +24,33 @@ int main() {
     for(std::uint16_t i=31;i<41;++i)
         assert(source_player_layer_depth(i) <
                source_player_layer_depth(i+1));
+
+    // Original wearable sprites run with their OWN animation speed, loop
+    // flag and number of frames. They must not reuse the skin's current
+    // integer frame when the source speeds/frame counts differ.
+    const minidayz::stage1::SpriteAnimationDef independent_loop{
+        679, 0, "run_down", 5, 8.0f, true};
+    assert(source_animation_frame_at_time(independent_loop,0.0f)==0);
+    assert(source_animation_frame_at_time(independent_loop,0.32f)==2);
+    assert(source_animation_frame_at_time(independent_loop,0.75f)==1);
+    const minidayz::stage1::SpriteAnimationDef independent_once{
+        679, 0, "pistol_down", 4, 8.0f, false};
+    assert(source_animation_frame_at_time(independent_once,100.0f)==3);
+    assert(source_animation_frame_at_time(independent_once,-1.0f)==0);
+    assert(source_animation_frame_at_time(
+        independent_loop,std::numeric_limits<float>::infinity())==0);
+    assert(source_equipment_animation_frame(679,"not_an_original_pose",1.0f)==0);
+    std::size_t original_animation_checks=0;
+    for(const auto& a : kSpriteAnimations) {
+        if(a.frame_count<2 || !(a.source_speed>0.0f) ||
+           !std::isfinite(a.source_speed))continue;
+        const float one_frame=1.25f/a.source_speed;
+        assert(source_equipment_animation_frame(a.object,a.name,one_frame)==1);
+        assert(source_equipment_animation_frame(a.object,a.name,0.0f)==0);
+        ++original_animation_checks;
+        if(original_animation_checks==24)break;
+    }
+    assert(original_animation_checks==24);
 
     // Exact Construct PlayerBase193 AltMove source expression:
     // 100-var6-var7+var4+var3+var5+var8, before native collision.
