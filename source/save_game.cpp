@@ -675,7 +675,26 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
         body_ok=std::fseek(file,0,SEEK_SET)==0 &&
                 std::fread(&old,sizeof(old),1,file)==1;
         if(body_ok) {
-            std::memcpy(&candidate,&old,sizeof(old));
+            // Assign every persisted field from the exact original
+            // v21 layout. Never memcpy non-trivial C++ save types or
+            // reinterpret padding as new gameplay state.
+            candidate.seed=old.seed;
+            candidate.player=old.player;
+            candidate.inventory=old.inventory;
+            candidate.equipment=old.equipment;
+            candidate.ground_loot=old.ground_loot;
+            candidate.tents=old.tents;
+            candidate.pending_item_use=old.pending_item_use;
+            candidate.perks=old.perks;
+            candidate.satchel=old.satchel;
+            candidate.equipment_fraction=old.equipment_fraction;
+            candidate.stashes=old.stashes;
+            candidate.source_time=old.source_time;
+            candidate.source_rain=old.source_rain;
+            candidate.source_loot=old.source_loot;
+            candidate.pending_craft=old.pending_craft;
+            candidate.world_level=old.world_level;
+            candidate.quick_pistol=old.quick_pistol;
             candidate.source_energy_seconds=0.0f;
         }
     } else if (header_ok && candidate.version == kSaveVersion) {
