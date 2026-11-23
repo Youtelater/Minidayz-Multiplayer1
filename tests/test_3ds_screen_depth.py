@@ -15,7 +15,7 @@ for label,code in (
     ("bitmap font foreground","at_y+row*pixel,0.90f"),
     ("menu wood foreground","if(index==1 && depth<=0.5f)depth=0.75f"),
     ("original floor background","C2D_SpriteSetDepth(&sprite,0.04f)"),
-    ("original road on source asphalt layer","C2D_SpriteSetDepth(&sprite,road_depth)"),
+    ("original road on source asphalt layer","road_depth,nullptr,crop.scale_x,crop.scale_y"),
     ("floor title background","0.0f, 0.0f, 400.0f, 240.0f, 0.05f"),
     ("inventory under HUD","0.0f, 0.0f, 320.0f, 240.0f, 0.05f"),
     ("player over ground at source size","p.x,p.y,1.0f,1.0f,player_depth"),
@@ -33,6 +33,10 @@ for label,code in (
         "original floor background","original road on source asphalt layer",
         "original tilemaps use the SAME source layer depths") else main
     assert code in source, f"3DS screen depth/input regression: {label}"
+# Assert the complete original-road UV crop is submitted on the actual
+# authored asphalt depth, never the preview's hardcoded 0.10f.
+assert "source_road_tile_crop(" in engine
+assert "C2D_DrawImageAt(source_tile,band.x+x*tile,band.y+y*tile," in engine
 # Opaque fallback panels must sit BEHIND the .05 menu-city art;
 # otherwise the menu background vanishes as soon as the depth order is fixed.
 assert "C2D_Color32(22,26,24,255),0.01f" in main
