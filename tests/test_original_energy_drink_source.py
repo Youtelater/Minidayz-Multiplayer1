@@ -32,7 +32,11 @@ def visit(nodes, parents=(), path=()):
 
 
 def numeric_param(call, kind):
-    params = call[5] if isinstance(call, list) and len(call) > 5 else []
+    # Construct condition records carry parameters in slot 9, whereas
+    # action records carry them in slot 5. The intervening condition flags
+    # include booleans and must never be interpreted as the param list.
+    params = (call[9] if len(call) > 9 else call[5]) if (
+        isinstance(call, list) and len(call) > 5) else []
     for row in params:
         if not isinstance(row, list) or row[:1] != [kind]:
             continue
