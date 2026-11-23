@@ -36,3 +36,32 @@ for level in range(1,8):
           sorted(fully,key=lambda t:t[1]+t[2])[:12])
     print("GROUND LEVEL",level,"CURRENT BACKDROP ID4",scores[4])
     print("GROUND LEVEL",level,"ALL TILES",scores)
+
+# Exact root gameplay event trace: the Array road codes are not a visual
+# road texture. Identify the Construct Tilemap SetTile actions that actually
+# paint physical scenery before changing any native world render rule.
+import sys
+from collections import Counter,defaultdict
+sys.path.insert(0,str(ROOT/"tools/stage1"))
+from audit_original_world_exhaustive import decode
+project=decode((ROOT/"data.deobfuscated.js").read_bytes())
+terrain_objects={482,687,688,776,980,1138,1139,208,211,418,230}
+count=Counter();samples=defaultdict(list)
+def walk(nodes,parents=()):
+    for e in nodes if isinstance(nodes,list) else ():
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:
+            continue
+        for a in e[6] if isinstance(e[6],list) else []:
+            if not isinstance(a,list) or len(a)<6 or a[0] not in terrain_objects:
+                continue
+            key=(a[0],a[1]);count[key]+=1
+            if len(samples[key])<6:
+                samples[key].append((e[4],parents[-5:],str(a[5])[:600],
+                                     str(e[5])[:600]))
+        if len(e)>7:walk(e[7],parents+(e[4],))
+for sheet,nodes in project[6]:
+    walk(nodes)
+print("ROOT ORIGINAL TERRAIN TILEMAP ACTION COUNTS",sorted(count.items()))
+for key in sorted(count):
+    if key[1] in (192,193,194,195,199,210,177):
+        print("ROOT TERRAIN ACTION",key,"SAMPLES",samples[key])
