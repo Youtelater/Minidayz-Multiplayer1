@@ -46,7 +46,7 @@ def visit(events,anc=()):
             yield from visit(e[7],anc+(e[4],))
 def find_expr_id(expr,oid):
     if isinstance(expr,list):
-        if len(expr)>=4 and expr[0]==9 and expr[1]==oid:
+        if len(expr)>=5 and expr[:2]==[20,oid] and expr[2] in (220,221):
             yield expr
         for child in expr:yield from find_expr_id(child,oid)
 for sheet_record in p[6]:
@@ -61,7 +61,7 @@ for sheet_record in p[6]:
                     "raw":c})
         for a in e[6] if isinstance(e[6],list) else []:
             if not isinstance(a,list) or len(a)<6:continue
-            if a[0] in (208,211,418,230,482,687,688,776,980,1138,1139) and a[1] in (189,192,205):
+            if a[0] in (208,211,418,230,482,687,688,776,980,1138,1139,1066) and a[1] in (189,192,202):
                 report["tilemap_actions"].append((sheet,e[4],a[0],a[1],a[3]))
             if a[0] in (514,518,525) and a[1] in (199,200,203,210,211):
                 report["road_actions"].append({"sheet":sheet,"event_uid":e[4],
@@ -72,6 +72,13 @@ for sheet_record in p[6]:
                     report["coordinate_expression_uses"].append({"sheet":sheet,"event_uid":e[4],
                         "parent_uid":list(anc[-5:]),"kind":"action",
                         "raw":a})
+# The seven ground objects receive paint actions through their Construct family.
+members=next(f[1:] for f in p[4] if f[0]==1066)
+report["ground_family_members"]=members
+paint_counts=Counter(a[3] for a in report["tilemap_actions"] if a[2]==1066)
+assert set(members)=={482,687,688,776,980,1138,1139}
+assert paint_counts=={192:398,202:163}, paint_counts
+assert report["coordinate_expression_uses"], "No family1066 position-to-tile calls found"
 out=ROOT/"audit-output/world/step1_coordinate_and_road_source.json"
 out.parent.mkdir(parents=True,exist_ok=True)
 out.write_text(json.dumps(report,indent=2)+"\n")

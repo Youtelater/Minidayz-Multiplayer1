@@ -48,7 +48,7 @@ public:
     // Play the exact source-selected event sound, on a dedicated world voice.
     // The event executor must choose the cue only after original conditions.
     void play_original_world_sound(OriginalWorldSound cue) noexcept;
-    void play_footstep(terrain::FootstepSurface surface) noexcept;
+    void play_footstep(terrain::FootstepSurface surface, std::uint32_t choice) noexcept;
     void start_menu_ambience() noexcept;
     void set_environment_ambience(bool night,bool winter=false) noexcept;
     void stop_environment_ambience() noexcept;
@@ -87,7 +87,6 @@ private:
     unsigned drop_serial_{};
     unsigned gear_drop_serial_{};
     unsigned pickup_serial_{};
-    unsigned step_serial_{};
     std::array<int,4> loaded_step_surfaces_{{-1,-1,-1,-1}};
     int loaded_pickup_variant_{-1};
     int ambient_variant_{-1};

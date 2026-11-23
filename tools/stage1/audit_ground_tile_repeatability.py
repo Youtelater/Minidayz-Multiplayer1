@@ -45,7 +45,7 @@ from collections import Counter,defaultdict
 sys.path.insert(0,str(ROOT/"tools/stage1"))
 from audit_original_world_exhaustive import decode
 project=decode((ROOT/"data.deobfuscated.js").read_bytes())
-terrain_objects={482,687,688,776,980,1138,1139,208,211,418,230}
+terrain_objects={1066,482,687,688,776,980,1138,1139,208,211,418,230}
 count=Counter();samples=defaultdict(list)
 def walk(nodes,parents=()):
     for e in nodes if isinstance(nodes,list) else ():

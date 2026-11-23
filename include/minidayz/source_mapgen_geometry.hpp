@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <initializer_list>
 #include "minidayz/terrain_roads.hpp"
 namespace minidayz::world_source {
 // Root original Game_events UID 3669795404796534 creates Sprite514 on
@@ -43,5 +44,22 @@ constexpr terrain::RoadBand mapgen_road_band(
                        road_width,kMapgenStride}
    : terrain::RoadBand{c.x-kMapgenStride*0.5f,c.y-road_width*0.5f,
                        kMapgenStride,road_width};
+}
+
+struct MapgenCell { int column, row; };
+
+inline MapgenCell mapgen_cell_at(float x,float y) noexcept {
+ return {static_cast<int>(std::floor((y-kMapgenStartY)/kMapgenStride+0.5f)),
+         static_cast<int>(std::floor((x-kMapgenStartX)/kMapgenStride+0.5f))};
+}
+
+inline bool point_on_mapgen_road(std::uint16_t code,MapgenCell cell,
+                                 float x,float y,float width) noexcept {
+ for(bool horizontal:{true,false}){
+  const auto band=mapgen_road_band(code,horizontal,cell.column,cell.row,width);
+  if(x>=band.x && x<band.x+band.width && y>=band.y && y<band.y+band.height)
+   return true;
+ }
+ return false;
 }
 }

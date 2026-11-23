@@ -25,7 +25,7 @@ required={
 }
 # Construct source has choose(*_1,*_2,*_3,*_4) for these
 # material families; hard_ground uses the two authored variants.
-for family in ("run","forest_run","road_run","sand_run","snow_run","swamp_step"):
+for family in ("run","forest_run","road_run","sand_run","snow_run","swamp_step","wood","concrete_run"):
     required.update(f"{family}_{i}.wav" for i in range(1,5))
 available={p.name for p in sounds.glob("*.wav")}
 missing=required-available
@@ -36,7 +36,7 @@ assert not missing, f"Missing original RomFS WAV files: {sorted(missing)}"
 source=(root/"data/stage1/construct_project_parsed.json").read_text(
     encoding="utf-8-sig").lower()
 for family in ("run","forest_run","road_run","sand_run","snow_run",
-               "swamp_step"):
+               "swamp_step","wood","concrete_run"):
     for n in range(1,5):
         assert f'"{family}_{n}"' in source, (family,n)
 for name in ("pick1","pick2","ambient","night_loop",
@@ -54,7 +54,7 @@ for name in required:
 audio=(root/"source/stage2_audio.cpp").read_text(encoding="utf-8")
 scene=(root/"source/main.cpp").read_text(encoding="utf-8")
 surface=(root/"include/minidayz/terrain_surface.hpp").read_text(encoding="utf-8")
-for stem in ("run","road_run","forest_run","sand_run","snow_run","swamp_step"):
+for stem in ("run","road_run","forest_run","sand_run","snow_run","swamp_step","wood","concrete_run"):
     assert re.search(r'prefix = "'+stem+'"',audio),stem
 for symbol in ("play_footstep","play_item_pickup",
                "set_environment_ambience","start_rain_loop"):
@@ -64,7 +64,7 @@ assert 'md_winter_amb.wav' in audio and 'md_winter_night_amb.wav' in audio
 assert 'wave.looping=(which==6 || which==12)' in audio
 assert "FootstepSurface" in surface
 assert "source_variant" in audio
-assert "step_serial_++ % 4u" in audio
+assert "choice >> 30" in audio
 assert "kSourceFootstepSeconds=0.25f" in scene
 assert "kSourceDefaultRainsLevel=2" in scene
 assert "blizzard.wav" in audio

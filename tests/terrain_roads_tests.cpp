@@ -56,5 +56,14 @@ int main() {
         14,true,3,2,junction.x+480.0f,60.0f,60.0f));
     assert(!minidayz::world_source::mapgen_duplicate_crossing_tile(
         13,false,3,2,junction.x+480.0f,60.0f,60.0f));
+    using namespace minidayz::world_source;
+    const auto cell=mapgen_cell_at(c.x,c.y);
+    assert(cell.column==3 && cell.row==2);
+    assert(mapgen_cell_at(c.x+510.0f,c.y).row==3);
+    assert(mapgen_cell_at(c.x,c.y-511.0f).column==2);
+    assert(point_on_mapgen_road(13,cell,c.x-30,c.y+200,60));
+    assert(!point_on_mapgen_road(13,cell,c.x+30,c.y+200,60));
+    assert(point_on_mapgen_road(12,cell,c.x+200,c.y,60));
+    assert(!point_on_mapgen_road(12,cell,c.x+200,c.y-31,60));
     return 0;
 }

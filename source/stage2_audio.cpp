@@ -252,7 +252,7 @@ void Stage2Audio::play(std::size_t which) noexcept {
         const bool source_item_drink=which==13u &&
             loaded_world_cue_==static_cast<int>(OriginalWorldSound::drinkSoda0);
         const float gain=(which==12 && menu_ambience_)?0.31622777f:
-                         source_car_open?0.56234133f:
+                         (source_car_open || (which>=7 && which<=10))?0.56234133f:
                          source_item_drink?0.31622777f:1.0f;
         const Result result=csndPlaySound(channel,flags,clip.sample_rate,
             gain,0.0f,clip.pcm,clip.pcm,static_cast<u32>(clip.bytes));
@@ -271,7 +271,7 @@ void Stage2Audio::play(std::size_t which) noexcept {
         loaded_world_cue_==static_cast<int>(OriginalWorldSound::carTrunkOpen);
     const bool source_item_drink=which==13u &&
         loaded_world_cue_==static_cast<int>(OriginalWorldSound::drinkSoda0);
-    const float gain=source_car_open?0.56234133f:
+    const float gain=(source_car_open || (which>=7 && which<=10))?0.56234133f:
                      source_item_drink?0.31622777f:1.0f;
     mix[0]=gain;
     mix[1]=gain;
@@ -351,7 +351,7 @@ void Stage2Audio::play_backpack_zip() noexcept {
     play(3);
 }
 
-void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
+void Stage2Audio::play_footstep(terrain::FootstepSurface surface, std::uint32_t choice) noexcept {
     if (muted_ || !audio_ready()) return;
     // Original WAV sets are grouped by terrain in the Construct source.
     // Each NDSP footstep voice retains its own variant until the surface
@@ -363,9 +363,11 @@ void Stage2Audio::play_footstep(terrain::FootstepSurface surface) noexcept {
     case terrain::FootstepSurface::sand: prefix = "sand_run"; break;
     case terrain::FootstepSurface::snow: prefix = "snow_run"; break;
     case terrain::FootstepSurface::shallow_water: prefix = "swamp_step"; break;
+    case terrain::FootstepSurface::wood: prefix = "wood"; break;
+    case terrain::FootstepSurface::concrete: prefix = "concrete_run"; break;
     default: prefix = "run"; break;
     }
-    const unsigned variant=step_serial_++ % 4u;
+    const unsigned variant=choice >> 30;
     const std::size_t voice=7u+variant;
     const unsigned source_variant=variant+1u;
     const auto surface_id=static_cast<int>(surface);
@@ -517,7 +519,6 @@ void Stage2Audio::shutdown() noexcept {
     drop_serial_=0;
     gear_drop_serial_=0;
     pickup_serial_=0;
-    step_serial_=0;
     loaded_step_surfaces_={{-1,-1,-1,-1}};
     loaded_pickup_variant_=-1;
     ambient_variant_=-1;

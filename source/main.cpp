@@ -13,6 +13,7 @@
 #include "minidayz/source_interior_container.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
+#include "minidayz/generated/ground_floor_source.hpp"
 #include "minidayz/source_world_sprite_visibility.hpp"
 #include "minidayz/generated/source_roof_foundation_animations.hpp"
 #include "minidayz/source_world_proximity.hpp"
@@ -1379,8 +1380,7 @@ public:
             if (footstep_elapsed_>=kSourceFootstepSeconds) {
                 footstep_elapsed_=std::fmod(
                     footstep_elapsed_,kSourceFootstepSeconds);
-                stage2_audio_.play_footstep(
-                    terrain_surface_at(player_.state().x,player_.state().y));
+                play_source_footsteps(player_.state().x,player_.state().y);
             }
         } else {
             footstep_elapsed_=0.0f;
@@ -4307,6 +4307,23 @@ private:
         return state;
     }
 
+    void play_source_footsteps(float x,float y) noexcept {
+        using minidayz::terrain::FootstepSurface;
+        bool indoors=false, wood=false, concrete=false;
+        for(const auto index:source_house_wall_indices_){
+            const auto* zone=world_.placement(index);
+            if(!zone || !minidayz::world_source::source_player_base_overlaps_wall(*zone,{x,y}))
+                continue;
+            indoors=true;
+            wood |= zone->source_variable_1==1;
+            concrete |= zone->source_variable_1==2;
+        }
+        // Each material is a separate picked-instance subevent of overlap 346.
+        if(wood)stage2_audio_.play_footstep(FootstepSurface::wood,world_.source_random()());
+        if(concrete)stage2_audio_.play_footstep(FootstepSurface::concrete,world_.source_random()());
+        if(!indoors)stage2_audio_.play_footstep(terrain_surface_at(x,y),world_.source_random()());
+    }
+
     minidayz::terrain::FootstepSurface terrain_surface_at(
         float x,float y) const noexcept {
         const auto surface=terrain_collision_.surface_at(x,y);
@@ -4318,11 +4335,12 @@ private:
            bounds.width<=0.0f||bounds.height<=0.0f||x<0.0f||y<0.0f||
            x>=bounds.width||y>=bounds.height)
             return surface;
-        const auto col=static_cast<int>(
-            x*static_cast<float>(grid.width())/bounds.width);
-        const auto row=static_cast<int>(
-            y*static_cast<float>(grid.height())/bounds.height);
-        if(minidayz::terrain::generated_road_cell(grid.at(col,row)))
+        const auto cell=minidayz::world_source::mapgen_cell_at(x,y);
+        if(cell.column>=0 && cell.column<grid.width() &&
+           cell.row>=0 && cell.row<grid.height() &&
+           minidayz::world_source::point_on_mapgen_road(
+               grid.at(cell.column,cell.row),cell,x,y,
+               minidayz::stage1::kOriginalFloorTileSize))
             return minidayz::terrain::FootstepSurface::road;
         // The fifth original ground sheet is snow and has its own
         // snow_run WAV set; don't use ordinary hard-earth footsteps there.

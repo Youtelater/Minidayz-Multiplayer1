@@ -11,7 +11,9 @@ enum class FootstepSurface : std::uint8_t {
     forest,
     sand,
     snow,
-    shallow_water
+    shallow_water,
+    wood,
+    concrete
 };
 
 constexpr FootstepSurface surface_for_detail_object(std::uint16_t object) noexcept {

@@ -776,7 +776,7 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
         military_pick(0,15,3,5);
     }
     if(level>=4){
-        for(const auto bounds: {std::pair<int,int>{0,15},
+        for(const auto& bounds: {std::pair<int,int>{0,15},
                                 std::pair<int,int>{17,32}}){
             military_pick(bounds.first,bounds.second,2,70);
             military_pick(bounds.first,bounds.second,3,5);
