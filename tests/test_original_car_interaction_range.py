@@ -15,7 +15,8 @@ events=[e for sheet,src in project[6] if sheet=="Game_events"
         for e in walk(src) if e[4]==711142196261088]
 assert len(events)==1, "Original car mobile proximity event changed"
 assert any(c[:2]==[-1,51] and len(c)>9 and c[9][1]==[8,3] and
-           c[9][2]==[7,[0,100]] and isinstance(c[9][0],list) and c[9][0][0]==7 and\n    isinstance(c[9][0][1],list) and c[9][0][1][:2]==[19,79]
+           c[9][2]==[7,[0,100]] and isinstance(c[9][0],list) and c[9][0][0]==7 and
+           isinstance(c[9][0][1],list) and c[9][0][1][:2]==[19,79]
            for c in events[0][5])
 main=(ROOT/"source/main.cpp").read_text(encoding="utf-8")
 generator=(ROOT/"tools/stage2/build_original_car_trunk_loot.py").read_text(encoding="utf-8")
