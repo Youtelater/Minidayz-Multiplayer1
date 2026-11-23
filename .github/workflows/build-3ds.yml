@@ -226,6 +226,13 @@ jobs:
             tests/terrain_source_visibility_tests.cpp -o /tmp/minidayz_world_sprite_view
           /tmp/minidayz_world_sprite_view
 
+      - name: Test original road UV clipping for rotated source atlas tiles
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_road_uv_crop_tests.cpp -o /tmp/minidayz_original_road_uv
+          /tmp/minidayz_original_road_uv
+
       - name: Verify source road corridors and crossings
         shell: bash
         run: |
