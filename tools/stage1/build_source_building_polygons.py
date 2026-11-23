@@ -23,7 +23,11 @@ for oid,obj in enumerate(objects):
 # Include original ghost object573 from Building_mode(12) Spawn action.
 # It has a custom frame12 polygon; rectangular picking changes house
 # placement eligibility and violates original sprite sheet coordinates.
-building=set((302,306,311,312,313,321,322,323,324,333,348,349,573,787,951))
+# Original wreck Sprites213/212/487/214/etc SpawnAnotherObject(241) on
+# Sunset_Dawn. Sprite241 is NOT a Solid or Map Buildings static instance,
+# but it still needs original per-frame dimensions/hotspots: without them
+# WorldSystem skips the 0x0 child and every car trunk becomes unsearchable.
+building=set((241,302,306,311,312,313,321,322,323,324,333,348,349,573,787,951))
 for layout in project[5]:
     if layout[0]!="Map":continue
     for layer in layout[6]:
