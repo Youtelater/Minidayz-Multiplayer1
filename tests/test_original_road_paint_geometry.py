@@ -93,6 +93,41 @@ for sh,events in project[6]:
 assert spot_writers,"Original TilemapspotX/Y formulas disappeared"
 for row in spot_writers:
     print("SOURCE_ROAD_ORIGIN",json.dumps(row,separators=(",",":"))[:7000])
+# Inspect every original create_map_location road-category branch,
+# including code14 intersections; don't assume two overlapping native
+# straight strips are all the original authored tile operations.
+road_branch_report=[]
+def find_road_branches(nodes,parents=()):
+    for e in nodes if isinstance(nodes,list) else ():
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+        codes=[]
+        for c in e[5] if isinstance(e[5],list) else ():
+            if isinstance(c,list) and len(c)>9 and c[:2]==[514,71]:
+                for p in c[9]:
+                    if isinstance(p,list) and p[:1]==[7] and len(p)>1 and (
+                        isinstance(p[1],list) and len(p[1])==2 and p[1][0]==0
+                        and p[1][1] in (12,13,14)):
+                        codes.append(p[1][1])
+        if codes and any(p[4]==8627807469654645 for p in parents):
+            paints=[]
+            def visit(branch):
+                for a in branch[6] if isinstance(branch[6],list) else ():
+                    if isinstance(a,list) and len(a)>5 and a[0]==1066 and a[1] in (192,202):
+                        paints.append({"event":branch[4],"uid":a[3],
+                                       "op":a[1],"params":a[5]})
+                if len(branch)>7 and isinstance(branch[7],list):
+                    for child in branch[7]:
+                        if isinstance(child,list) and len(child)>=7 and child[0]==0:
+                            visit(child)
+            visit(e)
+            road_branch_report.append({"codes":codes,"event_uid":e[4],
+                                       "paint_actions":paints})
+        if len(e)>7 and isinstance(e[7],list):
+            find_road_branches(e[7],parents+(e,))
+find_road_branches(dict(project[6])["Game_events"])
+for row in road_branch_report:
+    print("SOURCE_ROAD_BRANCH",json.dumps(row,separators=(",",":"))[:6500])
+
 for r in records:
     print("SOURCE_ROAD_RECT",json.dumps(r,ensure_ascii=False,separators=(",",":"))[:7000])
 print("PASS original 2 straight-road family1066 SetTileRange tile15 actions "
