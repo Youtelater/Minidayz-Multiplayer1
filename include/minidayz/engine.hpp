@@ -28,6 +28,9 @@ public:
  void unload_sheet(std::size_t slot) noexcept; void unload_all() noexcept;
  bool draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx=1.0f,float sy=1.0f,float rotation=0.0f,float depth=0.5f,float opacity=1.0f,float rgb_multiplier=1.0f) noexcept;
  bool draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f,float opacity=1.0f,float rgb_multiplier=1.0f,bool outline=false) noexcept;
+ // Reserve exact source overlay textures until their later Map-layer pass.
+ bool pin_source_sprite_texture(std::uint16_t object,std::uint16_t animation,
+                                std::uint32_t frame) noexcept;
  // Draw the original Construct sprite frame to an exact 3DS rectangle.
  // Keeps source artwork and texture scaling; only the destination changes.
  bool draw_original_ground_floor(float camera_x,float camera_y,float view_width,float view_height,std::uint8_t source_level=0,float second_half_x=1.0e30f) noexcept;
@@ -67,6 +70,7 @@ private:
  SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{}; std::size_t sprite_cache_misses_{}; std::size_t sprite_cache_failed_draws_{};
  std::array<bool,kMaxSheets> sprite_cache_drawn_this_frame_{};
  std::size_t choose_sprite_cache_slot() noexcept;
+ std::size_t acquire_source_sprite_page(const char* sheet) noexcept;
  C2D_Font debug_font_{}; C2D_TextBuf debug_buffer_{}; C2D_Text debug_text_{};
  float camera_x_{},camera_y_{}; bool initialized_{}; bool debug_ready_{};
 };

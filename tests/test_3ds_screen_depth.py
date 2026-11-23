@@ -56,6 +56,18 @@ source_night=main.index("source_world_layer_depth(46,0,0)",world)
 assert source_rain>world and source_night>source_rain, "rain44 must precede night46"
 assert "camera_x, camera_y, view_w, view_h, 0.14f" not in main
 assert "camera_x, camera_y, view_w, view_h, 0.16f" not in main
+# Source overlay texture pages are pinned early, but their actual pixels
+# are submitted at the end on correct original Map layers.
+engine_header=(ROOT/"include/minidayz/engine.hpp").read_text(encoding="utf-8")
+assert "pin_source_sprite_texture(" in engine_header
+assert "acquire_source_sprite_page(" in engine
+assert "sprite_cache_drawn_this_frame_[slot]=true" in engine
+pin=main.index("renderer.pin_source_sprite_texture(")
+world=main.index("            // WorldGrid codes 12/13/14",pin)
+overlay=main.index("source_world_layer_depth(44,0,0)",world)
+assert 0<pin<world<overlay, "reserve overlay atlas before world; draw only afterward"
+assert "renderer.draw_source_sprite_fitted(" in main[world:], "source overlay must still draw"
+
 assert "float depth=0.5f" in (ROOT/"include/minidayz/engine.hpp").read_text(encoding="utf-8")
 assert "kSkinPrevious{18, 145, 154, 191}" in menu
 assert "kNewGameButton=kMenuRows[1]" in menu

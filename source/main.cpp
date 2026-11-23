@@ -2685,6 +2685,23 @@ public:
                                              : C2D_Color32(130, 45, 45, 255));
         }
 
+        // Keep source rain/night atlas pages resident in GPU memory before
+        // world trees and houses exhaust the original 32-page draw budget.
+        // These calls do not submit pixels or alter the source event state;
+        // actual alpha overlays still draw AFTER scenery at Map layers44/46.
+        if (rain_timer_.active()) {
+            (void)renderer.pin_source_sprite_texture(
+                minidayz::stage1::kOriginalRainFadeArt.object,
+                minidayz::stage1::kOriginalRainFadeArt.animation,
+                minidayz::stage1::kOriginalRainFadeArt.frame);
+        }
+        if (!day_night_.day_mode()) {
+            (void)renderer.pin_source_sprite_texture(
+                minidayz::stage1::kOriginalNightOverlayArt.object,
+                minidayz::stage1::kOriginalNightOverlayArt.animation,
+                minidayz::stage1::kOriginalNightOverlayArt.frame);
+        }
+
         if (world_ready_) {
             // WorldGrid codes 12/13/14 are the original procedural road
             // network. They must be drawn before buildings and trees, or

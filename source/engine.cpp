@@ -199,6 +199,27 @@ std::size_t Renderer::choose_sprite_cache_slot() noexcept {
  unload_sheet(candidate);
  return candidate;
 }
+// Share one atlas load path between real sprite draws and critical source
+// overlays that must remain resident until their late Map-layer draw.
+std::size_t Renderer::acquire_source_sprite_page(const char* sheet) noexcept {
+ if(!sheet||!sheet[0])return kMaxSheets;
+ for(std::size_t i=0;i<kMaxSheets;++i){
+  if(sprite_cache_[i].sheet[0]&&
+     std::strcmp(sprite_cache_[i].sheet,sheet)==0 && sheets_[i])
+   return i;
+ }
+ ++sprite_cache_misses_;
+ const auto slot=choose_sprite_cache_slot();
+ if(slot==kMaxSheets){++sprite_cache_failed_draws_;return kMaxSheets;}
+ char path[192]{};
+ const int n=std::snprintf(path,sizeof(path),"romfs:/gfx/%s.t3x",sheet);
+ if(n<=0||static_cast<std::size_t>(n)>=sizeof(path)||
+    !load_sheet(slot,path)){++sprite_cache_failed_draws_;return kMaxSheets;}
+ std::snprintf(sprite_cache_[slot].sheet,sizeof(sprite_cache_[slot].sheet),"%s",sheet);
+ sprite_cache_[slot].slot=slot;
+ return slot;
+}
+
 bool Renderer::draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx,float sy,float rotation,float depth,float opacity,float rgb_multiplier) noexcept {
  if(slot>=kMaxSheets||!sheets_[slot]||image>=C2D_SpriteSheetCount(sheets_[slot])) return false;
  if(!std::isfinite(opacity)||opacity<=0.0f)return true;
@@ -239,20 +260,8 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
   if(n<=0 || static_cast<std::size_t>(n)>=sizeof(effect_sheet))return false;
   sheet=effect_sheet;
  }
- std::size_t slot=kMaxSheets;
- for(std::size_t i=0;i<kMaxSheets;++i){
-  if(sprite_cache_[i].sheet[0]&&std::strcmp(sprite_cache_[i].sheet,sheet)==0){slot=i;break;}
- }
- if(slot==kMaxSheets){
-  ++sprite_cache_misses_;
-  slot=choose_sprite_cache_slot();
-  if(slot==kMaxSheets){++sprite_cache_failed_draws_;return false;} // all 32 pages already in GPU use
-  char path[128];
-  const int n=std::snprintf(path,sizeof(path),"romfs:/gfx/%s.t3x",sheet);
-  if(n<=0||static_cast<std::size_t>(n)>=sizeof(path)||!load_sheet(slot,path)){++sprite_cache_failed_draws_;return false;}
-  std::snprintf(sprite_cache_[slot].sheet,sizeof(sprite_cache_[slot].sheet),"%s",sheet);
-  sprite_cache_[slot].slot=slot;
- }
+ const auto slot=acquire_source_sprite_page(sheet);
+ if(slot==kMaxSheets)return false;
  // Construct Sprite rotates about original active-frame hotspot (X,Y).
  // Uncentered Citro2D rotates about draw origin; keep pivot and culling
  // consistent using the same hotspot-corrected transform.
@@ -261,6 +270,33 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
      selected->origin_x,selected->origin_y,sx,sy,rotation);
  return draw_sprite(slot,selected->image,origin.x,origin.y,
                      sx*selected->texture_scale_x,sy*selected->texture_scale_y,rotation,depth,opacity,rgb_multiplier);
+}
+// Reserve an original source atlas for a later foreground overlay without
+// submitting fake off-screen geometry. A scene with >32 distinct textures
+// otherwise starves its night/rain layer after dense trees/buildings draw.
+bool Renderer::pin_source_sprite_texture(std::uint16_t object,
+                                         std::uint16_t animation,
+                                         std::uint32_t frame) noexcept {
+ const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
+     object,animation,frame};
+ const auto* begin=stage1::kSpriteFrames;
+ const auto* end=begin+stage1::kSpriteFrameCount;
+ const auto* found=std::lower_bound(begin,end,key,
+     [](const stage1::SpriteFrameDef& item,const auto& wanted){
+       return std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{
+           item.object,item.animation,item.frame}<wanted;
+     });
+ if(found==end||found->object!=object||found->animation!=animation||
+    found->frame!=frame){
+  ++sprite_cache_failed_draws_;
+  return false;
+ }
+ const auto slot=acquire_source_sprite_page(found->sheet);
+ if(slot==kMaxSheets)return false;
+ // A pinned sheet must not be recycled before the late Rain44/Night46
+ // draw; begin_frame resets these pins when queued GPU commands finish.
+ sprite_cache_drawn_this_frame_[slot]=true;
+ return true;
 }
 bool Renderer::draw_original_image(const char* original_png,float x,float y,
                                    float width,float height,float depth) noexcept {
