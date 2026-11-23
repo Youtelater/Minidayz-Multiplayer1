@@ -1346,8 +1346,11 @@ public:
         minidayz::stage1::SourcePlayerAltMoveModifiers speed_effects{};
         speed_effects.runner_bonus=static_cast<float>(
             perks_.source_runner_speed_bonus());
-        speed_effects.regen_bonus=perks_.level(
-            minidayz::items::SourcePerk::regen)>0 ? 10.0f : 0.0f;
+        // Original Player stats condition UID189013257553857 is
+        // perk_regen > 1, not perk_regen > 0. The bonus activates only
+        // on the second purchased Regen level (PlayerBase.var5=10).
+        speed_effects.regen_bonus=minidayz::stage1::source_player_regen_speed_bonus(
+            perks_.level(minidayz::items::SourcePerk::regen));
         // Root PlayerBase variable 4 is +15 only while the original
         // 60-second Edrink timer is active (source UID435941792839578).
         source_energy_drink_.update(dt);
