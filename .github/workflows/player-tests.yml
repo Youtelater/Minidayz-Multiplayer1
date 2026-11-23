@@ -160,6 +160,13 @@ jobs:
       - name: Verify original water-pump random bounds and stable native source draw
         run: python3 tests/test_original_world_pump_rng.py
 
+      - name: Test original road UV clipping for rotated source atlas tiles
+        run: |
+          set -euo pipefail
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_road_uv_crop_tests.cpp -o /tmp/minidayz_original_road_uv
+          /tmp/minidayz_original_road_uv
+
       - name: Regress exact 17x2 original Mapgen road geometry
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
