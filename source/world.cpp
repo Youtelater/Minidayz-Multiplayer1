@@ -220,12 +220,24 @@ void generate_source_roads(WorldGrid& grid, std::uint8_t level, std::uint8_t act
 // same seed and MT stream into the same world, so use an explicit unbiased
 // bounded draw instead of a library-defined distribution.
 std::uint32_t source_random_bounded(std::mt19937& rng, std::uint32_t bound) {
+    // Construct choose(a,b,...) selects an indexed literal. Keep the
+    // original native indexed-choice mapping distinct from random(x).
     if (bound <= 1) return 0;
     const std::uint32_t threshold = static_cast<std::uint32_t>(-bound) % bound;
     for (;;) {
         const std::uint32_t value = static_cast<std::uint32_t>(rng());
         if (value >= threshold) return value % bound;
     }
+}
+// Construct System.random expression ID95 produces a real number.
+// Match source/construct_expression.cpp and consume even random(1).
+double source_random_unit(std::mt19937& rng) noexcept {
+    return static_cast<double>(rng())/4294967296.0;
+}
+std::uint32_t source_floor_random_bounded(
+    std::mt19937& rng,std::uint32_t span) noexcept {
+    return static_cast<std::uint32_t>(
+        std::floor(source_random_unit(rng)*static_cast<double>(span)));
 }
 
 template <std::size_t N>
@@ -280,8 +292,8 @@ bool place_poi_count(WorldGrid& grid, std::uint8_t count, std::uint16_t code,
         bool found = false;
         for (int attempt = 0; attempt < max_attempts; ++attempt) {
             // The source stores at check_X - 1 and check_Y - 1.
-            const int x = static_cast<int>(source_random_bounded(rng, x_bound));
-            const int y = min_y + static_cast<int>(source_random_bounded(rng, y_bound)) - 1;
+            const int x = static_cast<int>(source_floor_random_bounded(rng, x_bound));
+            const int y = min_y + static_cast<int>(source_floor_random_bounded(rng, y_bound)) - 1;
             if (!grid.has_empty_3x3(x, y)) continue;
             if (!grid.set(x, y, code)) return false;
             found = true;
@@ -314,7 +326,7 @@ void replace_source_road_markers(
         // A Construct Pick Random Instance with an empty selection does
         // nothing; it does not fabricate a station or reject the world.
         if(eligible.empty())continue;
-        auto& m=markers[eligible[source_random_bounded(
+        auto& m=markers[eligible[source_floor_random_bounded(
             rng,static_cast<std::uint32_t>(eligible.size()))]];
         m.marker_type=m.marker_type==12?from_12:from_13;
     }
@@ -341,7 +353,7 @@ void source_pick_marker(
             matching.push_back(i);
         }
         if(matching.empty())continue; // Original PickRandom empty selection.
-        auto& selected=markers[matching[source_random_bounded(
+        auto& selected=markers[matching[source_floor_random_bounded(
             rng,static_cast<std::uint32_t>(matching.size()))]];
         const auto chosen=source_random_bounded(
             rng,static_cast<std::uint32_t>(outputs.size()));
@@ -695,7 +707,7 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
             matching.push_back(i);
         }
         if(matching.empty())return;
-        auto& m=map_markers_[matching[source_random_bounded(
+        auto& m=map_markers_[matching[source_floor_random_bounded(
             rng_,static_cast<std::uint32_t>(matching.size()))]];
         m.marker_type=choose_marker(chosen_source_types,rng_);
     };
@@ -841,9 +853,9 @@ bool WorldSystem::build_source_scatter_patch(std::size_t marker_index) {
                stage1::kTerrainScatterChoiceCount)return false;
         has_source_rule=true;
         for(std::uint16_t n=0;n<rule.repeat;++n){
-            const std::size_t x=rule.x_min+source_random_bounded(
+            const std::size_t x=rule.x_min+source_floor_random_bounded(
                 rng_,static_cast<std::uint32_t>(rule.x_max-rule.x_min));
-            const std::size_t y=rule.y_min+source_random_bounded(
+            const std::size_t y=rule.y_min+source_floor_random_bounded(
                 rng_,static_cast<std::uint32_t>(rule.y_max-rule.y_min));
             const auto choice=source_random_bounded(
                 rng_,static_cast<std::uint32_t>(rule.tile_count));
@@ -1092,7 +1104,7 @@ bool WorldSystem::generate_source_crash_sites() {
             eligible.push_back(i);
         }
         if(eligible.empty())return map_markers_.size();
-        const auto picked=eligible[source_random_bounded(
+        const auto picked=eligible[source_floor_random_bounded(
             rng_,static_cast<std::uint32_t>(eligible.size()))];
         chosen[picked]=true; // Original Sprite514.var9 = 1
         return picked;
@@ -1292,7 +1304,7 @@ bool WorldSystem::generate_source_radiation_sites(){
             // Source System.PickRandom(514) does not create an object if
             // no marker is selected: it must never invent a radiation zone.
             if(eligible.empty())break;
-            const auto selected=eligible[source_random_bounded(
+            const auto selected=eligible[source_floor_random_bounded(
                 rng_,static_cast<std::uint32_t>(eligible.size()))];
             consumed[selected]=true;
             spawn(selected,world_source::kOriginalRadioactivePickedSpawnAction);
@@ -1336,7 +1348,7 @@ bool WorldSystem::generate_source_road_vehicles(){
         }
         // Source PickRandom(514) with no selected instance creates no car.
         if(eligible.empty())return map_markers_.size();
-        return eligible[source_random_bounded(
+        return eligible[source_floor_random_bounded(
             rng_,static_cast<std::uint32_t>(eligible.size()))];
     };
     const auto spawn=[&](const world_source::OriginalRoadVehicleFrame& spec,
@@ -1382,9 +1394,11 @@ bool WorldSystem::generate_source_road_vehicles(){
         // y+100+random(800), angle choose(90,270).
         const bool vertical=m.marker_type==12;
         const float x=pos.x+(vertical?100.0f:400.0f)+
-            static_cast<float>(source_random_bounded(rng_,vertical?800:200));
+            static_cast<float>(source_random_unit(rng_)*
+                               (vertical?800.0:200.0));
         const float y=pos.y+(vertical?400.0f:100.0f)+
-            static_cast<float>(source_random_bounded(rng_,vertical?200:800));
+            static_cast<float>(source_random_unit(rng_)*
+                               (vertical?200.0:800.0));
         const float angle=vertical?
             (source_random_bounded(rng_,2)==0?180.0f:0.0f):
             (source_random_bounded(rng_,2)==0?90.0f:270.0f);
