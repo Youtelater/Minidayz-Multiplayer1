@@ -14,14 +14,14 @@ target=5249390718058362
 source_roof_chains={}
 
 def walk(nodes,sheet,anc=(),path=(),active=False,depth=0):
-    for i,e in enumerate(nodes):
-        if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+    for i,e in enumerate(nodes if isinstance(nodes,list) else ()):
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
         here=path+(i,)
         on=active or e[4]==target
         if e[4]==target:
             # Include non-ordinary nested event/wrapper nodes; otherwise
             # original opposite-side wall/roof effects are silently missed.
-            group_bytes=json.dumps(e[7],ensure_ascii=False,separators=(",",":"))
+            group_bytes=json.dumps((e[7] if len(e)>7 else []),ensure_ascii=False,separators=(",",":"))
             print("ROOF_RAW_CHILDREN_BYTES",len(group_bytes))
             (ROOT/"audit-output/world").mkdir(parents=True,exist_ok=True)
             (ROOT/"audit-output/world/original_house_raw_subtree.json").write_text(
@@ -36,10 +36,10 @@ def walk(nodes,sheet,anc=(),path=(),active=False,depth=0):
                 "sheet":sheet,"path":here,"uid":e[4],
                 "depth":depth,"parents":anc[-5:],
                 "conditions":e[5],"actions":e[6],
-                "child_count":len(e[7])
+                "child_count":len((e[7] if len(e)>7 else []))
             },ensure_ascii=False,separators=(",",":"))[:10000])
         if on and depth>=20:continue
-        walk(e[7],sheet,anc+(e[4],),here,on,depth+1 if on else 0)
+        walk((e[7] if len(e)>7 else []),sheet,anc+(e[4],),here,on,depth+1 if on else 0)
 for sh in project[6]:
     walk(sh[1],sh[0])
 # Construct Else branches (event type !=0) and nested blocks can contain
@@ -47,16 +47,16 @@ for sh in project[6]:
 # treating the active ordinary-event subset as the full event hierarchy.
 def all_child_actions(nodes,sheet,active=False):
     for e in nodes:
-        if not isinstance(e,list) or len(e)<8:continue
+        if not isinstance(e,list) or len(e)<7:continue
         selected=active or e[4]==target
         if selected:
             print("ROOF_ALL_BRANCH",json.dumps({
                 "sheet":sheet,"kind":e[0],"uid":e[4],
                 "conditions":e[5],"actions":e[6],
-                "children":len(e[7]) if isinstance(e[7],list) else 0},
+                "children":len((e[7] if len(e)>7 else [])) if isinstance((e[7] if len(e)>7 else []),list) else 0},
                 ensure_ascii=False,separators=(",",":"))[:7000])
-        if isinstance(e[7],list):
-            all_child_actions(e[7],sheet,selected)
+        if isinstance((e[7] if len(e)>7 else []),list):
+            all_child_actions((e[7] if len(e)>7 else []),sheet,selected)
 for sh in project[6]:
     all_child_actions(sh[1],sh[0])
 expected=(5249390718058362,3352196201835613,
