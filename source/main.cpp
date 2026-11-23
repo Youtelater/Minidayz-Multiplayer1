@@ -2655,6 +2655,14 @@ public:
         // Keep original pixel-art proportions. The previous arbitrary 0.55x
         // shrink made the survivor and zombies tiny in the 3DS viewport.
         if (npc_ready_) {
+            // Root Map layer29 ("Zeds") is visible; layer49
+            // ("zed_resp") is explicitly HIDDEN. Source Spawn_NPC
+            // creates each real body on Zeds but its eyes/controller
+            // Sprite256 on zed_resp. Only the body artwork belongs in
+            // the 3DS world draw; the controller still exists in NPC
+            // logic and must NOT be painted in front of the zombie.
+            const float npc_body_depth=
+                minidayz::world_source::source_world_layer_depth(29,0,0);
             for (std::size_t i = 0; i < npcs_.count(); ++i) {
                 const auto* npc = npcs_.actor(i);
                 if (!npc || !npc->alive ||
@@ -2665,11 +2673,7 @@ public:
                 // rectangle is not an authored MiniDAYZ character frame.
                 (void)renderer.draw_source_sprite(npc->source_object,
                     npc->animation_index, npc->animation_frame,
-                    npc->x, npc->y, 1.0f, 1.0f);
-                // The original NPC is composed from a skin sprite and a
-                // separate eyes sprite pinned to the same position.
-                (void)renderer.draw_source_sprite(npc->eyes_object, 0, 0,
-                    npc->x, npc->y, 1.0f, 1.0f);
+                    npc->x, npc->y, 1.0f, 1.0f,npc_body_depth);
             }
         }
 
