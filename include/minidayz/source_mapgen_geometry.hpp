@@ -66,6 +66,93 @@ constexpr terrain::RoadBand mapgen_road_band(
                        kMapgenStride,road_width};
 }
 
+// Original Game_events Location loader / Sprite514 code14
+// UID 1239724375006415 does NOT paint two unconditional 17-cell
+// corridors. It executes four separate family1066.SetTileRange(202)
+// commands, each guarded by an OR-block of ten Array518 neighbor codes.
+// Source actions (in source order):
+// 1586657255052358: Array(col-1,row), x+8,y,   size2x9
+// 8618616698851008: Array(col+1,row), x+8,y+8, size2x9
+// 4462790001866082: Array(col,row-1), x,y+8,   size9x2
+// 7247777744760893: Array(col,row+1), x+8,y+8, size9x2.
+// Sprite514.var2 is array column; .var1 is array row (confirmed by
+// SourceLocationEventRuntime::set_mapgen). Preserve the original 10
+// literals, including 103; do not turn this into "any nonzero tile."
+constexpr bool source_road_neighbor_permits_junction(std::uint16_t code) noexcept {
+ switch(code){
+ case 9: case 6: case 4: case 12: case 13:
+ case 14: case 5: case 11: case 15: case 103: return true;
+ default:return false;
+ }
+}
+template<class Grid>
+inline terrain::RoadBand source_grid_road_segment(
+    const Grid& grid,int array_col,int array_row,int segment,
+    float road_width) noexcept {
+ if(!(road_width>0.0f) || segment<0 || segment>=4)return {};
+ const auto code=grid.at(array_col,array_row);
+ // The root code12 / code13 base SetTileRange actions are 17x2 / 2x17.
+ if(code==12) return segment==0?
+     mapgen_road_band(code,false,array_col,array_row,road_width):
+     terrain::RoadBand{};
+ if(code==13) return segment==0?
+     mapgen_road_band(code,true,array_col,array_row,road_width):
+     terrain::RoadBand{};
+ if(code!=14)return {};
+ const std::uint16_t neighbor=
+     segment==0?grid.at(array_col-1,array_row):
+     segment==1?grid.at(array_col+1,array_row):
+     segment==2?grid.at(array_col,array_row-1):
+                grid.at(array_col,array_row+1);
+ if(!source_road_neighbor_permits_junction(neighbor))return {};
+ const auto c=mapgen_hotspot(array_col,array_row);
+ const float tile=road_width/static_cast<float>(kOriginalRoadWidthTiles);
+ const float beginning_x=c.x-8.5f*tile;
+ const float beginning_y=c.y-8.5f*tile;
+ const float half_length=9.0f*tile;
+ switch(segment){
+ case 0: return {beginning_x+8.0f*tile,beginning_y,
+                  road_width,half_length};
+ case 1: return {beginning_x+8.0f*tile,beginning_y+8.0f*tile,
+                  road_width,half_length};
+ case 2: return {beginning_x,beginning_y+8.0f*tile,
+                  half_length,road_width};
+ default:return {beginning_x+8.0f*tile,beginning_y+8.0f*tile,
+                  half_length,road_width};
+ }
+}
+// Two valid source actions can repaint the same central road tile.
+// In the 3DS rasterizer equal-depth overlapping submissions flicker
+// while the player walks. Draw each original tile once in source order.
+template<class Grid>
+inline bool source_grid_road_tile_was_drawn(
+    const Grid& grid,int array_col,int array_row,int segment,
+    float tile_x,float tile_y,float tile_size,float road_width) noexcept {
+ if(segment<=0 || !(tile_size>0.0f))return false;
+ for(int earlier=0;earlier<segment;++earlier){
+  const auto band=source_grid_road_segment(
+      grid,array_col,array_row,earlier,road_width);
+  if(!band.valid())continue;
+  constexpr float epsilon=0.01f;
+  if(tile_x>=band.x-epsilon && tile_y>=band.y-epsilon &&
+     tile_x+tile_size<=band.x+band.width+epsilon &&
+     tile_y+tile_size<=band.y+band.height+epsilon)return true;
+ }
+ return false;
+}
+template<class Grid>
+inline bool source_grid_road_contains(
+    const Grid& grid,int array_col,int array_row,
+    float x,float y,float road_width) noexcept {
+ for(int segment=0;segment<4;++segment){
+  const auto band=source_grid_road_segment(
+      grid,array_col,array_row,segment,road_width);
+  if(band.valid() && x>=band.x && x<band.x+band.width &&
+     y>=band.y && y<band.y+band.height)return true;
+ }
+ return false;
+}
+
 struct MapgenCell { int column, row; };
 
 inline MapgenCell mapgen_cell_at(float x,float y) noexcept {
