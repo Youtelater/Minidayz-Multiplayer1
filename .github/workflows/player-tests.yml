@@ -122,6 +122,12 @@ jobs:
       - name: Verify original map-array random bounds against root Construct
         run: python3 tests/test_original_world_poi_bounds.py
 
+      - name: Validate original map location tap labels and transposed coordinates
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_map_overlay_tests.cpp -o source_map_overlay_tests
+          ./source_map_overlay_tests
+
       - name: Compile World Regression Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
