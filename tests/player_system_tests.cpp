@@ -3,6 +3,7 @@
 #include "minidayz/source_player_altmove.hpp"
 #include "minidayz/source_equipment_animation.hpp"
 #include "minidayz/source_energy_drink_boost.hpp"
+#include "minidayz/generated/source_dead_skin_art.hpp"
 #include "minidayz/source_player_base_geometry.hpp"
 #include "minidayz/generated/stage1_data.hpp"
 #include "minidayz/terrain_source_collision.hpp"
@@ -25,6 +26,29 @@ int main() {
     for(std::uint16_t i=31;i<41;++i)
         assert(source_player_layer_depth(i) <
                source_player_layer_depth(i+1));
+
+    // Source death event 960074927103799 spawns original Sprite813
+    // into Map/items_on_ground18 and picks id_# using the survivor
+    // skin source variable, not a guessed custom corpse rectangle.
+    assert(kSourceDeadSkinCount==20);
+    assert(std::strcmp(source_dead_skin_animation(679),"id_2")==0);
+    assert(std::strcmp(source_dead_skin_animation(742),"id_1")==0);
+    assert(std::strcmp(source_dead_skin_animation(1009),"id_20")==0);
+    assert(source_dead_skin_animation(1262)==nullptr); // no original id_21
+    for(const auto& row:kSourceDeadSkins) {
+        bool found=false;
+        for(const auto& animation:kAnimations)
+            if(animation.object==813 &&
+               std::strcmp(animation.name,row.animation)==0) {
+                assert(animation.frames==6 && animation.speed==1.0f);
+                assert(!animation.loop);
+                found=true;
+                break;
+            }
+        assert(found && "Missing actual original dead skin animation");
+        assert(source_equipment_animation_frame(813,row.animation,2.1f)==2);
+        assert(source_equipment_animation_frame(813,row.animation,20.0f)==5);
+    }
 
     // Original wearable sprites run with their OWN animation speed, loop
     // flag and number of frames. They must not reuse the skin's current
