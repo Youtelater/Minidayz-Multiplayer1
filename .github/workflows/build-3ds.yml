@@ -38,6 +38,7 @@ jobs:
           python3 tools/stage2/build_original_initial_building_loot.py
           python3 tools/stage2/build_original_car_trunk_loot.py
           python3 tools/stage1/build_source_building_polygons.py
+          python3 tools/stage1/build_source_solid_tile_polygons.py
           python3 tools/stage1/build_source_roof_family_points.py
 
       # Reuse generated 3DS textures and sprite atlases across workflow runs.
@@ -190,6 +191,16 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
             tests/source_building_polygon_tests.cpp -o /tmp/minidayz_building_collision
           /tmp/minidayz_building_collision
+
+      - name: Verify source 208 and 211 Tilemap Solid polygons and flip gaps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/build_source_solid_tile_polygons.py --check
+          g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_tilemap_solid_collision_tests.cpp \
+            -o /tmp/minidayz_source_tilemap_solid
+          /tmp/minidayz_source_tilemap_solid
 
       - name: Verify exact original 348 closed door Solid polygon
         shell: bash
