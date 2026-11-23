@@ -127,6 +127,7 @@ stage1-assets:
 	@python3 tools/stage1/build_sprite_catalog.py
 	@python3 tools/stage1/build_menu_button_frame.py
 	@python3 tools/stage1/build_player_skin_catalog.py
+	@python3 tools/stage1/build_player_hands_source.py
 	@python3 tools/stage1/build_player_spawn_source.py
 	@python3 tools/stage1/build_player_equipment_visuals.py
 	@python3 tools/stage1/build_mp_quick_pistol_catalog.py
