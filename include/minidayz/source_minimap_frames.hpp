@@ -29,8 +29,11 @@ constexpr bool original_minimap_marker_is_visible(
 // Default object519 animation0/frame0. All nondefault values below come
 // from the original 42 ordered SetFrame actions, INCLUDING two road
 // branches where an adjacent original Array518 POI overrides the road art.
+// Template preserves the native WorldGrid reader while allowing a
+// header-only source Array518 fixture for fast map regressions.
+template <typename Grid>
 inline std::uint8_t original_minimap_frame(
-    const WorldGrid& grid,const WorldMapMarker& marker) noexcept {
+    const Grid& grid,const WorldMapMarker& marker) noexcept {
     const int x=marker.cell_x,y=marker.cell_y;
     switch(marker.marker_type) {
     case 50: return 19;

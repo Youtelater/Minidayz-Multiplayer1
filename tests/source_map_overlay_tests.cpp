@@ -3,6 +3,19 @@
 #include <cassert>
 #include <cstring>
 #include <cmath>
+// Standalone native test: source Array518 out-of-bounds reads are zero.
+struct OriginalArrayGridFixture {
+    std::uint16_t cells[16*16]{};
+    std::uint16_t at(int x,int y) const noexcept {
+        return x>=0&&x<16&&y>=0&&y<16
+            ?cells[y*16+x]:0;
+    }
+    bool set(int x,int y,std::uint16_t value) noexcept {
+        if(x<0||x>=16||y<0||y>=16)return false;
+        cells[y*16+x]=value;
+        return true;
+    }
+};
 using minidayz::map_overlay::CellKind;
 using namespace minidayz::map_overlay;
 
@@ -25,8 +38,7 @@ int main(){
     // Original Sprite519 minimap frames are chosen from the final
     // Sprite514 type, not raw road-only symbols. All 42 source actions
     // are covered by the root extraction audit below.
-    minidayz::WorldGrid grid;
-    assert(grid.resize(16,16));
+    OriginalArrayGridFixture grid{};
     const auto check=[&](std::uint16_t code,std::uint8_t frame){
         const minidayz::WorldMapMarker m{4,5,0,code};
         assert(original_minimap_frame(grid,m)==frame);

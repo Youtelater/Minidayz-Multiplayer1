@@ -1446,13 +1446,17 @@ public:
                     return f;
             return end;
         }();
+        bool player_map_sprite_drawn=false;
         if(player_mark_frame!=minidayz::stage1::kSpriteFrames+
                              minidayz::stage1::kSpriteFrameCount)
-            (void)renderer.draw_source_sprite_fitted(
+            player_map_sprite_drawn=renderer.draw_source_sprite_fitted(
                 player_mark_frame->object,player_mark_frame->animation,
                 player_mark_frame->frame,
                 point.x-6.0f,point.y-6.0f,12.0f,12.0f,0.77f);
-        renderer.draw_text("X",point.x-4.0f,point.y-9.0f,0.43f);
+        // An extra text X over the original survivor marker obscured
+        // the sprite. Draw fallback text only if the source art failed.
+        if(!player_map_sprite_drawn)
+            renderer.draw_text("X",point.x-4.0f,point.y-9.0f,0.43f);
         const auto* selected_name=minidayz::map_overlay::location_name(
             map_selected_kind_);
         if(selected_name){
