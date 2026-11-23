@@ -2594,7 +2594,9 @@ public:
                 visible_slot<visible_world_placements_.size();++visible_slot) {
                 const auto i=visible_world_placements_[visible_slot];
                 const auto* placement=world_.placement(i);
-                if(!placement || placement->layer>=44)continue;
+                if(!placement ||
+                   (placement->layer>=44 && placement->object!=1126))
+                    continue;
                 if(visible_slot>=layer_end){
                     layer_begin=visible_slot;
                     layer_end=visible_slot+1;
@@ -2605,10 +2607,10 @@ public:
                         ++layer_end;
                     }
                 }
-                // The original Map layers 44+ contain Rain/NVG/night,
-                // browser/mobile GUI controls, and event triggers. These
-                // cannot be painted as static world sprites on the 3DS:
-                // weather has separate runtime state and UI lives below.
+                // Root Rain layer44 holds original Sprite1126 radioactive
+                // world zones from function wuranqu. Render that one real
+                // source world overlay; other 44+ weather/NVG/browser GUI
+                // objects remain runtime-controlled, not static scenery.
                 // Original source Tilemaps, Arrays and invisible trigger
                 // objects must not be drawn as bogus marker rectangles.
                 const auto* source_object =

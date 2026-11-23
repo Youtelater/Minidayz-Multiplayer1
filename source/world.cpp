@@ -14,6 +14,7 @@
 #include "minidayz/source_interior_container.hpp"
 #include "minidayz/source_crash_site_geometry.hpp"
 #include "minidayz/source_road_vehicle_geometry.hpp"
+#include "minidayz/source_radiation_zone.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -522,7 +523,8 @@ bool WorldSystem::advance_source_generation() {
     case 2: ok = build_map_markers(generation_level_, seed_); break;
     case 3: ok = !generation_is_map_ || generate_source_locations(generation_level_); break;
     case 4: ok = !generation_is_map_ ||
-        (generate_source_crash_sites() && load_source_bunker_spawns(false)); break;
+        (generate_source_crash_sites() && load_source_bunker_spawns(false)
+            && generate_source_radiation_sites()); break;
     case 5: ok = !generation_is_map_ ||
         (load_source_bridge_elements() && generate_source_road_vehicles()); break;
     default: return false;
@@ -1162,6 +1164,90 @@ bool WorldSystem::generate_source_crash_sites() {
             obstacle.source_variable_0=model.runtime_uid;
             placements_[model_idx].linked_runtime_uid=obstacle.runtime_uid;
         }
+    }
+    return true;
+}
+
+// Root function "wuranqu" (UID316200290612230) follows
+// generate_helicrashes and generate_bunker_entrance, BEFORE road vehicles.
+// It spawns original Sprite1126 "duqu" zones on visible Rain layer44.
+// Sprite514.var0 *= 1000 temporarily excludes a picked marker from later
+// PickRandom calls. The final source event divides the marker by 1000.
+// Keep original marker types unchanged after this function, including
+// the minimap already generated BEFORE this source function.
+bool WorldSystem::generate_source_radiation_sites(){
+    if(!initialized_ || !generation_is_map_ || map_markers_.empty())
+        return false;
+    const auto* layout=stage1::find_layout("Map");
+    if(!layout)return false;
+    const auto layout_index=static_cast<std::uint16_t>(
+        layout-stage1::kLayoutTable);
+    const auto rain=find_layer_index_by_name(layout_index,"Rain");
+    if(rain==0xffff)return false;
+    const auto spawn=[&](std::size_t marker_index,
+                         std::uint64_t action_uid) {
+        const auto& marker=map_markers_[marker_index];
+        const auto point=world_source::mapgen_hotspot(
+            marker.cell_x,marker.cell_y);
+        const auto placed_index=placements_.size();
+        // Original Construct permits an object hotspot just outside the
+        // layout: its 2000px radiation art still overlaps the playfield.
+        // Never silently discard edge zones by bounds.contains(hotspot).
+        placements_.push_back({rain,world_source::kOriginalRadioactiveSprite,
+            action_uid,
+            point.x+world_source::kOriginalRadioactiveOffsetX,
+            point.y+world_source::kOriginalRadioactiveOffsetY,0.0f,
+            world_source::kOriginalRadioactiveWidth,
+            world_source::kOriginalRadioactiveHeight,
+            0.0f,1.0f,1.0f,
+            world_source::kOriginalRadioactiveOriginX,
+            world_source::kOriginalRadioactiveOriginY,
+            0,world_source::kOriginalRadioactiveFrame});
+        auto& zone=placements_.back();
+        zone.runtime_uid=(std::uint64_t{1}<<63) |
+            static_cast<std::uint64_t>(placed_index+1);
+        zone.instance_id=placed_index+1;
+        // Mapgen514 is a transient original source marker, not an
+        // invented physical Sprite514. Retain its exact Array index.
+        zone.source_variable_0=static_cast<std::uint64_t>(marker_index+1);
+    };
+    // Root Event849848542281325 picks EACH original military subtype70,
+    // independently of the repeated radiation-site selections.
+    for(std::size_t i=0;i<map_markers_.size();++i)
+        if(map_markers_[i].marker_type==70)
+            spawn(i,world_source::kOriginalRadioactiveMilitarySpawnAction);
+
+    const int count=world_source::original_radioactive_site_quota(
+        generation_level_);
+    std::vector<bool> consumed(map_markers_.size(),false);
+    const auto add_source_zone=[&](int min_row,int max_row) {
+        for(int repeat=0;repeat<count;++repeat){
+            std::vector<std::size_t> eligible;
+            for(std::size_t i=0;i<map_markers_.size();++i){
+                const auto& marker=map_markers_[i];
+                if(consumed[i]||marker.cell_y<min_row||
+                   marker.cell_y>max_row||
+                   !world_source::original_radioactive_site_type(
+                       marker.marker_type))continue;
+                eligible.push_back(i);
+            }
+            // Source System.PickRandom(514) does not create an object if
+            // no marker is selected: it must never invent a radiation zone.
+            if(eligible.empty())break;
+            const auto selected=eligible[source_random_bounded(
+                rng_,static_cast<std::uint32_t>(eligible.size()))];
+            consumed[selected]=true;
+            spawn(selected,world_source::kOriginalRadioactivePickedSpawnAction);
+        }
+    };
+    if(generation_level_==3)
+        add_source_zone(0,14); // Source Repeat(2), Sprite514.var1<15.
+    else if(generation_level_>=4){
+        // Source default perk_dao != 7: Repeat(3) in EACH half. The
+        // separate perk_dao==7 Repeat(6) branch must be wired when
+        // character perk state is passed through world creation.
+        add_source_zone(0,14);
+        add_source_zone(17,32);
     }
     return true;
 }

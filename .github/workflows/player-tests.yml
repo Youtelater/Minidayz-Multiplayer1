@@ -129,6 +129,9 @@ jobs:
       - name: Validate original roadside placement after road-to-marker conversion
         run: python3 tests/test_original_world_roadside_dispatch.py
 
+      - name: Verify root original wuranqu radioactive zone spawn events
+        run: python3 tests/test_original_radiation_source.py
+
       - name: Check source UAZ Volga Hammer and KA road vehicle spawn events
         run: python3 tests/test_original_road_vehicle_spawn_source.py
 

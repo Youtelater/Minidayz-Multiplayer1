@@ -21,6 +21,7 @@
 #include "minidayz/source_tree_visibility_collision.hpp"
 #include "minidayz/source_crash_site_geometry.hpp"
 #include "minidayz/source_road_vehicle_geometry.hpp"
+#include "minidayz/source_radiation_zone.hpp"
 #include "minidayz/npc_system.hpp"
 
 #include <cassert>
@@ -825,6 +826,77 @@ void test_original_car_trunk_one_time_search() {
     assert(restored.count()==1);
 }
 
+
+void test_original_radiation_site_world_generation(){
+    // Original function wuranqu runs after mapgen_toelements/minimap,
+    // helicopter crashes and bunker creation. Source Sprite1126 is
+    // visible Rain layer44 (2000px). Type70 overlays are independent
+    // of picked source toxic zones.
+    for(std::uint8_t level=0;level<6;++level){
+        minidayz::WorldSystem world;
+        assert(world.generate_from_source(
+            0x10203579u+static_cast<std::uint32_t>(level)*79u,
+            "Map",level));
+        const auto* layout=minidayz::stage1::find_layout("Map");
+        assert(layout);
+        const auto layout_index=static_cast<std::uint16_t>(
+            layout-minidayz::stage1::kLayoutTable);
+        std::size_t military=0,picked=0;
+        minidayz::terrain::VisibleSourcePlacementIndex visible;
+        visible.rebuild(world);
+        for(std::size_t i=0;i<world.placement_count();++i){
+            const auto* zone=world.placement(i);
+            if(!zone || zone->object!=
+                minidayz::world_source::kOriginalRadioactiveSprite)continue;
+            if(zone->source_uid!=
+                minidayz::world_source::kOriginalRadioactiveMilitarySpawnAction &&
+               zone->source_uid!=
+                minidayz::world_source::kOriginalRadioactivePickedSpawnAction)
+                continue; // Source authored layout marker is different.
+            const auto* layer=minidayz::stage1::find_layer(
+                layout_index,zone->layer);
+            assert(layer&&std::strcmp(layer->name,"Rain")==0);
+            assert(zone->width==2000.0f&&zone->height==2000.0f);
+            assert(zone->origin_x==0.5f&&zone->origin_y==0.5f);
+            assert(zone->source_frame==0);
+            assert(zone->source_variable_0>0 &&
+                   zone->source_variable_0<=world.map_marker_count());
+            const auto* marker=world.map_marker(
+                static_cast<std::size_t>(zone->source_variable_0-1));
+            assert(marker);
+            const auto p=minidayz::world_source::mapgen_hotspot(
+                marker->cell_x,marker->cell_y);
+            assert(zone->x==p.x-500.0f&&zone->y==p.y-500.0f);
+            std::vector<std::uint32_t> nearby;
+            visible.query(zone->x,zone->y,400.0f,240.0f,nearby);
+            assert(std::find(nearby.begin(),nearby.end(),
+                static_cast<std::uint32_t>(i))!=nearby.end());
+            if(zone->source_uid==
+                minidayz::world_source::kOriginalRadioactiveMilitarySpawnAction){
+                assert(marker->marker_type==70);
+                ++military;
+            }else{
+                assert(minidayz::world_source::original_radioactive_site_type(
+                    marker->marker_type));
+                ++picked;
+            }
+        }
+        std::size_t military_markers=0;
+        for(std::size_t i=0;i<world.map_marker_count();++i)
+            if(world.map_marker(i)->marker_type==70)
+                ++military_markers;
+        assert(military==military_markers);
+        const auto per_half=minidayz::world_source::
+            original_radioactive_site_quota(level);
+        const auto half_count=level>=4?2u:1u;
+        assert(picked<=static_cast<std::size_t>(per_half)*half_count);
+        assert(picked==(level<=2?0u:
+                         static_cast<std::size_t>(per_half)*half_count));
+        std::fprintf(stderr,
+            "SOURCE RADIOACTIVE ZONES level=%u military=%zu picked=%zu\\n",
+            level,military,picked);
+    }
+}
 
 void test_original_source_road_vehicle_placement() {
     // Car_respawn_uaz/volga each PickRandom a first-half road12/13,
@@ -2513,6 +2585,7 @@ int main() {
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
     test_original_car_trunk_one_time_search();
+    test_original_radiation_site_world_generation();
     test_original_source_road_vehicle_placement();
     test_original_crash_site_world_generation();
     test_original_source_settlement_building_groups();
