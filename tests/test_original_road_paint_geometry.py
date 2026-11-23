@@ -43,6 +43,34 @@ def walk(nodes,sheet,parents=(),path=()):
 for sheet,events in project[6]:
     walk(events,sheet)
 assert len(records)==2 and {r["action_uid"] for r in records}==uids
+# Root Game_events authored actual 17x2 / 2x17 rectangles, not
+# the old one-tile-width native visual substitute. Guard the exact
+# original Tilemapspot +8 offset and both dimensions.
+source_rects={
+    358622687629146:[
+        [0,[23,"TilemapspotX"]],
+        [0,[4,[23,"TilemapspotY"],[0,8]]],
+        [0,[0,17]],
+        [0,[0,2]],
+    ],
+    532767105758898:[
+        [0,[4,[23,"TilemapspotX"],[0,8]]],
+        [0,[23,"TilemapspotY"]],
+        [0,[0,2]],
+        [0,[0,17]],
+    ],
+}
+for r in records:
+    assert r["paint_rect_ast"]==source_rects[r["action_uid"]], (
+        "Original source road painting rectangle/offset changed")
+native=(ROOT/"include/minidayz/source_mapgen_geometry.hpp").read_text(encoding="utf-8")
+renderer=(ROOT/"source/engine.cpp").read_text(encoding="utf-8")
+scene=(ROOT/"source/main.cpp").read_text(encoding="utf-8")
+assert "kOriginalRoadLengthTiles=17" in native
+assert "kOriginalRoadWidthTiles=2" in native
+assert "source_road_painted_width(" in renderer
+assert "source_road_painted_width(" in scene
+
 # Resolve the original tile-space origin before changing the native
 # corridor world coordinates. The source uses TilemapspotX/Y to anchor
 # the authored 17x2 and 2x17 paint rectangles.
