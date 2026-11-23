@@ -1,5 +1,6 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/generated/terrain_scatter_source.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
 
@@ -21,22 +22,21 @@ bool Renderer::draw_source_procedural_environment(
  if(!world.generation_complete()||world.map_marker_count()==0)return true;
  if(view_width<=0.0f||view_height<=0.0f)return false;
  const auto& grid=world.grid();
- const auto& bounds=world.bounds();
- if(!grid.width()||!grid.height()||bounds.width<=0.0f||bounds.height<=0.0f)
-  return false;
+ if(!grid.width()||!grid.height())return false;
  constexpr float kSourceTile=30.0f;
  constexpr float kHalfPatch=500.0f;
  constexpr int kPatchCells=33;
  constexpr std::uint16_t kEmpty=0xffffu;
- const float cell_w=bounds.width/grid.width();
- const float cell_h=bounds.height/grid.height();
  const auto view_right=camera_x+view_width;
  const auto view_bottom=camera_y+view_height;
  for(std::size_t index=0;index<world.map_marker_count();++index){
   const WorldMapMarker* marker=world.map_marker(index);
   if(!marker)continue;
-  const float left=(marker->cell_x+0.5f)*cell_w-kHalfPatch;
-  const float top=(marker->cell_y+0.5f)*cell_h-kHalfPatch;
+  // Original Tilemap230 patch is Sprite514 hotspot minus 500px.
+  const auto source_hotspot=world_source::mapgen_hotspot(
+      marker->cell_x,marker->cell_y);
+  const float left=source_hotspot.x-kHalfPatch;
+  const float top=source_hotspot.y-kHalfPatch;
   if(left>=view_right||top>=view_bottom||
      left+kPatchCells*kSourceTile<=camera_x||
      top+kPatchCells*kSourceTile<=camera_y)continue;
