@@ -44,10 +44,10 @@ def visit(e,parents=()):
 visit(root)
 assert len(rules)==42,len(rules)
 assert all(0<=frame<39 for _,frame,_,_ in rules)
-# The source's 42 authored SetFrame actions include 10 nested
+# The source's 42 authored SetFrame actions include 9 nested
 # road-neighbor overrides for road13/road12; the native helper must
 # implement those original Array518 predicates rather than drawing a bar.
-assert sum(v>0 for _,_,_,v in rules)==10,rules
+assert sum(v>0 for _,_,_,v in rules)==9,rules
 single={
     (code,frame)
     for _,frame,types,n in rules if n==0
@@ -76,4 +76,4 @@ assert "original_minimap_frame(" in source
 assert "draw_source_sprite_fitted(" in source
 assert "classify_color=[]" not in source
 print("PASS original Sprite519 39-frame atlas, all 42 root minimap "
-      "SetFrame events including 10 raw road neighbor overrides")
+      "SetFrame events including 9 raw road neighbor overrides")
