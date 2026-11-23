@@ -91,6 +91,9 @@ def car_branch(record):
  ancestor=set(record["parent_uids"])
  return bool({7711324247664447,1792234758292318}&ancestor)
 stats=Counter();sheets=Counter();car_entries=[];unverified_by_group=Counter()
+# Preserve zero-count audit categories in the manifest: an empty verified
+# register is an expected INCOMPLETE port, not a failed source extraction.
+stats["reviewed_event_mappings"]=0
 with (out/"every_original_event.jsonl").open("w",encoding="utf-8") as dest:
  for sheet_idx,(sheet_name,events) in enumerate(original[6]):
   for row in traverse(events,sheet_idx,sheet_name):
