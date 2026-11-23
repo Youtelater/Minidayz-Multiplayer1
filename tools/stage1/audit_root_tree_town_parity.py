@@ -92,3 +92,18 @@ for sheet,events in p[6]:
    if a[0] in (525,-1) and a[1] not in (199,41,94):
     print("ROOT_SETTLEMENT_OTHER_ACTION",event[4],node_uid,
           json.dumps(a,separators=(",",":"),ensure_ascii=False)[:1400])
+
+print("ROOT_CAR_WRECK_NESTED_SPAWNS")
+for sheet,events in p[6]:
+ if sheet!="Game_events":continue
+ for e,anc in walk(events):
+  actions=e[6] if isinstance(e[6],list) else []
+  # Original source car wrecks created in category6 (source rules 6).
+  creates=[a for a in actions if isinstance(a,list) and len(a)>5 and a[1]==73
+           and a[0] in (213,212,487,214,238,239,237,190,859,860,861,483,485,486,484,508)]
+  if not creates:continue
+  if 4174243855126541 in anc or e[4] in (9828089533960500,6324270155335772,7948259058840941):
+   print("ROOT_CAR_CREATE_ACTIONS",e[4],"parents",anc[-5:],
+         "conds",json.dumps(e[5],separators=(",",":"))[:2100],
+         "acts",json.dumps(creates,separators=(",",":"))[:4200],
+         "children",len(e[7]) if len(e)>7 and isinstance(e[7],list) else 0)
