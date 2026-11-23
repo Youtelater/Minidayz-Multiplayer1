@@ -345,6 +345,41 @@ int main() {
     assert(loaded_tents.tent(0)->items[0].condition == 75);
     assert(loaded_tents.tent(0)->condition == 83);
 
+    // Root item_activate(63) starts Edrink(60s), setting PlayerBase var4
+    // to +15. A Continue during that timer must restore the remaining
+    // source timer, not silently reset the speed modifier or grant 60s.
+    stage1::SourceEnergyDrinkBoost source_energy{};
+    assert(!source_energy.on_successful_item_use(63,false,false));
+    assert(source_energy.on_successful_item_use(63,false,true));
+    source_energy.update(12.5f);
+    assert(source_energy.remaining()==47.5f);
+    assert(write_saved_game_to_paths(46, player, inventory, equipment,
+        ground, tents, kFile, kTemp, nullptr, nullptr, nullptr, nullptr,
+        nullptr, nullptr, nullptr, 0, &source_energy));
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==kSaveVersion && restored.seed==46);
+    assert(restored.source_energy_seconds==47.5f);
+    stage1::SourceEnergyDrinkBoost resumed_energy{};
+    assert(resumed_energy.restore(restored.source_energy_seconds));
+    assert(resumed_energy.remaining()==47.5f &&
+           resumed_energy.bonus()==15.0f);
+    resumed_energy.update(47.5f);
+    assert(resumed_energy.bonus()==0.0f);
+
+    // Read the exact old v21 file prefix, without a timer field, through
+    // the real migration code. Old saves remain playable with no bonus.
+    SavedGame old_source_save=restored;
+    old_source_save.version=21u;
+    std::FILE* previous_file=std::fopen(kFile,"wb");
+    assert(previous_file!=nullptr);
+    assert(std::fwrite(&old_source_save,1,
+        offsetof(SavedGame,source_energy_seconds),previous_file)==
+        offsetof(SavedGame,source_energy_seconds));
+    assert(std::fclose(previous_file)==0);
+    assert(load_saved_game_from_path(restored,kFile));
+    assert(restored.version==21u && restored.seed==46);
+    assert(restored.source_energy_seconds==0.0f);
+
     // Delayed original crafting persists through Continue, including subsecond time.
     PendingCraftSnapshot craft{0, 2.25f};
     assert(write_saved_game_to_paths(43, player, inventory, equipment, ground,
