@@ -1,4 +1,5 @@
 #pragma once
+#include "minidayz/generated/world_source_data.hpp"
 #include <cstdint>
 #include <cstring>
 
@@ -38,13 +39,32 @@ constexpr bool source_world_logic_marker_not_art(
 // the original Sprite241 layer and imagepoint from data.deobfuscated.js.
 // Sprite1126 is original world radiation art on Rain layer44.
 inline bool source_world_high_layer_gameplay_art(
-    std::uint16_t object,const char* source_layer_name) noexcept {
+    std::uint16_t object,const char* source_layer_name,
+    std::uint64_t source_creation_event_uid=0) noexcept {
     // Source Map layer indices can change when the authoritative root
     // Construct export regenerates stage1_data.hpp. Select by the actual
     // original layer NAME, not by a stale cached numeric index.
-    return source_layer_name &&
-           ((object==241 && std::strcmp(source_layer_name,"Sunset_Dawn")==0) ||
-            (object==1126 && std::strcmp(source_layer_name,"Rain")==0));
+    if (!source_layer_name) return false;
+    if ((object==241 && std::strcmp(source_layer_name,"Sunset_Dawn")==0) ||
+        (object==1126 && std::strcmp(source_layer_name,"Rain")==0))
+        return true;
+
+    // The original create_map_element source also creates world sprites
+    // on high event layers, e.g. object1417/1419 on "night" and 1420 on
+    // "Rain". An old two-object allowlist silently hid those *original*
+    // images even though their Sprite and frame were generated correctly.
+    // Admit only an exact object + layer + source creation-event match from
+    // ROOT data.deobfuscated.js; do NOT expose unrelated browser UI,
+    // weather templates, hidden logic markers or unverified sprites.
+    if (!source_creation_event_uid ||
+        source_world_logic_marker_not_art(object))
+        return false;
+    for (const auto& original : stage1::kWorldElementSpawnSource)
+        if (original.uid==source_creation_event_uid &&
+            original.object==object &&
+            std::strcmp(original.layer_name,source_layer_name)==0)
+            return true;
+    return false;
 }
 
 // build_ghost-sheet0 (571) and build_ghost_obstacle-sheet0/1 (573)
