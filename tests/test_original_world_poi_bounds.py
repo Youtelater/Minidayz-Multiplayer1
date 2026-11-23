@@ -32,6 +32,11 @@ assert "source_floor_random_bounded(rng, y_bound)" in source
 expr=(ROOT/"source/construct_expression.cpp").read_text()
 assert "static_cast<double>((*state->rng)()) / 4294967296.0" in expr
 assert "static_cast<double>(rng())/4294967296.0" in source
+# Original minified c2runtime.js k.prototype.Fv uses
+# floor(Math.random()*(arguments.length-1)), *not* native modulo.
+runtime=(ROOT/"c2runtime.js").read_text()
+assert "Fv=function(a){var b=ua(Math.random()*(arguments.length-1))" in runtime
+assert "return source_floor_random_bounded(rng,bound);" in source
 assert source.count("max_y - min_y + 1")>=1
 assert "const int first_max_y = static_cast<int>(profile.map_size_y) - 1;" in source
 assert "const int second_max_y = static_cast<int>(profile.grid_height) - 1;" in source

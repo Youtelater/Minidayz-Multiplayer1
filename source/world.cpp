@@ -215,29 +215,23 @@ void generate_source_roads(WorldGrid& grid, std::uint8_t level, std::uint8_t act
     if (level >= 4) add_vertical_roads(17);
 }
 
-// std::uniform_int_distribution is not required to use the same mapping on
-// every standard-library implementation. Multiplayer clients must turn the
-// same seed and MT stream into the same world, so use an explicit unbiased
-// bounded draw instead of a library-defined distribution.
-std::uint32_t source_random_bounded(std::mt19937& rng, std::uint32_t bound) {
-    // Construct choose(a,b,...) selects an indexed literal. Keep the
-    // original native indexed-choice mapping distinct from random(x).
-    if (bound <= 1) return 0;
-    const std::uint32_t threshold = static_cast<std::uint32_t>(-bound) % bound;
-    for (;;) {
-        const std::uint32_t value = static_cast<std::uint32_t>(rng());
-        if (value >= threshold) return value % bound;
-    }
-}
-// Construct System.random expression ID95 produces a real number.
-// Match source/construct_expression.cpp and consume even random(1).
+// Original c2runtime.js: both System.choose (k.prototype.Fv) and
+// picked random instances (f.prototype.Yn) use floor(Math.random()*N).
+// They are NOT modulo/rejection on a 32-bit raw RNG value. One draw is
+// consumed even if N==1. Our numeric seeded MT is an adaptation only:
+// preserve original expression semantics and per-call ordering here.
 double source_random_unit(std::mt19937& rng) noexcept {
     return static_cast<double>(rng())/4294967296.0;
 }
 std::uint32_t source_floor_random_bounded(
     std::mt19937& rng,std::uint32_t span) noexcept {
+    if(span==0)return 0;
     return static_cast<std::uint32_t>(
         std::floor(source_random_unit(rng)*static_cast<double>(span)));
+}
+std::uint32_t source_random_bounded(
+    std::mt19937& rng,std::uint32_t bound) noexcept {
+    return source_floor_random_bounded(rng,bound);
 }
 
 template <std::size_t N>

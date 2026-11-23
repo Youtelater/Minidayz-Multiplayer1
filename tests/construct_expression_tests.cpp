@@ -120,12 +120,28 @@ int main() {
     assert(result.as_number() == 3);
     assert(evaluate_source_system_expression(&source_system, 150, nullptr, 0, result));
     assert(result.as_number() == 4);
+    // Original c2runtime.js choose picks floor(Math.random()*N),
+    // independent of standard-library distributions or raw MT modulo.
+    std::mt19937 original_draws(1234);
+    const auto first = original_draws();
     const Value choose_arguments[] = {Value::from_number(2), Value::from_number(8)};
     assert(evaluate_source_system_expression(&source_system, 82, choose_arguments, 2, result));
-    assert(result.as_number() == 2 || result.as_number() == 8);
+    const std::size_t expected_choose_index = static_cast<std::size_t>(
+        std::floor(static_cast<double>(first) / 4294967296.0 * 2.0));
+    assert(result.as_number() == choose_arguments[expected_choose_index].as_number());
+    // Construct choose(x) still consumes a random value, affecting the
+    // immediately following world-generation location seed stream.
+    const auto second = original_draws();
+    (void)second;
+    const Value single_choice[] = {Value::from_number(113)};
+    assert(evaluate_source_system_expression(&source_system, 82, single_choice, 1, result));
+    assert(result.as_number() == 113);
+    const auto third = original_draws();
     const Value random_argument[] = {Value::from_number(12)};
     assert(evaluate_source_system_expression(&source_system, 95, random_argument, 1, result));
-    assert(result.as_number() >= 0 && result.as_number() < 12);
+    const double expected_random = static_cast<double>(third) /
+                                   4294967296.0 * 12.0;
+    assert(std::fabs(result.as_number()-expected_random)<1e-10);
     assert(evaluate_source_system_expression(&source_system, 204, floor_argument, 1, result));
     assert(result.as_number() == 3);
 

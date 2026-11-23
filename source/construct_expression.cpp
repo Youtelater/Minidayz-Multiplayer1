@@ -434,21 +434,17 @@ bool evaluate_source_system_expression(void* user, std::uint16_t expression_id,
         if (argument_count != 1 || !arguments) return false;
         result = Value::from_number(std::floor(arguments[0].as_number()));
         return true;
-    case 82: { // choose(a, b, ...); a single choice is returned unchanged.
-        if (!arguments || argument_count == 0 ||
+    case 82: { // choose(a,b,...): original c2runtime.js k.prototype.Fv.
+        if (!state->rng || !arguments || argument_count == 0 ||
             argument_count > std::numeric_limits<std::uint32_t>::max()) return false;
-        if (argument_count == 1) {
-            result = arguments[0];
-            return true;
-        }
-        if (!state->rng) return false;
-        const auto bound = static_cast<std::uint32_t>(argument_count);
-        const std::uint32_t threshold = static_cast<std::uint32_t>(-bound) % bound;
-        std::uint32_t draw{};
-        do {
-            draw = static_cast<std::uint32_t>((*state->rng)());
-        } while (draw < threshold);
-        result = arguments[draw % bound];
+        // Construct invokes Math.random() even with one source choice,
+        // unlike the previous native early return. Rejection/modulo also
+        // altered the choice index and occasionally added extra RNG draws.
+        const double unit =
+            static_cast<double>((*state->rng)()) / 4294967296.0;
+        const auto index = static_cast<std::size_t>(
+            std::floor(unit * static_cast<double>(argument_count)));
+        result = arguments[index];
         return true;
     }
     case 95: { // random(x) / random(a, b)
