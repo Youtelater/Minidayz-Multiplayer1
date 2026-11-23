@@ -49,6 +49,20 @@ std::size_t count_code(const minidayz::WorldGrid& grid, std::uint16_t code) {
     return count;
 }
 
+void test_building_attachment_name_case() {
+    using namespace minidayz::world_source;
+    for (const auto& point : kSourceHouseImagePoints) {
+        if (std::strcmp(point.name, "w1") != 0) continue;
+        const auto* lower = source_house_image_point(
+            point.object, point.animation, point.frame, "w1", 0);
+        const auto* upper = source_house_image_point(
+            point.object, point.animation, point.frame, "W1", 0);
+        assert(lower && lower == upper);
+        return;
+    }
+    assert(false && "expected an authored w1 building attachment");
+}
+
 void test_source_furniture_and_pump() {
     using namespace minidayz;
     using namespace minidayz::world_source;
@@ -2821,6 +2835,7 @@ void test_reported_world_seed_original_frame_integrity() {
 } // namespace
 
 int main() {
+    test_building_attachment_name_case();
     test_source_furniture_and_pump();
     test_original_constructed_bed_journal_v4();
     test_original_interaction_polygon_geometry();
