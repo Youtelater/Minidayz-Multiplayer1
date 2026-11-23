@@ -66,3 +66,13 @@ for oid in (193,679):
   for frame in a[7][:1]:
    print("PLAYER_FRAME",oid,i,json.dumps(frame,ensure_ascii=False,separators=(",",":"))[:4700])
 print("PLAYER_NATIVE_SPEED_SOURCE_ACTION",156884066447061)
+
+print("PLAYER_BASE_MAP_INSTANCE")
+for layout in p[5]:
+ if layout[0] not in ("Map","TD","Tutorial"):continue
+ for layer_index,layer in enumerate(layout[6]):
+  for inst in layer[14] if len(layer)>14 and isinstance(layer[14],list) else ():
+   if isinstance(inst,list) and len(inst)>2 and inst[1]==193:
+    print("PLAYER_BASE_INSTANCE",layout[0],layer_index,
+      "layer",layer[0],"uid",inst[2],
+      "instance",json.dumps(inst,ensure_ascii=False,separators=(",",":"))[:3600])
