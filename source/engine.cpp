@@ -5,6 +5,7 @@
 #include "minidayz/terrain_tiling.hpp"
 #include "minidayz/terrain_level.hpp"
 #include "minidayz/terrain_roads.hpp"
+#include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/terrain_source_tile_flags.hpp"
 #include "minidayz/menu_bitmap_font.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
@@ -672,10 +673,8 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
  // that same boundary rather than always using the seventh road sheet.
  const float second_half_y=(source_level==5 && grid.height()==33)
      ? bounds.height*18.0f/33.0f : 1.0e30f;
- const float cell_w=bounds.width/grid.width();
- const float cell_h=bounds.height/grid.height();
  const float road_width=stage1::kOriginalFloorTileSize;
- if(!(cell_w>0.0f&&cell_h>0.0f&&road_width>0.0f))return false;
+ if(!(road_width>0.0f))return false;
  // Original Map asphalt is a separate Construct layer, before
  // ground_enviroment. Resolve the source layer rather than choosing
  // an arbitrary 3DS Z such as 0.10, which can break layer ordering.
@@ -694,24 +693,20 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
  if(!asphalt_source_layer)return false;
  const float road_depth=world_source::source_world_layer_depth(
      asphalt_source_layer->index,0,0);
- const int left=std::max(0,static_cast<int>(
-       std::floor((camera_x-road_width)/cell_w))-1);
- const int right=std::min(static_cast<int>(grid.width()),
-       static_cast<int>(std::ceil((camera_x+view_width+road_width)/cell_w))+1);
- const int top=std::max(0,static_cast<int>(
-       std::floor((camera_y-road_width)/cell_h))-1);
- const int bottom=std::min(static_cast<int>(grid.height()),
-       static_cast<int>(std::ceil((camera_y+view_height+road_width)/cell_h))+1);
+ // The source physical grid axes are transposed. Scan at most 16x33
+ // logical cells, then reject every band outside the viewport.
  // Keep the original Map asphalt-layer depth, behind the authored
  // ground_enviroment layer but in front of the base ground floor.
  // Render only clipped, camera-visible source Array road corridor pieces.
- for(int row=top;row<bottom;++row)for(int col=left;col<right;++col){
+ for(int row=0;row<grid.height();++row)
+  for(int col=0;col<grid.width();++col){
   const std::uint16_t code=grid.at(col,row);
   if(!terrain::horizontal_road(code)&&!terrain::vertical_road(code))
    continue;
   for(int direction=0;direction<2;++direction){
-   const auto band=terrain::road_band(code,direction!=0,col,row,
-                                     cell_w,cell_h,road_width);
+   // Original horizontal Array roads run along physical world Y.
+   const auto band=world_source::mapgen_road_band(
+       code,direction==0,col,row,road_width);
    if(!terrain::intersects_view(band,camera_x,camera_y,
                                 view_width,view_height))continue;
    // Repeat native 60px Construct stone tiles instead of stretching
