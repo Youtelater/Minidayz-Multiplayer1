@@ -14,6 +14,7 @@
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
+#include "minidayz/source_tree_visibility_collision.hpp"
 #include "minidayz/npc_system.hpp"
 
 #include <cassert>
@@ -741,6 +742,16 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
     const auto* hitbox=world.placement(hitbox_index);
     assert(hitbox->object==345 && hitbox->source_frame==10);
     assert(hitbox->linked_runtime_uid==id);
+    // Regression: actual tree frame dimensions and authored Imagepoint1
+    // agree with the separate visible 345 standing trunk collider.
+    assert(minidayz::terrain::source_standing_tree_trunk_contains(
+        *p,hitbox->x,hitbox->y));
+    assert(!minidayz::terrain::source_standing_tree_trunk_contains(
+        *p,hitbox->x+120.0f,hitbox->y+120.0f));
+    assert(minidayz::terrain::source_tree_occludes_player(
+        *p,p->x,p->y-0.25f*p->height));
+    assert(!minidayz::terrain::source_tree_occludes_player(
+        *p,p->x+2000.0f,p->y));
     const auto* original_point=source_tree_impact_point(207);
     assert(original_point);
     const float a=p->angle*0.01745329251994329577f;
@@ -870,6 +881,22 @@ void test_generated_object_instance_ids() {
         }
     }
     assert(generated>1000);
+    // Every original source tree species has valid frame0 geometry and
+    // is accompanied by an invisible 345 trunk, not an invented full
+    // rectangle over foliage. Catch the broken 0x0 Imagepoint fallback.
+    std::size_t source_trees_verified=0;
+    for(std::size_t i=0;i<first.placement_count();++i) {
+        const auto* tree=first.placement(i);
+        if(!tree || tree->source_uid==0)continue;
+        const auto* frame=minidayz::world_source::source_tree_impact_point(tree->object);
+        if(!frame)continue;
+        assert(tree->width==frame->width && tree->height==frame->height);
+        assert(tree->origin_x==frame->origin_x &&
+               tree->origin_y==frame->origin_y);
+        assert(tree->linked_runtime_uid!=0);
+        ++source_trees_verified;
+    }
+    assert(source_trees_verified>50);
     assert(trees>1000);
     assert(source_sized_trees>0);
     assert(!first.placement_by_id(0));

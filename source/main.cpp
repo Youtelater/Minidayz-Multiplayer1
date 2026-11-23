@@ -19,6 +19,7 @@
 #include "minidayz/source_map_overlay.hpp"
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
+#include "minidayz/source_tree_visibility_collision.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
@@ -2656,7 +2657,10 @@ public:
                         placement->source_animation, placement->source_frame,
                         px, py, sx, sy, layer_depth,
                         placement->angle * 0.01745329251994329577f,
-                        placement->opacity,
+                        (p.alive && minidayz::terrain::source_tree_occludes_player(
+                            *placement,p.x,p.y))
+                            ? std::min(placement->opacity,0.36f)
+                            : placement->opacity,
                         i<source_foundation_tint_.size() && source_foundation_tint_[i]?
                             0.5f:1.0f)) {
                     // Original art was not loaded: do not draw a fake object.
@@ -4119,6 +4123,17 @@ private:
             // Original tree trunks are linked invisible Sprite345 on
             // zed_resp. Keep player collision consistent with the world
             // broadphase: ordinary zombie/loot respawn markers stay nonsolid.
+            // Grounded tree trunk fallback for unlinked/authored originals.
+            // Test the original Sprite345 Imagepoint1 footprint, not the
+            // entire visible tree canopy. The linked 345 companion still
+            // participates in collision independently.
+            if (std::strcmp(layer->name,"Trees")==0 &&
+                minidayz::world_source::source_tree_impact_point(
+                    placement->object)!=nullptr) {
+                if(minidayz::terrain::source_standing_tree_trunk_contains(
+                        *placement,x,y))return true;
+                continue;
+            }
             const bool barrier = std::strcmp(layer->name, "Obstacles") == 0 ||
                                  std::strcmp(layer->name, "Obstacle_enviroment") == 0 ||
                                  std::strcmp(layer->name, "Water") == 0 ||

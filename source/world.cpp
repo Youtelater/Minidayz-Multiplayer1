@@ -942,17 +942,27 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // those offsets even though the renderer can draw frame pixels.
         const auto* initial_frame=stage1::source_building_frame_geometry(
             rule.object,0,0);
+        // Original trees are NOT members of the building frame-geometry
+        // table. Derive all SIX tree species' size and hotspot from their
+        // actual source frame0/Imagepoint1 record. An ObjectDef with 0x0
+        // editor dimensions otherwise collapses the 345 trunk offset to
+        // the tree's sprite hotspot while the real PNG renders elsewhere.
+        const auto* tree_frame=world_source::source_tree_impact_point(rule.object);
         placements_.push_back({
             layer, rule.object, rule.uid, position.x, position.y, 0.0f,
-            initial_frame ? initial_frame->width :
-                (source_object ? source_object->width : 0.0f),
-            initial_frame ? initial_frame->height :
-                (source_object ? source_object->height : 0.0f),
+            tree_frame ? tree_frame->width :
+                initial_frame ? initial_frame->width :
+                    (source_object ? source_object->width : 0.0f),
+            tree_frame ? tree_frame->height :
+                initial_frame ? initial_frame->height :
+                    (source_object ? source_object->height : 0.0f),
             0.0f, 1.0f, 1.0f,
-            initial_frame ? initial_frame->origin_x :
-                (source_object ? source_object->origin_x : 0.0f),
-            initial_frame ? initial_frame->origin_y :
-                (source_object ? source_object->origin_y : 0.0f),
+            tree_frame ? tree_frame->origin_x :
+                initial_frame ? initial_frame->origin_x :
+                    (source_object ? source_object->origin_x : 0.0f),
+            tree_frame ? tree_frame->origin_y :
+                initial_frame ? initial_frame->origin_y :
+                    (source_object ? source_object->origin_y : 0.0f),
             rule.image_point
         });
         placements_.back().runtime_uid = runtime_id;

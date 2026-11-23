@@ -2,6 +2,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/terrain_source_collision.hpp"
+#include "minidayz/source_tree_visibility_collision.hpp"
 #include "minidayz/generated/source_door_points.hpp"
 #include <algorithm>
 #include <cmath>
@@ -40,7 +41,12 @@ public:
             // The original generated tree obstacle is Sprite345 on
             // zed_resp, linked to a visible tree's runtime UID. The old
             // layer-only gate discarded ALL these trunk hitboxes.
-            const bool barrier=std::strcmp(layer->name,"Obstacles")==0 ||
+            const bool standalone_tree=
+                std::strcmp(layer->name,"Trees")==0 &&
+                world_source::source_tree_impact_point(p->object)!=nullptr &&
+                p->source_frame==0 && p->opacity>0.0f;
+            const bool barrier=standalone_tree ||
+                               std::strcmp(layer->name,"Obstacles")==0 ||
                                std::strcmp(layer->name,"Obstacle_enviroment")==0 ||
                                std::strcmp(layer->name,"Water")==0 ||
                                source_linked_tree_collision_hitbox(
