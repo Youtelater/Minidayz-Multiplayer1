@@ -37,6 +37,7 @@
 #include "minidayz/equipment.hpp"
 #include "minidayz/item_use.hpp"
 #include "minidayz/ground_loot.hpp"
+#include "minidayz/original_car_trunk.hpp"
 #include "minidayz/crafting.hpp"
 #include "minidayz/tent_storage.hpp"
 #include "minidayz/stash_storage.hpp"
@@ -1301,7 +1302,8 @@ public:
         // inventing full Construct touchscreen pathfinding. A selected item
         // retains its own independent inventory-use action above.
         if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0 &&
-            !source_bed_build_.active && !request_source_manual_door())
+            !source_bed_build_.active && !request_source_manual_door() &&
+            !request_source_car_trunk())
             request_source_furniture();
         if ((input.pressed & KEY_X) && selected_inventory_slot_ < 0 &&
             !source_bed_build_.active)
@@ -3355,6 +3357,40 @@ private:
                 source_furniture_indices_.push_back(
                     static_cast<std::uint32_t>(i));
         }
+    }
+
+    // Original Player181/PlayerBase193 interact with Sprite241 trunk at
+    // source distance < 50. The loot is conditional, but searching always
+    // destroys the original trunk and awards two source XP.
+    bool request_source_car_trunk() noexcept {
+        const float x=player_.state().x,y=player_.state().y;
+        float distance=50.0f;
+        std::size_t nearest=world_.placement_count();
+        for(std::size_t i=0;i<world_.placement_count();++i){
+            const auto* p=world_.placement(i);
+            if(!p || p->object!=241 || !p->runtime_uid ||
+               p->source_variable_0!=0 || p->opacity<=0.0f)continue;
+            const float d=std::hypot(p->x-x,p->y-y);
+            if(d<distance){distance=d;nearest=i;}
+        }
+        if(nearest==world_.placement_count())return false;
+        const auto outcome=minidayz::items::source_search_original_car_trunk(
+            world_,nearest,ground_loot_,perks_.source_trunk_bonus(),
+            perks_.level(minidayz::items::SourcePerk::trunkster),
+            world_.source_random());
+        using Result=minidayz::items::OriginalCarSearchResult;
+        if(outcome==Result::invalid)return false;
+        if(outcome==Result::capacity_failure){
+            source_furniture_feedback_="CAR TRUNK: GROUND LOOT FULL";
+            source_furniture_feedback_seconds_=3.0f;
+            return true;
+        }
+        // Exact original car-open action adds expierence_points += 2.
+        (void)perks_.award_experience(2);
+        source_furniture_feedback_=outcome==Result::found
+            ?"CAR TRUNK: LOOT FOUND":"CAR TRUNK: EMPTY";
+        source_furniture_feedback_seconds_=3.0f;
+        return true;
     }
 
     // Called when A is pressed with no inventory selection, after the
