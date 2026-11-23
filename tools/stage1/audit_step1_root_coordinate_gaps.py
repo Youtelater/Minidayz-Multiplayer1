@@ -40,9 +40,10 @@ for index,layer in enumerate(world[6]):
     if item["objects"]:report["map_layout"].append(item)
 def visit(events,anc=()):
     for e in events if isinstance(events,list) else ():
-        if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
         yield e,anc
-        yield from visit(e[7],anc+(e[4],))
+        if len(e)>7:
+            yield from visit(e[7],anc+(e[4],))
 def find_expr_id(expr,oid):
     if isinstance(expr,list):
         if len(expr)>=4 and expr[0]==9 and expr[1]==oid:
