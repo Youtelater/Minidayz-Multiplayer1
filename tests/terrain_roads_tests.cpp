@@ -30,40 +30,51 @@ int main() {
     assert(a.x==700.0f&&a.y==320.0f);
     assert(b.x==33340.0f&&b.y==15620.0f);
     assert(c.x==2740.0f&&c.y==3380.0f);
-    const auto h=minidayz::world_source::mapgen_road_band(
-        13,true,3,2,60.0f);
-    assert(h.valid()&&h.x==2710.0f&&h.y==2870.0f);
-    assert(h.width==60.0f&&h.height==1020.0f);
-    const auto v=minidayz::world_source::mapgen_road_band(
-        12,false,3,2,60.0f);
-    assert(v.valid()&&v.x==2230.0f&&v.y==3350.0f);
-    assert(v.width==1020.0f&&v.height==60.0f);
-    assert(minidayz::world_source::mapgen_road_band(
-        14,true,3,2,60.0f).valid());
-    assert(minidayz::world_source::mapgen_road_band(
-        14,false,3,2,60.0f).valid());
-    assert(!minidayz::world_source::mapgen_road_band(
-        12,true,3,2,60.0f).valid());
-    // Original code14 is an intersection, not two source-road tiles
-    // depth-fighting over each other in the same 60px square.
-    const auto junction=minidayz::world_source::mapgen_road_band(
-        14,false,3,2,60.0f);
-    assert(minidayz::world_source::mapgen_duplicate_crossing_tile(
-        14,false,3,2,junction.x+480.0f,60.0f,60.0f));
-    assert(!minidayz::world_source::mapgen_duplicate_crossing_tile(
-        14,false,3,2,junction.x+420.0f,60.0f,60.0f));
-    assert(!minidayz::world_source::mapgen_duplicate_crossing_tile(
-        14,true,3,2,junction.x+480.0f,60.0f,60.0f));
-    assert(!minidayz::world_source::mapgen_duplicate_crossing_tile(
-        13,false,3,2,junction.x+480.0f,60.0f,60.0f));
+    // Exact original Location loader SetTileRange commands paint
+    // 17x2 (code12) and 2x17 (code13) tile15 rectangles, 60px per tile.
+    // Both road lanes must be 120px wide; the transverse two tiles are
+    // offsets 8 and 9 within the 17-cell Mapgen patch.
     using namespace minidayz::world_source;
+    static_assert(kOriginalRoadLengthTiles==17);
+    static_assert(kOriginalRoadWidthTiles==2);
+    constexpr float source_tile=60.0f;
+    constexpr float source_width=source_road_painted_width(source_tile);
+    static_assert(source_width==120.0f);
+    static_assert(kOriginalRoadLengthTiles*source_tile==kMapgenStride);
+    const auto h=mapgen_road_band(13,true,3,2,source_width);
+    assert(h.valid()&&h.x==2710.0f&&h.y==2870.0f);
+    assert(h.width==120.0f&&h.height==1020.0f);
+    const auto v=mapgen_road_band(12,false,3,2,source_width);
+    assert(v.valid()&&v.x==2230.0f&&v.y==3350.0f);
+    assert(v.width==1020.0f&&v.height==120.0f);
+    assert(mapgen_road_band(14,true,3,2,source_width).valid());
+    assert(mapgen_road_band(14,false,3,2,source_width).valid());
+    assert(!mapgen_road_band(12,true,3,2,source_width).valid());
+    // Array code14 forms an original 2x2 tile15 junction. Suppress
+    // both duplicate atlas tiles in the perpendicular source corridor.
+    const auto junction=mapgen_road_band(14,false,3,2,source_width);
+    assert(mapgen_duplicate_crossing_tile(
+        14,false,3,2,junction.x+480.0f,source_tile,source_width));
+    assert(mapgen_duplicate_crossing_tile(
+        14,false,3,2,junction.x+540.0f,source_tile,source_width));
+    assert(!mapgen_duplicate_crossing_tile(
+        14,false,3,2,junction.x+420.0f,source_tile,source_width));
+    assert(!mapgen_duplicate_crossing_tile(
+        14,false,3,2,junction.x+600.0f,source_tile,source_width));
+    assert(!mapgen_duplicate_crossing_tile(
+        14,true,3,2,junction.x+480.0f,source_tile,source_width));
+    assert(!mapgen_duplicate_crossing_tile(
+        13,false,3,2,junction.x+480.0f,source_tile,source_width));
     const auto cell=mapgen_cell_at(c.x,c.y);
     assert(cell.column==3 && cell.row==2);
     assert(mapgen_cell_at(c.x+510.0f,c.y).row==3);
     assert(mapgen_cell_at(c.x,c.y-511.0f).column==2);
-    assert(point_on_mapgen_road(13,cell,c.x-30,c.y+200,60));
-    assert(!point_on_mapgen_road(13,cell,c.x+30,c.y+200,60));
-    assert(point_on_mapgen_road(12,cell,c.x+200,c.y,60));
-    assert(!point_on_mapgen_road(12,cell,c.x+200,c.y-31,60));
+    assert(point_on_mapgen_road(13,cell,c.x-30.0f,c.y+200.0f,source_width));
+    assert(point_on_mapgen_road(13,cell,c.x+60.0f,c.y+200.0f,source_width));
+    assert(!point_on_mapgen_road(13,cell,c.x+90.0f,c.y+200.0f,source_width));
+    assert(point_on_mapgen_road(12,cell,c.x+200.0f,c.y,source_width));
+    assert(point_on_mapgen_road(12,cell,c.x+200.0f,c.y+60.0f,source_width));
+    assert(!point_on_mapgen_road(12,cell,c.x+200.0f,c.y-31.0f,source_width));
+    assert(!point_on_mapgen_road(12,cell,c.x+200.0f,c.y+90.0f,source_width));
     return 0;
 }
