@@ -3372,7 +3372,7 @@ private:
             if(!p || p->object!=241 || !p->runtime_uid ||
                p->source_variable_0!=0 || p->opacity<=0.0f)continue;
             const float d=std::hypot(p->x-x,p->y-y);
-            if(d<distance){distance=d;nearest=i;}
+            if(d<=distance){distance=d;nearest=i;}
         }
         if(nearest==world_.placement_count())return false;
         const auto outcome=minidayz::items::source_search_original_car_trunk(
