@@ -19,6 +19,7 @@
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
 #include "minidayz/source_tree_visibility_collision.hpp"
+#include "minidayz/source_crash_site_geometry.hpp"
 #include "minidayz/npc_system.hpp"
 
 #include <cassert>
@@ -876,8 +877,8 @@ void test_original_crash_site_world_generation() {
             if(p->object==218 && p->source_loot_category==18)++loot18;
         }
         const std::size_t halves=level>=4?2u:1u;
-        assert(heli==halves*world_source::source_helicrash_quota(level));
-        assert(hammer<=halves*world_source::source_hammercrash_quota(level));
+        assert(heli==halves*minidayz::world_source::source_helicrash_quota(level));
+        assert(hammer<=halves*minidayz::world_source::source_hammercrash_quota(level));
         assert(loot15>=heli*3);
         assert(loot18>=hammer*3);
         std::fprintf(stderr,
