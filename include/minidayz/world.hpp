@@ -280,6 +280,7 @@ private:
     bool generation_is_map_{};
     bool generate_source_locations(std::uint8_t level);
     bool generate_source_crash_sites();
+    bool generate_source_road_vehicles();
     bool initialized_{};
 };
 

@@ -20,6 +20,7 @@
 #include "minidayz/terrain_obstacle_index.hpp"
 #include "minidayz/source_tree_visibility_collision.hpp"
 #include "minidayz/source_crash_site_geometry.hpp"
+#include "minidayz/source_road_vehicle_geometry.hpp"
 #include "minidayz/npc_system.hpp"
 
 #include <cassert>
@@ -824,6 +825,52 @@ void test_original_car_trunk_one_time_search() {
     assert(restored.count()==1);
 }
 
+
+void test_original_source_road_vehicle_placement() {
+    // Car_respawn_uaz/volga each PickRandom a first-half road12/13,
+    // independently of category-6 searchable junk cars. Hummer/KA
+    // use their original Mapgen marker70/104 respectively.
+    for(std::uint8_t level=0;level<6;++level){
+        minidayz::WorldSystem world;
+        assert(world.generate_from_source(
+            0x246809U+static_cast<std::uint32_t>(level)*311u,
+            "Map",level));
+        std::size_t uaz=0,volga=0,hammer=0,ka=0;
+        for(std::size_t i=0;i<world.placement_count();++i){
+            const auto* p=world.placement(i);
+            if(!p)continue;
+            if(p->object==809 &&
+               (p->source_uid==117612298080658ULL ||
+                p->source_uid==812947475463361ULL)){
+                ++uaz;
+                assert(p->width==72.0f && p->height==32.0f);
+                assert(p->angle==0||p->angle==90||
+                       p->angle==180||p->angle==270);
+                assert(p->linked_runtime_uid!=0);
+            }
+            if(p->object==815 &&
+               (p->source_uid==375484843290557ULL ||
+                p->source_uid==613501860905527ULL)){
+                ++volga;
+                assert(p->width==89.0f && p->height==35.0f);
+                assert(p->linked_runtime_uid!=0);
+            }
+            if(p->object==920 && p->source_uid==579079383275854ULL){
+                ++hammer;
+                assert(p->angle==180.0f);
+            }
+            if(p->object==1343 &&
+               p->source_uid==117612298080658ULL){
+                ++ka;
+                assert(p->width==91.0f && p->height==41.0f);
+            }
+        }
+        assert(uaz<=1&&volga<=1&&hammer<=1&&ka<=1);
+        assert(uaz==1&&volga==1);
+        assert(hammer==(level>=3?1u:0u));
+        assert(ka==(level>=4?1u:0u));
+    }
+}
 
 void test_original_crash_site_world_generation() {
     // Root generate_helicrashes creates Sprite344 for original
@@ -2447,6 +2494,7 @@ int main() {
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
     test_original_car_trunk_one_time_search();
+    test_original_source_road_vehicle_placement();
     test_original_crash_site_world_generation();
     test_original_source_settlement_building_groups();
     test_original_tree_block_variants_and_solid_companions();

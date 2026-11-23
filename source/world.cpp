@@ -13,6 +13,7 @@
 #include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/source_interior_container.hpp"
 #include "minidayz/source_crash_site_geometry.hpp"
+#include "minidayz/source_road_vehicle_geometry.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -522,7 +523,8 @@ bool WorldSystem::advance_source_generation() {
     case 3: ok = !generation_is_map_ || generate_source_locations(generation_level_); break;
     case 4: ok = !generation_is_map_ ||
         (generate_source_crash_sites() && load_source_bunker_spawns(false)); break;
-    case 5: ok = !generation_is_map_ || load_source_bridge_elements(); break;
+    case 5: ok = !generation_is_map_ ||
+        (load_source_bridge_elements() && generate_source_road_vehicles()); break;
     default: return false;
     }
     if (!ok) {
@@ -1160,6 +1162,112 @@ bool WorldSystem::generate_source_crash_sites() {
             obstacle.source_variable_0=model.runtime_uid;
             placements_[model_idx].linked_runtime_uid=obstacle.runtime_uid;
         }
+    }
+    return true;
+}
+
+// Root Car_respawn_uaz/volga/hammer/ka functions (UIDs
+// 862359914595848 / 431593263530698 / 992596827703911 /
+// 410051924834415) are called AFTER the original crash-site pass.
+// These are DIFFERENT from category-6 searchable wrecks. Preserve
+// original marker filtering, offsets, angles and visual body frames.
+// Driving, fuel and runtime Pin attachments are separate vehicle work.
+bool WorldSystem::generate_source_road_vehicles(){
+    if(!initialized_||!generation_is_map_||map_markers_.empty())return false;
+    const auto* layout=stage1::find_layout("Map");
+    if(!layout)return false;
+    const auto layout_index=static_cast<std::uint16_t>(
+        layout-stage1::kLayoutTable);
+    const auto buildings=find_layer_index_by_name(layout_index,"Buildings");
+    if(buildings==0xffff)return false;
+    const auto choose=[&](std::initializer_list<std::uint16_t> types,
+                          int min_row,int max_row)->std::size_t{
+        std::vector<std::size_t> eligible;
+        for(std::size_t i=0;i<map_markers_.size();++i){
+            const auto& marker=map_markers_[i];
+            if(marker.cell_y<min_row||marker.cell_y>max_row)continue;
+            if(std::find(types.begin(),types.end(),marker.marker_type)==
+               types.end())continue;
+            eligible.push_back(i);
+        }
+        // Source PickRandom(514) with no selected instance creates no car.
+        if(eligible.empty())return map_markers_.size();
+        return eligible[source_random_bounded(
+            rng_,static_cast<std::uint32_t>(eligible.size()))];
+    };
+    const auto spawn=[&](const world_source::OriginalRoadVehicleFrame& spec,
+        std::uint64_t event,float x,float y,float angle,
+        std::uint64_t overlay_event) {
+        const std::size_t body_index=placements_.size();
+        placements_.push_back({buildings,spec.object,event,
+            x,y,0.0f,spec.width,spec.height,angle,
+            1.0f,1.0f,spec.origin_x,spec.origin_y});
+        auto& body=placements_.back();
+        body.runtime_uid=(std::uint64_t{1}<<63) |
+            static_cast<std::uint64_t>(body_index+1);
+        body.instance_id=body_index+1;
+        if(spec.overlay!=0){
+            const auto parent_uid=body.runtime_uid;
+            const std::size_t overlay_index=placements_.size();
+            placements_.push_back({buildings,spec.overlay,
+                overlay_event,x,y,0.0f,
+                spec.overlay_width,spec.overlay_height,angle,
+                1.0f,1.0f,spec.overlay_origin_x,spec.overlay_origin_y});
+            auto& overlay=placements_.back();
+            overlay.runtime_uid=(std::uint64_t{1}<<63) |
+                static_cast<std::uint64_t>(overlay_index+1);
+            overlay.instance_id=overlay_index+1;
+            overlay.parent_runtime_uid=parent_uid;
+            body.linked_runtime_uid=overlay.runtime_uid;
+        }
+    };
+    const auto spawn_road=[&](
+        const world_source::OriginalRoadVehicleFrame& spec,
+        std::uint64_t vertical_event,
+        std::uint64_t horizontal_event,
+        std::uint64_t overlay_event){
+        const auto index=choose({12,13},0,15);
+        if(index==map_markers_.size())return;
+        const auto& m=map_markers_[index];
+        const auto pos=world_source::mapgen_hotspot(m.cell_x,m.cell_y);
+        // Root System.Create: marker0==12 uses x+100+random(800),
+        // y+400+random(200), angle choose(180,0).
+        // marker0==13 uses x+400+random(200),
+        // y+100+random(800), angle choose(90,270).
+        const bool vertical=m.marker_type==12;
+        const float x=pos.x+(vertical?100.0f:400.0f)+
+            static_cast<float>(source_random_bounded(rng_,vertical?800:200));
+        const float y=pos.y+(vertical?400.0f:100.0f)+
+            static_cast<float>(source_random_bounded(rng_,vertical?200:800));
+        const float angle=vertical?
+            (source_random_bounded(rng_,2)==0?180.0f:0.0f):
+            (source_random_bounded(rng_,2)==0?90.0f:270.0f);
+        spawn(spec,vertical?vertical_event:horizontal_event,
+              x,y,angle,overlay_event);
+    };
+    spawn_road(world_source::kRoadVehicleUaz,
+        117612298080658ULL,812947475463361ULL,
+        931809985139153ULL);
+    spawn_road(world_source::kRoadVehicleVolga,
+        375484843290557ULL,613501860905527ULL,
+        262613965798799ULL);
+    // Root hammer car function selects an original military marker70
+    // only on the first 16 map rows. SetAngle(180) is its final action.
+    const auto hammer=choose({70},0,15);
+    if(hammer<map_markers_.size()){
+        const auto& m=map_markers_[hammer];
+        const auto p=world_source::mapgen_hotspot(m.cell_x,m.cell_y);
+        spawn(world_source::kRoadVehicleHammer,
+            579079383275854ULL,p.x+874.0f,p.y+855.0f,180.0f,0);
+    }
+    // Root KA car function selects marker104 (second-half rare site
+    // in levels4/5); no first-half predicate appears in this function.
+    const auto ka=choose({104},0,32);
+    if(ka<map_markers_.size()){
+        const auto& m=map_markers_[ka];
+        const auto p=world_source::mapgen_hotspot(m.cell_x,m.cell_y);
+        spawn(world_source::kRoadVehicleKa,
+            117612298080658ULL,p.x+150.0f,p.y+500.0f,0.0f,0);
     }
     return true;
 }
