@@ -2,6 +2,7 @@
 #include "minidayz/source_player_layers.hpp"
 #include "minidayz/source_player_altmove.hpp"
 #include "minidayz/source_equipment_animation.hpp"
+#include "minidayz/source_energy_drink_boost.hpp"
 #include "minidayz/source_player_base_geometry.hpp"
 #include "minidayz/generated/stage1_data.hpp"
 #include "minidayz/terrain_source_collision.hpp"
@@ -51,6 +52,25 @@ int main() {
         if(original_animation_checks==24)break;
     }
     assert(original_animation_checks==24);
+
+    // Original source item_activate(63) starts Timer "Edrink" for 60s
+    // and adds +15 to PlayerBase variable4; timer-end resets to zero.
+    SourceEnergyDrinkBoost energy{};
+    assert(energy.bonus()==0.0f);
+    assert(!energy.on_successful_item_use(63,true,true));
+    assert(!energy.on_successful_item_use(63,false,false));
+    assert(!energy.on_successful_item_use(49,false,true));
+    assert(energy.on_successful_item_use(63,false,true));
+    assert(energy.bonus()==15.0f && energy.remaining()==60.0f);
+    energy.update(59.75f);
+    assert(energy.bonus()==15.0f && energy.remaining()==0.25f);
+    assert(energy.on_successful_item_use(63,false,true)); // original Timer.Start restarts
+    assert(energy.remaining()==60.0f);
+    energy.update(60.0f);
+    assert(energy.bonus()==0.0f && energy.remaining()==0.0f);
+    assert(!energy.restore(61.0f) && !energy.restore(-1.0f));
+    assert(energy.restore(24.0f) && energy.bonus()==15.0f);
+    assert(energy.restore(0.0f) && energy.bonus()==0.0f);
 
     // Exact Construct PlayerBase193 AltMove source expression:
     // 100-var6-var7+var4+var3+var5+var8, before native collision.
