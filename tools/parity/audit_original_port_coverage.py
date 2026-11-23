@@ -25,6 +25,12 @@ verified=registry["verified"]
 assert isinstance(verified,list)
 by_key={r["key"]:r for r in verified}
 assert len(by_key)==len(verified),"Duplicate manually verified source occurrence"
+action_registry=json.loads((ROOT/"data/parity/verified_original_actions.json").read_text(encoding="utf-8"))
+assert action_registry["schema_version"]==1
+reviewed_actions=action_registry["verified"]
+assert isinstance(reviewed_actions,list)
+reviewed_by_key={r["action_key"]:r for r in reviewed_actions}
+assert len(reviewed_by_key)==len(reviewed_actions),"Duplicate reviewed action occurrence"
 
 def sha(obj):
  return hashlib.sha256(json.dumps(obj,ensure_ascii=False,
@@ -140,6 +146,7 @@ cars={"authority":"root data.deobfuscated.js; original object 241",
 # Index nested ordinal path + action index, NEVER a UID alone (UIDs repeat).
 import gzip
 action_count=0
+action_verified=0
 action_keys=set()
 with (out/"every_original_event.jsonl").open("r",encoding="utf-8") as source_events:
  with gzip.open(out/"every_original_action.jsonl.gz","wt",encoding="utf-8") as sink:
@@ -151,6 +158,15 @@ with (out/"every_original_event.jsonl").open("r",encoding="utf-8") as source_eve
      raise AssertionError("Duplicate original action occurrence "+action_key)
     action_keys.add(action_key)
     action_count+=1
+    mapping=reviewed_by_key.get(action_key)
+    if mapping:
+     assert mapping["source_action_fingerprint"]==sha(action),(
+       action_key,"Original action was changed")
+     for field in ("implementation","regression_test","scope"):
+      assert mapping.get(field),(action_key,"Missing action proof: "+field)
+     assert all((ROOT/mapping[field]).is_file() for field in
+                ("implementation","regression_test")),(action_key,"Missing native proof file")
+     action_verified+=1
     sink.write(json.dumps({
       "action_key":action_key,"event_key":event["key"],
       "event_uid":event["uid"],"sheet":event["sheet"],
@@ -163,22 +179,30 @@ with (out/"every_original_event.jsonl").open("r",encoding="utf-8") as source_eve
       "parent_event_uids":event["parent_uids"],
       "group_path":event["groups"],
       "verification":event["verification"],
-      "native_action_parity":"not_individually_verified"
+      "native_action_parity":"reviewed_action_mapping" if mapping else
+       "not_individually_verified",
+      "source_action_fingerprint":sha(action),
+      "implementation":mapping["implementation"] if mapping else None,
+      "regression_test":mapping["regression_test"] if mapping else None
     },separators=(",",":"),ensure_ascii=False)+"\n")
 if action_count!=stats["actions"] or action_count!=63289:
  raise AssertionError(f"Original action occurrence loss {action_count}/{stats['actions']}")
-print("FULL_ORIGINAL_ACTION_LEDGER",action_count,"individually indexed source actions")
+assert action_verified==len(reviewed_actions)
+print("FULL_ORIGINAL_ACTION_LEDGER",action_count,"individually indexed source actions",
+      "reviewed",action_verified)
 
 summary={
  "source":"root data.deobfuscated.js",
  "source_sha256":hashlib.sha256(source.read_bytes()).hexdigest(),
  "status_semantics":"A decoded event is NOT implemented or tested without explicit mapping.",
  "counts":dict(stats),"action_occurrences_indexed":action_count,
+ "reviewed_original_action_mappings":action_verified,
  "car_spawn_drop_event_occurrences":len(car_entries),
  "car_system_3ds_implementation_verified":False,
  "unverified_groups":dict(unverified_by_group.most_common()),
  "sheet_event_counts":dict(sheets),
- "complete_original_port_verified":len(verified)==stats["events"]
+ "complete_original_port_verified":(
+    len(verified)==stats["events"] and action_verified==action_count)
 }
 (out/"parity_summary.json").write_text(
  json.dumps(summary,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
