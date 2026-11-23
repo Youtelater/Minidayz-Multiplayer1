@@ -903,3 +903,7 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 ## Step 1 playtest follow-up (2026-11-23)
 
 The coordinate audit now reads Map instance width and height from the same fields as the root extractor and retains all matching road actions and coordinate expressions. The sprite renderer retries the selected frame's base atlas if its outline page cannot load. Neither change establishes the cause of the movement line. Road appearance, missing world sprites, tree collision and occlusion, multi-building sections, and car placement and loot still require verification in a playable build.
+
+- Tree collision indexing now includes the full source trunk or companion footprint. This covers queries on the other side of a collision bucket boundary when testing an authored tree's fallback collider.
+- The road renderer now draws valid road themes even if another theme is unavailable and still reports an incomplete render.
+- The movement line and the remaining visual and gameplay reports require a runtime reproduction. The collision and road fixes address specific code paths and do not establish that they caused every reported symptom.
