@@ -2707,6 +2707,42 @@ void test_original_building_specific_loot_on_generated_world() {
 // Screenshot-reproduction seed from the player's actual Manic Emu map.
 // All visible original world sprite states must resolve to source-authored
 // animation/frame data; a successful .3dsx build does not check this.
+// Regression for the original Sprite241 searchable-wreck art.
+ // Root category6 Body.SpawnAnotherObject(241) is explicitly on Map
+ // Sunset_Dawn layer45, not the browser-only GUI/rain/night overlays.
+ // A blanket layer>=44 visibility filter used to discard every trunk,
+ // even though the native world source actually generated them.
+void test_original_car_overlay_uses_visible_source_layer() {
+    using namespace minidayz;
+    WorldSystem world{};
+    assert(world.generate_from_source(0x4D444159u,"Map",0));
+    terrain::VisibleSourcePlacementIndex index{};
+    index.rebuild(world);
+    const auto* layout=stage1::find_layout("Map");
+    assert(layout);
+    const auto layout_id=static_cast<std::uint16_t>(
+        layout-stage1::kLayoutTable);
+    const auto* sunset=stage1::find_layer(layout_id,45);
+    assert(sunset && std::strcmp(sunset->name,"Sunset_Dawn")==0);
+    std::size_t visible_trunks=0;
+    std::vector<std::uint32_t> candidates{};
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* p=world.placement(i);
+        if(!p||p->object!=241||p->opacity<=0.0f||
+           !world.bounds().contains({p->x,p->y}))continue;
+        assert(p->layer==45);
+        assert(world_source::source_world_high_layer_gameplay_art(
+            p->object,p->layer));
+        index.query(p->x,p->y,1.0f,1.0f,candidates);
+        assert(std::binary_search(candidates.begin(),candidates.end(),
+            static_cast<std::uint32_t>(i)));
+        ++visible_trunks;
+    }
+    std::fprintf(stderr,
+        "SOURCE ORIGINAL LAYER45 CAR TRUNKS INDEXED=%zu\n",visible_trunks);
+    assert(visible_trunks>0);
+}
+
 void test_reported_world_seed_original_frame_integrity() {
     using namespace minidayz;
     constexpr std::uint32_t kReportedSeed=0x8D45D166u;
@@ -2800,6 +2836,7 @@ int main() {
     test_source_profiles();
     test_original_map_layout_and_descriptors();
     test_reported_world_seed_original_frame_integrity();
+    test_original_car_overlay_uses_visible_source_layer();
     test_seed_reproducibility();
     test_source_scatter_reproduction_and_layout_replacement();
     test_original_perk_dao_world_scatter_branch();
