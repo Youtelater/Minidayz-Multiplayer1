@@ -6,6 +6,7 @@
 #include <vector>
 #include <utility>
 #include "minidayz/terrain_surface.hpp"
+#include "minidayz/source_tilemap_solid_collision.hpp"
 
 namespace minidayz::terrain {
 
@@ -25,6 +26,23 @@ struct SolidTerrainMap {
         const auto row=static_cast<std::uint32_t>(dy/tile_size);
         const auto index=static_cast<std::size_t>(row)*columns+col;
         return index<cells.size() && cells[index]!=0xffffffffu;
+    }
+
+    bool blocks(float px,float py) const noexcept {
+        if(!occupied(px,py))return false;
+        const float fx=(px-x)/static_cast<float>(tile_size);
+        const float fy=(py-y)/static_cast<float>(tile_size);
+        const auto col=static_cast<std::uint32_t>(fx);
+        const auto row=static_cast<std::uint32_t>(fy);
+        const auto offset=static_cast<std::size_t>(row)*columns+col;
+        if(offset>=cells.size())return false;
+        // Preserve exact Construct per-tile Solid polygons, including
+        // shore/forest diagonal openings and original H/V/D flip flags.
+        // A plain full-tile occupied() test wrongly blocked transparent
+        // source polygon gaps.
+        return source_solid_tile_contains(
+            object,cells[offset],fx-static_cast<float>(col),
+            fy-static_cast<float>(row));
     }
 };
 
@@ -76,7 +94,7 @@ public:
 
     bool blocked(float x,float y) const noexcept {
         for(const auto& map:maps_)
-            if(detail_blocks_player(map.object) && map.occupied(x,y))
+            if(detail_blocks_player(map.object) && map.blocks(x,y))
                 return true;
         return false;
     }
