@@ -74,7 +74,8 @@ assert 'source_player_hands_object(source_skin_object)' in main
 hands=main.index('const auto source_hands =')
 hands_layer=main.index('kSourcePlayerHandsLayer',hands)
 hands_draw=main.index('draw_original_hands(skin_animation)',hands)
-pants=main.index('kSourcePlayerPantsLayer',hands-400)
+pants=main.rfind('kSourcePlayerPantsLayer',0,hands)
+assert pants>=0
 clothing=main.index('kSourcePlayerClothingLayer',hands_draw)
 assert pants<hands<hands_layer<hands_draw<clothing
 assert 'source_hands,animation,p.animation_elapsed' in main[hands:hands_draw]
