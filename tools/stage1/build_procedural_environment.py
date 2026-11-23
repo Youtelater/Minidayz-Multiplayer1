@@ -151,14 +151,31 @@ def main():
                     # future perk-enabled world generation. Diagnostics are
                     # source UIDs and literal original expressions only,
                     # never a guessed native substitution.
+                    perk_node_i=next(i for i,node in enumerate(ancestry)
+                        if any(isinstance(c,list) and len(c)>9 and
+                               c[:2]==[-1,46] and
+                               "perk_dao" in str(c[9]) for c in node[5]))
+                    perk_node=ancestry[perk_node_i]
+                    siblings=(ancestry[perk_node_i-1][7]
+                        if perk_node_i>0 else sheet[1])
+                    sibling_branches=[{"uid":branch[4],
+                        "conds":branch[5]} for branch in siblings
+                        if isinstance(branch,list) and len(branch)>6
+                        and branch[0]==0]
                     print("SOURCE_TERRAIN_PERK_BRANCH",
                         json.dumps({"action_uid":action[3],
                             "event_uid":event[4],
+                            "marker_codes":markers,
+                            "repeat_from_parents":[c[9] for c in conds
+                                if c[:2]==[-1,123]],
+                            "perk_parent":perk_node[4],
+                            "perk_sibling_branches":sibling_branches,
+                            "ancestry_uids":[node[4] for node in ancestry],
                             "conditions":[node[5] for node in ancestry
                                 if any(isinstance(c,list) and len(c)>9 and
                                        c[:2]==[-1,46] and
                                        "perk_dao" in str(c[9]) for c in node[5])],
-                            "params":action[5]},separators=(",",":"))[:7000])
+                            "params":action[5]},separators=(",",":"))[:12000])
                     rejected.append((action[3],"special perk branch"))
                     continue
                 repeat=1
