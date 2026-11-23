@@ -12,9 +12,9 @@ MAPGEN_FUNC_UID=7785053978136909
 def descendants(seq,anc=()):
  for n in seq if isinstance(seq,list) else ():
   if not isinstance(n,list) or not n:continue
-  if n[0]==0 and len(n)>=8:
+  if n[0]==0 and len(n)>=7:
    yield n,anc
-   yield from descendants(n[7],anc+(n[4],))
+   if len(n)>7:yield from descendants(n[7],anc+(n[4],))
 all_ev=[(sheet,n,anc) for sheet,evs in project[6] for n,anc in descendants(evs)]
 creates=[]
 for sheet,e,anc in all_ev:
@@ -37,13 +37,13 @@ for fn_uid in (FUNC_UID,MAPGEN_FUNC_UID):
   for child in nodes if isinstance(nodes,list) else ():
    if not isinstance(child,list) or not child:continue
    count[child[0]]+=1
-   if child[0]==0 and len(child)>=8:
+   if child[0]==0 and len(child)>=7:
     for a in child[6] if isinstance(child[6],list) else ():
      if isinstance(a,list) and len(a)>1:commands[(a[0],a[1])]+=1
     if depth<=3:
      parent_nodes.append({"depth":depth,"uid":child[4],
         "cond":child[5], "acts":child[6]})
-    tree(child[7],depth+1)
+    if len(child)>7:tree(child[7],depth+1)
    elif child[0]==1:
     if depth<=2: parent_nodes.append({"depth":depth,"variable":child[:10]})
  tree(e[7])

@@ -9,10 +9,10 @@ p=decode((ROOT/"data.deobfuscated.js").read_bytes())
 target_functions={"generate_array_tomap","generate_mapgen_toelements","create_map_location","generate_location"}
 def walk(nodes,anc=(),groups=()):
  for e in nodes if isinstance(nodes,list) else ():
-  if not isinstance(e,list) or len(e)<8:continue
+  if not isinstance(e,list) or len(e)<7:continue
   gn=groups+((e[1][1],) if isinstance(e[1],list) and len(e[1])>1 and isinstance(e[1][1],str) else ())
   if e[0]==0:yield e,anc,gn
-  yield from walk(e[7],anc+((e[4],) if e[0]==0 else ()),gn)
+  if len(e)>7:yield from walk(e[7],anc+((e[4],) if e[0]==0 else ()),gn)
 hits=[]
 for sheet,events in p[6]:
  for e,anc,groups in walk(events):

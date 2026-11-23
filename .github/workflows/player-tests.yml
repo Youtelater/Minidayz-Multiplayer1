@@ -96,6 +96,9 @@ jobs:
           python3 tools/stage2/build_original_timed_loot.py
           python3 tools/stage2/build_original_initial_building_loot.py
 
+      - name: Verify seven-field original Construct events and complete map generation actions
+        run: python3 tests/test_original_world_event_coverage.py
+
       - name: Verify original water-pump random bounds and stable native source draw
         run: python3 tests/test_original_world_pump_rng.py
 

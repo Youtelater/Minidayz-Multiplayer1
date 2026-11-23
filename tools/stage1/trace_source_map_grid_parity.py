@@ -18,9 +18,9 @@ targets={
 }
 def walk(nodes,anc=()):
  for e in nodes if isinstance(nodes,list) else ():
-  if not isinstance(e,list) or len(e)<8:continue
+  if not isinstance(e,list) or len(e)<7:continue
   if e[0]==0:yield e,anc
-  yield from walk(e[7],anc+(e[4],))
+  if len(e)>7:yield from walk(e[7],anc+(e[4],))
 for sheet,events in p[6]:
  for e,anc in walk(events):
   if e[4] not in targets.values():continue
@@ -31,12 +31,12 @@ for sheet,events in p[6]:
   print("ROOT_CHILD_COUNT",label,len(e[7]))
   def children(nodes,depth=0):
    for c in nodes if isinstance(nodes,list) else ():
-    if not isinstance(c,list) or len(c)<8:continue
+    if not isinstance(c,list) or len(c)<7:continue
     if depth<2:
      print("ROOT_CHILD",label,depth,"uid",c[4],"kind",c[0],
        "conditions",json.dumps(c[5],ensure_ascii=False,separators=(',',':'))[:3100],
        "actions",json.dumps(c[6],ensure_ascii=False,separators=(',',':'))[:3100])
-    children(c[7],depth+1)
+    if len(c)>7:children(c[7],depth+1)
   children(e[7])
 
 print("ROOT_ORIGINAL_MAPGEN_LAYOUT")
@@ -69,7 +69,7 @@ for sheet,events in p[6]:
   name="roads_1" if e[4]==921061167763666 else "roads_2"
   def all_conditions(nodes,depth=0):
    for node in nodes if isinstance(nodes,list) else ():
-    if not isinstance(node,list) or len(node)<8 or node[0]!=0:continue
+    if not isinstance(node,list) or len(node)<7 or node[0]!=0:continue
     conds=[c for c in node[5] if isinstance(c,list) and len(c)>9 and
       (c[0]==518 or (c[0]==-1 and ("518" in repr(c) or "anotherX" in repr(c))))]
     acts=[a for a in node[6] if isinstance(a,list) and len(a)>5 and
@@ -78,5 +78,5 @@ for sheet,events in p[6]:
      print("ROOT_ROAD_DETAIL",name,depth,node[4],
       "conds",json.dumps(conds,separators=(",",":"))[:4200],
       "actions",json.dumps(acts,separators=(",",":"))[:4200])
-    all_conditions(node[7],depth+1)
+    if len(node)>7:all_conditions(node[7],depth+1)
   all_conditions(e[7])
