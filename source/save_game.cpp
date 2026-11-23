@@ -282,7 +282,6 @@ struct SavedGameV21 {
     minidayz::items::ItemUseRuntimeSnapshot pending_item_use{};
     minidayz::items::SourcePerkSnapshot perks{};
     minidayz::items::SatchelSnapshot satchel{};
-    minidayz::items::SatchelSnapshot satchel{};
     minidayz::items::EquipmentFractionSnapshot equipment_fraction{};
     minidayz::items::StashStorageSnapshot stashes{};
     minidayz::items::SourceDayNightSnapshot source_time{};
