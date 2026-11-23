@@ -280,6 +280,9 @@ jobs:
             -o /tmp/minidayz_original_building_loot
           /tmp/minidayz_original_building_loot
 
+      - name: Verify original Regen level-2 speed event
+        run: python3 tests/test_original_regen_speed_source.py
+
       - name: Verify original Edrink source timer and PlayerBase speed effect
         shell: bash
         run: python3 tests/test_original_energy_drink_source.py
