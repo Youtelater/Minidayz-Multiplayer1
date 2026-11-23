@@ -16,7 +16,7 @@ def walk(nodes):
 original=[(e[4],a) for _,ev in p[6] for e in walk(ev)
  for a in e[6] if isinstance(a,list) and len(a)>5
  and a[0]==442 and a[1]==88
- and "100" in str(a[5]) and "200" in str(a[5])]
+ and a[5][1]==[7,[19,82,[[0,100],[0,200]]]]]
 assert [uid for uid,_ in original]==[3903561981802149], original
 assert original[0][1][5][1]==[7,[19,82,[[0,100],[0,200]]]]
 print("ROOT_PUMP_RANDOM_EVENTS", [uid for uid,_ in original])
