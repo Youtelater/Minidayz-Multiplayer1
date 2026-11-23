@@ -694,15 +694,22 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
  // The scene already draws a visible floor-load diagnostic independently.
  if(grid.width()==0||grid.height()==0) return false;
  if(!(bounds.width>0.0f && bounds.height>0.0f)) return false;
+ // Cache load failures for this pass so a missing theme cannot suppress
+ // the other half of the map or cause repeated ROMFS reads per tile.
+ bool missing_theme[7]{};
+ bool roads_drawn=true;
  const auto ensure_road_sheet=[&](std::uint32_t theme) noexcept -> bool {
-  if(theme>=7) return false;
+  if(theme>=7 || missing_theme[theme]) return false;
   if(road_sheets_[theme]) return true;
   char name[80]{};
   std::snprintf(name,sizeof(name),"romfs:/gfx/original_map_road_lvl%u.t3x",
                 static_cast<unsigned>(theme+1));
   auto sheet=C2D_SpriteSheetLoad(name);
-  if(!sheet) return false;
-  if(C2D_SpriteSheetCount(sheet)==0){C2D_SpriteSheetFree(sheet);return false;}
+  if(!sheet || C2D_SpriteSheetCount(sheet)==0){
+   if(sheet)C2D_SpriteSheetFree(sheet);
+   missing_theme[theme]=true;
+   return false;
+  }
   road_sheets_[theme]=sheet;
   return true;
  };
@@ -763,11 +770,17 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
      const float world_tile_x=band.x+(static_cast<float>(x)+0.5f)*tile;
      const auto theme=terrain::ground_texture_at(
          source_level,world_tile_x,second_half_x);
-     if(!ensure_road_sheet(theme)) return false;
+     if(!ensure_road_sheet(theme)){
+      roads_drawn=false;
+      continue;
+     }
      C2D_Sprite sprite{};
      C2D_SpriteFromSheet(&sprite,road_sheets_[theme],0);
-     if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f)
-      return false;
+     if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f){
+      missing_theme[theme]=true;
+      roads_drawn=false;
+      continue;
+     }
      // A source grid cell is not necessarily a multiple of its 60px
      // road tile. Trim the final tile instead of painting beyond the
      // original corridor, which made road edges bleed into water/forest.
@@ -787,7 +800,7 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
     }
   }
  }
- return true;
+ return roads_drawn;
 }
 bool Renderer::draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth) noexcept {
  if(width<=0.0f||height<=0.0f) return false;
