@@ -58,9 +58,12 @@ for e,anc in walk(items):
   raise SystemExit(f"Original car overlay layer/imagepoint changed {v}")
  frames=[literal(a[5][0][1]) for a in e[6]
          if isinstance(a,list) and len(a)>5 and a[:2]==[241,72]]
- if len(frames)!=1 or not isinstance(frames[0],int):
+ # Preserve original action ORDER: variant12 does SetFrame(2) and
+ # later SetFrame(4), so its visible initial frame is the LAST SetFrame.
+ # Collapsing to only one call incorrectly rejects real source behavior.
+ if not frames or not all(isinstance(value,int) for value in frames):
   raise SystemExit(f"Original car Sprite241 SetFrame changed {v}: {frames}")
- frame=frames[0]
+ frame=frames[-1]
  authored=p[3][241][7][0][7][frame]
  if len(authored)<9 or authored[4]<=0 or authored[5]<=0:
   raise SystemExit(f"Original car frame dimensions invalid {v}: {frame}")
