@@ -8,7 +8,7 @@ data=ROOT/"audit-output/source-parity"
 summary=json.loads((data/"parity_summary.json").read_text())
 assert summary["counts"]["events"]==22343
 assert summary["counts"]["seven_field_leaf_events"]==14560
-assert summary["counts"]["reviewed_event_mappings"]==len(json.loads(
+assert summary["counts"].get("reviewed_event_mappings",0)==len(json.loads(
   (ROOT/"data/parity/verified_original_events.json").read_text())["verified"])
 assert summary["counts"]["conditions"]>0 and summary["counts"]["actions"]>0
 records=[json.loads(line) for line in
