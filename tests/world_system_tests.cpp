@@ -1,5 +1,6 @@
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/world.hpp"
+#include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_world_event_effects.hpp"
 #include "minidayz/source_world_sprite_visibility.hpp"
@@ -703,6 +704,41 @@ void test_source_tree_fall_item_table() {
 // Root Game_events/Hitting_obstacles: branch UID 8754965976446553
 // subtracts 1 from instance variable 0 before child fall UID
 // 2738244684146745 checks that the new value is <=0.
+void test_original_source_settlement_building_groups() {
+    // Group original category-7 primary house instances by the *source*
+    // Mapgen514 1020px cell, not by a guessed density multiplier.
+    // This verifies that a town consists of multiple independent buildings
+    // rather than one building texture painted over a location marker.
+    minidayz::WorldSystem world;
+    assert(world.generate_from_source(0x4d444159u,"Map",0));
+    std::size_t groups=0, clustered=0, largest=0;
+    const auto& grid=world.grid();
+    for(int y=0;y<grid.height();++y)
+        for(int x=0;x<grid.width();++x){
+            const auto kind=grid.at(x,y);
+            if(kind!=9 && kind!=6)continue;
+            const auto center=minidayz::world_source::mapgen_hotspot(x,y);
+            std::size_t foundations=0;
+            for(std::size_t i=0;i<world.placement_count();++i){
+                const auto* p=world.placement(i);
+                if(!p||std::fabs(p->x-center.x)>510.0f ||
+                    std::fabs(p->y-center.y)>510.0f)continue;
+                for(const auto& root:minidayz::world_source::kSourceHousePrimarySpawns)
+                    if(p->source_uid==root.event_uid &&
+                       p->object==root.object){
+                        ++foundations;break;
+                    }
+            }
+            ++groups;
+            if(foundations>=2)++clustered;
+            largest=std::max(largest,foundations);
+        }
+    std::printf("ROOT SETTLEMENT GROUPS seed=4d444159 towns=%zu multi_building=%zu largest=%zu\n",
+                groups,clustered,largest);
+    assert(groups>0);
+    assert(clustered>0 && largest>=2);
+}
+
 void test_original_tree_block_variants_and_solid_companions() {
     // Directly verified root create_map_element event branches 7..10.
     // Object210 has four *different frames*, each with an original linked
@@ -2067,6 +2103,7 @@ int main() {
     test_grid_semantics();
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
+    test_original_source_settlement_building_groups();
     test_original_tree_block_variants_and_solid_companions();
     test_source_event_tree_hit_health_and_atomic_fall();
     test_source_event_tree_fall_and_door_transition();
