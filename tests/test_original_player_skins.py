@@ -51,7 +51,7 @@ def main():
         encoding="utf-8")
     assert "kOriginalPlayerHandArtCount=21;" in hands_header
     hands={int(skin):int(hand) for skin,hand in
-           re.findall(r"\\{(\\d+),(\\d+),\\d+,\\d+ULL\\},",hands_header)}
+           re.findall(r"\{(\d+),(\d+),\d+,\d+ULL\},",hands_header)}
     assert len(hands)==21
     assert hands[679]==682 and hands[744]==681 and hands[1262]==1263
     # The 21 original player skins must all have a source hand layer.
