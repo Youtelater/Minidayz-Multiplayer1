@@ -657,11 +657,13 @@ public:
                 const minidayz::map_overlay::MapRect viewport{
                     12.0f,32.0f,296.0f,170.0f};
                 float best_distance=11.0f*11.0f;
-                std::uint16_t selected=0;
+                auto selected=minidayz::map_overlay::CellKind::ground;
                 for(int y=0;y<grid.height();++y)
                     for(int x=0;x<grid.width();++x){
-                        const auto code=grid.at(x,y);
-                        const auto kind=minidayz::map_overlay::cell_kind(code);
+                        const auto* marker=world_.map_marker(
+                            static_cast<std::size_t>(y)*grid.width()+x);
+                        if(!marker)continue;
+                        const auto kind=minidayz::map_overlay::marker_cell_kind(*marker);
                         if(!minidayz::map_overlay::is_location(kind))continue;
                         const auto rect=minidayz::map_overlay::source_cell_rect(
                             x,y,bounds,viewport);
@@ -670,10 +672,10 @@ public:
                         const float sq=dx*dx+dy*dy;
                         if(sq<best_distance){
                             best_distance=sq;
-                            selected=code;
+                            selected=kind;
                         }
                     }
-                map_selected_type_=selected;
+                map_selected_kind_=selected;
             }
             if((input.pressed & KEY_B) ||
                (tap && input.touch.py>=207))
@@ -1423,7 +1425,10 @@ public:
         for(int y=0;y<grid.height();++y){
             for(int x=0;x<grid.width();++x){
                 using minidayz::map_overlay::CellKind;
-                const auto kind=minidayz::map_overlay::cell_kind(grid.at(x,y));
+                const auto* marker=world_.map_marker(
+                    static_cast<std::size_t>(y)*grid.width()+x);
+                if(!marker)continue;
+                const auto kind=minidayz::map_overlay::marker_cell_kind(*marker);
                 // Draw in ORIGINAL world-space, not Array column/row
                 // order. Root Mapgen converts (X,Y) -> (world Y,world X).
                 const auto cell=minidayz::map_overlay::source_cell_rect(
@@ -1479,10 +1484,8 @@ public:
                 player_mark_frame->frame,
                 point.x-6.0f,point.y-6.0f,12.0f,12.0f,0.77f);
         renderer.draw_text("X",point.x-4.0f,point.y-9.0f,0.43f);
-        const auto selected_kind=minidayz::map_overlay::cell_kind(
-            map_selected_type_);
         const auto* selected_name=minidayz::map_overlay::location_name(
-            selected_kind);
+            map_selected_kind_);
         if(selected_name){
             char label[48]{};
             std::snprintf(label,sizeof(label),"SECTION: %s",selected_name);
@@ -4401,7 +4404,8 @@ private:
     bool details_open_{};
     std::size_t details_scroll_{};
     bool map_open_{};
-    std::uint16_t map_selected_type_{};
+    minidayz::map_overlay::CellKind map_selected_kind_{
+        minidayz::map_overlay::CellKind::ground};
 };
 
 } // namespace

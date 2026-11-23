@@ -286,37 +286,32 @@ bool place_poi_count(WorldGrid& grid, std::uint8_t count, std::uint16_t code,
     return true;
 }
  
-bool place_gas_station_count(WorldGrid& grid, std::uint8_t count,
-                             std::mt19937& rng, int min_y, int max_y) {
-    // Exact five-cell footprint written by the original Map generation
-    // event: center 99, north/south 100, west/east 101. The event first
-    // verifies that the surrounding 3x3 Array cells are all zero.
-    if (count == 0) return true;
-    if (grid.width() < 3 || min_y < 1 || max_y >= grid.height()) return false;
-    const std::uint32_t x_bound = static_cast<std::uint32_t>(grid.width() - 1u);
-    const std::uint32_t y_bound = static_cast<std::uint32_t>(max_y - min_y + 1);
-    const int max_attempts = static_cast<int>(grid.width()) *
-                             static_cast<int>(grid.height()) * 64;
-    for (std::uint8_t placed = 0; placed < count; ++placed) {
-        bool found = false;
-        for (int attempt = 0; attempt < max_attempts; ++attempt) {
-            const int x = static_cast<int>(source_random_bounded(rng, x_bound));
-            const int y = min_y + static_cast<int>(source_random_bounded(rng, y_bound)) - 1;
-            if (!grid.has_empty_3x3(x, y)) continue;
-            // Validate the full footprint before writing any part of it.
-            // Construct Array writes outside its dimensions are ignored;
-            // edge locations remain valid when the 3x3 emptiness test passes.
-            (void)grid.set(x, y, 99);
-            (void)grid.set(x, y - 1, 100);
-            (void)grid.set(x, y + 1, 100);
-            (void)grid.set(x - 1, y, 101);
-            (void)grid.set(x + 1, y, 101);
-            found = true;
-            break;
+// Root generate_array_tomap (UID 1694439930581699) places gas stations,
+// roadside cafes and lite shops AFTER Array518 roads become Sprite514
+// markers. It uses Repeat(count), OR(type==12,type==13), PickRandom(514)
+// and SetInstanceVariable(0). These are ROAD MARKER REPLACEMENTS, not
+// Array518 3x3 placements; the raw road stays intact for its connections.
+void replace_source_road_markers(
+    std::vector<WorldMapMarker>& markers,std::mt19937& rng,
+    std::uint8_t repetitions,bool second_half,
+    std::uint16_t from_12,std::uint16_t from_13) {
+    for(std::uint8_t n=0;n<repetitions;++n){
+        std::vector<std::size_t> eligible;
+        for(std::size_t i=0;i<markers.size();++i){
+            const auto& m=markers[i];
+            // Original first map tests Sprite514.var1 <= 15.
+            // Its second-half counterpart tests var1 >= 17.
+            if(second_half ? (m.cell_y<17) : (m.cell_y>15))continue;
+            if(m.marker_type!=12 && m.marker_type!=13)continue;
+            eligible.push_back(i);
         }
-        if (!found) return false;
+        // A Construct Pick Random Instance with an empty selection does
+        // nothing; it does not fabricate a station or reject the world.
+        if(eligible.empty())continue;
+        auto& m=markers[eligible[source_random_bounded(
+            rng,static_cast<std::uint32_t>(eligible.size()))]];
+        m.marker_type=m.marker_type==12?from_12:from_13;
     }
-    return true;
 }
 
 } // namespace
@@ -506,34 +501,18 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     // yields check_Y 1..15 and stores at Y-1 -> rows 0..14.
     // On split maps rows 15/16 remain the original separator.
     const int first_max_y = static_cast<int>(profile.map_size_y) - 1;
-    const std::uint8_t first_gas_stations = profile.second_half_start_y
-        ? static_cast<std::uint8_t>(profile.gas_stations / 2)
-        : profile.gas_stations;
-    const std::uint8_t second_gas_stations = static_cast<std::uint8_t>(
-        profile.gas_stations - first_gas_stations);
-    const std::uint8_t first_roadside_cafes = profile.second_half_start_y
-        ? static_cast<std::uint8_t>(profile.roadside_cafes / 2)
-        : profile.roadside_cafes;
-    const std::uint8_t second_roadside_cafes = static_cast<std::uint8_t>(
-        profile.roadside_cafes - first_roadside_cafes);
-    const std::uint8_t first_lite_shops = profile.second_half_start_y
-        ? static_cast<std::uint8_t>(profile.lite_shop / 2)
-        : profile.lite_shop;
-    const std::uint8_t second_lite_shops = static_cast<std::uint8_t>(
-        profile.lite_shop - first_lite_shops);
+    // Root generate_array_locations writes only village/military/city/
+    // hospital/fire station/chaoshi POIs to Array518. The source creates
+    // gas/cafe/shop locations later by picking road markers in
+    // generate_array_tomap; writing their fake 99/100/101 footprints here
+    // removed original roads and altered every later random choice.
     bool placed =
         place_poi_count(grid_, profile.villages, 9, rng_, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.militaries, 5, rng_, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.cities, 6, rng_, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.hospitals, 11, rng_, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.firestations, 15, rng_, first_min_y, first_max_y) &&
-        place_poi_count(grid_, profile.chaoshi, 103, rng_, first_min_y, first_max_y) &&
-        // Keep the gas-station footprint (center plus one row north/south)
-        // inside the first map half, away from the split-map separator.
-        place_gas_station_count(grid_, first_gas_stations, rng_,
-                                first_min_y, first_max_y - (profile.second_half_start_y ? 1 : 0)) &&
-        place_poi_count(grid_, first_lite_shops, 51, rng_, first_min_y, first_max_y) &&
-        place_poi_count(grid_, first_roadside_cafes, 50, rng_, first_min_y, first_max_y);
+        place_poi_count(grid_, profile.chaoshi, 103, rng_, first_min_y, first_max_y);
     if (!placed) return false;
 
     if (profile.second_half_start_y != 0) {
@@ -547,13 +526,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
             place_poi_count(grid_, profile.second_half_cities, 6, rng_, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_hospitals, 11, rng_, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_firestations, 15, rng_, second_min_y, second_max_y) &&
-            place_poi_count(grid_, profile.second_half_chaoshi, 103, rng_, second_min_y, second_max_y) &&
-            // The five-cell gas-station footprint extends one row above its
-            // center. Keep that footprint out of the two-row split-map gap.
-            place_gas_station_count(grid_, second_gas_stations, rng_,
-                                    second_min_y + 1, second_max_y) &&
-            place_poi_count(grid_, second_lite_shops, 51, rng_, second_min_y, second_max_y) &&
-            place_poi_count(grid_, second_roadside_cafes, 50, rng_, second_min_y, second_max_y);
+            place_poi_count(grid_, profile.second_half_chaoshi, 103, rng_, second_min_y, second_max_y);
         if (!placed) return false;
     }
 
@@ -566,6 +539,8 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
     map_markers_.clear();
     map_markers_.reserve(static_cast<std::size_t>(grid_.width()) * grid_.height());
     (void)seed; // The source uses one global random stream across generation stages.
+    WorldGenerationProfile profile{};
+    if(!source_world_profile(level,profile))return false;
     for (std::uint8_t y = 0; y < grid_.height(); ++y) {
         for (std::uint8_t x = 0; x < grid_.width(); ++x) {
             const std::uint16_t source_code = grid_.at(x, y);
@@ -573,6 +548,20 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
                 x, y, source_code, source_marker_type(source_code, level, rng_)
             });
         }
+    }
+    // Root generate_array_tomap first runs these three functions on
+    // first-half road markers, then repeats them in the second map half
+    // at levels 4/5. The source repeats the FULL count in EACH half:
+    // splitting one count across the halves silently halves locations.
+    const int halves=profile.second_half_start_y?2:1;
+    for(int half=0;half<halves;++half){
+        const bool second_half=half==1;
+        replace_source_road_markers(map_markers_,rng_,
+            profile.gas_stations,second_half,30,31);
+        replace_source_road_markers(map_markers_,rng_,
+            profile.roadside_cafes,second_half,50,51);
+        replace_source_road_markers(map_markers_,rng_,
+            profile.lite_shop,second_half,108,109);
     }
     return true;
 }

@@ -1882,9 +1882,38 @@ void test_every_source_level_quota() {
             assert(count_code(world.grid(), 11) == total(profile.hospitals, profile.second_half_hospitals));
             assert(count_code(world.grid(), 15) == total(profile.firestations, profile.second_half_firestations));
             assert(count_code(world.grid(), 103) == total(profile.chaoshi, profile.second_half_chaoshi));
-            assert(count_code(world.grid(), 99) == profile.gas_stations);
-            assert(count_code(world.grid(), 51) == profile.lite_shop);
-            assert(count_code(world.grid(), 50) == profile.roadside_cafes);
+            // Root generate_array_locations has NO SetAtXY values 99,
+            // 50 or 51. Services replace original road Sprite514 markers
+            // only after generate_array_tomap, preserving the road grid.
+            assert(count_code(world.grid(),99)==0);
+            assert(count_code(world.grid(),50)==0);
+            assert(count_code(world.grid(),51)==0);
+            std::size_t gas=0,cafes=0,shops=0;
+            for(std::size_t i=0;i<world.map_marker_count();++i){
+                const auto* m=world.map_marker(i);
+                assert(m);
+                const auto type=m->marker_type;
+                if(type!=30&&type!=31&&type!=50&&type!=51&&
+                   type!=108&&type!=109)continue;
+                // A raw Array road becomes a roadside Mapgen marker.
+                // Never delete or replace its road path in Array518.
+                assert(m->source_code==12 || m->source_code==13);
+                if(type==30||type==31)++gas;
+                else if(type==50||type==51)++cafes;
+                else ++shops;
+                assert(m->source_code==12?
+                    (type==30||type==50||type==108):
+                    (type==31||type==51||type==109));
+            }
+            const std::size_t map_halves=level>=4?2u:1u;
+            // Some seeds can exhaust original road candidates. Construct
+            // PickRandom then skips that repeat; it never invents cells.
+            assert(gas<=map_halves*profile.gas_stations);
+            assert(cafes<=map_halves*profile.roadside_cafes);
+            assert(shops<=map_halves*profile.lite_shop);
+            if(profile.gas_stations)assert(gas>0);
+            if(profile.roadside_cafes)assert(cafes>0);
+            if(profile.lite_shop)assert(shops>0);
             assert(world.map_marker_count() ==
                    static_cast<std::size_t>(profile.map_size_x) * profile.grid_height);
         }

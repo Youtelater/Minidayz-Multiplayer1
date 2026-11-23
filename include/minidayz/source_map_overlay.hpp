@@ -54,6 +54,21 @@ constexpr const char* location_name(CellKind kind) noexcept {
     }
 }
 
+// The original roadside services are not written into Array518: they
+// replace Sprite514 road markers in generate_array_tomap. Keep the raw
+// Array road for corridor rendering, but show the selected location from
+// the actual source marker (Sprite514.var0).
+constexpr CellKind marker_cell_kind(const WorldMapMarker& marker) noexcept {
+    switch(marker.marker_type){
+    case 30: case 31: return CellKind::gas_station;
+    case 50: case 51:
+        return marker.source_code==12 || marker.source_code==13
+            ? CellKind::cafe : CellKind::shop;
+    case 108: case 109: return CellKind::shop;
+    default: return cell_kind(marker.source_code);
+    }
+}
+
 constexpr bool is_location(CellKind kind) noexcept {
     return kind>=CellKind::village;
 }

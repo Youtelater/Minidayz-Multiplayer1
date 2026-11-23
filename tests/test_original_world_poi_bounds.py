@@ -25,7 +25,7 @@ for key in ("check_X","check_Y"):
  assert expected in expressions[key], (key,len(expressions[key]),list(expressions[key])[:5])
 source=(ROOT/"source/world.cpp").read_text()
 assert "grid.width() - 1u" in source
-assert source.count("max_y - min_y + 1")>=2
+assert source.count("max_y - min_y + 1")>=1
 assert "const int first_max_y = static_cast<int>(profile.map_size_y) - 1;" in source
 assert "const int second_max_y = static_cast<int>(profile.grid_height) - 1;" in source
 print("PASS: original floor(random(1,Map_size_X/Y)) bounds preserved; no inclusive last-row/column POI spawn")

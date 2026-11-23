@@ -21,6 +21,22 @@ int main(){
     assert(cell_kind(51)==CellKind::shop);
     assert(cell_kind(50)==CellKind::cafe);
     assert(cell_kind(99)==CellKind::gas_station);
+    // Original 514 roadside SetInstanceVariable(0) overrides the raw
+    // road (Array518). The touch map labels the marker, not the base road.
+    const minidayz::WorldMapMarker gas{2,3,12,30};
+    const minidayz::WorldMapMarker gas_h{2,3,13,31};
+    const minidayz::WorldMapMarker cafe{2,3,12,50};
+    const minidayz::WorldMapMarker cafe_h{2,3,13,51};
+    const minidayz::WorldMapMarker shop{2,3,12,108};
+    const minidayz::WorldMapMarker shop_h{2,3,13,109};
+    assert(marker_cell_kind(gas)==CellKind::gas_station);
+    assert(marker_cell_kind(gas_h)==CellKind::gas_station);
+    assert(marker_cell_kind(cafe)==CellKind::cafe);
+    assert(marker_cell_kind(cafe_h)==CellKind::cafe);
+    assert(marker_cell_kind(shop)==CellKind::shop);
+    assert(marker_cell_kind(shop_h)==CellKind::shop);
+    assert(marker_cell_kind({2,3,9,4})==CellKind::village);
+    assert(marker_cell_kind({2,3,13,13})==CellKind::road_horizontal);
     // Unknown mapgen temporary codes are not settlements.
     assert(cell_kind(1)==CellKind::ground);
     assert(cell_kind(2)==CellKind::ground);
