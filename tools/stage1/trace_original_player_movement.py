@@ -76,3 +76,26 @@ for layout in p[5]:
     print("PLAYER_BASE_INSTANCE",layout[0],layer_index,
       "layer",layer[0],"uid",inst[2],
       "instance",json.dumps(inst,ensure_ascii=False,separators=(",",":"))[:3600])
+
+print("ORIGINAL_DEAD_SKIN_OBJECTS")
+dead=[]
+for oid,obj in enumerate(p[3]):
+ if not isinstance(obj,list) or len(obj)<8 or not isinstance(obj[7],list):continue
+ for ai,a in enumerate(obj[7]):
+  if not isinstance(a,list) or len(a)<8 or not isinstance(a[7],list):continue
+  for fi,frame in enumerate(a[7]):
+   if isinstance(frame,list) and frame and isinstance(frame[0],str) and "player_skin_dead-" in frame[0]:
+    dead.append((oid,ai,fi,frame[:10],a[0],len(a[7])))
+print("ORIGINAL_DEAD_SKIN_FRAMES",len(dead))
+for sample in dead[:18]:print("DEAD_SKIN_SAMPLE",json.dumps(sample,separators=(",",":"))[:1700])
+for oid in sorted({row[0] for row in dead}):
+ print("DEAD_SKIN_OBJECT",oid,"anims",[(a[0],len(a[7])) for a in p[3][oid][7]])
+ hits=[]
+ for sheet,events in p[6]:
+  for e,parents,groups in walk(events):
+   for a in e[6] if isinstance(e[6],list) else ():
+    if isinstance(a,list) and len(a)>5 and (a[0]==oid or
+        (a[1]==94 and ("[4, "+str(oid)+"]") in str(a[5]))):
+     hits.append((sheet,e[4],groups[-4:],a[1],a[5]))
+ print("DEAD_SKIN_ACTIONS",oid,len(hits))
+ for rec in hits[:25]:print("DEAD_SKIN_ACTION",oid,json.dumps(rec,separators=(",",":"))[:2000])
