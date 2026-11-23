@@ -74,6 +74,14 @@ assert any(
     if isinstance(c, list) and len(c) > 5
 ), "Original item63 activation guard missing"
 
+# Original audio action is not optional: item use plays the canonical
+# media/drinksoda_0 recording at -10 dB before starting the source timer.
+assert any(a[0:2] == [187, 111] and text_present(a[5], "DrinkSoda_0")
+           and [0,[0,-10]] in a[5]
+           for a in event[6] if isinstance(a,list) and len(a)>5), (
+    "Missing original DrinkSoda_0(-10dB) audio action")
+assert (ROOT / "romfs/wav/drinksoda_0.wav").is_file()
+
 timer_start = [a for a in called(event, 181, 106)
                if text_present(a[5], "Edrink")]
 assert len(timer_start) == 1, "Missing original Timer.Start Edrink action"
