@@ -48,6 +48,12 @@ assert 0<=start<actor<player<world, "source actor must be rendered before world 
 assert main.index("source_tree_render_depth(",world)>world, "world draw depth still controls original layering"
 assert main.index("draw_equipped_layer(held_item,true",player)<world, "held source overlay must be resident"
 assert main.count("        // Match original Construct Map layer 32 (player)")==1, "duplicate player draw"
+# Never render a different original skin from the PlayerSystem's animation
+# object. Menu selection can change independently of a restored save.
+assert "const auto source_skin_object=player_.source_skin();" in main
+assert "kOriginalPlayerSkins[selected_skin_].object;" not in main.split(
+    "        // Match original Construct Map layer 32 (player)",1)[1].split(
+    "        // Keep source rain/night atlas pages",1)[0]
 # Original Map weather/night sprite layers must composite above all gameplay
 # layers. Earlier hardcoded .14/.16 rendered both overlays behind the world.
 assert main.index("if (rain_timer_.active()) {",world)>world

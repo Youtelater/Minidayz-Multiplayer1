@@ -2657,8 +2657,11 @@ public:
         std::snprintf(skin_animation,sizeof(skin_animation),"%s_%s",
             p.animation==minidayz::PlayerAnimation::idle?"idle":"run",
             skin_direction);
-        const auto source_skin_object=
-            minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object;
+        // The PlayerSystem selects and validates the original Construct
+        // animation source at spawn/restore time. Render THAT same source
+        // object; using an independent menu index here can draw a different
+        // skin than the one whose animation frames PlayerSystem advances.
+        const auto source_skin_object=player_.source_skin();
         // An armed survivor uses the ORIGINAL player's held-weapon stance
         // when available, not an ordinary empty-hands idle pose. This works
         // for all 20 skins and chooses only authentic Construct animations.
