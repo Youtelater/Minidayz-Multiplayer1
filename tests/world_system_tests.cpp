@@ -768,6 +768,11 @@ void test_original_car_trunk_one_time_search() {
     assert(body<world.placement_count());
     const auto* car_body=world.placement(body);
     assert(car_body && stage1::source_family_contains(1041,car_body->object));
+    // Original wreck Sprite frame dimensions are needed to position its
+    // spawned trunk241 at the exact authored imagepoint (not zero-size).
+    assert(car_body->width>0.0f && car_body->height>0.0f);
+    assert(stage1::source_building_frame_geometry(
+        car_body->object,car_body->source_animation,car_body->source_frame));
     assert(car_body->source_frame==0);
     const auto* point=world_source::source_house_image_point(
         before->object,before->source_animation,before->source_frame,"",3);
