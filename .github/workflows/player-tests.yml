@@ -592,6 +592,9 @@ jobs:
             tests/source_interior_container_tests.cpp -o source_interior_container_tests
           ./source_interior_container_tests
 
+      - name: Check original hidden NPC controller and visible Zeds body layer
+        run: python3 tests/test_original_npc_visual_layers.py
+
       - name: Compile Original NPC Spawn Source Tests
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -ffunction-sections -fdata-sections -Iinclude \
