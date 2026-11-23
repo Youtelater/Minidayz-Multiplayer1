@@ -1,0 +1,15 @@
+name: Trace Nested Original Car Spawn Chain
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/trace_category6_spawn_chain.py'
+      - '.github/workflows/trace-category6-car.yml'
+  workflow_dispatch:
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trace nested original Sprite241 creation and parent 508 branches
+        run: python3 tools/stage1/trace_category6_spawn_chain.py
