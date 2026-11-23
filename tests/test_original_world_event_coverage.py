@@ -48,4 +48,29 @@ for name in ("extract_location_templates.py","trace_source_map_grid_parity.py",
  assert "len(e)<8" not in code
  assert "len(n)>=8" not in code
  assert "len(child)>=8" not in code
+# Original Map generation UID3669795404796534 creates Mapgen514 in
+# row-major Array518 order with physical transposed axes.
+creator=index[3669795404796534]
+origins=[a for a in creator[6] if a[:2]==[-1,94] and a[5][0]==[4,514]]
+assert len(origins)==1
+xc=origins[0][5][2][1]
+yc=origins[0][5][3][1]
+assert xc[0]==4 and xc[1]==[0,700] and xc[2][0]==6
+assert xc[2][2]==[0,1020]
+quot=[19,204,[[7,[19,150],[23,"Map_size_X"]]]]
+assert xc[2][1]==quot
+assert yc[0]==4 and yc[1]==[0,320] and yc[2][0]==6
+assert yc[2][1]==[0,1020]
+assert "'Map_size_X'" in repr(yc) and "[19, 150]" in repr(yc)
+sets={a[5][0][1]:a[5][1] for a in creator[6]
+      if a[0]==514 and a[1]==88}
+assert sets[1]==[7,quot]
+assert "'Map_size_X'" in repr(sets[2])
+cpp=(ROOT/"include/minidayz/source_mapgen_geometry.hpp").read_text()
+assert "kMapgenStartX=700.0f" in cpp
+assert "kMapgenStartY=320.0f" in cpp
+assert "kMapgenStride=1020.0f" in cpp
+assert "kMapgenCreateEvent=3669795404796534ULL" in cpp
+assert "Value::from_number(grid_x);" in (
+    ROOT/"source/location_event_runtime.cpp").read_text()
 print("PASS original events: 22,343 total, 14,560 7-field leaves; 102 mapgen-to-array and 5,747 location actions preserved")
