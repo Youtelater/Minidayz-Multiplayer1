@@ -7,7 +7,7 @@ source EVIDENCE report, not a claim that C++ matches every action.
 """
 import json
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/"tools/stage1"))
@@ -33,8 +33,8 @@ for index,layer in enumerate(world[6]):
         item["objects"].append({"object":oid,"uid":ins[2],
              "x":transform[0] if len(transform)>0 else None,
              "y":transform[1] if len(transform)>1 else None,
-             "width":transform[2] if len(transform)>2 else None,
-             "height":transform[3] if len(transform)>3 else None,
+             "width":transform[3] if len(transform)>3 else None,
+             "height":transform[4] if len(transform)>4 else None,
              "data":str(ins[5])[:140],
              "tilemap_header":transform[13][:2] if len(transform)>13 and isinstance(transform[13],list) else None})
     if item["objects"]:report["map_layout"].append(item)
@@ -53,24 +53,23 @@ for sheet,events in p[6]:
         for c in e[5] if isinstance(e[5],list) else []:
             if not isinstance(c,list):continue
             for oid in [1066]:
-                if list(find_expr_id(c,oid)) and len(report["coordinate_expression_uses"])<50:
+                if list(find_expr_id(c,oid)):
                     report["coordinate_expression_uses"].append({"sheet":sheet,"event_uid":e[4],
                     "parent_uid":list(anc[-5:]),"kind":"condition",
-                    "raw":str(c)[:650]})
+                    "raw":c})
         for a in e[6] if isinstance(e[6],list) else []:
             if not isinstance(a,list) or len(a)<6:continue
             if a[0] in (208,211,418,230,482,687,688,776,980,1138,1139) and a[1] in (189,192,205):
                 report["tilemap_actions"].append((sheet,e[4],a[0],a[1],a[3]))
             if a[0] in (514,518,525) and a[1] in (199,200,203,210,211):
-                if len(report["road_actions"])<50:
-                    report["road_actions"].append({"sheet":sheet,"event_uid":e[4],
-                      "parent_uid":list(anc[-5:]),"object":a[0],"command":a[1],
-                      "params":str(a[5])[:460]})
+                report["road_actions"].append({"sheet":sheet,"event_uid":e[4],
+                  "parent_uid":list(anc[-5:]),"object":a[0],"command":a[1],
+                  "params":a[5]})
             for oid in [1066]:
-                if list(find_expr_id(a,oid)) and len(report["coordinate_expression_uses"])<50:
+                if list(find_expr_id(a,oid)):
                     report["coordinate_expression_uses"].append({"sheet":sheet,"event_uid":e[4],
                         "parent_uid":list(anc[-5:]),"kind":"action",
-                        "raw":str(a)[:650]})
+                        "raw":a})
 out=ROOT/"audit-output/world/step1_coordinate_and_road_source.json"
 out.parent.mkdir(parents=True,exist_ok=True)
 out.write_text(json.dumps(report,indent=2)+"\n")
