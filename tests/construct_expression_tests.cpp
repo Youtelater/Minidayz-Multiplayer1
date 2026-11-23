@@ -5,6 +5,7 @@
 #include <map>
 #include <random>
 #include <string>
+#include <utility>
 
 using namespace minidayz::construct;
 
@@ -70,6 +71,31 @@ int main() {
     assert(result.as_number() == 3);
     assert(evaluate_expression("[17,[0,3],[0,3]]", context, result));
     assert(result.as_number() == 1);
+    // From the original minified c2runtime.js: opcode 17 is >=,
+    // not equality. This condition chooses the modulo-like Mapgen
+    // location row for every loop index >= Map_size_X.
+    assert(evaluate_expression("[17,[0,3],[0,2]]", context, result));
+    assert(result.as_number()==1);
+    assert(evaluate_expression("[17,[0,2],[0,3]]", context, result));
+    assert(result.as_number()==0);
+    for (const auto& test: {
+        std::pair<int,int>{12,1}, {13,0}, {14,0},
+        {15,1}, {16,0}, {17,1}
+    }) {
+        const std::string expression = "[" + std::to_string(test.first) +
+            ",[0,3],[0,3]]";
+        assert(evaluate_expression(expression, context, result));
+        assert(result.as_number()==test.second);
+    }
+    // The original source's conditional Y-coordinate wraps correctly at
+    // 16, 32, 48 ... instead of continuing beyond the playable map.
+    const auto mapgen_y=[](int index) {
+        const int column=index/16;
+        return 320+1020*(column>=1?index-column*16:index);
+    };
+    assert(mapgen_y(0)==320 && mapgen_y(15)==15620);
+    assert(mapgen_y(16)==320 && mapgen_y(31)==15620);
+    assert(mapgen_y(32)==320 && mapgen_y(255)==15620);
     assert(evaluate_expression("[18,[17,[0,2],[0,2]],[0,7],[0,9]]", context, result));
     assert(result.as_number() == 7);
     assert(evaluate_expression("[18,[0,1],[0,7],[19,82,[[0,1],[0,2]]]]", context, result));

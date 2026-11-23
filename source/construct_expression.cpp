@@ -227,8 +227,13 @@ private:
             return true;
         }
 
+        // Original c2runtime.js expression nodes 12..17 dispatch to
+        // AE, LE, HE, IE, DE, EE respectively:
+        // ==, !=, <, <=, >, >=. Previous native opcode17 incorrectly
+        // tested equality, breaking the original Mapgen row-wrapping
+        // ternary at index >= Map_size_X.
         if (opcode == 4 || opcode == 5 || opcode == 6 ||
-            opcode == 7 || opcode == 17) {
+            opcode == 7 || (opcode >= 12 && opcode <= 17)) {
             Value left, right;
             if (!expression(left, depth + 1) || !take(',') ||
                 !expression(right, depth + 1) || !take(']')) return false;
@@ -244,11 +249,25 @@ private:
             } else if (opcode == 7) {
                 result = Value::from_number(left.as_number() / right.as_number());
             } else {
-                const bool equal = left.kind == Value::Kind::String ||
-                                   right.kind == Value::Kind::String
-                    ? left.as_string() == right.as_string()
-                    : left.as_number() == right.as_number();
-                result = Value::from_number(equal ? 1.0 : 0.0);
+                // For two source strings, compare their actual values;
+                // numeric operands keep Construct's number comparison.
+                const bool strings = left.kind == Value::Kind::String &&
+                                     right.kind == Value::Kind::String;
+                const int comparison = strings
+                    ? left.as_string().compare(right.as_string())
+                    : (left.as_number() < right.as_number() ? -1 :
+                       left.as_number() > right.as_number() ? 1 : 0);
+                bool matched = false;
+                switch (opcode) {
+                case 12: matched = comparison == 0; break;
+                case 13: matched = comparison != 0; break;
+                case 14: matched = comparison < 0; break;
+                case 15: matched = comparison <= 0; break;
+                case 16: matched = comparison > 0; break;
+                case 17: matched = comparison >= 0; break;
+                default: break;
+                }
+                result = Value::from_number(matched ? 1.0 : 0.0);
             }
             return true;
         }
