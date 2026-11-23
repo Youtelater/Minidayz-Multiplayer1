@@ -95,6 +95,7 @@ jobs:
           python3 tools/stage2/build_source_loot_catalog.py
           python3 tools/stage2/build_original_timed_loot.py
           python3 tools/stage2/build_original_initial_building_loot.py
+          python3 tools/stage2/build_original_car_trunk_loot.py
 
       - name: Audit source player and item spritesheet coordinates
         run: python3 tools/stage2/audit_player_item_frame_coordinates.py
