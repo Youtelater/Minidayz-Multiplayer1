@@ -1,0 +1,15 @@
+name: Trace Original Player Controls
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/trace_original_player_movement.py'
+      - '.github/workflows/trace-original-player-controls.yml'
+  workflow_dispatch:
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode original player animation and AltMove event ancestry
+        run: python3 tools/stage1/trace_original_player_movement.py
