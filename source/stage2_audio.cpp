@@ -249,8 +249,11 @@ void Stage2Audio::play(std::size_t which) noexcept {
         // Apply linear amplitude 10^(-5/20), unlike normal door cues.
         const bool source_car_open=which==13u &&
             loaded_world_cue_==static_cast<int>(OriginalWorldSound::carTrunkOpen);
+        const bool source_item_drink=which==13u &&
+            loaded_world_cue_==static_cast<int>(OriginalWorldSound::drinkSoda0);
         const float gain=(which==12 && menu_ambience_)?0.31622777f:
-                         source_car_open?0.56234133f:1.0f;
+                         source_car_open?0.56234133f:
+                         source_item_drink?0.31622777f:1.0f;
         const Result result=csndPlaySound(channel,flags,clip.sample_rate,
             gain,0.0f,clip.pcm,clip.pcm,static_cast<u32>(clip.bytes));
         if(which==12) {
@@ -266,7 +269,10 @@ void Stage2Audio::play(std::size_t which) noexcept {
     float mix[12]{};
     const bool source_car_open=which==13u &&
         loaded_world_cue_==static_cast<int>(OriginalWorldSound::carTrunkOpen);
-    const float gain=source_car_open?0.56234133f:1.0f;
+    const bool source_item_drink=which==13u &&
+        loaded_world_cue_==static_cast<int>(OriginalWorldSound::drinkSoda0);
+    const float gain=source_car_open?0.56234133f:
+                     source_item_drink?0.31622777f:1.0f;
     mix[0]=gain;
     mix[1]=gain;
     ndspChnSetMix(channel,mix);
@@ -302,7 +308,8 @@ void Stage2Audio::play_original_world_sound(OriginalWorldSound cue) noexcept {
         "romfs:/wav/close_door.wav",
         "romfs:/wav/open_door_metal.wav",
         "romfs:/wav/close_door_metal.wav",
-        "romfs:/wav/open.wav" // Root Game_events car Sprite241: Audio.Play("open",-5)
+        "romfs:/wav/open.wav", // Root car Sprite241 Audio.Play("open",-5)
+        "romfs:/wav/drinksoda_0.wav" // Root item63 Audio.Play("DrinkSoda_0",-10)
     };
     const auto index=static_cast<std::size_t>(cue);
     if (index>=sizeof(files)/sizeof(files[0])) return;
