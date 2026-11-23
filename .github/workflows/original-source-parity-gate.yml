@@ -1,0 +1,26 @@
+name: Audit Every Original Event Against 3DS Port
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/parity/audit_original_port_coverage.py'
+      - 'data/parity/verified_original_events.json'
+      - 'tests/test_original_port_coverage.py'
+      - '.github/workflows/original-source-parity-gate.yml'
+      - 'data.deobfuscated.js'
+  workflow_dispatch:
+jobs:
+  exact-source-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enumerate every original event and exact car loot ancestry
+        run: python3 tools/parity/audit_original_port_coverage.py
+      - name: Verify full original-event register without silent omissions
+        run: python3 tests/test_original_port_coverage.py
+      - name: Publish source-to-3DS implementation and missing-code report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exact-source-port-coverage-and-car-loot
+          path: audit-output/source-parity
