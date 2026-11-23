@@ -18,7 +18,7 @@ inline constexpr std::uint64_t kSourceBunkerLootboxOpenEvent=389950912936355ULL;
 inline bool source_bunker_lootbox_closed(const WorldPlacement& box) noexcept {
     return box.object==kSourceBunkerLootbox &&
         box.layer==kSourceInteriorContainerLayer &&
-        box.runtime_uid!=0 &&
+        box.runtime_uid!=0 && box.source_variable_1==0 &&
         box.opacity>0.0f && std::isfinite(box.opacity) &&
         box.width>0.0f && box.height>0.0f &&
         box.source_animation<=3 && box.source_frame==0;

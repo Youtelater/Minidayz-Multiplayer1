@@ -16,6 +16,10 @@ int main() {
         box.source_animation=static_cast<std::uint16_t>(animation);
         box.source_frame=0;
         assert(source_bunker_lootbox_closed(box));
+        // Original root OnCollision requires that instance bool1 is false.
+        box.source_variable_1=1;
+        assert(!source_bunker_lootbox_closed(box));
+        box.source_variable_1=0;
         // Changing to exact original Sprite796 frame1 latches the box.
         box.source_frame=kSourceBunkerLootboxOpenedFrame;
         assert(!source_bunker_lootbox_closed(box));
