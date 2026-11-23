@@ -37,6 +37,17 @@ for label,code in (
 # otherwise the menu background vanishes as soon as the depth order is fixed.
 assert "C2D_Color32(22,26,24,255),0.01f" in main
 assert "C2D_Color32(24, 34, 29, 255),0.01f" in main
+# The 32-atlas-frame budget must never hide the original survivor and
+# equipment behind an arbitrary 33rd tree/house PNG. GPU depth, not
+# draw submission order, preserves the original Construct Map layers.
+start=main.index("        // World sprite atlases can consume all 32 GPU cache slots")
+actor=main.index("        // Keep original pixel-art proportions.",start)
+player=main.index("        // Match original Construct Map layer 32 (player)",actor)
+world=main.index("            // WorldGrid codes 12/13/14",start)
+assert 0<=start<actor<player<world, "source actor must be rendered before world sprite cache pressure"
+assert main.index("source_tree_render_depth(",world)>world, "world draw depth still controls original layering"
+assert main.index("draw_equipped_layer(held_item,true",player)<world, "held source overlay must be resident"
+assert main.count("        // Match original Construct Map layer 32 (player)")==1, "duplicate player draw"
 assert "float depth=0.5f" in (ROOT/"include/minidayz/engine.hpp").read_text(encoding="utf-8")
 assert "kSkinPrevious{18, 145, 154, 191}" in menu
 assert "kNewGameButton=kMenuRows[1]" in menu

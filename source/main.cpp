@@ -2546,6 +2546,145 @@ public:
                                camera_x + 12.0f, camera_y + 12.0f, 0.30f);
         }
 
+        // World sprite atlases can consume all 32 GPU cache slots in a
+        // single frame. Submit the original source player/NPC and equipment
+        // first, so their artwork stays pinned when dense towns/forests
+        // introduce more source textures. The GPU depth buffer, NOT draw
+        // submission order, still determines Construct layer visibility:
+        // Buildings_bg(31) < survivor(32..39) < Buildings(41)/Trees(43).
+        // This also lets translucent source roofs blend over the survivor
+        // instead of depth-rejecting them after an earlier roof draw.
+        // Keep original pixel-art proportions. The previous arbitrary 0.55x
+        // shrink made the survivor and zombies tiny in the 3DS viewport.
+        if (npc_ready_) {
+            for (std::size_t i = 0; i < npcs_.count(); ++i) {
+                const auto* npc = npcs_.actor(i);
+                if (!npc || !npc->alive ||
+                    npc->x < camera_x - 48.0f || npc->x > camera_x + view_w + 48.0f ||
+                    npc->y < camera_y - 48.0f || npc->y > camera_y + view_h + 48.0f)
+                    continue;
+                if (!renderer.draw_source_sprite(npc->source_object,
+                        npc->animation_index, npc->animation_frame,
+                        npc->x, npc->y, 1.0f, 1.0f))
+                    renderer.draw_solid_rect(npc->x - 5.0f, npc->y - 5.0f,
+                        10.0f, 12.0f, C2D_Color32(130, 145, 78, 255));
+                // The original NPC is composed from a skin sprite and a
+                // separate eyes sprite pinned to the same position.
+                (void)renderer.draw_source_sprite(npc->eyes_object, 0, 0,
+                    npc->x, npc->y, 1.0f, 1.0f);
+            }
+        }
+
+        // Match original Construct Map layer 32 (player) and source
+        // clothing/weapon layer indices 33..39, not hardcoded 3DS Z.
+        const float player_depth=minidayz::stage1::source_player_layer_depth(
+            minidayz::stage1::kSourcePlayerLayer);
+        const char* skin_direction="down";
+        switch(p.facing){
+        case minidayz::PlayerFacing::down: skin_direction="down"; break;
+        case minidayz::PlayerFacing::up: skin_direction="up"; break;
+        case minidayz::PlayerFacing::left: skin_direction="left"; break;
+        case minidayz::PlayerFacing::right: skin_direction="right"; break;
+        }
+        char skin_animation[32]{};
+        std::snprintf(skin_animation,sizeof(skin_animation),"%s_%s",
+            p.animation==minidayz::PlayerAnimation::idle?"idle":"run",
+            skin_direction);
+        const auto source_skin_object=
+            minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object;
+        // An armed survivor uses the ORIGINAL player's held-weapon stance
+        // when available, not an ordinary empty-hands idle pose. This works
+        // for all 20 skins and chooses only authentic Construct animations.
+        const auto held_item=(active_quick_pistol_ && equipment_.quick_pistol()!=0)
+            ? equipment_.quick_pistol()
+            : equipment_.equipped(active_held_slot_)!=0
+                ?equipment_.equipped(active_held_slot_)
+                : equipment_.equipped(minidayz::items::EquipmentSlot::weapon)!=0
+                    ?equipment_.equipped(minidayz::items::EquipmentSlot::weapon)
+                    : equipment_.equipped(minidayz::items::EquipmentSlot::hands);
+        const auto* held_visual=minidayz::stage1::original_equipment_visual(
+            held_item);
+        const auto* weapon_pose=minidayz::stage1::original_equipment_pose(
+            held_visual,p.animation!=minidayz::PlayerAnimation::idle,true);
+        const bool outlined=source_player_outline_ &&
+            minidayz::stage1::source_family_contains(1064,source_skin_object);
+        bool sprite_drawn=false;
+        if(p.alive && weapon_pose &&
+            std::strcmp(weapon_pose,"idle")!=0 &&
+            std::strcmp(weapon_pose,"run")!=0) {
+            char armed_animation[32]{};
+            std::snprintf(armed_animation,sizeof(armed_animation),"%s_%s",
+                          weapon_pose,skin_direction);
+            sprite_drawn=renderer.draw_source_animation(source_skin_object,
+                armed_animation,player_.source_animation_frame(),
+                p.x,p.y,1.0f,1.0f,player_depth,0.0f,outlined);
+        }
+        if(p.alive && !sprite_drawn)
+            sprite_drawn=renderer.draw_source_animation(source_skin_object,
+                skin_animation,player_.source_animation_frame(),
+                p.x,p.y,1.0f,1.0f,player_depth,0.0f,outlined);
+        // If an optional survivor texture is missing from RomFS, use the
+        // game's ORIGINAL default survivor as a last-resort sprite. This
+        // keeps the player visible without substituting invented artwork;
+        // equipment overlays remain source-derived. Never replace the
+        // selected skin when its original animation loaded successfully.
+        if(p.alive && !sprite_drawn &&
+           source_skin_object!=minidayz::kSourcePlayerObject)
+            sprite_drawn=renderer.draw_source_animation(
+                minidayz::kSourcePlayerObject,skin_animation,
+                player_.source_animation_frame(),
+                p.x,p.y,1.0f,1.0f,player_depth,0.0f,
+                source_player_outline_ && minidayz::stage1::source_family_contains(
+                    1064,minidayz::kSourcePlayerObject));
+        if (p.alive) {
+            // Original item pickups and wearable actor overlays are NOT
+            // interchangeable. Only draw original animation poses proven to
+            // exist for this source item. The selected skin supplies the
+            // player hotspot; all original equipment layers use that hotspot.
+            const bool moving=p.animation!=minidayz::PlayerAnimation::idle;
+            const auto draw_equipped_layer=[&](std::uint16_t item_id,
+                                               bool weapon,float depth) {
+                if(item_id==0)return;
+                const auto* visual=minidayz::stage1::original_equipment_visual(item_id);
+                const auto* prefix=minidayz::stage1::original_equipment_pose(
+                    visual,moving,weapon);
+                if(!visual||!prefix)return;
+                char name[32]{};
+                std::snprintf(name,sizeof(name),"%s_%s",prefix,skin_direction);
+                (void)renderer.draw_source_animation(visual->object,name,
+                    player_.source_animation_frame(),p.x,p.y,1.0f,1.0f,depth);
+            };
+            // Source-authored equipment back-to-front. The originals use
+            // separate layers on top of the chosen character base skin.
+            draw_equipped_layer(equipment_.equipped(
+                minidayz::items::EquipmentSlot::pants),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerPantsLayer));
+            draw_equipped_layer(equipment_.equipped(
+                minidayz::items::EquipmentSlot::outerwear),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerClothingLayer));
+            draw_equipped_layer(equipment_.equipped(
+                minidayz::items::EquipmentSlot::vest),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerVestLayer));
+            draw_equipped_layer(equipment_.equipped(
+                minidayz::items::EquipmentSlot::head),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerHelmetLayer));
+            draw_equipped_layer(inventory_.equipped_backpack(),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerBackpackLayer));
+            // Original satchels are separate wearable storage equipment,
+            // not part of the main backpack slot. Show both when equipped.
+            draw_equipped_layer(inventory_.equipped_satchel(),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerBackpackLayer));
+            // Draw only the selected held firearm OR melee overlay, not
+            // both weapons through the same hand at the same time.
+            draw_equipped_layer(held_item,true,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerWeaponLayer));
+        }
+        if (!sprite_drawn) {
+            renderer.draw_solid_rect(p.x - 5.0f, p.y - 5.0f, 10.0f, 12.0f,
+                                     p.alive ? C2D_Color32(190, 126, 65, 255)
+                                             : C2D_Color32(130, 45, 45, 255));
+        }
+
         if (world_ready_) {
             // WorldGrid codes 12/13/14 are the original procedural road
             // network. They must be drawn before buildings and trees, or
@@ -2806,137 +2945,6 @@ public:
                 loot->y > camera_y + view_h + 24.0f) continue;
             (void)renderer.draw_item_icon(loot->item.item_id,
                 loot->x, loot->y, 18.0f, 18.0f, 0.54f);
-        }
-
-        // Keep original pixel-art proportions. The previous arbitrary 0.55x
-        // shrink made the survivor and zombies tiny in the 3DS viewport.
-        if (npc_ready_) {
-            for (std::size_t i = 0; i < npcs_.count(); ++i) {
-                const auto* npc = npcs_.actor(i);
-                if (!npc || !npc->alive ||
-                    npc->x < camera_x - 48.0f || npc->x > camera_x + view_w + 48.0f ||
-                    npc->y < camera_y - 48.0f || npc->y > camera_y + view_h + 48.0f)
-                    continue;
-                if (!renderer.draw_source_sprite(npc->source_object,
-                        npc->animation_index, npc->animation_frame,
-                        npc->x, npc->y, 1.0f, 1.0f))
-                    renderer.draw_solid_rect(npc->x - 5.0f, npc->y - 5.0f,
-                        10.0f, 12.0f, C2D_Color32(130, 145, 78, 255));
-                // The original NPC is composed from a skin sprite and a
-                // separate eyes sprite pinned to the same position.
-                (void)renderer.draw_source_sprite(npc->eyes_object, 0, 0,
-                    npc->x, npc->y, 1.0f, 1.0f);
-            }
-        }
-
-        // Match original Construct Map layer 32 (player) and source
-        // clothing/weapon layer indices 33..39, not hardcoded 3DS Z.
-        const float player_depth=minidayz::stage1::source_player_layer_depth(
-            minidayz::stage1::kSourcePlayerLayer);
-        const char* skin_direction="down";
-        switch(p.facing){
-        case minidayz::PlayerFacing::down: skin_direction="down"; break;
-        case minidayz::PlayerFacing::up: skin_direction="up"; break;
-        case minidayz::PlayerFacing::left: skin_direction="left"; break;
-        case minidayz::PlayerFacing::right: skin_direction="right"; break;
-        }
-        char skin_animation[32]{};
-        std::snprintf(skin_animation,sizeof(skin_animation),"%s_%s",
-            p.animation==minidayz::PlayerAnimation::idle?"idle":"run",
-            skin_direction);
-        const auto source_skin_object=
-            minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object;
-        // An armed survivor uses the ORIGINAL player's held-weapon stance
-        // when available, not an ordinary empty-hands idle pose. This works
-        // for all 20 skins and chooses only authentic Construct animations.
-        const auto held_item=(active_quick_pistol_ && equipment_.quick_pistol()!=0)
-            ? equipment_.quick_pistol()
-            : equipment_.equipped(active_held_slot_)!=0
-                ?equipment_.equipped(active_held_slot_)
-                : equipment_.equipped(minidayz::items::EquipmentSlot::weapon)!=0
-                    ?equipment_.equipped(minidayz::items::EquipmentSlot::weapon)
-                    : equipment_.equipped(minidayz::items::EquipmentSlot::hands);
-        const auto* held_visual=minidayz::stage1::original_equipment_visual(
-            held_item);
-        const auto* weapon_pose=minidayz::stage1::original_equipment_pose(
-            held_visual,p.animation!=minidayz::PlayerAnimation::idle,true);
-        const bool outlined=source_player_outline_ &&
-            minidayz::stage1::source_family_contains(1064,source_skin_object);
-        bool sprite_drawn=false;
-        if(p.alive && weapon_pose &&
-            std::strcmp(weapon_pose,"idle")!=0 &&
-            std::strcmp(weapon_pose,"run")!=0) {
-            char armed_animation[32]{};
-            std::snprintf(armed_animation,sizeof(armed_animation),"%s_%s",
-                          weapon_pose,skin_direction);
-            sprite_drawn=renderer.draw_source_animation(source_skin_object,
-                armed_animation,player_.source_animation_frame(),
-                p.x,p.y,1.0f,1.0f,player_depth,0.0f,outlined);
-        }
-        if(p.alive && !sprite_drawn)
-            sprite_drawn=renderer.draw_source_animation(source_skin_object,
-                skin_animation,player_.source_animation_frame(),
-                p.x,p.y,1.0f,1.0f,player_depth,0.0f,outlined);
-        // If an optional survivor texture is missing from RomFS, use the
-        // game's ORIGINAL default survivor as a last-resort sprite. This
-        // keeps the player visible without substituting invented artwork;
-        // equipment overlays remain source-derived. Never replace the
-        // selected skin when its original animation loaded successfully.
-        if(p.alive && !sprite_drawn &&
-           source_skin_object!=minidayz::kSourcePlayerObject)
-            sprite_drawn=renderer.draw_source_animation(
-                minidayz::kSourcePlayerObject,skin_animation,
-                player_.source_animation_frame(),
-                p.x,p.y,1.0f,1.0f,player_depth,0.0f,
-                source_player_outline_ && minidayz::stage1::source_family_contains(
-                    1064,minidayz::kSourcePlayerObject));
-        if (p.alive) {
-            // Original item pickups and wearable actor overlays are NOT
-            // interchangeable. Only draw original animation poses proven to
-            // exist for this source item. The selected skin supplies the
-            // player hotspot; all original equipment layers use that hotspot.
-            const bool moving=p.animation!=minidayz::PlayerAnimation::idle;
-            const auto draw_equipped_layer=[&](std::uint16_t item_id,
-                                               bool weapon,float depth) {
-                if(item_id==0)return;
-                const auto* visual=minidayz::stage1::original_equipment_visual(item_id);
-                const auto* prefix=minidayz::stage1::original_equipment_pose(
-                    visual,moving,weapon);
-                if(!visual||!prefix)return;
-                char name[32]{};
-                std::snprintf(name,sizeof(name),"%s_%s",prefix,skin_direction);
-                (void)renderer.draw_source_animation(visual->object,name,
-                    player_.source_animation_frame(),p.x,p.y,1.0f,1.0f,depth);
-            };
-            // Source-authored equipment back-to-front. The originals use
-            // separate layers on top of the chosen character base skin.
-            draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::pants),false,minidayz::stage1::source_player_layer_depth(
-                    minidayz::stage1::kSourcePlayerPantsLayer));
-            draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::outerwear),false,minidayz::stage1::source_player_layer_depth(
-                    minidayz::stage1::kSourcePlayerClothingLayer));
-            draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::vest),false,minidayz::stage1::source_player_layer_depth(
-                    minidayz::stage1::kSourcePlayerVestLayer));
-            draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::head),false,minidayz::stage1::source_player_layer_depth(
-                    minidayz::stage1::kSourcePlayerHelmetLayer));
-            draw_equipped_layer(inventory_.equipped_backpack(),false,minidayz::stage1::source_player_layer_depth(
-                    minidayz::stage1::kSourcePlayerBackpackLayer));
-            // Original satchels are separate wearable storage equipment,
-            // not part of the main backpack slot. Show both when equipped.
-            draw_equipped_layer(inventory_.equipped_satchel(),false,minidayz::stage1::source_player_layer_depth(
-                    minidayz::stage1::kSourcePlayerBackpackLayer));
-            // Draw only the selected held firearm OR melee overlay, not
-            // both weapons through the same hand at the same time.
-            draw_equipped_layer(held_item,true,minidayz::stage1::source_player_layer_depth(
-                    minidayz::stage1::kSourcePlayerWeaponLayer));
-        }
-        if (!sprite_drawn) {
-            renderer.draw_solid_rect(p.x - 5.0f, p.y - 5.0f, 10.0f, 12.0f,
-                                     p.alive ? C2D_Color32(190, 126, 65, 255)
-                                             : C2D_Color32(130, 45, 45, 255));
         }
 
         // The original Map has separate night (46) and Rain (44) layers.

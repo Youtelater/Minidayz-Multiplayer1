@@ -1,4 +1,5 @@
 #include "minidayz/terrain_source_visibility.hpp"
+#include "minidayz/source_world_layer_depth.hpp"
 #include <cassert>
 #include <cmath>
 
@@ -42,6 +43,21 @@ int main() {
         quarter_turn,0,0,400,240));
     assert(!source_sprite_in_view(500,120,800,24,.5f,.5f,1,1,
         quarter_turn,0,0,400,240));
+    // Original Construct world compositing on 3DS is Z-based. Drawing
+    // player sprites first must not put them above original foreground
+    // trees or roofs: GPU depth still honors the source layer numbers.
+    using minidayz::world_source::source_world_layer_depth;
+    const float background=source_world_layer_depth(31,0,1);
+    const float player=source_world_layer_depth(32,0,0);
+    const float equipment=source_world_layer_depth(39,0,0);
+    const float foreground=source_world_layer_depth(41,0,1);
+    const float trees=source_world_layer_depth(43,0,1);
+    assert(background<player && player<equipment);
+    assert(equipment<foreground && foreground<trees);
+    // Every within-layer index is strictly below the next source layer,
+    // including crowded visible slices in large original town clusters.
+    assert(source_world_layer_depth(41,5000,10000)<
+           source_world_layer_depth(42,0,0));
     // Avoid out-of-bounds math for bad source geometry.
     assert(!source_sprite_in_view(NAN,0,32,32,.5f,.5f,1,1,0,0,0,400,240));
     assert(!source_sprite_in_view(0,0,0,32,.5f,.5f,1,1,0,0,0,400,240));
