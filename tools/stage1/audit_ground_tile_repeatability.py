@@ -87,8 +87,9 @@ for index,layer in enumerate(layout[6]):
             summary["tilemap_header"]=t[13][:2]
             import re
             tiles={}
-            for match in re.finditer(r"(\\d+)x(-?\\d+)|(-?\\d+)",str(t[13][2])):
+            for match in re.finditer(r"(\d+)x(-?\d+)|(-?\d+)",str(t[13][2])):
                 n=int(match[1] or 1);v=int(match[2] if match[2] is not None else match[3])
                 tiles[v]=tiles.get(v,0)+n
             summary["rle_top"]=sorted(tiles.items(),key=lambda a:-a[1])[:8]
+            summary["occupied_source_cells"]=sum(n for v,n in tiles.items() if v!=-1)
         print("ROOT MAP ORIGINAL BG INSTANCE",summary)
