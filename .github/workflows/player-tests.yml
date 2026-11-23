@@ -49,6 +49,9 @@ jobs:
           python3 tools/stage1/build_source_building_polygons.py
           python3 tools/stage1/build_source_roof_family_points.py
 
+      - name: Recheck root original Step 1 Tilemap and map-coordinate actions
+        run: python3 tools/stage1/audit_step1_root_coordinate_gaps.py
+
       - name: Verify original per-frame house and building Solid polygons
         shell: bash
         run: |
