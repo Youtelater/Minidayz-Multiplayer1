@@ -37,6 +37,12 @@ assert "static_cast<double>(rng())/4294967296.0" in source
 runtime=(ROOT/"c2runtime.js").read_text()
 assert "Fv=function(a){var b=ua(Math.random()*(arguments.length-1))" in runtime
 assert "return source_floor_random_bounded(rng,bound);" in source
+assert "if(outputs.size()==1)" in source  # literal Sprite514 SetVariable has no choose()
+assert "selected.marker_type=*outputs.begin();" in source
+assert "f.prototype.Yn=function(b,a,d,g){if(b.R){var c=ua(Math.random()*b.fg.length)" in runtime
+# Raw MT modulo/rejection isn't equivalent to the source
+# k.prototype.Fv's Math.random()*N on the original map generation.
+assert "const std::uint32_t threshold =" not in source
 assert source.count("max_y - min_y + 1")>=1
 assert "const int first_max_y = static_cast<int>(profile.map_size_y) - 1;" in source
 assert "const int second_max_y = static_cast<int>(profile.grid_height) - 1;" in source
