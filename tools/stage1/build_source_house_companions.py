@@ -58,6 +58,25 @@ for name,nodes in p[6]:
   # building-base original Spawn parents belong to this building pass.
   if roots[0][2] not in ("Buildings_base","Buildings"):continue
   base=roots[0][1]
+  # In original category6 wreck branches, the base and its Solid345/348
+  # are spawned in the parent event, but *Sprite241 car trunk* is spawned
+  # in a CHILD event gated by Mapgen508.var3 == 0. Previously the parser
+  # read only parent actions and silently discarded ALL 15 searchable
+  # car trunks, even though the original car art appeared.
+  # Include the exact source child actions in original event order only
+  # under the authored var3=0 guard; do not promote arbitrary descendants.
+  if 4174243855126541 in anc:
+   for child in (e[7] if len(e)>7 and isinstance(e[7],list) else []):
+    if not isinstance(child,list) or len(child)<7 or child[0]!=0:continue
+    guard=child[5] if isinstance(child[5],list) else []
+    if (len(guard)!=1 or guard[0][:2]!=[508,71] or
+        len(guard[0])<=9 or
+        guard[0][9]!=[[10,3],[8,0],[7,[0,0]]]):
+     continue
+    source_child=child[6] if isinstance(child[6],list) else []
+    if any(spawn(a) == (base,241,"Sunset_Dawn",1)
+           for a in source_child):
+     acts=list(acts)+list(source_child)
   # Original child event predicate: Mapgen508 instance variable index2
   # equals the current create_map_element variant. This is stronger than
   # trusting stale generated event UIDs in world_source_data.hpp.
