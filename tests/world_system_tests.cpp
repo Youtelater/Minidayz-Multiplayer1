@@ -6,6 +6,7 @@
 #include "minidayz/source_door_auto.hpp"
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
+#include "minidayz/source_interior_container.hpp"
 #include "minidayz/original_initial_building_loot.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
@@ -1875,6 +1876,46 @@ void test_original_constructed_bed_journal_v4() {
     std::remove(temp);
 }
 
+void test_original_bunker_container_open_save_replay() {
+    using namespace minidayz;
+    using namespace minidayz::world_source;
+    WorldSystem world;
+    assert(world.generate_from_source(0x715d00d0u,"Map",0));
+    std::size_t index=world.placement_count();
+    for(std::size_t i=0;i<world.placement_count();++i) {
+        const auto* p=world.placement(i);
+        if(p && p->object==kSourceBunkerLootbox &&
+           p->layer==kSourceInteriorContainerLayer &&
+           p->source_animation==0 && p->source_frame==0) {
+            index=i;break;
+        }
+    }
+    // Map's original 796 editor fixture is offscreen and invisible;
+    // activate that same exact sprite to exercise the event without
+    // inventing a world container or modifying the authored layout.
+    assert(index<world.placement_count());
+    const auto id=world.placement(index)->runtime_uid;
+    assert(world.set_placement_sprite_state(index,0,0,1.0f));
+    assert(source_bunker_lootbox_closed(*world.placement(index)));
+    assert(world.open_source_bunker_lootbox(index));
+    const auto* opened=world.placement(index);
+    assert(opened && opened->runtime_uid==id);
+    assert(opened->source_frame==kSourceBunkerLootboxOpenedFrame);
+    assert(opened->source_variable_1==1);
+    assert(!source_bunker_lootbox_closed(*opened));
+    assert(!world.open_source_bunker_lootbox(index)); // original bool1 latch
+    const auto saved=world.capture_sprite_states();
+    assert(!saved.empty());
+    assert(world.restore_sprite_states({})); // restore original hidden fixture
+    const auto* baseline=world.placement(index);
+    assert(baseline && baseline->source_frame==0);
+    assert(baseline->source_variable_1==0);
+    assert(world.restore_sprite_states(saved));
+    assert(world.placement(index)->source_frame==1);
+    assert(world.placement(index)->source_variable_1==1);
+    assert(!world.open_source_bunker_lootbox(index));
+}
+
 void test_original_building_specific_loot_on_generated_world() {
     using namespace minidayz;
     using namespace minidayz::items;
@@ -1950,6 +1991,7 @@ int main() {
     test_category4_variant40_building_spawns();
     test_location_state_gates_existing_placement();
     test_original_house_loot_marker_spawns();
+    test_original_bunker_container_open_save_replay();
     test_original_building_specific_loot_on_generated_world();
     test_every_source_mapped_house_spawn_chain();
     test_live_original_automatic_doors();
