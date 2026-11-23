@@ -245,7 +245,12 @@ void Stage2Audio::play(std::size_t which) noexcept {
         if (channel<0) return;
         const u32 flags=SOUND_FORMAT_16BIT|SOUND_LINEAR_INTERP|
             ((which==6 || which==12)?SOUND_REPEAT:SOUND_ONE_SHOT);
-        const float gain=(which==12 && menu_ambience_)?0.31622777f:1.0f;
+        // Root car-open UID7711324247664447 plays WAV "open" at -5dB.
+        // Apply linear amplitude 10^(-5/20), unlike normal door cues.
+        const bool source_car_open=which==13u &&
+            loaded_world_cue_==static_cast<int>(OriginalWorldSound::carTrunkOpen);
+        const float gain=(which==12 && menu_ambience_)?0.31622777f:
+                         source_car_open?0.56234133f:1.0f;
         const Result result=csndPlaySound(channel,flags,clip.sample_rate,
             gain,0.0f,clip.pcm,clip.pcm,static_cast<u32>(clip.bytes));
         if(which==12) {
@@ -259,8 +264,11 @@ void Stage2Audio::play(std::size_t which) noexcept {
     ndspChnSetFormat(channel, clip.channels==1
         ? NDSP_FORMAT_MONO_PCM16 : NDSP_FORMAT_STEREO_PCM16);
     float mix[12]{};
-    mix[0]=1.0f;
-    mix[1]=1.0f;
+    const bool source_car_open=which==13u &&
+        loaded_world_cue_==static_cast<int>(OriginalWorldSound::carTrunkOpen);
+    const float gain=source_car_open?0.56234133f:1.0f;
+    mix[0]=gain;
+    mix[1]=gain;
     ndspChnSetMix(channel,mix);
     auto& wave=waves_[which];
     wave={};

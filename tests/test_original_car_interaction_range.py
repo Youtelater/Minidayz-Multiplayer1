@@ -32,3 +32,6 @@ assert '"romfs:/wav/open.wav"' in audio
 assert 'carTrunkOpen' in enum
 assert 'OriginalWorldSound::carTrunkOpen' in scene
 assert (ROOT/"romfs/wav/open.wav").is_file()
+
+assert audio.count("source_car_open")>=2
+assert audio.count("0.56234133f")>=2
