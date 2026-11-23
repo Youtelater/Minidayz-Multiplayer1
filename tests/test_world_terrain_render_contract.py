@@ -32,7 +32,12 @@ road=engine.split("bool Renderer::draw_source_road_grid(",1)[1].split(
     "bool Renderer::draw_source_sprite_fitted(",1)[0]
 assert 'std::strcmp(source_layer.name,"asphalt")==0' in road
 assert 'source_world_layer_depth(' in road
-assert 'C2D_SpriteSetDepth(&sprite,road_depth)' in road
+# UV-cropped original road pixel artwork is submitted with its real
+# Construct asphalt layer depth directly to C2D_DrawImageAt.
+assert 'source_road_tile_crop(' in road
+assert 'C2D_DrawImageAt(source_tile,band.x+x*tile,band.y+y*tile,' in road
+assert 'road_depth,nullptr,crop.scale_x,crop.scale_y' in road
+assert 'C2D_SpriteSetScale(&sprite,clipped_w/sprite.params.pos.w' not in road
 # The authored source code14 junction is four independently guarded
 # 9-cell arms, not unconditional full-cross geometry. Keep both the
 # original Sprite514 Mapgen anchor and the Array518 neighbor predicates.
