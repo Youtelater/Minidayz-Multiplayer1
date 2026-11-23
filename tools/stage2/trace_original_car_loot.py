@@ -81,3 +81,28 @@ for sheet,events in project[6]:
     "ancestors",json.dumps([(a[4],a[5]) for a in parents[-10:]],ensure_ascii=False,separators=(",",":"))[:9000],
     "conds",json.dumps(e[5],ensure_ascii=False,separators=(",",":"))[:2200],
     "drops",json.dumps(drops,ensure_ascii=False,separators=(",",":"))[:2500])
+
+# Source 1041 is a Construct family: report its ORIGINAL member sprite
+# filenames before deciding how to pick the car whose trunk241 is searched.
+for family in project[4]:
+ if not(isinstance(family,list) and family and family[0]==1041):continue
+ for id in family[1:]:
+  obj=project[3][id]
+  sprites=obj[7] if len(obj)>7 and isinstance(obj[7],list) else []
+  frames=sprites[0][7] if sprites and len(sprites[0])>7 else []
+  pic=frames[0][0] if frames and isinstance(frames[0],list) else ""
+  print("CAR_COLLISION_FAMILY_1041",id,obj[0],pic)
+# Catch the source action that actually creates the separate 241
+# interaction marker. Sprite art existing is NOT evidence of a world spawn.
+create_calls=[]
+for sheet,events in project[6]:
+ for e,parents in walk(events):
+  for action in e[6] if isinstance(e[6],list) else ():
+   if not(isinstance(action,list) and len(action)>5):continue
+   if action[1] not in (73,94,161):continue
+   if "[4, 241]" in str(action[5]) or "[4,241]" in str(action[5]):
+    create_calls.append((sheet,e[4],[a[4] for a in parents],action))
+for sheet,uid,anc,action in create_calls:
+ print("SOURCE_CAR_241_CREATION",sheet,uid,"anc",anc[-8:],
+       "action",json.dumps(action,ensure_ascii=False,separators=(",",":"))[:2800])
+print("SOURCE_CAR_241_CREATION_COUNT",len(create_calls))
