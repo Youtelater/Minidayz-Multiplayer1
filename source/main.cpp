@@ -2804,6 +2804,9 @@ public:
                 : 0;
             visibility_index_.query(camera_x,camera_y,view_w,view_h,
                                     visible_world_placements_);
+            std::size_t world_source_requested=0;
+            std::size_t world_source_drawn=0;
+            std::size_t world_source_bad_frames=0;
             // Construct paints by Map layer and then instance creation order.
             // The source roof events can move an instance between layers:
             // sort the currently visible instances AFTER updating their layer.
@@ -2892,6 +2895,7 @@ public:
                 const float sy=source_frame_valid && sprite->height>0.0f &&
                         placement->height>0.0f
                     ? placement->height/sprite->height : std::fabs(authored_sx);
+                if(!source_frame_valid)++world_source_bad_frames;
                 if (source_frame_valid) {
                     if (!minidayz::terrain::source_sprite_in_view(
                         px,py,sprite->width,sprite->height,
@@ -2913,7 +2917,8 @@ public:
                     minidayz::stage1::source_player_layer_depth(
                         minidayz::stage1::kSourcePlayerLayer),
                     tree_over_player);
-                if (!renderer.draw_source_sprite(placement->object,
+                ++world_source_requested;
+                if (renderer.draw_source_sprite(placement->object,
                         placement->source_animation, placement->source_frame,
                         px, py, sx, sy, layer_depth,
                         placement->angle * 0.01745329251994329577f,
@@ -2921,10 +2926,13 @@ public:
                                          : placement->opacity,
                         i<source_foundation_tint_.size() && source_foundation_tint_[i]?
                             0.5f:1.0f)) {
-                    // Original art was not loaded: do not draw a fake object.
-                    // Missing source atlas frames are audited during CI.
+                    ++world_source_drawn;
                 }
             }
+
+            renderer.set_world_sprite_stats(
+                visible_world_placements_.size(),world_source_requested,
+                world_source_drawn,world_source_bad_frames);
 
             // Root event 622329722190205 also emits the original
             // object317 from test_bullet_hit-sheet0.png on Buildings41,

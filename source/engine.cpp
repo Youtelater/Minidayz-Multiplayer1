@@ -81,6 +81,8 @@ void Renderer::shutdown() noexcept {
 void Renderer::begin_frame() noexcept {
  sprite_cache_misses_=0;
  sprite_cache_failed_draws_=0;
+ world_sprite_candidates_=world_sprite_requested_=0;
+ world_sprite_rendered_=world_sprite_invalid_=0;
  sprite_cache_drawn_this_frame_.fill(false);
  C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
  C2D_TargetClear(top_,C2D_Color32(12,16,18,255));
@@ -894,9 +896,20 @@ void Engine::render() noexcept {
     static_cast<double>(fps),static_cast<double>(measured_frame_seconds_*1000.0f),
     static_cast<unsigned long>(renderer_.sprite_cache_misses()),
     static_cast<unsigned long>(renderer_.sprite_cache_failed_draws()));
-  renderer_.draw_solid_rect(0.0f,0.0f,400.0f,17.0f,
+  // A screenshot showing DROPS=0 does NOT prove every source world
+  // sprite was spawned. Distinguish nearby source placements, actual
+  // render submissions and unmapped original sprite frames.
+  renderer_.draw_solid_rect(0.0f,0.0f,400.0f,31.0f,
                             C2D_Color32(14,18,15,238),0.88f);
   renderer_.draw_text(metrics,4.0f,2.0f,0.37f);
+  char source_metrics[128]{};
+  std::snprintf(source_metrics,sizeof(source_metrics),
+      "SOURCE WORLD %lu PLACED %lu DRAWN %lu BADFRAME %lu",
+      static_cast<unsigned long>(renderer_.world_sprite_candidates()),
+      static_cast<unsigned long>(renderer_.world_sprite_requested()),
+      static_cast<unsigned long>(renderer_.world_sprite_rendered()),
+      static_cast<unsigned long>(renderer_.world_sprite_invalid()));
+  renderer_.draw_text(source_metrics,4.0f,17.0f,0.28f);
  }
  // The bottom screen is reserved for diagnostics and touch UI; never
  // redraw the top-screen world here.

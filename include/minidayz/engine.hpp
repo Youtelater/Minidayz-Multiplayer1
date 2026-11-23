@@ -20,6 +20,18 @@ public:
  // Requests that couldn't be drawn: missing source frames, failed textures,
  // or >32 distinct in-use GPU atlas pages in the same rendered frame.
  std::size_t sprite_cache_failed_draws() const noexcept { return sprite_cache_failed_draws_; }
+ // Per-frame source placement census for distinguishing absent world
+ // generation from hidden sprites or actual 3DS texture load failures.
+ void set_world_sprite_stats(std::size_t candidates,std::size_t requested,
+                             std::size_t rendered,std::size_t invalid) noexcept {
+  world_sprite_candidates_=candidates;world_sprite_requested_=requested;
+  world_sprite_rendered_=rendered;world_sprite_invalid_=invalid;
+ }
+ std::size_t world_sprite_candidates() const noexcept {return world_sprite_candidates_;}
+ std::size_t world_sprite_requested() const noexcept {return world_sprite_requested_;}
+ std::size_t world_sprite_rendered() const noexcept {return world_sprite_rendered_;}
+ std::size_t world_sprite_invalid() const noexcept {return world_sprite_invalid_;}
+
  void load_debug_overlay(std::uint64_t frame, float delta, const InputState& input, bool scene_active) noexcept;
  void draw_debug_overlay() noexcept;
  void draw_solid_rect(float x,float y,float width,float height,u32 color,float depth=0.5f) noexcept;
@@ -68,6 +80,8 @@ private:
   bool ground_load_attempted_{};bool ground_loaded_{}; std::uint8_t ground_active_level_{255}; C2D_SpriteSheet sheets_[kMaxSheets]{};
  struct SpriteCacheEntry { char sheet[128]{}; std::size_t slot{}; };
  SpriteCacheEntry sprite_cache_[kMaxSheets]{}; std::size_t next_sprite_cache_{}; std::size_t sprite_cache_misses_{}; std::size_t sprite_cache_failed_draws_{};
+ std::size_t world_sprite_candidates_{},world_sprite_requested_{},
+             world_sprite_rendered_{},world_sprite_invalid_{};
  std::array<bool,kMaxSheets> sprite_cache_drawn_this_frame_{};
  std::size_t choose_sprite_cache_slot() noexcept;
  std::size_t acquire_source_sprite_page(const char* sheet) noexcept;

@@ -68,6 +68,13 @@ overlay=main.index("source_world_layer_depth(44,0,0)",world)
 assert 0<pin<world<overlay, "reserve overlay atlas before world; draw only afterward"
 assert "renderer.draw_source_sprite_fitted(" in main[world:], "source overlay must still draw"
 
+# On-screen source census distinguishes generated-but-hidden placements
+# from skipped source frames and actual RomFS/GPU loading failures.
+assert "set_world_sprite_stats(" in main
+assert "++world_source_requested" in main
+assert "++world_source_drawn" in main
+assert "++world_source_bad_frames" in main
+assert "SOURCE WORLD %lu PLACED %lu DRAWN %lu BADFRAME %lu" in engine
 assert "float depth=0.5f" in (ROOT/"include/minidayz/engine.hpp").read_text(encoding="utf-8")
 assert "kSkinPrevious{18, 145, 154, 191}" in menu
 assert "kNewGameButton=kMenuRows[1]" in menu
