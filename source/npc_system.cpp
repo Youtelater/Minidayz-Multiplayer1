@@ -1,4 +1,5 @@
 #include "minidayz/npc_system.hpp"
+#include "minidayz/source_equipment_animation.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -159,14 +160,21 @@ void NpcSystem::update(float delta_seconds, float player_x, float player_y,
         if (!is_blocked(actor.x, actor.y + step_y - kCollisionRadius) &&
             !is_blocked(actor.x, actor.y + step_y + kCollisionRadius)) actor.y += step_y;
         if (std::fabs(step_x) + std::fabs(step_y) > 0.01f) {
-            if (std::fabs(vx) > std::fabs(vy))
-                actor.animation_index = vx < 0.0f ? 14u : 15u;
-            else actor.animation_index = vy < 0.0f ? 13u : 12u;
+            // These walk_* animation indices come from the six original
+            // MiniDAYZ NPC body sprites (600,206,582,583,586,587).
+            // All six source sprites have authored 1 FPS walk loops,
+            // NOT 8 FPS. Respect each selected body's own frame metadata,
+            // including 3-frame up/down versus 4-frame left/right.
+            const std::uint8_t wanted=std::fabs(vx)>std::fabs(vy)
+                ? (vx<0.0f?14u:15u) : (vy<0.0f?13u:12u);
+            if(actor.animation_index!=wanted){
+                actor.animation_index=wanted;
+                actor.animation_elapsed=0.0f;
+            }
             actor.animation_elapsed += dt;
-            const std::uint32_t frame_count =
-                (actor.animation_index == 12u || actor.animation_index == 13u) ? 3u : 4u;
-            actor.animation_frame =
-                static_cast<std::uint32_t>(actor.animation_elapsed * 8.0f) % frame_count;
+            actor.animation_frame=stage1::source_object_animation_frame(
+                actor.source_object,actor.animation_index,
+                actor.animation_elapsed);
         } else {
             if (actor.animation_index == 12u) actor.animation_index = 0u;
             else if (actor.animation_index == 13u) actor.animation_index = 1u;
