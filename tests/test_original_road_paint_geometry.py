@@ -140,6 +140,39 @@ def trace_road_legs(nodes,parents=()):
             if isinstance(a,list) and len(a)>5 and a[3] in source_leg_ids:
                 assert a[:2]==[1066,202] and a[5][4]==[0,[0,15]]
                 assert 9 in (a[5][2][1][1],a[5][3][1][1])
+                source_codes={9,6,4,12,13,14,5,11,15,103}
+                # Original Construct event is an OR-block of ten
+                # Array518.At(X,Y)==literal predicates. No approximation:
+                # retain all ten original codes and their Array indices.
+                assert len(e[5])==10 and e[2], (
+                    "Source code14 leg lost its ten-condition OR block")
+                originals=set()
+                first_coordinate_pair=None
+                for cond in e[5]:
+                    assert cond[:2]==[518,203] and len(cond)>9
+                    assert len(cond[9])==4 and cond[9][2]==[8,0]
+                    assert cond[9][3][0]==7 and cond[9][3][1][0]==0
+                    originals.add(cond[9][3][1][1])
+                    coordinates=cond[9][:2]
+                    if first_coordinate_pair is None:
+                        first_coordinate_pair=coordinates
+                    else:
+                        assert first_coordinate_pair==coordinates, (
+                            "Inconsistent original junction neighbor picking")
+                assert originals==source_codes
+                expected_axis={
+                    1586657255052358:(2,5),
+                    8618616698851008:(2,4),
+                    4462790001866082:(1,5),
+                    7247777744760893:(1,4),
+                }
+                slot,operation=expected_axis[a[3]]
+                shifted=first_coordinate_pair[0] if slot==2 else first_coordinate_pair[1]
+                untouched=first_coordinate_pair[1] if slot==2 else first_coordinate_pair[0]
+                assert shifted[0]==0 and shifted[1][0]==operation
+                assert shifted[1][1]==[21,514,False,None,slot]
+                assert shifted[1][2]==[0,1]
+                assert untouched==[0,[21,514,False,None,1 if slot==2 else 2]]
                 found_legs.add(a[3])
                 print("SOURCE_ROAD_LEG",json.dumps({
                     "uid":a[3],"event":e[4],
