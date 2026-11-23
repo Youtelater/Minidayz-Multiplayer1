@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'tools/stage2/trace_original_car_loot.py'
+      - 'tools/stage2/build_original_car_trunk_loot.py'
       - '.github/workflows/audit-original-car-loot.yml'
   workflow_dispatch:
 jobs:
@@ -11,5 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Compile source car trunk item pools and probability gates
+        run: python3 tools/stage2/build_original_car_trunk_loot.py
       - name: Inspect original car probability, loot and interaction events
         run: python3 tools/stage2/trace_original_car_loot.py
