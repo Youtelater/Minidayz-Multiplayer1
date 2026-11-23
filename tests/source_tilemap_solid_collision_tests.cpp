@@ -31,6 +31,33 @@ int main() {
     assert(!source_solid_tile_contains(208,
         pack_source_tile(kTileFlipD,0,0),0.8f,0.8f));
 
+    // Cover ALL eight source texture transforms, not merely the
+    // individual flags: collision must use the same diagonal-first,
+    // H/V-after order as the original 3DS tile renderer.
+    for(std::uint32_t combination=0;combination<8u;++combination){
+        const std::uint32_t flags=
+            ((combination&1u)?kTileFlipH:0u) |
+            ((combination&2u)?kTileFlipV:0u) |
+            ((combination&4u)?kTileFlipD:0u);
+        const auto forward=[&](float x,float y) {
+            if(flags & kTileFlipD){
+                const float former=x;
+                x=1.0f-y;
+                y=1.0f-former;
+            }
+            if(flags & kTileFlipH)x=1.0f-x;
+            if(flags & kTileFlipV)y=1.0f-y;
+            return std::pair<float,float>{x,y};
+        };
+        const auto inside=forward(0.8f,0.8f);
+        const auto outside=forward(0.2f,0.2f);
+        const auto descriptor=pack_source_tile(flags,0,0);
+        assert(source_solid_tile_contains(
+            208,descriptor,inside.first,inside.second));
+        assert(!source_solid_tile_contains(
+            208,descriptor,outside.first,outside.second));
+    }
+
     // Water tile1 has no custom object[13] polygon; retain its source
     // Solid fallback instead of inventing a walkable hole.
     assert(source_solid_tile_contains(208,
