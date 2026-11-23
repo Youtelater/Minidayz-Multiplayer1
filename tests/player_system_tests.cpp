@@ -280,6 +280,55 @@ int main() {
         }
     }
 
+    // Step 4A: the original per-skin animation table determines both pose
+    // index AND the elapsed source-frame coordinate, at each facing.
+    // A 20-skin direction test that only checks animation names would miss
+    // a wrong frame crop or source-speed mismatch once the character moves.
+    for (const std::uint16_t skin : {
+             679, 826, 743, 1262, 745, 742, 680, 748, 750, 998,
+             997, 825, 811, 749, 1009, 999, 741, 996, 746, 747}) {
+        for (const auto face : {PlayerFacing::down,PlayerFacing::up,
+                                PlayerFacing::right,PlayerFacing::left}) {
+            PlayerState animated_state{};
+            animated_state.health=100.0f;
+            PlayerSystem original_frames(animated_state);
+            original_frames.set_source_skin(skin);
+            PlayerInput input{};
+            const char* name="run_down";
+            switch (face) {
+            case PlayerFacing::down: input.move_y=1.0f; name="run_down"; break;
+            case PlayerFacing::up: input.move_y=-1.0f; name="run_up"; break;
+            case PlayerFacing::right: input.move_x=1.0f; name="run_right"; break;
+            case PlayerFacing::left: input.move_x=-1.0f; name="run_left"; break;
+            }
+            const stage1::AnimationDef* source=nullptr;
+            for (const auto& anim : stage1::kAnimations) {
+                if (anim.object==skin && std::strcmp(anim.name,name)==0) {
+                    source=&anim;break;
+                }
+            }
+            assert(source && source->frames>0 && source->speed>0.0f);
+            PlayerRules rules{};
+            rules.run_speed=100.0f;
+            input.run=true;
+            constexpr int kSteps=47;
+            constexpr float kDt=0.05f;
+            for (int step=0;step<kSteps;++step)
+                original_frames.update_movement(input,kDt,rules);
+            assert(original_frames.state().facing==face);
+            const float elapsed=kSteps*kDt;
+            const float cycle=static_cast<float>(source->frames)/source->speed;
+            const float effective=source->loop?std::fmod(elapsed,cycle):elapsed;
+            const auto advanced=static_cast<std::uint32_t>(effective*source->speed);
+            const auto expected=source->loop ? advanced%source->frames :
+                                std::min(advanced,source->frames-1);
+            assert(original_frames.source_animation_frame()==expected);
+            original_frames.update_movement(PlayerInput{},kDt,rules);
+            assert(original_frames.source_animation_frame()==0);
+            assert(original_frames.state().animation==PlayerAnimation::idle);
+        }
+    }
+
     // The original sprite hotspot and rotation determine which source
     // building pixels physically block the player.
     using minidayz::terrain::source_solid_sprite_contains;
