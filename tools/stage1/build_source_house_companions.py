@@ -278,7 +278,7 @@ def fl(v):
  if "." not in s and "e" not in s and "E" not in s:s+=".0"
  return s+"f"
 lines=["#pragma once","#include <cstddef>","#include <cstdint>",
-"#include <cstring>",
+"#include <strings.h>",
 "namespace minidayz::world_source {",
 "// Literal root source primary Mapgen508 Spawn command in var1=7 branch.",
 "struct SourceHousePrimarySpawn {std::uint64_t event_uid;",
@@ -349,7 +349,7 @@ lines += ["};",
 " if((!name||!name[0])&&index==0)return nullptr;",
 " for(const auto& p:kSourceHouseImagePoints){",
 "  if(p.object!=object||p.animation!=animation||p.frame!=frame)continue;",
-"  if(name&&name[0]){if(std::strcmp(p.name,name)==0)return &p;}",
+"  if(name&&name[0]){if(::strcasecmp(p.name,name)==0)return &p;}",
 "  else if(p.index==index)return &p;",
 " }return nullptr;}",
 "} // namespace minidayz::world_source"]
