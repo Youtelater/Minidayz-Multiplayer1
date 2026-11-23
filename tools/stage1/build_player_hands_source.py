@@ -60,11 +60,20 @@ def source_skin_type(event):
 source_hands={}
 source_types=set()
 for event in walk(events):
+    # Only source Start events that actually pair BOTH PlayerBase193
+    # instance-variable assignments belong to this catalog. Other events
+    # compare Player_skin_type in compound guards and are not assignments.
+    actions=event[6] if isinstance(event[6],list) else []
+    candidates=[a for a in actions if isinstance(a,list) and
+                len(a)>5 and a[:2]==[193,88] and
+                isinstance(a[5],list) and a[5] and
+                a[5][0] in ([10,0],[10,1])]
+    if not candidates:continue
     skin_type=source_skin_type(event)
     if skin_type is None:continue
-    skin=[v for a in event[6] if
+    skin=[v for a in candidates if
           (v:=original_object_uid(a,0)) is not None]
-    hands=[v for a in event[6] if
+    hands=[v for a in candidates if
            (v:=original_object_uid(a,1)) is not None]
     if not skin and not hands:continue
     if len(skin)!=1 or len(hands)!=1:
