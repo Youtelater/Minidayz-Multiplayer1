@@ -166,6 +166,18 @@ def main():
                     rules.append((marker,repeat,*x,*y,tiles,action[3],level_mask))
     if len(rules)<45:
         raise SystemExit(f"Only {len(rules)} location scatter rules extracted; source changed")
+    # The regular original new-game terrain must have zero silently
+    # unimplemented actions. All four currently unsupported SetTile visits
+    # are guarded by the SOURCE perk_dao character perk branch, which is
+    # not active in the ordinary new-game generator. If an unconditional
+    # source action stops decoding, fail the build rather than drawing an
+    # invented replacement tile or incorrectly claiming map parity.
+    expected_perk_only=(991152536617746,725601334342355,
+                        511216400465073,511216400465073)
+    if (len(rejected)!=len(expected_perk_only) or
+        sorted(uid for uid,_ in rejected)!=sorted(expected_perk_only) or
+        any(reason!="special perk branch" for _,reason in rejected)):
+        raise SystemExit(f"New ordinary original SetTile actions not decoded: {rejected!r}")
     palette=[]
     entries=[]
     for marker,repeat,xlo,xhi,ylo,yhi,tiles,uid,level_mask in rules:
