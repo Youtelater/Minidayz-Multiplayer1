@@ -909,7 +909,7 @@ void test_original_source_settlement_building_groups() {
         ++generated_car_trunks;
     }
     std::fprintf(stderr,
-        "ROOT GENERATION CARS seed=4d444159 searchable_trunks=%zu\\n",
+        "ROOT GENERATION CARS seed=4d444159 searchable_trunks=%zu\n",
         generated_car_trunks);
     assert(generated_car_trunks>0);
 
