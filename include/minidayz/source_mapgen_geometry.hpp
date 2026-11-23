@@ -9,6 +9,16 @@ namespace minidayz::world_source {
 inline constexpr float kMapgenStartX=700.0f;
 inline constexpr float kMapgenStartY=320.0f;
 inline constexpr float kMapgenStride=1020.0f;
+// Game_events / Location loader root SetTileRange actions
+// 358622687629146 (514 code12) and 532767105758898 (code13)
+// paint tile15 across 17x2 or 2x17 original 60px tiles.
+// The old 3DS renderer incorrectly made the road only ONE tile wide.
+inline constexpr int kOriginalRoadLengthTiles=17;
+inline constexpr int kOriginalRoadWidthTiles=2;
+constexpr float source_road_painted_width(float tile_pixels) noexcept {
+ return tile_pixels*static_cast<float>(kOriginalRoadWidthTiles);
+}
+
 inline constexpr std::uint64_t kMapgenCreateEvent=3669795404796534ULL;
 struct MapgenHotspot {float x{},y{};};
 constexpr MapgenHotspot mapgen_hotspot(int array_x,int array_y) noexcept {
