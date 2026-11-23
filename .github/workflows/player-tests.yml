@@ -422,6 +422,9 @@ jobs:
       - name: Check weather-loop sample matches winter world instead of rain eligibility
         run: python3 tests/test_weather_audio_source_dispatch.py
 
+      - name: Verify Source PlayerBase Collision Geometry
+        run: python3 tests/test_original_playerbase_collision.py
+
       - name: Verify Exact Original Player AltMove Speed Expression
         run: python3 tests/test_original_player_altmove.py
 

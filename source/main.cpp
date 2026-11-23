@@ -28,6 +28,7 @@
 #include "minidayz/player_equipment_visual.hpp"
 #include "minidayz/source_player_layers.hpp"
 #include "minidayz/source_player_altmove.hpp"
+#include "minidayz/source_player_base_geometry.hpp"
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/inventory.hpp"
@@ -141,8 +142,14 @@ public:
         // Old 72/108 numbers were invented preview speed values.
         preview_rules_.walk_speed = 100.0f;
         preview_rules_.run_speed = 100.0f;
-        preview_rules_.collision_half_width = 5.0f;
-        preview_rules_.collision_half_height = 7.0f;
+        preview_rules_.collision_half_width =
+            minidayz::stage1::kSourcePlayerBaseHalfWidth;
+        preview_rules_.collision_half_height =
+            minidayz::stage1::kSourcePlayerBaseHalfHeight;
+        preview_rules_.collision_offset_x =
+            minidayz::stage1::kSourcePlayerBaseCollisionOffsetX;
+        preview_rules_.collision_offset_y =
+            minidayz::stage1::kSourcePlayerBaseCollisionOffsetY;
         preview_rules_.min_temperature = -10.0f;
         preview_rules_.max_temperature = 10.0f;
         // The boot menu must appear immediately, before world generation.
@@ -405,8 +412,10 @@ public:
                         // Original AltMove max-speed action is 100 before equipment effects.
                         preview_rules_.walk_speed=100.0f;
                         preview_rules_.run_speed=100.0f;
-                        preview_rules_.collision_half_width=5.0f;
-                        preview_rules_.collision_half_height=7.0f;
+                        preview_rules_.collision_half_width=minidayz::stage1::kSourcePlayerBaseHalfWidth;
+                        preview_rules_.collision_half_height=minidayz::stage1::kSourcePlayerBaseHalfHeight;
+                        preview_rules_.collision_offset_x=minidayz::stage1::kSourcePlayerBaseCollisionOffsetX;
+                        preview_rules_.collision_offset_y=minidayz::stage1::kSourcePlayerBaseCollisionOffsetY;
                         preview_rules_.min_temperature=-10.0f;
                         preview_rules_.max_temperature=10.0f;
                         persist_menu_settings();

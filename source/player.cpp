@@ -250,6 +250,10 @@ PlayerMoveResult PlayerSystem::update_movement(
 
     const auto blocked = [&](float x, float y) noexcept {
         if (!is_blocked) return false;
+        // Construct position is at the source image HOTSPOT, not always
+        // the centre of its collision rectangle (PlayerBase193 is origin1,1).
+        x += finite_or_zero(rules.collision_offset_x);
+        y += finite_or_zero(rules.collision_offset_y);
         return is_blocked(collision_context, x - half_w, y - half_h) ||
                is_blocked(collision_context, x + half_w, y - half_h) ||
                is_blocked(collision_context, x - half_w, y + half_h) ||

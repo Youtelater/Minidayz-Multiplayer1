@@ -44,6 +44,11 @@ struct PlayerRules {
     float run_speed{};
     float collision_half_width{};
     float collision_half_height{};
+    // Offset of the collision rectangle's centre from the sprite hotspot.
+    // Original PlayerBase object193 has a 2x2 sprite at hotspot(1,1),
+    // unlike its 30x30 graphical skin; defaults preserve host tests.
+    float collision_offset_x{};
+    float collision_offset_y{};
     float max_health{};
     float max_hunger{};
     float max_thirst{};

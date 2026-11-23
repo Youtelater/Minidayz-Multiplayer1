@@ -1,6 +1,7 @@
 #include "minidayz/player.hpp"
 #include "minidayz/source_player_layers.hpp"
 #include "minidayz/source_player_altmove.hpp"
+#include "minidayz/source_player_base_geometry.hpp"
 #include "minidayz/generated/stage1_data.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 
@@ -146,6 +147,31 @@ int main() {
     animated.kill(PlayerDeathReason::other);
     assert(animated.source_animation_index() == 0);
     assert(animated.source_animation_frame() == 0);
+
+    // Source PlayerBase193 has a 2x2 collider anchored at its bottom-right
+    // hotspot. Its visible 30x30 skin is NOT its movement hitbox.
+    assert(stage1::kSourcePlayerBaseHalfWidth==1.0f);
+    assert(stage1::kSourcePlayerBaseHalfHeight==1.0f);
+    PlayerState anchor_state{};anchor_state.x=10.0f;anchor_state.y=10.0f;
+    anchor_state.health=100.0f;
+    PlayerSystem anchored(anchor_state);
+    PlayerRules anchor_rules{};anchor_rules.walk_speed=20.0f;
+    anchor_rules.collision_half_width=stage1::kSourcePlayerBaseHalfWidth;
+    anchor_rules.collision_half_height=stage1::kSourcePlayerBaseHalfHeight;
+    anchor_rules.collision_offset_x=stage1::kSourcePlayerBaseCollisionOffsetX;
+    anchor_rules.collision_offset_y=stage1::kSourcePlayerBaseCollisionOffsetY;
+    float last_probe_x=0.0f,last_probe_y=0.0f;
+    struct Probe { float* x;float* y; } probe{&last_probe_x,&last_probe_y};
+    const auto capture=+[](void* ctx,float x,float y) noexcept -> bool {
+        auto* out=static_cast<Probe*>(ctx);
+        *out->x=x;*out->y=y;return false;
+    };
+    PlayerInput walking_right{};walking_right.move_x=1.0f;
+    anchored.update_movement(walking_right,0.05f,anchor_rules,capture,&probe);
+    assert(std::fabs(anchored.state().x-11.0f)<0.0001f);
+    // Last corner probe uses source rect [x-2,x] at player anchor x=11.
+    assert(std::fabs(last_probe_x-11.0f)<0.0001f);
+    assert(std::fabs(last_probe_y-10.0f)<0.0001f);
 
     // The configured player half-size participates in collision checks.
     PlayerState edge_state{};
