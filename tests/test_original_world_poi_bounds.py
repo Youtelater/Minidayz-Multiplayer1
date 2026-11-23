@@ -25,6 +25,13 @@ for key in ("check_X","check_Y"):
  assert expected in expressions[key], (key,len(expressions[key]),list(expressions[key])[:5])
 source=(ROOT/"source/world.cpp").read_text()
 assert "grid.width() - 1u" in source
+assert "source_floor_random_bounded(rng, x_bound)" in source
+assert "source_floor_random_bounded(rng, y_bound)" in source
+# The original floor(random(1,size)) uses expression ID95 random float,
+# not the modulo/rejection chooser reserved for Construct choose().
+expr=(ROOT/"source/construct_expression.cpp").read_text()
+assert "static_cast<double>((*state->rng)()) / 4294967296.0" in expr
+assert "static_cast<double>(rng())/4294967296.0" in source
 assert source.count("max_y - min_y + 1")>=1
 assert "const int first_max_y = static_cast<int>(profile.map_size_y) - 1;" in source
 assert "const int second_max_y = static_cast<int>(profile.grid_height) - 1;" in source
