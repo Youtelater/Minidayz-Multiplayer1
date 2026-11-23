@@ -15,7 +15,7 @@ for label,code in (
     ("bitmap font foreground","at_y+row*pixel,0.90f"),
     ("menu wood foreground","if(index==1 && depth<=0.5f)depth=0.75f"),
     ("original floor background","C2D_SpriteSetDepth(&sprite,0.04f)"),
-    ("original road over floor","C2D_SpriteSetDepth(&sprite,0.10f)"),
+    ("original road on source asphalt layer","C2D_SpriteSetDepth(&sprite,road_depth)"),
     ("floor title background","0.0f, 0.0f, 400.0f, 240.0f, 0.05f"),
     ("inventory under HUD","0.0f, 0.0f, 320.0f, 240.0f, 0.05f"),
     ("player over ground at source size","p.x,p.y,1.0f,1.0f,0.57f"),
@@ -30,7 +30,7 @@ for label,code in (
 ):
     source=engine if label in (
         "menu text foreground","bitmap font foreground","menu wood foreground",
-        "original floor background","original road over floor",
+        "original floor background","original road on source asphalt layer",
         "original tilemaps use the SAME source layer depths") else main
     assert code in source, f"3DS screen depth/input regression: {label}"
 # Opaque fallback panels must sit BEHIND the .05 menu-city art;
