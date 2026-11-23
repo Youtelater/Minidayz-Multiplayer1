@@ -268,6 +268,9 @@ jobs:
           make clean
           make
 
+      - name: Trace original straight-road texture rectangle actions
+        run: python3 tests/test_original_road_paint_geometry.py
+
       - name: Verify original building loot chance and weighted item tables
         shell: bash
         run: |
