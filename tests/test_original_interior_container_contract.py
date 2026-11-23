@@ -46,3 +46,13 @@ assert "source_player_overlaps_world_sprite" in main
 # A trash container 314 is not source 796 or a searchable house cupboard.
 assert Path(source[3][314][7][0][7][0][0]).name.startswith("obst_trash_container")
 print("PASS original bunker lootbox: collision event, 4*2 exact atlas frames, open once / Fade / bool1; no invented house containers")
+
+# Original event 389950912936355 switches frame1 and sets bool1 together.
+world=(ROOT/"source/world.cpp").read_text(encoding="utf-8")
+scene=(ROOT/"source/main.cpp").read_text(encoding="utf-8")
+assert "bool WorldSystem::open_source_bunker_lootbox(" in world
+assert "source_bunker_lootbox_closed(box)" in world
+assert "placements_[index].source_variable_1=1;" in world
+assert "world_.open_source_bunker_lootbox(idx)" in scene
+assert "placed.source_variable_1=" in world and "p.source_variable_1=" in world
+print("PASS: original bunker container frame1 and boolean1 are latched together and replayed from saved frame")

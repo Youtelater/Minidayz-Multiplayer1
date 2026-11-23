@@ -754,3 +754,9 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 ### Step 3 source-accurate parent guard for roof versus rain (2026-11-22)
 
 - [x] Reviewed the original full House_transparenting event tree after fixing the seven-field source-leaf trace ([source trace #45090045639](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/45090045639)). **Roof opacity 0 and inner door opacity 25 are guarded by UID 8794469330826744 (picked foundation1048 overlapping wall346)**, but rain shelter UID `1706727368417029` is a **sibling** under UID `1166878656779541` (Player193 overlaps wall346), not a descendant of the 1048 pick. Kept source-accurate global wall parent condition for shelter and inside/outside branch selection, while constraining the *actual* roof/door visual effects to a matched foundation; added native dispatch contract.
+
+
+### Step 3 — original interior bunker container open-state parity (2026-11-22)
+
+- [x] Root Sprite796 collision event UID `389950912936355` sets **both** animation frame1 and boolean instance-variable1 to true; the 3DS implementation formerly changed only the frame. Introduced a source-guarded, one-time `WorldSystem::open_source_bunker_lootbox` action and source var1 latch; reload derives this boolean from restored frame state without changing the binary save layout. The caller now uses the atomic original action instead of raw SetFrame. Added root-source contract verification.
+- [ ] Sprite796's Fade.StartFade timing and original category-conditioned Spawn_drop rewards are reserved for the Step 5 items/loot implementation, not invented in Step 3; do not claim bunker loot has already been granted. This limitation and the Azahar visual test remain final-integration prerequisites.

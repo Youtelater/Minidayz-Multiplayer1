@@ -9,6 +9,7 @@
 #include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
+#include "minidayz/source_interior_container.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -1289,6 +1290,21 @@ bool WorldSystem::set_source_pump_water(
     return true;
 }
 
+bool WorldSystem::open_source_bunker_lootbox(std::size_t index) noexcept {
+    if(!generation_complete() || index>=placements_.size())return false;
+    const auto box=placements_[index];
+    if(!world_source::source_bunker_lootbox_closed(box) ||
+       box.source_variable_1!=0)return false;
+    // Root event UID389950912936355: Sprite796.SetFrame(1) then
+    // Fade.StartFade and Boolean instance variable1=true.
+    // Guard both effects as one original per-instance state change.
+    if(!set_placement_sprite_state(index,box.source_animation,
+             world_source::kSourceBunkerLootboxOpenedFrame,box.opacity))
+        return false;
+    placements_[index].source_variable_1=1;
+    return true;
+}
+
 bool WorldSystem::add_source_constructed_bed(
     float x,float y,std::uint8_t bear_pi) noexcept {
     if(!generation_complete() || !generation_is_map_ ||
@@ -1490,6 +1506,9 @@ bool WorldSystem::restore_sprite_states(
         placed.opacity=baseline.opacity;
         placed.layer=baseline.layer;
         placed.source_variable_0=baseline.source_variable_0;
+        if(placed.object==world_source::kSourceBunkerLootbox)
+            placed.source_variable_1=
+                placed.source_frame==world_source::kSourceBunkerLootboxOpenedFrame?1u:0u;
     }
     for(const auto& state:states)
         for(auto& p:placements_)
@@ -1501,6 +1520,9 @@ bool WorldSystem::restore_sprite_states(
                 if(state.layer!=0xffff)p.layer=state.layer;
                 if(state.source_variable_0!=~std::uint64_t{0})
                     p.source_variable_0=state.source_variable_0;
+                if(p.object==world_source::kSourceBunkerLootbox)
+                    p.source_variable_1=
+                        p.source_frame==world_source::kSourceBunkerLootboxOpenedFrame?1u:0u;
                 break;
             }
     // Companion visibility is derived from its linked source door frame.

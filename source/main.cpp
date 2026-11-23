@@ -3656,10 +3656,7 @@ private:
             // is an independent source atlas rectangle in every authored
             // bunker-lootbox animation. The existing v4 world sprite
             // sidecar persists frame1 so it cannot be looted repeatedly.
-            (void)world_.set_placement_sprite_state(
-                idx,box->source_animation,
-                minidayz::world_source::kSourceBunkerLootboxOpenedFrame,
-                box->opacity);
+            (void)world_.open_source_bunker_lootbox(idx);
             // Contents dispatch belongs to original category-specific
             // bunker loot drops, not invented storage slots. Do not grant
             // guessed items or replay open events on a saved box.

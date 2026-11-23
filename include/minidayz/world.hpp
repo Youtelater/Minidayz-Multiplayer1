@@ -227,6 +227,9 @@ public:
     bool set_placement_layer(std::size_t index,
                              std::uint16_t layer) noexcept;
     bool set_source_pump_water(std::size_t index,std::uint64_t water) noexcept;
+    // Original collision-on-796 transition: frame1 and instance bool1
+    // must change together, exactly once per source box instance.
+    bool open_source_bunker_lootbox(std::size_t index) noexcept;
     bool add_source_constructed_bed(float x,float y,std::uint8_t bear_pi) noexcept;
     bool dismantle_source_bed(std::size_t index) noexcept;
     std::vector<SourceConstructedBed> capture_source_constructed_beds() const;
