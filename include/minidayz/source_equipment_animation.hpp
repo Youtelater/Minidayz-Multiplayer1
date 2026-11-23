@@ -1,5 +1,5 @@
 #pragma once
-#include "minidayz/generated/sprite_catalog.hpp"
+#include "minidayz/generated/stage1_data.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -14,21 +14,21 @@ namespace minidayz::stage1 {
 // elapsed movement phase, but interpret it using that original Sprite's
 // source-authored animation metadata, including nonlooping animations.
 inline std::uint32_t source_animation_frame_at_time(
-    const SpriteAnimationDef& animation,float elapsed_seconds) noexcept {
-    if (!animation.frame_count || !std::isfinite(elapsed_seconds) ||
-        !std::isfinite(animation.source_speed) ||
-        animation.source_speed <= 0.0f)
+    const AnimationDef& animation,float elapsed_seconds) noexcept {
+    if (!animation.frames || !std::isfinite(elapsed_seconds) ||
+        !std::isfinite(animation.speed) ||
+        animation.speed <= 0.0f)
         return 0;
     const double elapsed=std::max(0.0,static_cast<double>(elapsed_seconds));
-    const double cycle=static_cast<double>(animation.frame_count) /
-                       static_cast<double>(animation.source_speed);
+    const double cycle=static_cast<double>(animation.frames) /
+                       static_cast<double>(animation.speed);
     const double seconds=animation.loop && cycle>0.0 ?
         std::fmod(elapsed,cycle) : elapsed;
     const double frames=std::floor(seconds *
-                       static_cast<double>(animation.source_speed));
+                       static_cast<double>(animation.speed));
     // Constrain before narrowing: extremely long sessions must not overflow.
-    if (frames>=static_cast<double>(animation.frame_count))
-        return animation.frame_count-1;
+    if (frames>=static_cast<double>(animation.frames))
+        return animation.frames-1;
     return frames>0.0 ? static_cast<std::uint32_t>(frames) : 0u;
 }
 
@@ -36,10 +36,10 @@ inline std::uint32_t source_equipment_animation_frame(
     std::uint16_t object,const char* animation_name,
     float elapsed_seconds) noexcept {
     if (!animation_name || !animation_name[0]) return 0;
-    const auto* begin=kSpriteAnimations;
-    const auto* end=begin+kSpriteAnimationCount;
+    const auto* begin=kAnimations;
+    const auto* end=begin+kAnimationCount;
     const auto* it=std::lower_bound(begin,end,object,
-        [](const SpriteAnimationDef& a,std::uint16_t wanted) {
+        [](const AnimationDef& a,std::uint16_t wanted) {
             return a.object<wanted;
         });
     for (;it!=end && it->object==object;++it)
