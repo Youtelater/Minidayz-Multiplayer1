@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cstring>
 
 namespace minidayz::world_source {
 
@@ -30,16 +31,20 @@ constexpr bool source_world_logic_marker_not_art(
 
 // Source-exact exceptions to the top world-scene cutoff before browser
 // overlays and GUI. The original category6 create_map_element event emits
-// REAL Sprite241 car-lootbox art onto "Sunset_Dawn" (Map layer45), not
+// REAL Sprite241 car-lootbox art onto "Sunset_Dawn" (original Sunset_Dawn Map layer), not
 // Buildings/vehicle layers. Previous global layer>=44 culling hid ALL of
 // those original overlays even though source spawn states were present.
 // Root generator tools/stage1/build_source_car_wreck_trunks.py verifies
 // the original Sprite241 layer and imagepoint from data.deobfuscated.js.
 // Sprite1126 is original world radiation art on Rain layer44.
-constexpr bool source_world_high_layer_gameplay_art(
-    std::uint16_t object,std::uint16_t layer) noexcept {
-    return (object==241 && layer==45) ||
-           (object==1126 && layer==44);
+inline bool source_world_high_layer_gameplay_art(
+    std::uint16_t object,const char* source_layer_name) noexcept {
+    // Source Map layer indices can change when the authoritative root
+    // Construct export regenerates stage1_data.hpp. Select by the actual
+    // original layer NAME, not by a stale cached numeric index.
+    return source_layer_name &&
+           ((object==241 && std::strcmp(source_layer_name,"Sunset_Dawn")==0) ||
+            (object==1126 && std::strcmp(source_layer_name,"Rain")==0));
 }
 
 // build_ghost-sheet0 (571) and build_ghost_obstacle-sheet0/1 (573)

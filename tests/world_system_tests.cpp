@@ -2722,17 +2722,22 @@ void test_original_car_overlay_uses_visible_source_layer() {
     assert(layout);
     const auto layout_id=static_cast<std::uint16_t>(
         layout-stage1::kLayoutTable);
-    const auto* sunset=stage1::find_layer(layout_id,45);
-    assert(sunset && std::strcmp(sunset->name,"Sunset_Dawn")==0);
+    const stage1::LayerDef* sunset=nullptr;
+    for(const auto& candidate:stage1::kLayerTable)
+        if(candidate.layout==layout_id &&
+           std::strcmp(candidate.name,"Sunset_Dawn")==0){
+            sunset=&candidate;break;
+        }
+    assert(sunset && "root original Sunset_Dawn layer missing");
     std::size_t visible_trunks=0;
     std::vector<std::uint32_t> candidates{};
     for(std::size_t i=0;i<world.placement_count();++i){
         const auto* p=world.placement(i);
         if(!p||p->object!=241||p->opacity<=0.0f||
            !world.bounds().contains({p->x,p->y}))continue;
-        assert(p->layer==45);
+        assert(p->layer==sunset->index);
         assert(world_source::source_world_high_layer_gameplay_art(
-            p->object,p->layer));
+            p->object,sunset->name));
         index.query(p->x,p->y,1.0f,1.0f,candidates);
         assert(std::binary_search(candidates.begin(),candidates.end(),
             static_cast<std::uint32_t>(i)));
@@ -2756,12 +2761,15 @@ void test_reported_world_seed_original_frame_integrity() {
         map-stage1::kLayoutTable);
     for(std::size_t i=0;i<world.placement_count();++i) {
         const auto* p=world.placement(i);
+        const auto* source_layer=p?
+            stage1::find_layer(layout_id,p->layer):nullptr;
         if(p && stage1::source_family_contains(1041,p->object))
             ++family_car_bodies;
         if(p && p->object==241)++all_car_trunks;
-        if(!p||p->opacity<=0.0f||p->layer==32||(p->layer>=44 &&
-           !world_source::source_world_high_layer_gameplay_art(
-               p->object,p->layer))||
+        if(!p||!source_layer||p->opacity<=0.0f||p->layer==32||
+           (p->layer>=44 &&
+            !world_source::source_world_high_layer_gameplay_art(
+                p->object,source_layer->name))||
            world_source::source_world_logic_marker_not_art(p->object)||
            world_source::source_world_preview_needs_live_event(p->object))
             continue;
@@ -2802,11 +2810,11 @@ void test_reported_world_seed_original_frame_integrity() {
     // Original 241 car trunk is drawn above Trees43 on Sunset_Dawn45.
     // The old index/render filters wrongly treated it as a browser-only
     // night/weather layer and hid every original source car trunk.
-    assert(world_source::source_world_high_layer_gameplay_art(241,45));
-    assert(world_source::source_world_high_layer_gameplay_art(1126,44));
-    assert(!world_source::source_world_high_layer_gameplay_art(241,44));
-    assert(!world_source::source_world_high_layer_gameplay_art(241,46));
-    assert(!world_source::source_world_high_layer_gameplay_art(404,45));
+    assert(world_source::source_world_high_layer_gameplay_art(241,"Sunset_Dawn"));
+    assert(world_source::source_world_high_layer_gameplay_art(1126,"Rain"));
+    assert(!world_source::source_world_high_layer_gameplay_art(241,"Rain"));
+    assert(!world_source::source_world_high_layer_gameplay_art(241,"night"));
+    assert(!world_source::source_world_high_layer_gameplay_art(404,"Sunset_Dawn"));
     assert(invalid_frames==0 && "original world sprite frame not in source");
 }
 

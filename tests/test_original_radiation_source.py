@@ -71,7 +71,7 @@ assert "generate_source_radiation_sites()" in src
 # blanket high-layer check that hid every car trunk.
 assert "source_world_high_layer_gameplay_art(" in vis
 source_roles=(ROOT/"include/minidayz/source_world_sprite_visibility.hpp").read_text()
-assert "object==1126 && layer==44" in source_roles
-assert "object==241 && layer==45" in source_roles
+assert 'object==1126 && std::strcmp(source_layer_name,"Rain")==0' in source_roles
+assert 'object==241 && std::strcmp(source_layer_name,"Sunset_Dawn")==0' in source_roles
 print("PASS root wuranqu source placement: 70 military overlays; "
       "2 level-three and 3-per-half level-four/five radiation zones")

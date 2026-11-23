@@ -2820,11 +2820,7 @@ public:
                 visible_slot<visible_world_placements_.size();++visible_slot) {
                 const auto i=visible_world_placements_[visible_slot];
                 const auto* placement=world_.placement(i);
-                if(!placement ||
-                   (placement->layer>=44 &&
-                    !minidayz::world_source::source_world_high_layer_gameplay_art(
-                        placement->object,placement->layer)))
-                    continue;
+                if(!placement)continue;
                 if(visible_slot>=layer_end){
                     layer_begin=visible_slot;
                     layer_end=visible_slot+1;
@@ -2859,6 +2855,13 @@ public:
                     ? minidayz::stage1::find_layer(
                           source_map_index, placement->layer)
                     : nullptr;
+                // Root source object241 lives on Sunset_Dawn, not the
+                // generic GUI/browser overlays. Resolve the Map layer NAME
+                // so rebuilt original-source layer indices stay correct.
+                if(!source_layer ||
+                   (placement->layer>=44 &&
+                    !minidayz::world_source::source_world_high_layer_gameplay_art(
+                        placement->object,source_layer->name)))continue;
                 if (source_layer && !source_layer->visible) continue;
                 if (source_layer &&
                     (std::strstr(source_layer->name, "respawn") ||
