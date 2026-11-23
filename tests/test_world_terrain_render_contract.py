@@ -33,6 +33,9 @@ road=engine.split("bool Renderer::draw_source_road_grid(",1)[1].split(
 assert 'std::strcmp(source_layer.name,"asphalt")==0' in road
 assert 'source_world_layer_depth(' in road
 assert 'C2D_SpriteSetDepth(&sprite,road_depth)' in road
+assert 'world_source::mapgen_road_band(' in road
+assert 'for(int row=0;row<grid.height();++row)' in road
+assert 'bounds.width/grid.width()' not in road
 assert 'draw_source_procedural_environment(' in main
 # Each instance may be in a different original Construct animation (e.g.
 # closed/open doors and damaged/standing trees). Do not regress to always
@@ -46,6 +49,10 @@ assert 'px, py, sx, sy, layer_depth' in main
 assert 'source_sprite_in_view(' in main
 assert 'original_map_detail_230.t3x' in scatter
 assert 'kTerrainScatterChoices' in scatter
+assert 'world_source::mapgen_hotspot(' in scatter
+assert 'bounds.width/grid.width()' not in scatter
+assert 'world_source::mapgen_hotspot(x,y)' in (
+    root/"source/world.cpp").read_text(encoding="utf-8")
 assert 'source_world_layer_depth(' in scatter
 assert 'stage1::kSourceScatterGroundLayer' in scatter
 assert 'C2D_SpriteSetDepth(&sprite,0.17f)' not in scatter
