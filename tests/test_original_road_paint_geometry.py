@@ -125,6 +125,33 @@ def find_road_branches(nodes,parents=()):
         if len(e)>7 and isinstance(e[7],list):
             find_road_branches(e[7],parents+(e,))
 find_road_branches(dict(project[6])["Game_events"])
+# The original code14 junction has four separately gated 9-cell
+# half-strips rather than two invented unconditional full-length roads.
+# Export their exact inherited guards for native source-condition parity.
+source_leg_ids={
+    1586657255052358,8618616698851008,
+    4462790001866082,7247777744760893,
+}
+found_legs=set()
+def trace_road_legs(nodes,parents=()):
+    for e in nodes if isinstance(nodes,list) else ():
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+        for a in e[6] if isinstance(e[6],list) else ():
+            if isinstance(a,list) and len(a)>5 and a[3] in source_leg_ids:
+                assert a[:2]==[1066,202] and a[5][4]==[0,[0,15]]
+                assert 9 in (a[5][2][1][1],a[5][3][1][1])
+                found_legs.add(a[3])
+                print("SOURCE_ROAD_LEG",json.dumps({
+                    "uid":a[3],"event":e[4],
+                    "conditions":e[5],
+                    "ancestors":[{"event":p[4],"guards":p[5]} for p in parents[-5:]],
+                    "rect":a[5][:4]
+                },separators=(",",":"))[:8000])
+        if len(e)>7 and isinstance(e[7],list):
+            trace_road_legs(e[7],parents+(e,))
+trace_road_legs(dict(project[6])["Game_events"])
+assert found_legs==source_leg_ids
+
 for row in road_branch_report:
     print("SOURCE_ROAD_BRANCH",json.dumps(row,separators=(",",":"))[:6500])
 
