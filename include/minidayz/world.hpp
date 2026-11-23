@@ -279,6 +279,7 @@ private:
     std::uint8_t generation_level_{};
     bool generation_is_map_{};
     bool generate_source_locations(std::uint8_t level);
+    bool generate_source_crash_sites();
     bool initialized_{};
 };
 

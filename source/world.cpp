@@ -12,6 +12,7 @@
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/source_interior_container.hpp"
+#include "minidayz/source_crash_site_geometry.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -519,7 +520,8 @@ bool WorldSystem::advance_source_generation() {
     case 1: ok = generate_procedural_grid(generation_level_, seed_); break;
     case 2: ok = build_map_markers(generation_level_, seed_); break;
     case 3: ok = !generation_is_map_ || generate_source_locations(generation_level_); break;
-    case 4: ok = !generation_is_map_ || load_source_bunker_spawns(false); break;
+    case 4: ok = !generation_is_map_ ||
+        (generate_source_crash_sites() && load_source_bunker_spawns(false)); break;
     case 5: ok = !generation_is_map_ || load_source_bridge_elements(); break;
     default: return false;
     }
@@ -976,6 +978,189 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
         ++added;
     }
     source_location_spawn_count_ = added;
+    return true;
+}
+
+// Original generate_helicrashes is called after mapgen_toelements and
+// before Reload_locations_start. It selects original Sprite514 markers,
+// creates Sprite344/Sprite434, and the selected marker's create_map_location
+// child event creates crash artwork, Solid348, and exact loot category
+// markers at authored Sprite imagepoints. All structures are rebuildable
+// from the same world seed (no guessed extra wrecks or category items).
+bool WorldSystem::generate_source_crash_sites() {
+    if(!initialized_||!generation_is_map_||map_markers_.empty())
+        return false;
+    const auto* layout=stage1::find_layout("Map");
+    if(!layout)return false;
+    const auto layout_id=static_cast<std::uint16_t>(layout-stage1::kLayoutTable);
+    const auto buildings=find_layer_index_by_name(layout_id,"Buildings");
+    const auto trees=find_layer_index_by_name(layout_id,"Trees");
+    const auto zed=find_layer_index_by_name(layout_id,"zed_resp");
+    const auto loot=find_layer_index_by_name(layout_id,"LOOT_respawn");
+    if(buildings==0xffff||trees==0xffff||zed==0xffff||loot==0xffff)
+        return false;
+    const auto make=[&](const world_source::CrashSpriteGeometry& spec,
+        std::uint16_t layer,std::uint64_t action_uid,float x,float y,
+        std::uint64_t parent_uid=0)->std::size_t {
+        const auto index=placements_.size();
+        placements_.push_back({layer,spec.object,action_uid,x,y,0.0f,
+            spec.width,spec.height,0.0f,1.0f,1.0f,
+            spec.origin_x,spec.origin_y,0,spec.frame});
+        auto& instance=placements_.back();
+        instance.runtime_uid=(std::uint64_t{1}<<63) |
+            static_cast<std::uint64_t>(index+1);
+        instance.instance_id=index+1;
+        instance.parent_runtime_uid=parent_uid;
+        return index;
+    };
+    const auto point_position=[](const WorldPlacement& parent,
+        world_source::CrashImagePoint point)->WorldPoint {
+        return {parent.x+(point.x-parent.origin_x)*parent.width,
+                parent.y+(point.y-parent.origin_y)*parent.height};
+    };
+    std::vector<bool> chosen(map_markers_.size(),false);
+    const auto choose_site=[&](int first,int last,
+        std::initializer_list<std::uint16_t> types)->std::size_t {
+        std::vector<std::size_t> eligible;
+        for(std::size_t i=0;i<map_markers_.size();++i){
+            const auto& m=map_markers_[i];
+            if(m.cell_y<first||m.cell_y>last||chosen[i])continue;
+            if(std::find(types.begin(),types.end(),m.marker_type)==
+               types.end())continue;
+            eligible.push_back(i);
+        }
+        if(eligible.empty())return map_markers_.size();
+        const auto picked=eligible[source_random_bounded(
+            rng_,static_cast<std::uint32_t>(eligible.size()))];
+        chosen[picked]=true; // Original Sprite514.var9 = 1
+        return picked;
+    };
+    const auto spawn_markers=[&](const WorldPlacement& art,
+        std::uint16_t category,
+        const world_source::CrashImagePoint (&points)[3],
+        const std::uint64_t (&action_uids)[3]) {
+        for(std::size_t n=0;n<3;++n){
+            const auto pos=point_position(art,points[n]);
+            const auto idx=make(world_source::kCrashLoot,loot,
+                action_uids[n],pos.x,pos.y,art.runtime_uid);
+            auto& marker=placements_[idx];
+            marker.image_point=points[n].index;
+            marker.linked_runtime_uid=art.runtime_uid;
+            marker.source_variable_0=category;
+            marker.source_loot_category=category;
+            // Root immediately calls Trigger_spawn(218.UID) after every
+            // SetInstanceVariable(0,15/18), in this exact action order.
+            marker.source_initial_loot_trigger=true;
+        }
+    };
+    for(int half=0;half<(generation_level_>=4?2:1);++half){
+        const int first=half==0?0:17;
+        const int last=half==0?15:32;
+        const auto heli_quota=world_source::source_helicrash_quota(
+            generation_level_);
+        const auto hammer_quota=world_source::source_hammercrash_quota(
+            generation_level_);
+        for(int n=0;n<heli_quota;++n){
+            const auto i=choose_site(first,last,{1,2,8,10,52});
+            if(i==map_markers_.size())break;
+            const auto& marker=map_markers_[i];
+            const auto hotspot=world_source::mapgen_hotspot(
+                marker.cell_x,marker.cell_y);
+            const float x=hotspot.x-500.0f,y=hotspot.y-500.0f;
+            const auto anchor=make(world_source::kHeliAnchor,buildings,
+                667245097137285ULL,x,y);
+            auto& point=placements_[anchor];
+            point.source_variable_0=1; // 344.var0 after first site reload
+            // Original 344.var1 stores the selected 514 runtime UID.
+            // Native Mapgen514 is represented by the deterministic
+            // WorldMapMarker index, not a visible fake Sprite514.
+            point.source_variable_1=static_cast<std::uint64_t>(i+1);
+            const auto parent_uid=point.runtime_uid;
+            const auto visual_uid=marker.marker_type==52
+                ?453361015394042ULL
+                :marker.marker_type==2||marker.marker_type==8
+                    ?416326667732045ULL:439357571825697ULL;
+            const auto model_idx=make(world_source::kHeliCrash,buildings,
+                visual_uid,x,y,parent_uid);
+            const auto model=placements_[model_idx];
+            const auto solid_idx=make(world_source::kHeliSolid,zed,
+                884735663000338ULL,x,y,model.runtime_uid);
+            placements_[solid_idx].linked_runtime_uid=model.runtime_uid;
+            placements_[model_idx].linked_runtime_uid=
+                placements_[solid_idx].runtime_uid;
+            const auto counter=make(world_source::kHeliCounter,zed,
+                757293486782645ULL,x,y,model.runtime_uid);
+            placements_[counter].width=300.0f;
+            placements_[counter].height=300.0f;
+            constexpr std::uint64_t loot_uids[]={
+                239697520904115ULL,873380527087600ULL,
+                571157701650261ULL};
+            spawn_markers(model,15,world_source::kHeliLootPoints,
+                loot_uids);
+            const auto npc=make(world_source::kCrashZed,zed,
+                567620764434094ULL,x+100.0f,y,parent_uid);
+            // Object216 is an original special zombie spawn point.
+            // Keep it in the world source spawn index as long as it is in
+            // the Map bounds, without manufacturing extra zombies.
+            if(bounds_.contains({x+100.0f,y}))
+                features_.push_back({WorldFeatureKind::SpawnPoint,
+                    {x+100.0f,y},567620764434094ULL,216,zed,216,
+                    placements_[npc].width,placements_[npc].height,0.0f,0});
+        }
+        for(int n=0;n<hammer_quota;++n){
+            const auto i=choose_site(first,last,{5,15,13});
+            if(i==map_markers_.size())break;
+            const auto& marker=map_markers_[i];
+            const auto hotspot=world_source::mapgen_hotspot(
+                marker.cell_x,marker.cell_y);
+            const float x=hotspot.x-500.0f,y=hotspot.y-600.0f;
+            const auto anchor=make(world_source::kHammerAnchor,buildings,
+                marker.marker_type==13?770992642019829ULL:
+                    515255034690416ULL,x,y);
+            auto& point=placements_[anchor];
+            point.source_variable_0=1;
+            // Original 434.var2 remembers 514.UID; link as the native
+            // parent marker index, not as an unrelated object variable.
+            point.house_base_runtime_uid=static_cast<std::uint64_t>(i+1);
+            const auto parent_uid=point.runtime_uid;
+            const bool fallen=marker.marker_type==13;
+            const auto& frame=fallen
+                ?world_source::kHammerCrashFallen
+                :world_source::kHammerCrashStanding;
+            const auto model_idx=make(frame,trees,
+                fallen?832344210313130ULL:672392095922871ULL,
+                x,y,parent_uid);
+            const auto model=placements_[model_idx];
+            const auto counter=make(world_source::kHammerCounter,zed,
+                525953418179817ULL,x,y,model.runtime_uid);
+            placements_[counter].width=300.0f;
+            placements_[counter].height=300.0f;
+            constexpr std::uint64_t loot_uids[]={
+                629751421654089ULL,370030648544993ULL,
+                200882605382924ULL};
+            if(fallen)
+                spawn_markers(model,18,
+                    world_source::kHammerFallenLootPoints,loot_uids);
+            else
+                spawn_markers(model,18,
+                    world_source::kHammerStandingLootPoints,loot_uids);
+            const auto& wall=fallen?
+                world_source::kHammerFallenWallPoints:
+                world_source::kHammerStandingWallPoints;
+            const auto start=point_position(model,wall[0]);
+            const auto end=point_position(model,wall[1]);
+            const auto wall_index=make(world_source::kHammerSolid,zed,
+                812180985531328ULL,start.x,start.y,model.runtime_uid);
+            auto& obstacle=placements_[wall_index];
+            // Original Solid348 SetSize is the difference of named
+            // Sprite441 ImagePoint("w2") and ImagePoint("w1").
+            obstacle.width=end.x-start.x;
+            obstacle.height=end.y-start.y;
+            obstacle.linked_runtime_uid=model.runtime_uid;
+            obstacle.source_variable_0=model.runtime_uid;
+            placements_[model_idx].linked_runtime_uid=obstacle.runtime_uid;
+        }
+    }
     return true;
 }
 

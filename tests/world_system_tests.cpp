@@ -823,6 +823,69 @@ void test_original_car_trunk_one_time_search() {
     assert(restored.count()==1);
 }
 
+
+void test_original_crash_site_world_generation() {
+    // Root generate_helicrashes creates Sprite344 for original
+    // {1,2,8,10,52} wilderness and Sprite434 for {5,15,13}.
+    // create_map_location then creates an actual Sprite246 helicopter
+    // wreck / Sprite441 hammer wreck and the original category 15/18
+    // loot markers, not guessed cars from the generic generator.
+    for(std::uint8_t level=0;level<6;++level){
+        minidayz::WorldSystem world;
+        assert(world.generate_from_source(0x4d444159u+level*137u,
+            "Map",level));
+        std::size_t heli=0,hammer=0,loot15=0,loot18=0;
+        for(std::size_t i=0;i<world.placement_count();++i){
+            const auto* p=world.placement(i);
+            if(!p)continue;
+            if(p->object==246 && p->source_uid!=0){
+                ++heli;
+                assert(p->width==240.0f&&p->height==186.0f);
+                assert(p->parent_runtime_uid!=0);
+                std::size_t loot_found=0;
+                for(std::size_t j=0;j<world.placement_count();++j){
+                    const auto* marker=world.placement(j);
+                    if(marker&&marker->object==218&&
+                       marker->parent_runtime_uid==p->runtime_uid){
+                        assert(marker->source_loot_category==15);
+                        assert(marker->source_variable_0==15);
+                        assert(marker->source_initial_loot_trigger);
+                        ++loot_found;
+                    }
+                }
+                assert(loot_found==3);
+            }
+            if(p->object==441 && p->source_uid!=0){
+                ++hammer;
+                assert(p->width>0.0f&&p->height>0.0f);
+                assert(p->parent_runtime_uid!=0);
+                std::size_t loot_found=0;
+                for(std::size_t j=0;j<world.placement_count();++j){
+                    const auto* marker=world.placement(j);
+                    if(marker&&marker->object==218&&
+                       marker->parent_runtime_uid==p->runtime_uid){
+                        assert(marker->source_loot_category==18);
+                        assert(marker->source_variable_0==18);
+                        assert(marker->source_initial_loot_trigger);
+                        ++loot_found;
+                    }
+                }
+                assert(loot_found==3);
+            }
+            if(p->object==218 && p->source_loot_category==15)++loot15;
+            if(p->object==218 && p->source_loot_category==18)++loot18;
+        }
+        const std::size_t halves=level>=4?2u:1u;
+        assert(heli==halves*world_source::source_helicrash_quota(level));
+        assert(hammer<=halves*world_source::source_hammercrash_quota(level));
+        assert(loot15>=heli*3);
+        assert(loot18>=hammer*3);
+        std::fprintf(stderr,
+            "SOURCE CRASH SITES level=%u heli=%zu hammer=%zu category15=%zu category18=%zu\\n",
+            level,heli,hammer,loot15,loot18);
+    }
+}
+
 void test_original_source_settlement_building_groups() {
     // Group original category-7 primary house instances by the *source*
     // Mapgen514 1020px cell, not by a guessed density multiplier.
@@ -2378,6 +2441,7 @@ int main() {
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
     test_original_car_trunk_one_time_search();
+    test_original_crash_site_world_generation();
     test_original_source_settlement_building_groups();
     test_original_tree_block_variants_and_solid_companions();
     test_source_event_tree_hit_health_and_atomic_fall();
