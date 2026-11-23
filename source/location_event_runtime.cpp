@@ -374,12 +374,20 @@ bool SourceLocationEventRuntime::execute_action(
         // scenery marker before conditionally creating a replacement.
         // Construct Destroy without a selected instance is a valid no-op.
         if (action.parameter_count != 0) return false;
+        // Construct's Destroy acts on the picked Sprite915 instances
+        // for THIS location. Earlier generated map cells are independent
+        // instances and must not disappear when a later cell destroys its
+        // temporary marker. Preserve every previous cell's spawns and
+        // leave the current location's non-915 instances untouched.
+        const auto begin = self.spawns_.begin() +
+            static_cast<std::ptrdiff_t>(self.spawn_start_index_);
         self.spawns_.erase(
-            std::remove_if(self.spawns_.begin(), self.spawns_.end(),
+            std::remove_if(begin, self.spawns_.end(),
                 [](const SourceLocationSpawn& spawn) { return spawn.object == 915; }),
             self.spawns_.end());
-        self.spawn_start_index_ = self.spawns_.size();
-        self.last_spawn_index_ = static_cast<std::size_t>(-1);
+        self.last_spawn_index_ = self.spawns_.empty() ||
+            self.spawns_.size() == self.spawn_start_index_
+            ? static_cast<std::size_t>(-1) : self.spawns_.size() - 1;
         return true;
     }
     if (action.object_index == 915 && action.command_id == 47) {
