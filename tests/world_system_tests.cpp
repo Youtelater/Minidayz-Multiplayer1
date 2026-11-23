@@ -1914,6 +1914,32 @@ void test_every_source_level_quota() {
             if(profile.gas_stations)assert(gas>0);
             if(profile.roadside_cafes)assert(cafes>0);
             if(profile.lite_shop)assert(shops>0);
+            // Source generate_array_tomap special markers must never
+            // be confused with raw Array518 POIs. Check all ordinary
+            // difficulty levels and both halves of the 16x33 maps.
+            std::size_t special32=0,special105=0,military5=0,military70=0;
+            for(std::size_t i=0;i<world.map_marker_count();++i){
+                const auto* m=world.map_marker(i);
+                assert(m);
+                const auto type=m->marker_type;
+                assert(type!=1000&&type!=2000&&type!=3000&&
+                       type!=8000&&type!=10000);
+                if(type==32){++special32;assert(m->source_code==0);}
+                if(type==105){++special105;assert(m->source_code==0);}
+                if(m->source_code==5){
+                    assert(type==22||type==5||type==70);
+                    if(type==5)++military5;
+                    if(type==70)++military70;
+                }
+            }
+            assert(special32==(level==0?0u:level>=4?2u:1u));
+            assert(special105==(level>=4?2u:1u));
+            const std::size_t expected_military5=
+                level==0?0u:level==1?1u:level==2?2u:level==3?3u:6u;
+            const std::size_t expected_military70=
+                level<=2?0u:level==3?1u:4u;
+            assert(military5==expected_military5);
+            assert(military70==expected_military70);
             assert(world.map_marker_count() ==
                    static_cast<std::size_t>(profile.map_size_x) * profile.grid_height);
         }

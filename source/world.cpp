@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstring>
 #include <random>
+#include <initializer_list>
 
 namespace minidayz {
 namespace {
@@ -314,6 +315,76 @@ void replace_source_road_markers(
     }
 }
 
+// Original generate_array_tomap executes PickRandom(514) only among the
+// instances selected by its own source conditions. Selection updates the
+// picked 514.var0; the Array518 road/POI value remains unchanged.
+void source_pick_marker(
+    std::vector<WorldMapMarker>& markers,std::mt19937& rng,
+    int min_row,int max_row,int min_col,int max_col,
+    std::initializer_list<std::uint16_t> allowed,
+    std::initializer_list<std::uint16_t> outputs,
+    int repetitions=1) {
+    if(!allowed.size()||!outputs.size()||repetitions<=0)return;
+    for(int n=0;n<repetitions;++n){
+        std::vector<std::size_t> matching;
+        for(std::size_t i=0;i<markers.size();++i){
+            const auto& m=markers[i];
+            if(m.cell_y<min_row||m.cell_y>max_row||
+               m.cell_x<min_col||m.cell_x>max_col)continue;
+            if(std::find(allowed.begin(),allowed.end(),m.marker_type)==
+               allowed.end())continue;
+            matching.push_back(i);
+        }
+        if(matching.empty())continue; // Original PickRandom empty selection.
+        auto& selected=markers[matching[source_random_bounded(
+            rng,static_cast<std::uint32_t>(matching.size()))]];
+        const auto chosen=source_random_bounded(
+            rng,static_cast<std::uint32_t>(outputs.size()));
+        selected.marker_type=outputs.begin()[chosen];
+    }
+}
+
+// Root generate_array_tomap nodes 424890147621748 and
+// 688300943103455: a 14x14 Repeat checks the four adjacent Mapgen
+// instances for the ORIGINAL wilderness codes {1,2,3,8,10,52}, and
+// multiplies the CENTER type by 1000 only if it is {1,2,3,8,10}.
+// Keep in-place, nested-repeat order: multiplying one center affects
+// the next neighbor's predicate, and prevents overlapping special sites.
+void source_flag_interior_markers(
+    std::vector<WorldMapMarker>& markers,int row_start,int columns){
+    if(columns<3 || markers.size()%static_cast<std::size_t>(columns)!=0)
+        return;
+    const int rows=static_cast<int>(markers.size()/columns);
+    const auto at=[&](int row,int col)->WorldMapMarker*{
+        if(row<0||row>=rows||col<0||col>=columns)return nullptr;
+        return &markers[static_cast<std::size_t>(row)*columns+col];
+    };
+    const auto wilderness=[](std::uint16_t code,bool include_52){
+        switch(code){
+        case 1:case 2:case 3:case 8:case 10:return true;
+        case 52:return include_52;
+        default:return false;
+        }
+    };
+    for(int row=row_start;row<row_start+14;++row){
+        for(int col=1;col<=14;++col){
+            auto* center=at(row,col);
+            auto* left=at(row,col-1);
+            auto* right=at(row,col+1);
+            auto* up=at(row-1,col);
+            auto* down=at(row+1,col);
+            if(!center||!left||!right||!up||!down||
+               !wilderness(center->marker_type,false)||
+               !wilderness(left->marker_type,true)||
+               !wilderness(right->marker_type,true)||
+               !wilderness(up->marker_type,true)||
+               !wilderness(down->marker_type,true))continue;
+            center->marker_type=static_cast<std::uint16_t>(
+                center->marker_type*1000u);
+        }
+    }
+}
+
 } // namespace
 
 bool WorldBounds::contains(WorldPoint p) const noexcept {
@@ -562,6 +633,124 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
             profile.roadside_cafes,second_half,50,51);
         replace_source_road_markers(map_markers_,rng_,
             profile.lite_shop,second_half,108,109);
+    }
+
+    // Root generate_array_tomap branch 148779630202671 selects one
+    // original wilderness marker and changes 514.var0 to 32 on maps
+    // 1+, with an additional second-half selection at levels 4/5.
+    if(level>=1)
+        source_pick_marker(map_markers_,rng_,0,15,0,15,
+            {2,8,1,10,3},{32});
+    if(level>=4)
+        source_pick_marker(map_markers_,rng_,17,32,0,15,
+            {2,8,1,10,3},{32});
+
+    // Root default sav_checked=0, not challenge-menu -2. The two
+    // 105 branches use the same OR selection before interior marking.
+    source_pick_marker(map_markers_,rng_,0,15,0,15,
+        {2,8,1,10,3},{105});
+    if(level>=4)
+        source_pick_marker(map_markers_,rng_,17,32,0,15,
+            {2,8,1,10,3},{105});
+
+    // Root 14x14 interior tagging: first b_x=1..14, then 18..31.
+    source_flag_interior_markers(map_markers_,1,grid_.width());
+    if(level>=4)
+        source_flag_interior_markers(map_markers_,18,grid_.width());
+
+    // Root selected 514.var0 values 1000/2000/3000/8000/10000
+    // are SOURCE TEMPORARY TYPES, not placed permanent scenery.
+    // The ordered PickRandom branches below instantiate the authored
+    // special map location variants before resetting every leftover.
+    constexpr std::uint16_t chosen_source_types[]={
+        23,24,25,26,27,28,29,40,42,43,44,45,46,47,48,49,
+        60,61,62,63,64,66
+    };
+    const auto pick_source_special=[&](
+        int first_row,int last_row,
+        std::initializer_list<std::uint16_t> out) {
+        source_pick_marker(map_markers_,rng_,
+            first_row,last_row,1,14,
+            {2000,8000,1000,10000,3000},out);
+    };
+    const auto choose_source_special=[&](int first_row,int last_row){
+        std::vector<std::size_t> matching;
+        for(std::size_t i=0;i<map_markers_.size();++i){
+            const auto& m=map_markers_[i];
+            if(m.cell_y<first_row||m.cell_y>last_row||
+               m.cell_x<1||m.cell_x>14)continue;
+            if(m.marker_type!=2000&&m.marker_type!=8000&&
+               m.marker_type!=1000&&m.marker_type!=10000&&
+               m.marker_type!=3000)continue;
+            matching.push_back(i);
+        }
+        if(matching.empty())return;
+        auto& m=map_markers_[matching[source_random_bounded(
+            rng_,static_cast<std::uint32_t>(matching.size()))]];
+        m.marker_type=choose_marker(chosen_source_types,rng_);
+    };
+    if(level>=4){
+        pick_source_special(18,31,{104});
+        pick_source_special(18,31,{102});
+        pick_source_special(18,31,{106});
+    }
+    if(level>=5){
+        pick_source_special(1,14,{102});
+        pick_source_special(1,14,{110});
+    }
+    if(level>=2)pick_source_special(1,14,{107});
+    if(level>=4)pick_source_special(18,31,{107});
+    choose_source_special(1,14); // Source branch 871254110967877
+    if(level>=5){
+        choose_source_special(1,14);
+        choose_source_special(18,31);
+    }
+    if(level>=4)pick_source_special(18,31,{65});
+    // Source DLC conditional (dlc_2==1) produces 67. Normal new-game
+    // initialization resets dlc_2 to zero; do not invent this marker.
+    for(auto& marker:map_markers_){
+        switch(marker.marker_type){
+        case 1000:case 2000:case 3000:case 8000:case 10000:
+            marker.marker_type=static_cast<std::uint16_t>(
+                marker.marker_type/1000);
+            break;
+        default:break;
+        }
+    }
+
+    // Original level-five return-to-wilderness branches convert six
+    // first-half and four second-half markers to Sprite514 type 3.
+    if(level>=5){
+        source_pick_marker(map_markers_,rng_,0,15,0,15,
+            {2,8,1,10},{3},6);
+        source_pick_marker(map_markers_,rng_,17,32,0,15,
+            {2,8,1,10},{3},4);
+    }
+
+    // Root generate_array_tomap military subtypes (UIDs
+    // 234786497469423/972939048496615/200534481265776/
+    // 957929406510728). Raw Array518 code 5 initially maps to
+    // Sprite514 type22; the source THEN converts picked 22s to
+    // types 5 and 70. Do not create additional military POIs.
+    const auto military_pick=[&](int min_row,int max_row,int count,
+                                 std::uint16_t result) {
+        if(!count)return;
+        for(int n=0;n<count;++n)
+            source_pick_marker(map_markers_,rng_,min_row,max_row,0,15,
+                {22},{result});
+    };
+    if(level==1)military_pick(0,15,1,5);
+    if(level==2)military_pick(0,15,2,5);
+    if(level==3){
+        military_pick(0,15,1,70);
+        military_pick(0,15,3,5);
+    }
+    if(level>=4){
+        for(const auto bounds: {std::pair<int,int>{0,15},
+                                std::pair<int,int>{17,32}}){
+            military_pick(bounds.first,bounds.second,2,70);
+            military_pick(bounds.first,bounds.second,3,5);
+        }
     }
     return true;
 }
