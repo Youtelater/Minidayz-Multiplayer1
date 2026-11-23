@@ -38,6 +38,7 @@ jobs:
         run: |
           python3 tools/stage1/reassemble_snapshot.py
           python3 tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
+          python3 tools/stage1/build_original_dead_skin_catalog.py
           python3 tools/stage1/extract_location_templates.py
           python3 tools/stage1/extract_npc_spawn_calls.py
           # WorldSystem now executes source Tilemap230 SetTile rules itself;
