@@ -147,6 +147,18 @@ def main():
                 special=any(condition[0]==-1 and condition[1]==46 and
                             "perk_dao" in str(condition[9]) for condition in conds)
                 if special:
+                    # Retain the exact root condition/SetTile evidence for
+                    # future perk-enabled world generation. Diagnostics are
+                    # source UIDs and literal original expressions only,
+                    # never a guessed native substitution.
+                    print("SOURCE_TERRAIN_PERK_BRANCH",
+                        json.dumps({"action_uid":action[3],
+                            "event_uid":event[4],
+                            "conditions":[node[5] for node in ancestry
+                                if any(isinstance(c,list) and len(c)>9 and
+                                       c[:2]==[-1,46] and
+                                       "perk_dao" in str(c[9]) for c in node[5])],
+                            "params":action[5]},separators=(",",":"))[:7000])
                     rejected.append((action[3],"special perk branch"))
                     continue
                 repeat=1
