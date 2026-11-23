@@ -21,8 +21,19 @@ jobs:
       - name: Generate Construct family membership used by native collision headers
         run: python3 tools/stage1/build_source_family_members.py
 
+      - name: Build exact root PlayerBase source event catalog
+        run: python3 tools/stage1/build_player_speed_event_catalog.py
+
       - name: Trace original PlayerBase movement event effects
         run: python3 tools/stage1/trace_original_player_movement.py
+
+      - name: Upload original PlayerBase source event ancestry
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-player-speed-event-ancestry
+          path: audit-output/player/original_player_speed_events.json
+          if-no-files-found: warn
 
       - name: Verify source PlayerBase variable8 has no invented equipment speed bonus
         run: python3 tests/test_original_player_variable8_source.py
