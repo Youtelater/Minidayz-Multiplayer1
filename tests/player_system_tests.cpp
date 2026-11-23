@@ -30,12 +30,12 @@ int main() {
     // flag and number of frames. They must not reuse the skin's current
     // integer frame when the source speeds/frame counts differ.
     const minidayz::stage1::AnimationDef independent_loop{
-        679, 0, "run_down", 5, 8.0f, true};
+        679, "run_down", 5, 8.0f, true};
     assert(source_animation_frame_at_time(independent_loop,0.0f)==0);
     assert(source_animation_frame_at_time(independent_loop,0.32f)==2);
     assert(source_animation_frame_at_time(independent_loop,0.75f)==1);
     const minidayz::stage1::AnimationDef independent_once{
-        679, 0, "pistol_down", 4, 8.0f, false};
+        679, "pistol_down", 4, 8.0f, false};
     assert(source_animation_frame_at_time(independent_once,100.0f)==3);
     assert(source_animation_frame_at_time(independent_once,-1.0f)==0);
     assert(source_animation_frame_at_time(
