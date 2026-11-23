@@ -458,6 +458,9 @@ jobs:
       - name: Check weather-loop sample matches winter world instead of rain eligibility
         run: python3 tests/test_weather_audio_source_dispatch.py
 
+      - name: Verify original item63 energy boost event, timer, and ancestor guards
+        run: python3 tests/test_original_energy_drink_source.py
+
       - name: Verify Source PlayerBase Collision Geometry
         run: python3 tests/test_original_playerbase_collision.py
 
