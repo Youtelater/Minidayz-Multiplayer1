@@ -1,5 +1,6 @@
 #include "minidayz/source_map_overlay.hpp"
 #include <cassert>
+#include <cstring>
 #include <cmath>
 using minidayz::map_overlay::CellKind;
 using namespace minidayz::map_overlay;
@@ -24,6 +25,17 @@ int main(){
     assert(cell_kind(1)==CellKind::ground);
     assert(cell_kind(2)==CellKind::ground);
     assert(cell_kind(65535)==CellKind::ground);
+    assert(location_name(cell_kind(9)));
+    assert(std::strcmp(location_name(cell_kind(9)),"VILLAGE")==0);
+    assert(std::strcmp(location_name(cell_kind(6)),"CITY")==0);
+    assert(std::strcmp(location_name(cell_kind(5)),"MILITARY BASE")==0);
+    assert(std::strcmp(location_name(cell_kind(11)),"HOSPITAL")==0);
+    assert(std::strcmp(location_name(cell_kind(15)),"FIRE STATION")==0);
+    assert(std::strcmp(location_name(cell_kind(103)),"MARKET")==0);
+    assert(std::strcmp(location_name(cell_kind(51)),"SHOP")==0);
+    assert(std::strcmp(location_name(cell_kind(50)),"ROADSIDE CAFE")==0);
+    assert(std::strcmp(location_name(cell_kind(99)),"GAS STATION")==0);
+    assert(location_name(cell_kind(1234))==nullptr);
     assert(is_location(cell_kind(9)));
     assert(!is_location(cell_kind(12)));
     assert(!is_location(cell_kind(0)));

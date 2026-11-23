@@ -37,6 +37,23 @@ constexpr CellKind cell_kind(std::uint16_t code) noexcept {
     }
 }
 
+// Names correspond to original procedural Array POI codes, not invented
+// map markers. Unknown temporary Array codes deliberately have no label.
+constexpr const char* location_name(CellKind kind) noexcept {
+    switch(kind){
+    case CellKind::village: return "VILLAGE";
+    case CellKind::military: return "MILITARY BASE";
+    case CellKind::city: return "CITY";
+    case CellKind::hospital: return "HOSPITAL";
+    case CellKind::firestation: return "FIRE STATION";
+    case CellKind::market: return "MARKET";
+    case CellKind::shop: return "SHOP";
+    case CellKind::cafe: return "ROADSIDE CAFE";
+    case CellKind::gas_station: return "GAS STATION";
+    default: return nullptr;
+    }
+}
+
 constexpr bool is_location(CellKind kind) noexcept {
     return kind>=CellKind::village;
 }

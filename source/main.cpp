@@ -646,6 +646,34 @@ public:
         if(map_open_) {
             const bool tap=input.touching && !touch_down_;
             touch_down_=input.touching;
+            if(tap && input.touch.py>=32 && input.touch.py<202) {
+                // The 3DS touch map uses original Array POI codes and
+                // exact Mapgen's transposed world positions. Identify a
+                // touched section by its source-defined type, not by an
+                // invented minimap icon or guessed building density.
+                const auto& grid=world_.grid();
+                const auto& bounds=world_.bounds();
+                const minidayz::map_overlay::MapRect viewport{
+                    12.0f,32.0f,296.0f,170.0f};
+                float best_distance=11.0f*11.0f;
+                std::uint16_t selected=0;
+                for(int y=0;y<grid.height();++y)
+                    for(int x=0;x<grid.width();++x){
+                        const auto code=grid.at(x,y);
+                        const auto kind=minidayz::map_overlay::cell_kind(code);
+                        if(!minidayz::map_overlay::is_location(kind))continue;
+                        const auto rect=minidayz::map_overlay::source_cell_rect(
+                            x,y,bounds,viewport);
+                        const float dx=input.touch.px-(rect.x+rect.width*0.5f);
+                        const float dy=input.touch.py-(rect.y+rect.height*0.5f);
+                        const float sq=dx*dx+dy*dy;
+                        if(sq<best_distance){
+                            best_distance=sq;
+                            selected=code;
+                        }
+                    }
+                map_selected_type_=selected;
+            }
             if((input.pressed & KEY_B) ||
                (tap && input.touch.py>=207))
                 map_open_=false;
@@ -1449,8 +1477,18 @@ public:
                 player_mark_frame->frame,
                 point.x-6.0f,point.y-6.0f,12.0f,12.0f,0.77f);
         renderer.draw_text("X",point.x-4.0f,point.y-9.0f,0.43f);
-        renderer.draw_text("ROADS    TOWNS    X = YOU",
-                           27.0f,207.0f,0.32f);
+        const auto selected_kind=minidayz::map_overlay::cell_kind(
+            map_selected_type_);
+        const auto* selected_name=minidayz::map_overlay::location_name(
+            selected_kind);
+        if(selected_name){
+            char label[48]{};
+            std::snprintf(label,sizeof(label),"SECTION: %s",selected_name);
+            renderer.draw_text(label,29.0f,207.0f,0.31f);
+        }else{
+            renderer.draw_text("TAP A MAP LOCATION TO SHOW ITS TYPE",
+                               14.0f,207.0f,0.30f);
+        }
         renderer.draw_solid_rect(9.0f,222.0f,302.0f,16.0f,
             C2D_Color32(76,66,47,255),0.61f);
         renderer.draw_text("Y / B / TOUCH: BACK TO INVENTORY",
@@ -4322,6 +4360,7 @@ private:
     bool details_open_{};
     std::size_t details_scroll_{};
     bool map_open_{};
+    std::uint16_t map_selected_type_{};
 };
 
 } // namespace
