@@ -47,3 +47,37 @@ for sheet,events in project[6]:
    print("CAR_NAMED_EVENT",sheet,e[4],json.dumps({
      "parents":[p[4] for p in parents[-6:]],
      "conditions":e[5],"actions":e[6]},ensure_ascii=False,separators=(",",":"))[:7000])
+
+# Interpret the ORIGINAL interact / search event ancestry, including
+# probability comparisons, never infer chance from loot item weights.
+TRACE_UIDS={
+ 926793085373299,5295137988838652,5907389574047888,
+ 7711324247664447,1074032691412307,400880056066513,
+ 191794159726343,226004896143721,147540547237867,
+ 626175794442741,701148703897151,483051176616500,
+ 1182523301410486,8880091309135125,6075180485305278,
+ 1923316192354192,711142196261088,1792234758292318,
+ 3302144065259174,838215728858889,4701221851322259,
+ 388182302027069,7634579179280124,6684143115687861,
+ 1430881814617229,8106312900809434,6755804858417062,
+}
+print("CAR_SOURCE_ANCESTOR_EVENTS")
+for sheet,events in project[6]:
+ for e,parents in walk(events):
+  if e[4] not in TRACE_UIDS:continue
+  print("CAR_PARENT",sheet,e[4],"anc",tuple(x[4] for x in parents[-7:]),
+    "conds",json.dumps(e[5],ensure_ascii=False,separators=(",",":"))[:4700],
+    "acts",json.dumps(e[6],ensure_ascii=False,separators=(",",":"))[:4700])
+# Enumerate all original Spawn_drop calls under Car open event UID and
+# preserve full source comparison/choice probabilities via ancestor chain.
+for sheet,events in project[6]:
+ for e,parents in walk(events):
+  actions=e[6] if isinstance(e[6],list) else ()
+  drops=[a for a in actions if isinstance(a,list) and len(a)>5 and
+    a[:2]==[189,69] and a[5] and a[5][0]==[1,[2,"Spawn_drop"]]]
+  if not drops or not any(x[4] in (7711324247664447,1923316192354192) for x in parents):
+   continue
+  print("CAR_DROP_CHAIN",e[4],sheet,
+    "ancestors",json.dumps([(a[4],a[5]) for a in parents[-10:]],ensure_ascii=False,separators=(",",":"))[:9000],
+    "conds",json.dumps(e[5],ensure_ascii=False,separators=(",",":"))[:2200],
+    "drops",json.dumps(drops,ensure_ascii=False,separators=(",",":"))[:2500])
