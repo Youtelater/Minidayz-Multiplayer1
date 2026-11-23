@@ -772,6 +772,8 @@ void test_original_car_trunk_one_time_search() {
     const auto* point=world_source::source_house_image_point(
         before->object,before->source_animation,before->source_frame,"",3);
     assert(point); // original Sprite241 Imagepoint3 on every car frame
+    // Root family1041 Overlaps241 gate must be honored for car loot.
+    assert(original_car_trunk_has_source_body(world,*before));
     GroundLootSystem ground;
     std::mt19937 random(1u);  // deterministic source sample under 50
     const auto outcome=source_search_original_car_trunk(
