@@ -1,5 +1,6 @@
 #pragma once
 #include "minidayz/world.hpp"
+#include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/ground_loot.hpp"
 #include "minidayz/original_initial_building_loot.hpp"
 #include "minidayz/generated/original_car_trunk_loot.hpp"
@@ -18,6 +19,23 @@ namespace minidayz::items {
 enum class OriginalCarSearchResult : std::uint8_t {
     invalid, empty, found, capacity_failure
 };
+
+// Source Game_events UID1074032691412307 / UID3302144065259174
+// requires family1041 overlaps Sprite241 before its loot/XP child.
+// Family1041 is the original 17-car family, never a guessed object ID.
+// The source spawn event also links the search marker to its car body.
+inline bool original_car_trunk_has_source_body(
+    const WorldSystem& world,const WorldPlacement& marker) noexcept {
+    if(marker.object!=241 || marker.opacity<=0.0f)return false;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* body=world.placement(i);
+        if(!body || body->opacity<=0.0f ||
+           !stage1::source_family_contains(1041,body->object))continue;
+        if(world_source::source_house_sprites_overlap(*body,marker))
+            return true;
+    }
+    return false;
+}
 
 inline const OriginalCarTrunkPool* original_car_pool(
     std::uint32_t frame) noexcept {
@@ -58,6 +76,10 @@ inline OriginalCarSearchResult source_search_original_car_trunk(
        car->source_variable_0!=0 || perk_trunkster_level>2 ||
        trunk_bonus!=(perk_trunkster_level>0
            ?kOriginalCarTrunkBonusOnTrunkster:0))
+        return OriginalCarSearchResult::invalid;
+    // Source family1041 Overlaps Sprite241 is a real inherited guard.
+    // A matching car sprite filename or marker alone grants no loot.
+    if(!original_car_trunk_has_source_body(world,*car))
         return OriginalCarSearchResult::invalid;
     const auto* pool=original_car_pool(car->source_frame);
     if(!pool)return OriginalCarSearchResult::invalid;
