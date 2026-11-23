@@ -2829,6 +2829,36 @@ void test_reported_world_seed_original_frame_integrity() {
     assert(!world_source::source_world_high_layer_gameplay_art(241,"Rain"));
     assert(!world_source::source_world_high_layer_gameplay_art(241,"night"));
     assert(!world_source::source_world_high_layer_gameplay_art(404,"Sunset_Dawn"));
+    // Source var1=3 variants 15/16/17 create DIFFERENT original sprites
+    // on high "night" and "Rain" layers. Previously those generated
+    // sprites were silently culled by the two-object-only art whitelist.
+    // Require their precise original Spawn event, object and layer.
+    assert(world_source::source_world_high_layer_gameplay_art(
+        1417,"night",611509906059529ULL));
+    assert(world_source::source_world_high_layer_gameplay_art(
+        1419,"night",969885855510364ULL));
+    assert(world_source::source_world_high_layer_gameplay_art(
+        1420,"Rain",635923503739935ULL));
+    assert(!world_source::source_world_high_layer_gameplay_art(1417,"night"));
+    assert(!world_source::source_world_high_layer_gameplay_art(
+        1417,"night",969885855510364ULL));
+    assert(!world_source::source_world_high_layer_gameplay_art(
+        1417,"Rain",611509906059529ULL));
+    assert(!world_source::source_world_high_layer_gameplay_art(
+        404,"Sunset_Dawn",611509906059529ULL));
+    // Keep the source table as the authority for ALL future generated
+    // high-layer world sprites, instead of forgetting to add another
+    // manually entered exception every time an original frame is found.
+    std::size_t original_high_art=0;
+    for(const auto& item:stage1::kWorldElementSpawnSource){
+        if(std::strcmp(item.layer_name,"night")!=0 &&
+           std::strcmp(item.layer_name,"Rain")!=0)continue;
+        assert(world_source::source_world_high_layer_gameplay_art(
+            item.object,item.layer_name,item.uid));
+        ++original_high_art;
+    }
+    assert(original_high_art==3);
+
     assert(invalid_frames==0 && "original world sprite frame not in source");
 }
 
