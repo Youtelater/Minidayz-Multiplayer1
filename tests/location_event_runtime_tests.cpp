@@ -64,9 +64,46 @@ void test_all_original_location_branches() {
     assert(executions >= stage1::kLocationTemplateSourceCount * 6);
 }
 
+void test_root_original_settlement_array_rows() {
+    // Root generate_location 9/4/16/17/6/21 branches author many Array525
+    // columns; ensure the native interpreter retains their distinct entries.
+    // This is the source grouping the player expects on the world map.
+    for(const auto code:{9,4,16,17,6,21}){
+        const auto* t=minidayz::find_source_location_template(code);
+        assert(t);
+        minidayz::construct::Array map;
+        assert(map.set_size(16,16,1));
+        std::mt19937 rng(0x4d444159u+code);
+        minidayz::construct::SourceLocationEventRuntime rt;
+        assert(rt.initialize(0,map,rng));
+        rt.set_mapgen(code,4,5,3760.0,4400.0,1020.0,1020.0);
+        bool matched=false;
+        assert(rt.execute_branch(t->event_uid,matched) && matched);
+        const auto& array=rt.location_array();
+        std::size_t count=0,houses=0;
+        for(int col=0;col<static_cast<int>(array.width());++col){
+            const int cat=static_cast<int>(array.at(col,0).as_number());
+            if(cat>0){
+                ++count;
+                if(cat==7)++houses;
+                if(count<=22)
+                    std::fprintf(stderr,
+                     "ROOT SETTLEMENT ENTRY tile=%d col=%d category=%d variant=%g worldX=%g worldY=%g\n",
+                     code,col,cat,array.at(col,1).as_number(),
+                     array.at(col,2).as_number(),array.at(col,3).as_number());
+            }
+        }
+        std::fprintf(stderr,
+            "ROOT SETTLEMENT ARRAY tile=%d source_uid=%llu rows=%zu count=%zu houses=%zu\n",
+            code,static_cast<unsigned long long>(t->event_uid),
+            array.height(),count,houses);
+    }
+}
+
 } // namespace
 
 int main() {
+    test_root_original_settlement_array_rows();
     test_all_original_location_branches();
 
     construct::Array map_array;
