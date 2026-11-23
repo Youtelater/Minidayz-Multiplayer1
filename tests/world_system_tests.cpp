@@ -740,10 +740,11 @@ void test_original_car_trunk_one_time_search() {
 
     WorldSystem world;
     assert(world.initialize(0xCA241u));
-    // Trigger the exact original category4 source branches rather than
-    // invent a car marker or custom sprite outside create_map_element.
-    for(std::uint8_t variant=1;variant<=40;++variant)
-        (void)world.expand_map_element(4,variant,0,
+    // Root create_map_element category6 contains the original car wrecks.
+    // Category4 is unrelated scenery and legitimately has no car trunks.
+    // Exercise every category6 car variant through its source Spawn events.
+    for(std::uint8_t variant=1;variant<=20;++variant)
+        (void)world.expand_map_element(6,variant,0,
             {14000.0f+variant*350.0f,9000.0f},0.0);
     std::size_t trunk=world.placement_count();
     for(std::size_t i=0;i<world.placement_count();++i) {
