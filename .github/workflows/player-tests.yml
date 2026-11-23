@@ -129,6 +129,9 @@ jobs:
       - name: Validate original roadside placement after road-to-marker conversion
         run: python3 tests/test_original_world_roadside_dispatch.py
 
+      - name: Verify original helicopter and hammer crash sites and loot markers
+        run: python3 tests/test_original_crash_site_source.py
+
       - name: Validate original map location tap labels and transposed coordinates
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
