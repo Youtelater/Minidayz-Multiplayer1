@@ -7,6 +7,7 @@
 #include "minidayz/generated/source_tree_impact_points.hpp"
 #include "minidayz/generated/source_door_points.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
+#include "minidayz/generated/source_family_members.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/source_interior_container.hpp"
@@ -1451,9 +1452,26 @@ bool WorldSystem::mark_source_car_trunk_searched(
     auto& p=placements_[index];
     if(p.object!=241 || !p.runtime_uid || p.source_variable_0!=0)
         return false;
-    // Root Player181 OnCollision241 destroys the trunk marker even when
-    // its loot roll fails. Retain a hidden stable native placement so
-    // Continue can replay source_variable_0 and opacity from the sidecar.
+    // Root Game_events UID 1074032691412307 selects the linked
+    // Family1041 car body and SetFrame(1) BEFORE the Sprite241 marker is
+    // destroyed. Preserve BOTH effects; otherwise an opened wreck still
+    // looks unopened after searching it (and after Continue).
+    const auto parent_uid=p.parent_runtime_uid;
+    if(!parent_uid)return false;
+    const auto it=std::find_if(placements_.begin(),placements_.end(),
+        [parent_uid](const WorldPlacement& candidate){
+            return candidate.runtime_uid==parent_uid;});
+    if(it==placements_.end() ||
+       !stage1::source_family_contains(1041,it->object))return false;
+    const auto parent_index=static_cast<std::size_t>(
+        it-placements_.begin());
+    const auto frames=stage1::animations_for_object(it->object);
+    if(!frames.data||frames.size==0||frames.data[0].frames<=1)
+        return false;
+    if(!set_placement_sprite_state(parent_index,0,1,it->opacity))
+        return false;
+    // Original 241.Destroy is adapted as a permanently hidden stable
+    // instance so the one-shot state replays from the world save sidecar.
     p.source_variable_0=1;
     p.opacity=0.0f;
     return true;

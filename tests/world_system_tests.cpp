@@ -10,6 +10,7 @@
 #include "minidayz/source_interior_container.hpp"
 #include "minidayz/original_initial_building_loot.hpp"
 #include "minidayz/original_car_trunk.hpp"
+#include "minidayz/generated/source_family_members.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/generated/world_source_data.hpp"
@@ -756,6 +757,17 @@ void test_original_car_trunk_one_time_search() {
     assert(trunk<world.placement_count());
     const auto* before=world.placement(trunk);
     assert(before && before->source_variable_0==0);
+    // Root 1041.SetFrame(1) affects the parent car BODY, separately from
+    // object241.Destroy. A surviving visible frame0 car would be wrong.
+    const std::uint64_t body_uid=before->parent_runtime_uid;
+    assert(body_uid!=0);
+    std::size_t body=world.placement_count();
+    for(std::size_t i=0;i<world.placement_count();++i)
+        if(world.placement(i)->runtime_uid==body_uid){body=i;break;}
+    assert(body<world.placement_count());
+    const auto* car_body=world.placement(body);
+    assert(car_body && stage1::source_family_contains(1041,car_body->object));
+    assert(car_body->source_frame==0);
     const auto* point=world_source::source_house_image_point(
         before->object,before->source_animation,before->source_frame,"",3);
     assert(point); // original Sprite241 Imagepoint3 on every car frame
@@ -768,6 +780,7 @@ void test_original_car_trunk_one_time_search() {
     const auto* searched=world.placement(trunk);
     assert(searched && searched->source_variable_0==1);
     assert(searched->opacity==0.0f);
+    assert(world.placement(body)->source_frame==1);
     assert(source_search_original_car_trunk(world,trunk,ground,0,0,random)
            ==OriginalCarSearchResult::invalid);
     assert(ground.count()==1); // car cannot be searched repeatedly
