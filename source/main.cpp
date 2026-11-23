@@ -29,6 +29,7 @@
 #include "minidayz/generated/player_skin_source.hpp"
 #include "minidayz/generated/player_spawn_source.hpp"
 #include "minidayz/player_equipment_visual.hpp"
+#include "minidayz/source_equipment_animation.hpp"
 #include "minidayz/source_player_layers.hpp"
 #include "minidayz/source_player_altmove.hpp"
 #include "minidayz/source_player_base_geometry.hpp"
@@ -2630,11 +2631,11 @@ public:
                     npc->x < camera_x - 48.0f || npc->x > camera_x + view_w + 48.0f ||
                     npc->y < camera_y - 48.0f || npc->y > camera_y + view_h + 48.0f)
                     continue;
-                if (!renderer.draw_source_sprite(npc->source_object,
-                        npc->animation_index, npc->animation_frame,
-                        npc->x, npc->y, 1.0f, 1.0f))
-                    renderer.draw_solid_rect(npc->x - 5.0f, npc->y - 5.0f,
-                        10.0f, 12.0f, C2D_Color32(130, 145, 78, 255));
+                // Original NPC skin or no rendered NPC: a colored native
+                // rectangle is not an authored MiniDAYZ character frame.
+                (void)renderer.draw_source_sprite(npc->source_object,
+                    npc->animation_index, npc->animation_frame,
+                    npc->x, npc->y, 1.0f, 1.0f);
                 // The original NPC is composed from a skin sprite and a
                 // separate eyes sprite pinned to the same position.
                 (void)renderer.draw_source_sprite(npc->eyes_object, 0, 0,
@@ -2721,8 +2722,13 @@ public:
                 if(!visual||!prefix)return;
                 char name[32]{};
                 std::snprintf(name,sizeof(name),"%s_%s",prefix,skin_direction);
+                // Overlay animation metadata belongs to the original
+                // EQUIPMENT sprite, not to the selected survivor's skin.
+                const auto original_frame =
+                    minidayz::stage1::source_equipment_animation_frame(
+                        visual->object,name,p.animation_elapsed);
                 (void)renderer.draw_source_animation(visual->object,name,
-                    player_.source_animation_frame(),p.x,p.y,1.0f,1.0f,depth);
+                    original_frame,p.x,p.y,1.0f,1.0f,depth);
             };
             // Source-authored equipment back-to-front. The originals use
             // separate layers on top of the chosen character base skin.
@@ -2749,10 +2755,12 @@ public:
             draw_equipped_layer(held_item,true,minidayz::stage1::source_player_layer_depth(
                     minidayz::stage1::kSourcePlayerWeaponLayer));
         }
-        if (!sprite_drawn) {
-            renderer.draw_solid_rect(p.x - 5.0f, p.y - 5.0f, 10.0f, 12.0f,
-                                     p.alive ? C2D_Color32(190, 126, 65, 255)
-                                             : C2D_Color32(130, 45, 45, 255));
+        if(p.alive && !sprite_drawn) {
+            // Never conceal a missing source atlas behind an invented
+            // colored player block. The source default skin is the genuine
+            // last-resort artwork; report a load problem explicitly.
+            renderer.draw_text("ORIGINAL PLAYER SPRITE MISSING",
+                p.x-60.0f,p.y+16.0f,0.23f);
         }
 
         // Keep source rain/night atlas pages resident in GPU memory before
