@@ -65,3 +65,30 @@ print("ROOT ORIGINAL TERRAIN TILEMAP ACTION COUNTS",sorted(count.items()))
 for key in sorted(count):
     if key[1] in (192,193,194,195,199,210,177):
         print("ROOT TERRAIN ACTION",key,"SAMPLES",samples[key])
+
+# Inspect the original Map's giant bg Tilemap instances that the renderer
+# does NOT currently include in the four named environment tilemaps. Only
+# the root Construct project can tell whether they are authored scenery.
+for oid in (208,211,230,418,482,687,688,776,784,980,1138,1139,1375,350,974,976):
+    obj=project[3][oid]
+    print("ROOT MAP OBJECT",oid,"type",obj[1],"art",repr(obj[6])[:500])
+layout=next(x for x in project[5] if x[0]=="Map")
+for index,layer in enumerate(layout[6]):
+    if layer[0] not in ("bg","asphalt","Water","ground_enviroment","Forest","Forests"):
+        continue
+    for inst in layer[14] if len(layer)>14 and isinstance(layer[14],list) else []:
+        if not isinstance(inst,list) or len(inst)<6 or inst[1] not in (
+             208,211,230,418,482,687,688,776,784,980,1138,1139,1375,974,976):
+            continue
+        t,attrs=inst[0],inst[5]
+        summary={"object":inst[1],"layer":layer[0],"x":t[0],
+                 "y":t[1],"w":t[2],"h":t[3],"attrs":attrs[:5]}
+        if len(t)>13 and isinstance(t[13],list):
+            summary["tilemap_header"]=t[13][:2]
+            import re
+            tiles={}
+            for match in re.finditer(r"(\\d+)x(-?\\d+)|(-?\\d+)",str(t[13][2])):
+                n=int(match[1] or 1);v=int(match[2] if match[2] is not None else match[3])
+                tiles[v]=tiles.get(v,0)+n
+            summary["rle_top"]=sorted(tiles.items(),key=lambda a:-a[1])[:8]
+        print("ROOT MAP ORIGINAL BG INSTANCE",summary)
