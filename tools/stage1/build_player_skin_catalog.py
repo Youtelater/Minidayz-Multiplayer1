@@ -37,22 +37,34 @@ def main():
                         images.add(basename.split("-sheet")[0])
             if frames:
                 named[name]=len(frames)
-        # One Construct sprite object may use several source PNG sheets;
-        # the original filename is the authoritative skin family.
-        if len(images)!=1:
+        # The original biker (Sprite744) mixes player_skin_biker and
+        # player_skin_def_3 frames inside its AUTHORED run/axe animations.
+        # A one-PNG-family filter wrongly deleted this entire valid skin.
+        # Identify a skin by its actual idle_down frame, while leaving
+        # every animation's mixed source PNG references unchanged.
+        idle=next((a for a in animations if isinstance(a,list) and
+                   len(a)>7 and str(a[0]).lower()=="idle_down" and
+                   isinstance(a[7],list) and a[7]),None)
+        if idle is None or not isinstance(idle[7][0],list) or not idle[7][0]:
             continue
-        label=next(iter(images))
-        if label=="player_skin_dead":
+        first_path=idle[7][0][0]
+        if not isinstance(first_path,str):
+            continue
+        label=Path(first_path.replace("\\","/")).name.lower().split("-sheet")[0]
+        if not label.startswith("player_skin_") or label=="player_skin_dead":
             continue
         if not all(named.get(f"idle_{d}",0)>0 and
                    named.get(f"run_{d}",0)>0 for d in DIRECTIONS):
             continue
         skins.append((index,label.removeprefix("player_skin_")))
-    skins.sort(key=lambda row:(row[0]!=DEFAULT,row[1],row[0]))
+    # Retain existing 3DS selection indices across old menu.cfg saves; append
+    # the recovered original biker rather than reassigning every saved skin.
+    skins.sort(key=lambda row:(row[0]!=DEFAULT,row[0]==744,row[1],row[0]))
     if not skins or skins[0][0]!=DEFAULT:
         raise SystemExit("Default original player skin object 679 is missing its animations")
-    if len(skins)<3:
-        raise SystemExit(f"Only {len(skins)} original fully animated player skins discovered")
+    if len(skins)!=21 or not any(row[0]==744 for row in skins):
+        raise SystemExit(
+            f"Original 21 skin objects (including biker Sprite744) not all recovered: {skins}")
     lines=["#pragma once","#include <cstddef>","#include <cstdint>",
            "namespace minidayz::stage1 {",
            "struct OriginalPlayerSkin { std::uint16_t object; const char* name; };",
