@@ -352,8 +352,8 @@ def main():
     if len(per_branch)!=6 or any(count<2 for count in per_branch.values()):
         raise SystemExit(f"Unexpected original settlement descriptor counts {per_branch}")
     slot_rows=[]
-    for branch_uid,event_uid,object_index,action_id,first_parameter,
-        param_count,raw_call in action_rows:
+    for (branch_uid,event_uid,object_index,action_id,first_parameter,
+         param_count,raw_call) in action_rows:
         raw=json.loads(raw_call)
         if len(raw)<4:
             continue
