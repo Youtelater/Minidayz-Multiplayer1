@@ -134,6 +134,7 @@ stage1-assets:
 	@python3 tests/test_original_player_skins.py
 	@python3 tools/stage1/build_ground_floor.py
 	@python3 tools/stage1/build_environment_tilemaps.py
+	@python3 tools/stage1/build_source_solid_tile_polygons.py
 	@python3 tools/stage1/build_procedural_environment.py
 	@python3 tools/stage1/build_source_door_points.py
 	@python3 tools/stage1/build_source_tree_impact_points.py
