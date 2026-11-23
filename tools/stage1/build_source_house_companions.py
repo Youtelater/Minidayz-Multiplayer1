@@ -248,7 +248,10 @@ if len(loot_markers)!=153 or any(r[6] is None for r in loot_markers):
 # Construct layer names are case-insensitive. Resolve the exact Map layer.
 map_layers={l[0].lower():l[0] for l in next(l for l in p[5] if l[0]=="Map")[6]}
 for r in loot_markers:r[4]=map_layers[r[4].lower()]
-parents={row[4] for row in rules} | {row[3] for row in loot_markers}
+# Car Sprite241 is spawned as a child of authored wreck scenery, not a
+# SpawnAnotherObject parent. Root trunk Spawn_drop explicitly targets
+# 241.ImagePointX/Y(3); it must be in the exact image-point catalog.
+parents={row[4] for row in rules} | {row[3] for row in loot_markers} | {241}
 
 # Object frame image points are relative to each source animation frame's
 # own hotspot; multiple image points may live in ONE PNG atlas rectangle.
