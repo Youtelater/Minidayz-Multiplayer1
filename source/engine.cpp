@@ -12,6 +12,7 @@
 #include "minidayz/terrain_source_visibility.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
 #include "minidayz/generated/water_shore_source.hpp"
+#include "minidayz/source_water_shore_effective_tile.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
 #include "minidayz/generated/original_image_catalog.hpp"
@@ -637,37 +638,9 @@ bool Renderer::draw_original_environment_tilemaps(
   for(int row=y0;row<y1;++row)for(int col=x0;col<x1;++col){
    auto frame=map.cells[static_cast<std::size_t>(row)*
                          map.columns+static_cast<std::size_t>(col)];
-   if(map.object_id==208 && frame==0xffffffffu){
-    // The original water Tilemap has SetTile shoreline rules based on
-    // Compare tile at x +/- 1 and y +/- 1 against source water frame 4.
-    // Only fill currently EMPTY source cells; never overwrite the exact
-    // RLE-authored water, beach or shoreline frames.
-    for(const auto& rule:stage1::kWaterShoreRules){
-     // Some source branches explicitly handle zero surrounding water.
-     // They belong to the larger procedural water-creation event and must
-     // not be applied to every empty cell in an authored Map tilemap.
-     bool has_source_water=false;
-     for(std::uint16_t i=0;i<rule.count;++i)
-      if(stage1::kWaterShoreChecks[rule.first+i].requires_water)
-       has_source_water=true;
-     if(!has_source_water)continue;
-     bool match=true;
-     for(std::uint16_t i=0;i<rule.count;++i){
-      const auto& check=stage1::kWaterShoreChecks[rule.first+i];
-      const int nx=col+check.dx,ny=row+check.dy;
-      const bool water=nx>=0&&ny>=0&&
-          nx<static_cast<int>(map.columns)&&
-          ny<static_cast<int>(map.rows)&&
-          map.cells[static_cast<std::size_t>(ny)*map.columns+
-                    static_cast<std::size_t>(nx)]!=terrain::kTileEmpty &&
-          terrain::source_tile_frame(map.cells[
-              static_cast<std::size_t>(ny)*map.columns+
-              static_cast<std::size_t>(nx)])==4u;
-      if(water!=check.requires_water){match=false;break;}
-     }
-     if(match){frame=rule.frame;break;}
-    }
-   }
+   if(map.object_id==208 && frame==terrain::kTileEmpty)
+    frame=terrain::source_water_shore_effective_tile(
+        map.cells,map.columns,map.rows,col,row);
    if(frame==0xffffffffu)continue;
    if(!detail_sheets_[slot]){
     char path[80]{};
