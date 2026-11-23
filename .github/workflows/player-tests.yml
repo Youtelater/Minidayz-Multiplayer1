@@ -129,6 +129,9 @@ jobs:
       - name: Validate original roadside placement after road-to-marker conversion
         run: python3 tests/test_original_world_roadside_dispatch.py
 
+      - name: Check source UAZ Volga Hammer and KA road vehicle spawn events
+        run: python3 tests/test_original_road_vehicle_spawn_source.py
+
       - name: Verify original helicopter and hammer crash sites and loot markers
         run: python3 tests/test_original_crash_site_source.py
 
