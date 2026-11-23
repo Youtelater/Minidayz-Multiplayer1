@@ -28,12 +28,12 @@ int main() {
     // Original wearable sprites run with their OWN animation speed, loop
     // flag and number of frames. They must not reuse the skin's current
     // integer frame when the source speeds/frame counts differ.
-    const minidayz::stage1::SpriteAnimationDef independent_loop{
+    const minidayz::stage1::AnimationDef independent_loop{
         679, 0, "run_down", 5, 8.0f, true};
     assert(source_animation_frame_at_time(independent_loop,0.0f)==0);
     assert(source_animation_frame_at_time(independent_loop,0.32f)==2);
     assert(source_animation_frame_at_time(independent_loop,0.75f)==1);
-    const minidayz::stage1::SpriteAnimationDef independent_once{
+    const minidayz::stage1::AnimationDef independent_once{
         679, 0, "pistol_down", 4, 8.0f, false};
     assert(source_animation_frame_at_time(independent_once,100.0f)==3);
     assert(source_animation_frame_at_time(independent_once,-1.0f)==0);
@@ -41,10 +41,10 @@ int main() {
         independent_loop,std::numeric_limits<float>::infinity())==0);
     assert(source_equipment_animation_frame(679,"not_an_original_pose",1.0f)==0);
     std::size_t original_animation_checks=0;
-    for(const auto& a : kSpriteAnimations) {
-        if(a.frame_count<2 || !(a.source_speed>0.0f) ||
-           !std::isfinite(a.source_speed))continue;
-        const float one_frame=1.25f/a.source_speed;
+    for(const auto& a : kAnimations) {
+        if(a.frames<2 || !(a.speed>0.0f) ||
+           !std::isfinite(a.speed))continue;
+        const float one_frame=1.25f/a.speed;
         assert(source_equipment_animation_frame(a.object,a.name,one_frame)==1);
         assert(source_equipment_animation_frame(a.object,a.name,0.0f)==0);
         ++original_animation_checks;
