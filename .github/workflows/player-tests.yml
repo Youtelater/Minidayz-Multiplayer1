@@ -70,6 +70,7 @@ jobs:
           python3 tools/stage1/build_source_house_companions.py
           python3 tools/stage1/build_source_car_wreck_trunks.py
           python3 tools/stage1/build_source_building_polygons.py
+          python3 tools/stage1/build_source_solid_tile_polygons.py
           python3 tools/stage1/build_source_roof_family_points.py
 
       - name: Recheck root original Step 1 Tilemap and map-coordinate actions
@@ -82,6 +83,15 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
             tests/source_building_polygon_tests.cpp -o /tmp/minidayz_building_collision
           /tmp/minidayz_building_collision
+
+      - name: Test root Tilemap208/211 Solid polygons and flips
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/build_source_solid_tile_polygons.py --check
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/source_tilemap_solid_collision_tests.cpp \
+            -o /tmp/minidayz_source_tilemap_solid
+          /tmp/minidayz_source_tilemap_solid
 
       - name: Test original frame hotspots and rotated camera culling
         run: |
