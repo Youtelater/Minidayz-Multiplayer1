@@ -89,7 +89,9 @@ bool compare_source_value(std::uint8_t op, double actual,
     case 3: return actual <= expected;
     case 4: return actual > expected;
     case 5: return actual >= expected;
-    default: return true; // 255 is the source-table wildcard.
+    case 255: return true; // Explicit unguarded source-table field.
+    default: return false; // Unknown Construct opcode: fail CLOSED.
+
     }
 }
 
