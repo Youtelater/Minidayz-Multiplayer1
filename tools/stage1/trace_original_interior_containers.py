@@ -28,9 +28,9 @@ for i,obj in enumerate(objects):
 print("OBJECT_CANDIDATE_COUNT",len(candidates))
 def walk(events,parents=()):
  for e in events if isinstance(events,list) else []:
-  if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+  if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
   yield e,parents
-  yield from walk(e[7],parents+(e[4],))
+  if len(e)>7:yield from walk(e[7],parents+(e[4],))
 # Full event references to candidate objects in conditions/action targets.
 hits=collections.defaultdict(list)
 for sheet,events in p[6]:
@@ -53,9 +53,9 @@ TARGET_U={389950912936355,425016699358996,7711324247664447,
   353286644684551,114378063020685,884665878059776}
 def all_events(nodes,ancestors=()):
  for e in nodes if isinstance(nodes,list) else []:
-  if isinstance(e,list) and len(e)>=8 and e[0]==0:
+  if isinstance(e,list) and len(e)>=7 and e[0]==0:
    yield e,ancestors
-   yield from all_events(e[7],ancestors+(e[4],))
+   if len(e)>7:yield from all_events(e[7],ancestors+(e[4],))
 for sheet,evs in p[6]:
  if sheet!='Game_events':continue
  for e,anc in all_events(evs):

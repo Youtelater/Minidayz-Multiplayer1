@@ -12,9 +12,9 @@ TARGET={302,306,311,312,313,321,322,323,324,333,346,347,348,349,
 SOURCE_CREATE=7736925111997576
 def walk(nodes,ancestors=()):
  for e in nodes:
-  if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+  if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
   yield e,ancestors
-  yield from walk(e[7],ancestors+(e[4],))
+  if len(e)>7:yield from walk(e[7],ancestors+(e[4],))
 records=[]
 counts=Counter()
 for sheet,events in p[6]:

@@ -10,9 +10,9 @@ p=decode((ROOT/"data.deobfuscated.js").read_bytes())
 SOURCE=7736925111997576
 def walk(nodes,parents=()):
  for e in nodes:
-  if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+  if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
   yield e,parents
-  yield from walk(e[7],parents+(e[4],))
+  if len(e)>7:yield from walk(e[7],parents+(e[4],))
 counts=Counter()
 traces=defaultdict(list)
 for sheet,events in p[6]:

@@ -16,7 +16,7 @@ all_roots=p[6]
 events=[]
 def scan(nodes,sheet,anc=(),depth=0):
  for e in nodes:
-  if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+  if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
   uid=e[4]
   actions=e[6] if isinstance(e[6],list) else []
   hits=[]
@@ -31,7 +31,7 @@ def scan(nodes,sheet,anc=(),depth=0):
         "conditions":e[5],"actions":hits,"all_actions":actions}
    events.append(rec)
    print("HOUSE_COMPANION_SOURCE",json.dumps(rec,ensure_ascii=False,separators=(",",":"))[:8500])
-  scan(e[7],sheet,anc+(uid,),depth+1)
+  if len(e)>7:scan(e[7],sheet,anc+(uid,),depth+1)
 for sheet,roots in all_roots:scan(roots,sheet)
 out=ROOT/"audit-output/world";out.mkdir(parents=True,exist_ok=True)
 (out/"original_house_companion_spawn_actions.json").write_text(
