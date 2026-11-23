@@ -886,6 +886,33 @@ void test_original_source_settlement_building_groups() {
     assert(groups>0 && total_source_houses>0);
     assert(clustered>0 && largest>=2);
 
+    // Verify the REAL procedural generator, not only a manually expanded
+    // category-6 fixture. Its original car-wreck category must create
+    // searchable Sprite241 markers linked to the actual family1041 body.
+    std::size_t generated_car_trunks=0;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* marker=world.placement(i);
+        if(!marker || marker->object!=241 ||
+           marker->parent_runtime_uid==0)continue;
+        bool linked_body=false;
+        for(std::size_t j=0;j<world.placement_count();++j){
+            const auto* body=world.placement(j);
+            if(!body || body->runtime_uid!=marker->parent_runtime_uid)
+                continue;
+            linked_body=stage1::source_family_contains(1041,body->object);
+            assert(linked_body);
+            assert(body->source_variable_1==marker->runtime_uid);
+            break;
+        }
+        assert(linked_body && original_car_pool(marker->source_frame));
+        assert(original_car_trunk_has_source_body(world,*marker));
+        ++generated_car_trunks;
+    }
+    std::fprintf(stderr,
+        "ROOT GENERATION CARS seed=4d444159 searchable_trunks=%zu\\n",
+        generated_car_trunks);
+    assert(generated_car_trunks>0);
+
 }
 
 void test_original_tree_block_variants_and_solid_companions() {
