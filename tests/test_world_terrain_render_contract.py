@@ -33,10 +33,20 @@ road=engine.split("bool Renderer::draw_source_road_grid(",1)[1].split(
 assert 'std::strcmp(source_layer.name,"asphalt")==0' in road
 assert 'source_world_layer_depth(' in road
 assert 'C2D_SpriteSetDepth(&sprite,road_depth)' in road
-assert 'world_source::mapgen_road_band(' in road
-assert "mapgen_duplicate_crossing_tile(" in road
-assert "mapgen_duplicate_crossing_tile(" in (
-    root/"include/minidayz/source_mapgen_geometry.hpp").read_text(encoding="utf-8")
+# The authored source code14 junction is four independently guarded
+# 9-cell arms, not unconditional full-cross geometry. Keep both the
+# original Sprite514 Mapgen anchor and the Array518 neighbor predicates.
+assert 'world_source::source_grid_road_segment(' in road
+assert 'world_source::source_grid_road_tile_was_drawn(' in road
+assert 'world_source::source_road_painted_width(' in road
+source_roads=(root/"include/minidayz/source_mapgen_geometry.hpp").read_text(
+    encoding="utf-8")
+assert 'mapgen_road_band(' in source_roads
+assert 'source_road_neighbor_permits_junction(' in source_roads
+assert 'source_grid_road_segment(' in source_roads
+assert 'source_grid_road_tile_was_drawn(' in source_roads
+assert 'source_grid_road_contains(' in source_roads
+assert 'source_grid_road_contains(' in main
 assert 'for(int row=0;row<grid.height();++row)' in road
 assert 'bounds.width/grid.width()' not in road
 assert 'draw_source_procedural_environment(' in main
