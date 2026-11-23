@@ -2749,12 +2749,16 @@ void test_reported_world_seed_original_frame_integrity() {
     WorldSystem world{};
     assert(world.generate_from_source(kReportedSeed,"Map",0));
     std::size_t visible_art=0,invalid_frames=0,trees=0,cars=0;
+    std::size_t family_car_bodies=0,all_car_trunks=0;
     const auto* map=stage1::find_layout("Map");
     assert(map);
     const auto layout_id=static_cast<std::uint16_t>(
         map-stage1::kLayoutTable);
     for(std::size_t i=0;i<world.placement_count();++i) {
         const auto* p=world.placement(i);
+        if(p && stage1::source_family_contains(1041,p->object))
+            ++family_car_bodies;
+        if(p && p->object==241)++all_car_trunks;
         if(!p||p->opacity<=0.0f||p->layer==32||(p->layer>=44 &&
            !world_source::source_world_high_layer_gameplay_art(
                p->object,p->layer))||
@@ -2790,6 +2794,9 @@ void test_reported_world_seed_original_frame_integrity() {
                 "car_trunks=%zu invalid_source_frames=%zu placements=%zu\n",
                 kReportedSeed,visible_art,trees,cars,
                 invalid_frames,world.placement_count());
+    std::printf("USER SEED CAR TRUNK SOURCE family1041_bodies=%zu "
+                "raw_object241=%zu drawn_candidate241=%zu\n",
+                family_car_bodies,all_car_trunks,cars);
     assert(visible_art>100);
     assert(trees>10);
     // Original 241 car trunk is drawn above Trees43 on Sunset_Dawn45.
