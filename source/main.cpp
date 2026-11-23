@@ -236,8 +236,10 @@ public:
             perks_.item_use_flags(),&item_use_runtime_);
         // Game_events item_activate(63) is the original Edrink boost;
         // a failed item activation must never create a free speed buff.
-        (void)source_energy_drink_.on_successful_item_use(
-            item_id,secondary,used);
+        if(source_energy_drink_.on_successful_item_use(
+                item_id,secondary,used))
+            stage2_audio_.play_original_world_sound(
+                minidayz::OriginalWorldSound::drinkSoda0);
         return used;
     }
 
