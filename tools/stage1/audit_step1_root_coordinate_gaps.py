@@ -49,7 +49,8 @@ def find_expr_id(expr,oid):
         if len(expr)>=4 and expr[0]==9 and expr[1]==oid:
             yield expr
         for child in expr:yield from find_expr_id(child,oid)
-for sheet,events in p[6]:
+for sheet_record in p[6]:
+    sheet,events=sheet_record[:2]
     for e,anc in visit(events):
         for c in e[5] if isinstance(e[5],list) else []:
             if not isinstance(c,list):continue
