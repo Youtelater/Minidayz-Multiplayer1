@@ -733,8 +733,38 @@ void test_original_source_settlement_building_groups() {
             if(foundations>=2)++clustered;
             largest=std::max(largest,foundations);
         }
-    std::printf("ROOT SETTLEMENT GROUPS seed=4d444159 towns=%zu multi_building=%zu largest=%zu\n",
-                groups,clustered,largest);
+    std::fprintf(stderr,
+        "ROOT SETTLEMENT GROUPS seed=4d444159 towns=%zu multi_building=%zu largest=%zu\n",
+        groups,clustered,largest);
+    std::size_t total_source_houses=0;
+    float min_center_distance=std::numeric_limits<float>::infinity();
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* placement=world.placement(i);
+        if(!placement)continue;
+        bool house=false;
+        for(const auto& source:minidayz::world_source::kSourceHousePrimarySpawns)
+            if(placement->source_uid==source.event_uid &&
+               placement->object==source.object){house=true;break;}
+        if(!house)continue;
+        ++total_source_houses;
+        float best=std::numeric_limits<float>::infinity();
+        for(int y=0;y<grid.height();++y)
+            for(int x=0;x<grid.width();++x){
+                if(grid.at(x,y)!=9&&grid.at(x,y)!=6)continue;
+                const auto c=minidayz::world_source::mapgen_hotspot(x,y);
+                best=std::min(best,std::max(std::fabs(placement->x-c.x),
+                                             std::fabs(placement->y-c.y)));
+            }
+        min_center_distance=std::min(min_center_distance,best);
+        if(total_source_houses<=12)
+            std::fprintf(stderr,
+                "ROOT HOUSE POS object=%u src=%llu x=%.1f y=%.1f nearest_town=%.1f\n",
+                static_cast<unsigned>(placement->object),
+                static_cast<unsigned long long>(placement->source_uid),
+                placement->x,placement->y,best);
+    }
+    std::fprintf(stderr,"ROOT GROUP DIAGNOSTIC source_house_total=%zu nearest_town=%.1f\n",
+        total_source_houses,min_center_distance);
     assert(groups>0);
     assert(clustered>0 && largest>=2);
 }
