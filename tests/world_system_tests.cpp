@@ -703,6 +703,53 @@ void test_source_tree_fall_item_table() {
 // Root Game_events/Hitting_obstacles: branch UID 8754965976446553
 // subtracts 1 from instance variable 0 before child fall UID
 // 2738244684146745 checks that the new value is <=0.
+void test_original_tree_block_variants_and_solid_companions() {
+    // Directly verified root create_map_element event branches 7..10.
+    // Object210 has four *different frames*, each with an original linked
+    // Solid348 at its Imagepoint1 and frames 17/21/22/23. All were missing.
+    minidayz::WorldSystem world;
+    assert(world.initialize(0x210348u));
+    for(std::uint8_t variant=7;variant<=10;++variant){
+        const auto* spec=minidayz::world_source::source_tree_block_variant(variant);
+        assert(spec && spec->tree_frame==variant-7);
+        const auto first=world.placement_count();
+        assert(world.expand_map_element(1,variant,0,
+            {8000.0f+variant*350.0f,8000.0f},0.0)==1);
+        assert(world.placement_count()==first+2);
+        const auto* tree=world.placement(first);
+        const auto* solid=world.placement(first+1);
+        assert(tree&&solid&&tree->object==210&&solid->object==348);
+        assert(tree->source_frame==spec->tree_frame);
+        assert(tree->width==spec->width&&tree->height==spec->height);
+        assert(tree->origin_x==spec->origin_x);
+        assert(tree->origin_y==spec->origin_y);
+        assert(solid->source_frame==spec->solid_frame);
+        assert(solid->width==spec->solid_width);
+        assert(solid->height==spec->solid_height);
+        assert(solid->origin_x==spec->solid_origin_x);
+        assert(solid->origin_y==spec->solid_origin_y);
+        assert(tree->linked_runtime_uid==solid->runtime_uid);
+        assert(solid->linked_runtime_uid==tree->runtime_uid);
+        assert(tree->source_variable_1==solid->runtime_uid);
+        assert(solid->source_variable_0==tree->runtime_uid);
+        assert(minidayz::terrain::source_tree_block_solid_contains(
+            *tree,solid->x,solid->y));
+        assert(!minidayz::terrain::source_tree_block_solid_contains(
+            *tree,solid->x+1500.0f,solid->y+1500.0f));
+    }
+    minidayz::terrain::SourceObstacleIndex index;
+    index.rebuild(world);
+    for(std::size_t i=0;i<world.placement_count();i+=2){
+        const auto* solid=world.placement(i+1);
+        assert(solid);
+        const auto& candidate=index.candidates(solid->x,solid->y);
+        assert(std::find(candidate.begin(),candidate.end(),
+            static_cast<std::uint32_t>(i))!=candidate.end());
+        assert(std::find(candidate.begin(),candidate.end(),
+            static_cast<std::uint32_t>(i+1))!=candidate.end());
+    }
+}
+
 void test_source_event_tree_hit_health_and_atomic_fall() {
     using namespace minidayz;
     using namespace minidayz::world_source;
@@ -2020,6 +2067,7 @@ int main() {
     test_grid_semantics();
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
+    test_original_tree_block_variants_and_solid_companions();
     test_source_event_tree_hit_health_and_atomic_fall();
     test_source_event_tree_fall_and_door_transition();
     test_original_world_visual_file_roundtrip();
