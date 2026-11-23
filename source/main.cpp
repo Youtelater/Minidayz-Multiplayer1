@@ -27,6 +27,7 @@
 #include "minidayz/terrain_roads.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/generated/player_skin_source.hpp"
+#include "minidayz/generated/player_hands_source.hpp"
 #include "minidayz/generated/source_dead_skin_art.hpp"
 #include "minidayz/generated/player_spawn_source.hpp"
 #include "minidayz/player_equipment_visual.hpp"
@@ -2786,6 +2787,37 @@ public:
             draw_equipped_layer(equipment_.equipped(
                 minidayz::items::EquipmentSlot::pants),false,minidayz::stage1::source_player_layer_depth(
                     minidayz::stage1::kSourcePlayerPantsLayer));
+            // The original Start events pair every PlayerBase193 skin
+            // sprite (instance var0) with a SEPARATE matching hands Sprite
+            // (instance var1). The old 3DS renderer entirely omitted that
+            // animation layer, leaving the survivor's hands/weapon poses
+            // wrong even when the body texture was the correct PNG.
+            // The pairs and original 21 skin types come from root events,
+            // never guessed from matching asset filenames or skin color.
+            const auto source_hands =
+                minidayz::stage1::source_player_hands_object(source_skin_object);
+            if(source_hands!=0) {
+                const auto hands_depth=minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerHandsLayer);
+                const auto draw_original_hands=[&](const char* animation) noexcept {
+                    const auto hand_frame =
+                        minidayz::stage1::source_equipment_animation_frame(
+                            source_hands,animation,p.animation_elapsed);
+                    return renderer.draw_source_animation(source_hands,animation,
+                        hand_frame,p.x,p.y,1.0f,1.0f,hands_depth);
+                };
+                bool hand_drawn=false;
+                if(weapon_pose &&
+                   std::strcmp(weapon_pose,"idle")!=0 &&
+                   std::strcmp(weapon_pose,"run")!=0) {
+                    char armed_hands[32]{};
+                    std::snprintf(armed_hands,sizeof(armed_hands),"%s_%s",
+                                  weapon_pose,skin_direction);
+                    hand_drawn=draw_original_hands(armed_hands);
+                }
+                if(!hand_drawn)
+                    (void)draw_original_hands(skin_animation);
+            }
             draw_equipped_layer(equipment_.equipped(
                 minidayz::items::EquipmentSlot::outerwear),false,minidayz::stage1::source_player_layer_depth(
                     minidayz::stage1::kSourcePlayerClothingLayer));
