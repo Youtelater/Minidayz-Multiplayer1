@@ -150,6 +150,12 @@ jobs:
       - name: Verify original water-pump random bounds and stable native source draw
         run: python3 tests/test_original_world_pump_rng.py
 
+      - name: Regress exact 17x2 original Mapgen road geometry
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/terrain_roads_tests.cpp -o /tmp/minidayz_source_road_tests
+          /tmp/minidayz_source_road_tests
+
       - name: Trace original straight-road texture rectangle actions
         run: python3 tests/test_original_road_paint_geometry.py
 
