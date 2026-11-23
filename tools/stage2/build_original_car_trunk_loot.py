@@ -112,6 +112,17 @@ if not any("trunk_bonus" in str(a[5]) and "[0, 10]" in str(a[5])
     for _,e,_ in events for a in e[6]
     if isinstance(a,list) and len(a)>5 and a[:2]==[-1,41]):
  raise SystemExit("Original Trunkster bonus +10 source global changed")
+# Root mobile pick-and-interact UID711142196261088:
+# distance(Player193, Sprite241) <= 100. Keep the original comparison
+# opcode and literal range; do not use an invented 50px interaction radius.
+range_events=[e for sheet,e,_ in events if sheet=="Game_events"
+              and e[4]==711142196261088]
+if len(range_events)!=1 or not any(
+    isinstance(c,list) and len(c)>9 and c[:2]==[-1,51] and
+    c[9][1]==[8,3] and c[9][2]==[7,[0,100]] and
+    c[9][0][:2]==[7,[19,79]]
+    for c in range_events[0][5]):
+ raise SystemExit("Original car mobile interact <=100 source guard changed")
 # Verify the original Sprite241 frame3 drop imagepoint exists for each frame.
 sprite=project[3][241]
 if not sprite or len(sprite)<=7:raise SystemExit("Original car loot Sprite241 missing")
@@ -132,6 +143,7 @@ lines=[
  "inline constexpr std::uint8_t kOriginalCarTrunkBonusOnTrunkster=10;",
  "inline constexpr std::uint8_t kOriginalCarTrunkExtraChance=10;",
  "inline constexpr std::uint8_t kOriginalCarTrunkRollMax=100;",
+ "inline constexpr float kOriginalCarTrunkInteractionRange=100.0f;",
  "inline constexpr std::uint16_t kOriginalCarTrunkDropImagepoint=3;",
  "inline constexpr std::uint16_t kOriginalCarTrunkItems[]={"]
 flat=[]

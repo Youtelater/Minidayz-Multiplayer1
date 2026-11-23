@@ -3360,11 +3360,12 @@ private:
     }
 
     // Original Player181/PlayerBase193 interact with Sprite241 trunk at
-    // source distance < 50. The loot is conditional, but searching always
+    // source distance <= 100 (UID711142196261088). Loot is conditional;
+    // searching always
     // destroys the original trunk and awards two source XP.
     bool request_source_car_trunk() noexcept {
         const float x=player_.state().x,y=player_.state().y;
-        float distance=50.0f;
+        float distance=minidayz::items::kOriginalCarTrunkInteractionRange;
         std::size_t nearest=world_.placement_count();
         for(std::size_t i=0;i<world_.placement_count();++i){
             const auto* p=world_.placement(i);

@@ -97,6 +97,9 @@ jobs:
           python3 tools/stage2/build_original_initial_building_loot.py
           python3 tools/stage2/build_original_car_trunk_loot.py
 
+      - name: Verify original 100px car-interaction source range
+        run: python3 tests/test_original_car_interaction_range.py
+
       - name: Audit source player and item spritesheet coordinates
         run: python3 tools/stage2/audit_player_item_frame_coordinates.py
 
