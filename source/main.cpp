@@ -1356,6 +1356,18 @@ public:
         renderer.draw_solid_rect(7.0f,28.0f,306.0f,178.0f,
             C2D_Color32(41,53,41,238),0.11f);
         renderer.draw_text("WORLD MAP",107.0f,4.0f,0.55f);
+        // MP_WorldSeed records seed+array/map hashes to reproduce a broken
+        // world. Expose the native seed and level when the user opens the
+        // map so screenshots identify the generated run without changing
+        // the original single-player RNG or saved-world compatibility.
+        char map_seed[24]{};
+        std::snprintf(map_seed,sizeof(map_seed),"SEED %08X",
+                      static_cast<unsigned>(world_.seed()));
+        renderer.draw_text(map_seed,10.0f,8.0f,0.24f);
+        char map_level[16]{};
+        std::snprintf(map_level,sizeof(map_level),"LVL %u",
+                      static_cast<unsigned>(world_.generation_level()+1u));
+        renderer.draw_text(map_level,262.0f,8.0f,0.24f);
         if(grid.width()==0 || grid.height()==0 ||
            !(bounds.width>0.0f&&bounds.height>0.0f)){
             renderer.draw_text("MAP NOT GENERATED",54.0f,103.0f,0.36f);
