@@ -2893,10 +2893,10 @@ public:
                         ++layer_end;
                     }
                 }
-                // Root Rain layer44 holds original Sprite1126 radioactive
-                // world zones from function wuranqu. Render that one real
-                // source world overlay; other 44+ weather/NVG/browser GUI
-                // objects remain runtime-controlled, not static scenery.
+                // Original create_map_element can place gameplay artwork
+                // on high Map layers. Require its exact source event UID
+                // and art/layer pair rather than hiding those source frames
+                // or admitting unrelated conditional GUI overlays.
                 // Original source Tilemaps, Arrays and invisible trigger
                 // objects must not be drawn as bogus marker rectangles.
                 const auto* source_object =
@@ -2923,7 +2923,8 @@ public:
                 if(!source_layer ||
                    (placement->layer>=44 &&
                     !minidayz::world_source::source_world_high_layer_gameplay_art(
-                        placement->object,source_layer->name)))continue;
+                        placement->object,source_layer->name,
+                        placement->source_uid)))continue;
                 if (source_layer && !source_layer->visible) continue;
                 if (source_layer &&
                     (std::strstr(source_layer->name, "respawn") ||
