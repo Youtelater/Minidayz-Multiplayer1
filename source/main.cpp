@@ -27,6 +27,7 @@
 #include "minidayz/terrain_roads.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/generated/player_skin_source.hpp"
+#include "minidayz/generated/source_dead_skin_art.hpp"
 #include "minidayz/generated/player_spawn_source.hpp"
 #include "minidayz/player_equipment_visual.hpp"
 #include "minidayz/source_equipment_animation.hpp"
@@ -591,6 +592,11 @@ public:
         // updates and present a 3DS touch/physical-button death screen.
         // Do not permit dead characters to use, craft or transfer items.
         if (!player_.state().alive) {
+            // Root dead-survivor Sprite813 has six frames at 1 fps,
+            // nonlooping, on Map/items_on_ground18. Advance the original
+            // visual clock while the 3DS death screen is showing.
+            source_dead_animation_elapsed_=std::min(6.0f,
+                source_dead_animation_elapsed_+std::max(0.0f,dt));
             if (!death_saved_) {
                 death_saved_ = write_scene_save();
                 has_saved_game_ = has_saved_game_ || death_saved_;
@@ -2698,6 +2704,25 @@ public:
         const bool outlined=source_player_outline_ &&
             minidayz::stage1::source_family_contains(1064,source_skin_object);
         bool sprite_drawn=false;
+        if(!p.alive) {
+            // Original Construct death events spawn Sprite813 and select
+            // "id_" + source survivor skin type. Use only animations
+            // verified against the ROOT Game_events 193 skin assignment.
+            // The source 21st skin has no authored "id_21" corpse art.
+            const auto* original_dead_animation=
+                minidayz::stage1::source_dead_skin_animation(
+                    source_skin_object);
+            if(original_dead_animation) {
+                const auto corpse_frame=
+                    minidayz::stage1::source_equipment_animation_frame(
+                        813,original_dead_animation,
+                        source_dead_animation_elapsed_);
+                sprite_drawn=renderer.draw_source_animation(
+                    813,original_dead_animation,corpse_frame,
+                    p.x,p.y,1.0f,1.0f,
+                    minidayz::world_source::source_world_layer_depth(18,0,1));
+            }
+        }
         if(p.alive && weapon_pose &&
             std::strcmp(weapon_pose,"idle")!=0 &&
             std::strcmp(weapon_pose,"run")!=0) {
@@ -4122,6 +4147,7 @@ private:
         rain_timer_.reset();
         loot_timer_.reset();
         item_use_runtime_.clear();
+        source_dead_animation_elapsed_=0.0f;
         source_energy_drink_.clear();
         perks_.clear();
         source_temperature_initialized_ = false;
@@ -4487,6 +4513,7 @@ private:
     minidayz::items::SourceLootTimer loot_timer_{};
     minidayz::items::ItemUseRuntime item_use_runtime_{};
     minidayz::stage1::SourceEnergyDrinkBoost source_energy_drink_{};
+    float source_dead_animation_elapsed_{};
     minidayz::items::SourcePerkSystem perks_{};
     minidayz::Stage2Audio stage2_audio_{};
     minidayz::PlayerRules preview_rules_{};
