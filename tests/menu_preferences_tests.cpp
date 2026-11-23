@@ -10,7 +10,9 @@ int main(){
     m.difficulty=2;
     m.muted=1;
     assert(valid_preferences(m));
-    m.skin_index=20;
+    m.skin_index=20; // Original biker Sprite744 is the 21st selection.
+    assert(valid_preferences(m));
+    m.skin_index=21;
     assert(!valid_preferences(m));
     m.skin_index=0;m.difficulty=3;
     assert(!valid_preferences(m));
