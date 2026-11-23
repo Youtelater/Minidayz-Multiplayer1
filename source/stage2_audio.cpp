@@ -294,7 +294,6 @@ void Stage2Audio::play_original_world_sound(OriginalWorldSound cue) noexcept {
         "romfs:/wav/close_door.wav",
         "romfs:/wav/open_door_metal.wav",
         "romfs:/wav/close_door_metal.wav",
-        "romfs:/wav/open.wav" // Root car Sprite241 audio "open",
         "romfs:/wav/open.wav" // Root Game_events car Sprite241: Audio.Play("open",-5)
     };
     const auto index=static_cast<std::size_t>(cue);
