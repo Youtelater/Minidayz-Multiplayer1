@@ -47,6 +47,18 @@ inline bool source_standing_tree_trunk_contains(
 // player layer32. At 400x240 this hides the survivor. Fade ONLY the
 // foreground canopy that actually covers the player's original hotspot;
 // do not mutate source sprite state, hitboxes, saves, or offscreen trees.
+inline float source_tree_render_depth(float original_depth,
+                                      float player_depth,
+                                      bool occludes) noexcept {
+    // Citro2D depth test still rejects the player if a translucent
+    // foreground canopy writes a *nearer* depth first. Temporarily move
+    // only the overlapping tree behind the player, preserving the regular
+    // original Map43 vs player Map32 order for all other trees.
+    return occludes ? std::min(original_depth,
+                               std::max(0.0f,player_depth-0.002f))
+                    : original_depth;
+}
+
 inline bool source_tree_occludes_player(
     const WorldPlacement& tree,float player_x,float player_y) noexcept {
     const auto* point=world_source::source_tree_impact_point(tree.object);

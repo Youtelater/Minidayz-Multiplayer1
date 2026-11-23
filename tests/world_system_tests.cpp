@@ -752,6 +752,17 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
         *p,p->x,p->y-0.25f*p->height));
     assert(!minidayz::terrain::source_tree_occludes_player(
         *p,p->x+2000.0f,p->y));
+    // A translucent foreground tree must NOT leave a nearer depth in the
+    // GPU buffer and hide the subsequently drawn source layer32 player.
+    assert(minidayz::terrain::source_tree_render_depth(
+        0.6875f,0.55f,true)<0.55f);
+    assert(minidayz::terrain::source_tree_render_depth(
+        0.6875f,0.55f,false)==0.6875f);
+    minidayz::terrain::SourceObstacleIndex tree_index{};
+    tree_index.rebuild(world);
+    const auto& trunk_candidates=tree_index.candidates(hitbox->x,hitbox->y);
+    assert(std::find(trunk_candidates.begin(),trunk_candidates.end(),
+         static_cast<std::uint32_t>(tree))!=trunk_candidates.end());
     const auto* original_point=source_tree_impact_point(207);
     assert(original_point);
     const float a=p->angle*0.01745329251994329577f;

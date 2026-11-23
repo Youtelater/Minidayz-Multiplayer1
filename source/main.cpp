@@ -2663,16 +2663,21 @@ public:
                 // Buildings and 43 Trees stay above. Distinct depths also
                 // preserve the original insertion order WITHIN each layer
                 // instead of relying on undefined equal-depth GPU ordering.
-                const float layer_depth=minidayz::world_source::source_world_layer_depth(
-                    placement->layer,visible_slot-layer_begin,layer_end-layer_begin);
+                const bool tree_over_player=p.alive &&
+                    minidayz::terrain::source_tree_occludes_player(
+                        *placement,p.x,p.y);
+                const float layer_depth=minidayz::terrain::source_tree_render_depth(
+                    minidayz::world_source::source_world_layer_depth(
+                        placement->layer,visible_slot-layer_begin,layer_end-layer_begin),
+                    minidayz::stage1::source_player_layer_depth(
+                        minidayz::stage1::kSourcePlayerLayer),
+                    tree_over_player);
                 if (!renderer.draw_source_sprite(placement->object,
                         placement->source_animation, placement->source_frame,
                         px, py, sx, sy, layer_depth,
                         placement->angle * 0.01745329251994329577f,
-                        (p.alive && minidayz::terrain::source_tree_occludes_player(
-                            *placement,p.x,p.y))
-                            ? std::min(placement->opacity,0.36f)
-                            : placement->opacity,
+                        tree_over_player ? std::min(placement->opacity,0.36f)
+                                         : placement->opacity,
                         i<source_foundation_tint_.size() && source_foundation_tint_[i]?
                             0.5f:1.0f)) {
                     // Original art was not loaded: do not draw a fake object.
