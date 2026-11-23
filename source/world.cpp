@@ -7,6 +7,7 @@
 #include "minidayz/generated/source_tree_impact_points.hpp"
 #include "minidayz/generated/source_door_points.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
+#include "minidayz/generated/source_car_wreck_trunks.hpp"
 #include "minidayz/generated/source_family_members.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
@@ -953,6 +954,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // and frame-specific 348 Solids, NOT the six 345-trunk species.
         const auto* block_frame=(var1==1 && rule.object==210)
             ? world_source::source_tree_block_variant(var2) : nullptr;
+        const std::size_t primary_index=placements_.size();
         placements_.push_back({
             layer, rule.object, rule.uid, position.x, position.y, 0.0f,
             block_frame ? block_frame->width :
@@ -1282,6 +1284,52 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                 solid.source_variable_0=tree.runtime_uid; // 348.var0
                 placements_[index].linked_runtime_uid=uid;
                 placements_[index].source_variable_1=uid; // 210.var1
+            }
+        }
+
+        // Category6 original Mapgen508.var2 car-wreck parent (body)
+        // executes a nested child event when Mapgen508.var3 == 0,
+        // and Body.SpawnAnotherObject(241) on Sunset_Dawn at Imagepoint1.
+        // This action was dropped because the generic house extractor
+        // reads only same-event companions; a nested event has its own UID.
+        // Every variant/frame below is extracted from the original source,
+        // not a guessed car count, position or randomized frame.
+        if(var1==6 && var3==0.0) {
+            for(const auto& car:world_source::kSourceCarWreckTrunks) {
+                if(car.variant!=var2||car.body_object!=rule.object)
+                    continue;
+                const WorldPlacement base=placements_[primary_index];
+                const auto dest=find_layer_index_by_name(
+                    layout_index,car.layer);
+                if(dest==0xffff)continue;
+                const auto* point=world_source::source_house_image_point(
+                    base.object,base.source_animation,base.source_frame,
+                    "",car.image_point);
+                if(!point)continue;
+                const float rad=base.angle*0.01745329251994329577f;
+                const float dx=base.width*(point->x-point->origin_x)*
+                               (base.scale_x<0.0f?-1.0f:1.0f);
+                const float dy=base.height*(point->y-point->origin_y);
+                const float child_x=base.x+dx*std::cos(rad)-dy*std::sin(rad);
+                const float child_y=base.y+dx*std::sin(rad)+dy*std::cos(rad);
+                if(!std::isfinite(child_x)||!std::isfinite(child_y))
+                    continue;
+                const std::uint64_t uid=(std::uint64_t{1}<<63)|
+                    static_cast<std::uint64_t>(placements_.size()+1);
+                placements_.push_back({
+                    dest,241,car.source_uid,child_x,child_y,0.0f,
+                    car.width,car.height,base.angle,1.0f,1.0f,
+                    car.origin_x,car.origin_y,car.image_point,car.frame
+                });
+                auto& trunk=placements_.back();
+                trunk.runtime_uid=uid;
+                trunk.instance_id=placements_.size();
+                trunk.parent_runtime_uid=base.runtime_uid;
+                trunk.house_base_runtime_uid=base.runtime_uid;
+                trunk.linked_runtime_uid=base.runtime_uid;
+                // Original same-child Body.SetInstanceVariable(1,241.UID)
+                // ensures the car body retains its searchable trunk.
+                placements_[primary_index].source_variable_1=uid;
             }
         }
 
