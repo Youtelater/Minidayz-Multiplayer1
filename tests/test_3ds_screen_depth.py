@@ -66,6 +66,20 @@ overlay=main.index('const auto original_frame =',weapon_draw)
 assert 'visual->object,name,p.animation_elapsed' in main[overlay:overlay+250]
 assert '#include "minidayz/source_equipment_animation.hpp"' in main
 
+# Original Start events pair each survivor Sprite with a separate hands
+# Sprite (PlayerBase193 variable1). It belongs to source Map layer 34,
+# not an invented recolor, an equipment icon, or a missing overlay.
+assert '#include "minidayz/generated/player_hands_source.hpp"' in main
+assert 'source_player_hands_object(source_skin_object)' in main
+hands=main.index('const auto source_hands =')
+hands_layer=main.index('kSourcePlayerHandsLayer',hands)
+hands_draw=main.index('draw_original_hands(skin_animation)',hands)
+pants=main.index('kSourcePlayerPantsLayer',hands-400)
+clothing=main.index('kSourcePlayerClothingLayer',hands_draw)
+assert pants<hands<hands_layer<hands_draw<clothing
+assert 'source_hands,animation,p.animation_elapsed' in main[hands:hands_draw]
+assert 'draw_original_hands(armed_hands)' in main[hands:hands_draw]
+
 # Original Map weather/night sprite layers must composite above all gameplay
 # layers. Earlier hardcoded .14/.16 rendered both overlays behind the world.
 assert main.index("if (rain_timer_.active()) {",world)>world
