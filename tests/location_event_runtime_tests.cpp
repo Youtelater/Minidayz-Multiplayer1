@@ -72,6 +72,40 @@ void test_all_original_location_branches() {
     assert(executions >= stage1::kLocationTemplateSourceCount * 6);
 }
 
+void test_original_location_spawns_preserved_across_cells() {
+    // The original Mapgen creates independent instances for each cell.
+    // Destroying a temporary Sprite915 while processing the next cell
+    // must never erase the prior cell's scenery or spawn markers.
+    construct::Array map;
+    assert(map.set_size(16,16,1));
+    std::mt19937 rng(0x4d444159u);
+    construct::SourceLocationEventRuntime runtime;
+    assert(runtime.initialize(0,map,rng));
+    const auto* first=find_source_location_template(50);
+    assert(first);
+    runtime.set_mapgen(50,3,4,1000.0,2000.0,1020.0,1020.0);
+    bool matched=false;
+    assert(runtime.execute_branch(first->event_uid,matched) && matched);
+    const auto previous=runtime.spawns();
+    assert(!previous.empty());
+    for(const auto code:{9,4,16,17,6,21,52}) {
+        const auto* next=find_source_location_template(code);
+        assert(next);
+        runtime.set_mapgen(code,5,6,3500.0,4700.0,1020.0,1020.0);
+        assert(runtime.execute_branch(next->event_uid,matched));
+        assert(matched);
+        assert(runtime.spawns().size()>=previous.size());
+        for(std::size_t i=0;i<previous.size();++i) {
+            const auto& before=previous[i];
+            const auto& after=runtime.spawns()[i];
+            assert(before.object==after.object);
+            assert(before.layer==after.layer);
+            assert(before.x==after.x && before.y==after.y);
+            assert(before.frame==after.frame);
+        }
+    }
+}
+
 void test_root_original_settlement_array_rows() {
     // Root generate_location 9/4/16/17/6/21 branches author many Array525
     // columns; ensure the native interpreter retains their distinct entries.
@@ -116,6 +150,7 @@ void test_root_original_settlement_array_rows() {
 } // namespace
 
 int main() {
+    test_original_location_spawns_preserved_across_cells();
     test_root_original_settlement_array_rows();
     test_all_original_location_branches();
 
