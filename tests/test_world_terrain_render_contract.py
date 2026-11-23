@@ -28,6 +28,11 @@ assert 'std::fseek(file,static_cast<long>(cell_count*sizeof(std::uint32_t))' in 
 assert 'if(map.layer>=44)continue;' in engine
 assert 'draw_original_ground_floor(' in main
 assert 'draw_original_environment_tilemaps(' in main
+road=engine.split("bool Renderer::draw_source_road_grid(",1)[1].split(
+    "bool Renderer::draw_source_sprite_fitted(",1)[0]
+assert 'std::strcmp(source_layer.name,"asphalt")==0' in road
+assert 'source_world_layer_depth(' in road
+assert 'C2D_SpriteSetDepth(&sprite,road_depth)' in road
 assert 'draw_source_procedural_environment(' in main
 # Each instance may be in a different original Construct animation (e.g.
 # closed/open doors and damaged/standing trees). Do not regress to always

@@ -28,7 +28,10 @@ road_renderer=engine.split("bool Renderer::draw_source_road_grid(",1)[1].split(
     "bool Renderer::draw_source_sprite_fitted(",1)[0]
 assert "ground_loaded_" not in road_renderer
 assert "ensure_road_sheet(theme)" in road_renderer
-assert "C2D_SpriteSetDepth(&sprite,0.10f)" in road_renderer
+assert 'std::strcmp(source_layer.name,"asphalt")==0' in road_renderer
+assert "source_world_layer_depth(" in road_renderer
+assert "C2D_SpriteSetDepth(&sprite,road_depth)" in road_renderer
+assert "C2D_SpriteSetDepth(&sprite,0.10f)" not in road_renderer
 assert "clamp(delta_seconds, 0.0f, 0.25f)" in player
 # The renderer tries the real selected survivor first; only a missing
 # source sprite may fall back to the original player_skin_def_2 object.

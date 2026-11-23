@@ -1,5 +1,6 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
+#include "minidayz/generated/stage1_data.hpp"
 #include "minidayz/generated/ground_floor_source.hpp"
 #include "minidayz/terrain_tiling.hpp"
 #include "minidayz/terrain_level.hpp"
@@ -675,6 +676,22 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
  const float cell_h=bounds.height/grid.height();
  const float road_width=stage1::kOriginalFloorTileSize;
  if(!(cell_w>0.0f&&cell_h>0.0f&&road_width>0.0f))return false;
+ // Original Map asphalt is a separate Construct layer, before
+ // ground_enviroment. Resolve the source layer rather than choosing
+ // an arbitrary 3DS Z such as 0.10, which can break layer ordering.
+ const auto* original_map=stage1::find_layout("Map");
+ if(!original_map)return false;
+ const auto original_layout=static_cast<std::uint16_t>(
+      original_map-stage1::kLayoutTable);
+ const stage1::LayerDef* asphalt_source_layer=nullptr;
+ for(const auto& source_layer:stage1::kLayerTable)
+  if(source_layer.layout==original_layout &&
+     std::strcmp(source_layer.name,"asphalt")==0){
+    asphalt_source_layer=&source_layer;break;
+  }
+ if(!asphalt_source_layer)return false;
+ const float road_depth=world_source::source_world_layer_depth(
+     asphalt_source_layer->index,0,0);
  const int left=std::max(0,static_cast<int>(
        std::floor((camera_x-road_width)/cell_w))-1);
  const int right=std::min(static_cast<int>(grid.width()),
@@ -683,8 +700,8 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
        std::floor((camera_y-road_width)/cell_h))-1);
  const int bottom=std::min(static_cast<int>(grid.height()),
        static_cast<int>(std::ceil((camera_y+view_height+road_width)/cell_h))+1);
- // The emulator uses larger Z values as nearer: road .10 overlays
- // authored ground .08 and base ground .04, below actors and buildings.
+ // Keep the original Map asphalt-layer depth, behind the authored
+ // ground_enviroment layer but in front of the base ground floor.
  // Render only clipped, camera-visible source Array road corridor pieces.
  for(int row=top;row<bottom;++row)for(int col=left;col<right;++col){
   const std::uint16_t code=grid.at(col,row);
@@ -726,7 +743,7 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
      C2D_SpriteSetPos(&sprite,band.x+x*tile,band.y+y*tile);
      C2D_SpriteSetScale(&sprite,clipped_w/sprite.params.pos.w,
                               clipped_h/sprite.params.pos.h);
-     C2D_SpriteSetDepth(&sprite,0.10f);
+     C2D_SpriteSetDepth(&sprite,road_depth);
      if(!C2D_DrawSprite(&sprite))return false;
     }
   }
