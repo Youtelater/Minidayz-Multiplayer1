@@ -4343,7 +4343,8 @@ private:
            cell.row>=0 && cell.row<grid.height() &&
            minidayz::world_source::point_on_mapgen_road(
                grid.at(cell.column,cell.row),cell,x,y,
-               minidayz::stage1::kOriginalFloorTileSize))
+               minidayz::world_source::source_road_painted_width(
+                   minidayz::stage1::kOriginalFloorTileSize)))
             return minidayz::terrain::FootstepSurface::road;
         // The fifth original ground sheet is snow and has its own
         // snow_run WAV set; don't use ordinary hard-earth footsteps there.
