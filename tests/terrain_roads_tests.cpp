@@ -1,4 +1,5 @@
 #include "minidayz/terrain_roads.hpp"
+#include "minidayz/source_mapgen_geometry.hpp"
 #include <cassert>
 int main() {
     using namespace minidayz::terrain;
@@ -22,5 +23,26 @@ int main() {
                            junction_v.width,junction_v.height));
     assert(!intersects_view(horizontal,2000.0f,2000.0f,400.0f,240.0f));
     assert(!road_band(0,false,2,3,600.0f,500.0f,60.0f).valid());
+    // Original Sprite514 coordinate layout (Mapgen creation event).
+    const auto a=minidayz::world_source::mapgen_hotspot(0,0);
+    const auto b=minidayz::world_source::mapgen_hotspot(15,32);
+    const auto c=minidayz::world_source::mapgen_hotspot(3,2);
+    assert(a.x==700.0f&&a.y==320.0f);
+    assert(b.x==33340.0f&&b.y==15620.0f);
+    assert(c.x==2740.0f&&c.y==3380.0f);
+    const auto h=minidayz::world_source::mapgen_road_band(
+        13,true,3,2,60.0f);
+    assert(h.valid()&&h.x==2710.0f&&h.y==2870.0f);
+    assert(h.width==60.0f&&h.height==1020.0f);
+    const auto v=minidayz::world_source::mapgen_road_band(
+        12,false,3,2,60.0f);
+    assert(v.valid()&&v.x==2230.0f&&v.y==3350.0f);
+    assert(v.width==1020.0f&&v.height==60.0f);
+    assert(minidayz::world_source::mapgen_road_band(
+        14,true,3,2,60.0f).valid());
+    assert(minidayz::world_source::mapgen_road_band(
+        14,false,3,2,60.0f).valid());
+    assert(!minidayz::world_source::mapgen_road_band(
+        12,true,3,2,60.0f).valid());
     return 0;
 }
