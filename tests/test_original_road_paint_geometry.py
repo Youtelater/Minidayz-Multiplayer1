@@ -43,6 +43,28 @@ def walk(nodes,sheet,parents=(),path=()):
 for sheet,events in project[6]:
     walk(events,sheet)
 assert len(records)==2 and {r["action_uid"] for r in records}==uids
+# Resolve the original tile-space origin before changing the native
+# corridor world coordinates. The source uses TilemapspotX/Y to anchor
+# the authored 17x2 and 2x17 paint rectangles.
+spot_writers=[]
+def spotwalk(nodes,sheet,parents=()):
+    for e in nodes if isinstance(nodes,list) else ():
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+        for a in e[6] if isinstance(e[6],list) else ():
+            if not isinstance(a,list) or len(a)<6 or a[:2]!=[-1,41]:
+                continue
+            if not a[5] or a[5][0] not in ([11,"TilemapspotX"],[11,"TilemapspotY"]):
+                continue
+            spot_writers.append({"sheet":sheet,"event":e[4],
+                                 "parents":[p[4] for p in parents],
+                                 "action":a})
+        if len(e)>7 and isinstance(e[7],list):
+            spotwalk(e[7],sheet,parents+(e,))
+for sh,events in project[6]:
+    spotwalk(events,sh)
+assert spot_writers,"Original TilemapspotX/Y formulas disappeared"
+for row in spot_writers:
+    print("SOURCE_ROAD_ORIGIN",json.dumps(row,separators=(",",":"))[:7000])
 for r in records:
     print("SOURCE_ROAD_RECT",json.dumps(r,ensure_ascii=False,separators=(",",":"))[:7000])
 print("PASS original 2 straight-road family1066 SetTileRange tile15 actions "
