@@ -49,6 +49,51 @@ std::size_t count_code(const minidayz::WorldGrid& grid, std::uint16_t code) {
     return count;
 }
 
+void test_original_high_layer_spawn_visibility() {
+    // Reproduce three root create_map_element Sprite creations that the
+    // old object241/1126-only whitelist silently hid during 3DS rendering.
+    minidayz::WorldSystem world;
+    assert(world.initialize(0x71417u));
+    const struct Case {
+        std::uint8_t variant;
+        std::uint16_t object;
+        std::uint64_t event_uid;
+        const char* layer;
+        float x;
+    } cases[]={
+        {15,1417,611509906059529ULL,"night",3000.0f},
+        {16,1419,969885855510364ULL,"night",4000.0f},
+        {17,1420,635923503739935ULL,"Rain",5000.0f},
+    };
+    for(const auto& c:cases){
+        const std::size_t before=world.placement_count();
+        assert(world.expand_map_element(3,c.variant,0,{c.x,3000.0f})>0);
+        bool found=false;
+        for(std::size_t i=before;i<world.placement_count();++i){
+            const auto* p=world.placement(i);
+            if(p && p->object==c.object && p->source_uid==c.event_uid){
+                assert(minidayz::world_source::source_world_high_layer_gameplay_art(
+                    p->object,c.layer,p->source_uid));
+                found=true;
+            }
+        }
+        assert(found && "Original high-layer scene Sprite was never spawned");
+    }
+    minidayz::terrain::VisibleSourcePlacementIndex visibility;
+    visibility.rebuild(world);
+    for(const auto& c:cases){
+        std::vector<std::uint32_t> near{};
+        visibility.query(c.x-100.0f,2900.0f,200.0f,200.0f,near);
+        bool indexed=false;
+        for(const auto index:near){
+            const auto* p=world.placement(index);
+            if(p && p->object==c.object && p->source_uid==c.event_uid)
+                indexed=true;
+        }
+        assert(indexed && "Original high-layer Sprite culled before rendering");
+    }
+}
+
 void test_building_attachment_name_case() {
     using namespace minidayz::world_source;
     for (const auto& point : kSourceHouseImagePoints) {
@@ -2865,6 +2910,7 @@ void test_reported_world_seed_original_frame_integrity() {
 } // namespace
 
 int main() {
+    test_original_high_layer_spawn_visibility();
     test_building_attachment_name_case();
     test_source_furniture_and_pump();
     test_original_constructed_bed_journal_v4();
