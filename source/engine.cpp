@@ -262,7 +262,10 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
   if(n<=0 || static_cast<std::size_t>(n)>=sizeof(effect_sheet))return false;
   sheet=effect_sheet;
  }
- const auto slot=acquire_source_sprite_page(sheet);
+ auto slot=acquire_source_sprite_page(sheet);
+ // Preserve the selected survivor and animation when its outline page is unavailable.
+ if(slot==kMaxSheets && outline)
+  slot=acquire_source_sprite_page(selected->sheet);
  if(slot==kMaxSheets)return false;
  // Construct Sprite rotates about original active-frame hotspot (X,Y).
  // Uncentered Citro2D rotates about draw origin; keep pivot and culling
