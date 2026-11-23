@@ -58,24 +58,7 @@ private:
     std::uint16_t object_id{},layer{};
     std::vector<std::uint32_t> cells{};
   };
-  // The original Construct SetTile scatter is generated once per map
-  // marker, not rerolled every rendered frame. Cache a bounded set of
-  // recently visible source patches for the 3DS CPU and memory budget.
-  static constexpr std::size_t kScatterCells=33u*33u;
-  static constexpr std::size_t kScatterCacheEntries=12;
-  struct ScatterCacheEntry {
-    std::uint32_t seed{};
-    std::uint8_t level{255};
-    std::size_t marker_index{};
-    std::uint16_t marker_type{};
-    int cell_x{},cell_y{};
-    bool valid{};
-    bool has_source_rule{};
-    std::array<std::uint16_t,kScatterCells> cells{};
-  };
-  // Stored on heap; never allocate ~26KB of terrain cache on the 3DS main stack.
-  std::vector<ScatterCacheEntry> scatter_cache_{};
-  std::size_t next_scatter_cache_{};
+  // Original source scatter is world data; no renderer RNG/cache.
   std::vector<DetailMap> detail_maps_{};
   bool detail_load_attempted_{}; bool detail_loaded_{};
   std::vector<GroundMap> ground_maps_{};std::uint32_t ground_tile_pixels_{};std::uint32_t ground_pages_{};

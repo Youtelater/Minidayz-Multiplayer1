@@ -55,10 +55,7 @@ bool Renderer::initialize() noexcept {
  top_=C2D_CreateScreenTarget(GFX_TOP,GFX_LEFT);
  bottom_=C2D_CreateScreenTarget(GFX_BOTTOM,GFX_LEFT);
  if(!top_||!bottom_){ shutdown(); return false; }
- // Cache source SetTile patches in heap memory; this Renderer lives inside
- // the Engine object, so a 26KB inline array could exhaust the 3DS stack.
- try { scatter_cache_.resize(kScatterCacheEntries); }
- catch (...) { shutdown(); return false; }
+ // Original source SetTile patches are generated with the world.
  debug_font_=C2D_FontLoadSystem(CFG_REGION_USA);
  if(debug_font_) debug_buffer_=C2D_TextBufNew(4096);
  if(debug_font_&&debug_buffer_) debug_ready_=true;
@@ -72,7 +69,6 @@ void Renderer::shutdown() noexcept {
  for(auto& sheet:road_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  for(auto& sheet:detail_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  detail_maps_.clear(); detail_load_attempted_=false; detail_loaded_=false;
- scatter_cache_.clear(); next_scatter_cache_=0;
  ground_maps_.clear();ground_load_attempted_=false;ground_loaded_=false;
  ground_active_level_=255;
  for(auto& sheet:menu_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
