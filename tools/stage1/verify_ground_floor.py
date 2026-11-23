@@ -74,7 +74,7 @@ for object_id, filename in source_objects.items():
     with Image.open(ROOT / "assets/gfx" / filename) as image_source:
         source = image_source.convert("RGBA")
         columns = source.width // tile_pixels
-        assert columns == 5 and selected < columns, (object_id,columns)
+        assert columns == 5 and selected < columns * (source.height // tile_pixels), (object_id,columns,selected)
         x = (selected % columns) * tile_pixels
         y = (selected // columns) * tile_pixels
         base = source.crop((x, y, x + tile_pixels, y + tile_pixels))
