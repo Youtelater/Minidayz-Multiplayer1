@@ -24,3 +24,11 @@ assert "distance=minidayz::items::kOriginalCarTrunkInteractionRange" in main
 assert "source distance < 50" not in main
 assert "kOriginalCarTrunkInteractionRange=100.0f" in generator
 print("PASS root mobile car distance<=100 uses original comparison/extent in 3DS")
+
+audio=(ROOT/"source/stage2_audio.cpp").read_text(encoding="utf-8")
+scene=(ROOT/"source/main.cpp").read_text(encoding="utf-8")
+enum=(ROOT/"include/minidayz/stage2_audio.hpp").read_text(encoding="utf-8")
+assert '"romfs:/wav/open.wav"' in audio
+assert 'carTrunkOpen' in enum
+assert 'OriginalWorldSound::carTrunkOpen' in scene
+assert (ROOT/"romfs/wav/open.wav").is_file()

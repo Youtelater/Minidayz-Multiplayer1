@@ -3386,6 +3386,11 @@ private:
             source_furniture_feedback_seconds_=3.0f;
             return true;
         }
+        // Original Game_events UID7711324247664447 plays the original
+        // sound resource "open" (-5dB) when the trunk is searched, not
+        // the wood/metal door opening sounds or a guessed car-door sound.
+        stage2_audio_.play_original_world_sound(
+            minidayz::OriginalWorldSound::carTrunkOpen);
         // Exact original car-open action adds expierence_points += 2.
         (void)perks_.award_experience(2);
         source_furniture_feedback_=outcome==Result::found
