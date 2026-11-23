@@ -899,13 +899,13 @@ void test_original_source_settlement_building_groups() {
             const auto* body=world.placement(j);
             if(!body || body->runtime_uid!=marker->parent_runtime_uid)
                 continue;
-            linked_body=stage1::source_family_contains(1041,body->object);
+            linked_body=minidayz::stage1::source_family_contains(1041,body->object);
             assert(linked_body);
             assert(body->source_variable_1==marker->runtime_uid);
             break;
         }
-        assert(linked_body && original_car_pool(marker->source_frame));
-        assert(original_car_trunk_has_source_body(world,*marker));
+        assert(linked_body && minidayz::items::original_car_pool(marker->source_frame));
+        assert(minidayz::items::original_car_trunk_has_source_body(world,*marker));
         ++generated_car_trunks;
     }
     std::fprintf(stderr,
