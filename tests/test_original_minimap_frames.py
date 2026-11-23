@@ -72,8 +72,15 @@ for n in ("kOriginalMinimapSprite=519",
           "original_minimap_frame("):
     assert n in cpp,n
 source=(ROOT/"source/main.cpp").read_text()
-assert "original_minimap_frame(" in source
-assert "draw_source_sprite_fitted(" in source
+# Preserve the exact original 519 frame/event catalog for source parity,
+# even when the user chooses a custom map-only 3DS presentation.
+assert "original_minimap_frame(" in cpp
+assert "renderer.draw_source_sprite(placement->object" in source
 assert "classify_color=[]" not in source
+map_block=source.split("    void render_source_map(",1)[1].split(
+    "    void render_bottom(",1)[0]
+assert "original_minimap_frame(" not in map_block
+assert "marker_cell_kind(" in map_block
+assert "source_cell_rect(" in map_block
 print("PASS original Sprite519 39-frame atlas, all 42 root minimap "
       "SetFrame events including 9 raw road neighbor overrides")

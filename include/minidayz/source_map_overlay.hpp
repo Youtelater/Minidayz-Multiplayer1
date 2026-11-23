@@ -59,7 +59,16 @@ constexpr const char* location_name(CellKind kind) noexcept {
 // Array road for corridor rendering, but show the selected location from
 // the actual source marker (Sprite514.var0).
 constexpr CellKind marker_cell_kind(const WorldMapMarker& marker) noexcept {
+    // The source Sprite519 SetFrame event maps several distinct Sprite514
+    // values to the SAME original village/city minimap symbol. The prior
+    // port lost those locations by consulting Array518 alone.
     switch(marker.marker_type){
+    case 4: case 7: case 9: case 16: case 17: return CellKind::village;
+    case 6: case 21: return CellKind::city;
+    case 5: return CellKind::military;
+    case 11: return CellKind::hospital;
+    case 15: return CellKind::firestation;
+    case 103: return CellKind::market;
     case 30: case 31: return CellKind::gas_station;
     case 50: case 51:
         return marker.source_code==12 || marker.source_code==13

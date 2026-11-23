@@ -87,6 +87,14 @@ int main(){
     assert(marker_cell_kind(shop)==CellKind::shop);
     assert(marker_cell_kind(shop_h)==CellKind::shop);
     assert(marker_cell_kind({2,3,9,4})==CellKind::village);
+    for(auto original_village: {4u,7u,9u,16u,17u})
+        assert(marker_cell_kind({2,3,0,
+            static_cast<std::uint16_t>(original_village)})==CellKind::village);
+    assert(marker_cell_kind({2,3,0,21})==CellKind::city);
+    assert(marker_cell_kind({2,3,0,5})==CellKind::military);
+    assert(marker_cell_kind({2,3,0,11})==CellKind::hospital);
+    assert(marker_cell_kind({2,3,0,15})==CellKind::firestation);
+    assert(marker_cell_kind({2,3,0,103})==CellKind::market);
     assert(marker_cell_kind({2,3,13,13})==CellKind::road_horizontal);
     // Unknown mapgen temporary codes are not settlements.
     assert(cell_kind(1)==CellKind::ground);

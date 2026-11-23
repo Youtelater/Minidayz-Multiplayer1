@@ -24,6 +24,7 @@
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
+#include "minidayz/terrain_roads.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/generated/player_skin_source.hpp"
 #include "minidayz/generated/player_spawn_source.hpp"
@@ -1378,99 +1379,160 @@ public:
     }
 
     void render_source_map(minidayz::Renderer& renderer) noexcept {
+        // 3DS-ONLY CUSTOM MAP PRESENTATION, expressly limited to the lower
+        // screen. No custom art, geometry, or spawning is used in the WORLD.
+        // Read original Array518 roads and Sprite514 marker codes directly;
+        // reuse the same original Mapgen coordinates as the world renderer.
         renderer.reset_camera();
         const auto& grid=world_.grid();
         const auto& bounds=world_.bounds();
         renderer.draw_solid_rect(0.0f,0.0f,320.0f,240.0f,
-            C2D_Color32(34,37,30,255),0.01f);
-        // minimap_tile-sheet0.png is a multiple-frame SOURCE TILE ATLAS,
-        // not a full 306x178 background. Never stretch the entire sheet
-        // behind the map. The original map codes provide the roads below.
-        renderer.draw_solid_rect(7.0f,28.0f,306.0f,178.0f,
-            C2D_Color32(41,53,41,238),0.11f);
-        renderer.draw_text("WORLD MAP",107.0f,4.0f,0.55f);
-        // MP_WorldSeed records seed+array/map hashes to reproduce a broken
-        // world. Expose the native seed and level when the user opens the
-        // map so screenshots identify the generated run without changing
-        // the original single-player RNG or saved-world compatibility.
+            C2D_Color32(18,25,21,255),0.01f);
+        renderer.draw_solid_rect(4.0f,3.0f,312.0f,23.0f,
+            C2D_Color32(43,60,51,255),0.10f);
+        renderer.draw_text("WORLD MAP",111.0f,5.0f,0.47f);
         char map_seed[24]{};
         std::snprintf(map_seed,sizeof(map_seed),"SEED %08X",
-                      static_cast<unsigned>(world_.seed()));
-        renderer.draw_text(map_seed,10.0f,8.0f,0.24f);
+            static_cast<unsigned>(world_.seed()));
+        renderer.draw_text(map_seed,10.0f,9.0f,0.19f);
         char map_level[16]{};
         std::snprintf(map_level,sizeof(map_level),"LVL %u",
-                      static_cast<unsigned>(world_.generation_level()+1u));
-        renderer.draw_text(map_level,262.0f,8.0f,0.24f);
-        if(grid.width()==0 || grid.height()==0 ||
+            static_cast<unsigned>(world_.generation_level()+1u));
+        renderer.draw_text(map_level,264.0f,9.0f,0.21f);
+        if(grid.width()==0||grid.height()==0||
            !(bounds.width>0.0f&&bounds.height>0.0f)){
-            renderer.draw_text("MAP NOT GENERATED",54.0f,103.0f,0.36f);
+            renderer.draw_text("MAP NOT GENERATED",63.0f,105.0f,0.33f);
             return;
         }
-        // The source Map-generation Array encodes road segments 12/13/14
-        // and settlements with the original POI IDs. Show those cells
-        // rather than inventing buildings or revealing ungenerated places.
-        const minidayz::map_overlay::MapRect area{12.0f,32.0f,296.0f,170.0f};
-        // Each source Sprite514 marker creates Sprite519 (20x20 frame)
-        // in original function generate_minimap. Keep the source type,
-        // Array518 neighbor predicates and frame numbers in one helper.
-        for(int y=0;y<grid.height();++y){
+
+        // The touch coordinate rectangle is intentionally identical to
+        // update()'s source_cell_rect selection rectangle.
+        const minidayz::map_overlay::MapRect area{
+            12.0f,32.0f,296.0f,170.0f};
+        renderer.draw_solid_rect(area.x-3.0f,area.y-3.0f,
+            area.width+6.0f,area.height+6.0f,
+            C2D_Color32(89,101,73,255),0.13f);
+        renderer.draw_solid_rect(area.x,area.y,area.width,area.height,
+            C2D_Color32(46,67,49,255),0.17f);
+
+        // Clean geographic grid; 33 original Array rows are east-west,
+        // 16 Array columns are north-south in the Construct world.
+        // Pixel-snap 3DS map-only line artwork to avoid subpixel shimmer.
+        for(int y=0;y<grid.height();++y)
             for(int x=0;x<grid.width();++x){
                 const auto* marker=world_.map_marker(
                     static_cast<std::size_t>(y)*grid.width()+x);
-                if(!marker ||
+                if(!marker||
                    !minidayz::map_overlay::original_minimap_marker_is_visible(
                        *marker))continue;
-                // Draw the original source Sprite519 tile frame for this
-                // exact Sprite514.var0 and Array518 road-neighbor context.
-                // No invented section art or custom shapes are substituted.
-                // World X/Y projection retains original Mapgen transposition.
                 const auto cell=minidayz::map_overlay::source_cell_rect(
                     x,y,bounds,area);
-                const auto frame=minidayz::map_overlay::original_minimap_frame(
-                    grid,*marker);
-                (void)renderer.draw_source_sprite_fitted(
-                    minidayz::map_overlay::kOriginalMinimapSprite,
-                    minidayz::map_overlay::kOriginalMinimapAnimation,frame,
-                    cell.x,cell.y,cell.width,cell.height,0.40f);
+                if(cell.width<=0.0f||cell.height<=0.0f||
+                   cell.x+cell.width<area.x||cell.y+cell.height<area.y||
+                   cell.x>area.x+area.width||
+                   cell.y>area.y+area.height)continue;
+                // Extremely subtle boundaries keep the map readable without
+                // repeating 20x20 source minimap atlas art at only 8px.
+                renderer.draw_solid_rect(std::floor(cell.x),
+                    std::floor(cell.y),std::max(1.0f,cell.width),
+                    0.45f,C2D_Color32(63,82,58,255),0.19f);
+                renderer.draw_solid_rect(std::floor(cell.x),
+                    std::floor(cell.y),0.45f,
+                    std::max(1.0f,cell.height),
+                    C2D_Color32(63,82,58,255),0.19f);
+
+                // The actual Array518 road codes determine corridors.
+                // Array-X roads are world-vertical, Array-Y roads world-
+                // horizontal. Markers 30/31/50 etc may override Sprite514
+                // but do not erase their underlying Array518 road cell.
+                const auto road=grid.at(x,y);
+                const bool vert=minidayz::terrain::horizontal_road(road);
+                const bool hori=minidayz::terrain::vertical_road(road);
+                const float cx=cell.x+cell.width*0.5f;
+                const float cy=cell.y+cell.height*0.5f;
+                if(vert){
+                    renderer.draw_solid_rect(std::floor(cx-2.2f),
+                        std::floor(cell.y),4.5f,std::ceil(cell.height)+1.0f,
+                        C2D_Color32(30,39,35,255),0.33f);
+                    renderer.draw_solid_rect(std::floor(cx-1.1f),
+                        std::floor(cell.y),2.4f,std::ceil(cell.height)+1.0f,
+                        C2D_Color32(177,161,116,255),0.35f);
+                }
+                if(hori){
+                    renderer.draw_solid_rect(std::floor(cell.x),
+                        std::floor(cy-2.2f),std::ceil(cell.width)+1.0f,4.5f,
+                        C2D_Color32(30,39,35,255),0.33f);
+                    renderer.draw_solid_rect(std::floor(cell.x),
+                        std::floor(cy-1.1f),std::ceil(cell.width)+1.0f,2.4f,
+                        C2D_Color32(177,161,116,255),0.35f);
+                }
             }
-        }
-        const auto point=minidayz::map_overlay::player_point(
+
+        // Source marker types label actual places. The only invented part
+        // is the *map display styling*, never world objects or location data.
+        for(int y=0;y<grid.height();++y)
+            for(int x=0;x<grid.width();++x){
+                const auto* marker=world_.map_marker(
+                    static_cast<std::size_t>(y)*grid.width()+x);
+                if(!marker||
+                   !minidayz::map_overlay::original_minimap_marker_is_visible(
+                       *marker))continue;
+                const auto kind=minidayz::map_overlay::marker_cell_kind(*marker);
+                if(!minidayz::map_overlay::is_location(kind))continue;
+                const auto cell=minidayz::map_overlay::source_cell_rect(
+                    x,y,bounds,area);
+                const float cx=std::floor(cell.x+cell.width*0.5f);
+                const float cy=std::floor(cell.y+cell.height*0.5f);
+                if(cx<area.x||cy<area.y||
+                   cx>area.x+area.width||cy>area.y+area.height)continue;
+                u32 icon_color=C2D_Color32(217,200,139,255);
+                switch(kind){
+                case minidayz::map_overlay::CellKind::military:
+                    icon_color=C2D_Color32(99,169,192,255);break;
+                case minidayz::map_overlay::CellKind::city:
+                    icon_color=C2D_Color32(236,171,105,255);break;
+                case minidayz::map_overlay::CellKind::hospital:
+                    icon_color=C2D_Color32(238,234,211,255);break;
+                case minidayz::map_overlay::CellKind::firestation:
+                    icon_color=C2D_Color32(217,109,93,255);break;
+                case minidayz::map_overlay::CellKind::village:
+                    icon_color=C2D_Color32(222,200,130,255);break;
+                default:
+                    icon_color=C2D_Color32(137,203,149,255);break;
+                }
+                renderer.draw_solid_rect(cx-3.0f,cy-3.0f,7.0f,7.0f,
+                    C2D_Color32(13,25,23,255),0.49f);
+                renderer.draw_solid_rect(cx-2.0f,cy-2.0f,5.0f,5.0f,
+                    icon_color,0.51f);
+            }
+
+        // Distinct marker: red source player world coordinates. On-map
+        // crosshair is intentionally custom because only the map may use
+        // non-original presentation.
+        const auto position=minidayz::map_overlay::player_point(
             player_.state().x,player_.state().y,bounds,area);
-        // The player marker is also a sprite atlas, not one full-size
-        // bitmap. Render its real Construct animation frame.
-        static const auto* player_mark_frame=[]() noexcept {
-            const auto* begin=minidayz::stage1::kSpriteFrames;
-            const auto* end=begin+minidayz::stage1::kSpriteFrameCount;
-            for(auto* f=begin;f!=end;++f)
-                if(std::strncmp(f->sheet,"minimap_player_sheet0_",22)==0)
-                    return f;
-            return end;
-        }();
-        bool player_map_sprite_drawn=false;
-        if(player_mark_frame!=minidayz::stage1::kSpriteFrames+
-                             minidayz::stage1::kSpriteFrameCount)
-            player_map_sprite_drawn=renderer.draw_source_sprite_fitted(
-                player_mark_frame->object,player_mark_frame->animation,
-                player_mark_frame->frame,
-                point.x-6.0f,point.y-6.0f,12.0f,12.0f,0.77f);
-        // An extra text X over the original survivor marker obscured
-        // the sprite. Draw fallback text only if the source art failed.
-        if(!player_map_sprite_drawn)
-            renderer.draw_text("X",point.x-4.0f,point.y-9.0f,0.43f);
+        const float mx=std::floor(position.x),my=std::floor(position.y);
+        renderer.draw_solid_rect(mx-4.0f,my-4.0f,9.0f,9.0f,
+            C2D_Color32(11,20,18,255),0.72f);
+        renderer.draw_solid_rect(mx-3.0f,my-1.0f,7.0f,3.0f,
+            C2D_Color32(242,103,75,255),0.77f);
+        renderer.draw_solid_rect(mx-1.0f,my-3.0f,3.0f,7.0f,
+            C2D_Color32(242,103,75,255),0.78f);
+
         const auto* selected_name=minidayz::map_overlay::location_name(
             map_selected_kind_);
         if(selected_name){
             char label[48]{};
             std::snprintf(label,sizeof(label),"SECTION: %s",selected_name);
-            renderer.draw_text(label,29.0f,207.0f,0.31f);
+            renderer.draw_text(label,12.0f,208.0f,0.29f);
         }else{
-            renderer.draw_text("TAP A MAP LOCATION TO SHOW ITS TYPE",
-                               14.0f,207.0f,0.30f);
+            renderer.draw_text("TOUCH A MARKER TO IDENTIFY THE LOCATION",
+                11.0f,208.0f,0.24f);
         }
-        renderer.draw_solid_rect(9.0f,222.0f,302.0f,16.0f,
-            C2D_Color32(76,66,47,255),0.61f);
+        renderer.draw_solid_rect(8.0f,225.0f,304.0f,14.0f,
+            C2D_Color32(77,72,51,255),0.67f);
         renderer.draw_text("Y / B / TOUCH: BACK TO INVENTORY",
-                           17.0f,224.0f,0.27f);
+            21.0f,226.0f,0.25f);
     }
 
     void render_bottom(minidayz::Renderer& renderer) noexcept override {

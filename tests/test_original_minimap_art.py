@@ -17,9 +17,21 @@ assert '"minimap_player-sheet0.png"' not in main
 assert "minimap_mark_sheet0_" not in main  # don't repeat first unknown icon per POI
 assert 'source_cell_rect(' in main
 assert 'case 99: return CellKind::gas_station;' in (ROOT/"include/minidayz/source_map_overlay.hpp").read_text()
-assert "minimap_player_sheet0_" in main
-assert "renderer.draw_source_sprite_fitted(" in main
+# User-authorized custom styling exists ONLY in the bottom-screen map.
 assert "render_source_map" in main
+map_block=main.split("    void render_source_map(",1)[1].split(
+    "    void render_bottom(",1)[0]
+assert "draw_source_sprite_fitted(" not in map_block, "map must not crush sprite frames to 8px"
+assert "source_cell_rect(" in map_block
+assert "renderer.draw_solid_rect(" in map_block
+assert "renderer.draw_text(" in map_block
+assert "minidayz::terrain::horizontal_road(road)" in map_block
+assert "minidayz::terrain::vertical_road(road)" in map_block
+assert "player_point(" in map_block
+assert "SEED %08X" in map_block and "LVL %u" in map_block
+# The top-screen world still loads source sprite frames, never custom map art.
+world_block=main.split("    void render(minidayz::Renderer& renderer) noexcept override",1)[1]
+assert "renderer.draw_source_sprite(placement->object" in world_block
 assert "SEED %08X" in main and "LVL %u" in main
 # Inspect the actual user-recommended root multiplayer seed shim. It wraps
 # the original generator, hashes the generated Array/map and overrides
