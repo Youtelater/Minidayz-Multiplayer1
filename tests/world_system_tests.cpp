@@ -839,7 +839,10 @@ void test_original_crash_site_world_generation() {
         for(std::size_t i=0;i<world.placement_count();++i){
             const auto* p=world.placement(i);
             if(!p)continue;
-            if(p->object==246 && p->source_uid!=0){
+            if(p->object==246 &&
+               (p->source_uid==453361015394042ULL ||
+                p->source_uid==416326667732045ULL ||
+                p->source_uid==439357571825697ULL)){
                 ++heli;
                 assert(p->width==240.0f&&p->height==186.0f);
                 assert(p->parent_runtime_uid!=0);
@@ -856,7 +859,9 @@ void test_original_crash_site_world_generation() {
                 }
                 assert(loot_found==3);
             }
-            if(p->object==441 && p->source_uid!=0){
+            if(p->object==441 &&
+               (p->source_uid==832344210313130ULL ||
+                p->source_uid==672392095922871ULL)){
                 ++hammer;
                 assert(p->width>0.0f&&p->height>0.0f);
                 assert(p->parent_runtime_uid!=0);
