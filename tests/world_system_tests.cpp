@@ -866,9 +866,28 @@ void test_original_source_road_vehicle_placement() {
             }
         }
         assert(uaz<=1&&volga<=1&&hammer<=1&&ka<=1);
-        assert(uaz==1&&volga==1);
-        assert(hammer==(level>=3?1u:0u));
-        assert(ka==(level>=4?1u:0u));
+        // Source System.PickRandom(514) with zero selected instances is
+        // a no-op: a seed can leave NO first-half raw road12/13 after
+        // gas/cafe/shop replacements. Don't manufacture a vehicle to
+        // satisfy a test; match the exact source candidate selection.
+        std::size_t available_roads=0,available_hammer=0,available_ka=0;
+        for(std::size_t i=0;i<world.map_marker_count();++i){
+            const auto* marker=world.map_marker(i);
+            assert(marker);
+            if(marker->cell_y<=15 &&
+               (marker->marker_type==12||marker->marker_type==13))
+                ++available_roads;
+            if(marker->cell_y<=15 && marker->marker_type==70)
+                ++available_hammer;
+            if(marker->marker_type==104)++available_ka;
+        }
+        std::fprintf(stderr,
+            "SOURCE ROAD VEHICLES level=%u candidates=%zu uaz=%zu volga=%zu hammer=%zu ka=%zu\\n",
+            level,available_roads,uaz,volga,hammer,ka);
+        assert(uaz==(available_roads>0?1u:0u));
+        assert(volga==(available_roads>0?1u:0u));
+        assert(hammer==(available_hammer>0?1u:0u));
+        assert(ka==(available_ka>0?1u:0u));
     }
 }
 
