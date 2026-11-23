@@ -948,22 +948,31 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // editor dimensions otherwise collapses the 345 trunk offset to
         // the tree's sprite hotspot while the real PNG renders elsewhere.
         const auto* tree_frame=world_source::source_tree_impact_point(rule.object);
+        // Original Sprite210 variants 7..10 use distinct standing frames
+        // and frame-specific 348 Solids, NOT the six 345-trunk species.
+        const auto* block_frame=(var1==1 && rule.object==210)
+            ? world_source::source_tree_block_variant(var2) : nullptr;
         placements_.push_back({
             layer, rule.object, rule.uid, position.x, position.y, 0.0f,
+            block_frame ? block_frame->width :
             tree_frame ? tree_frame->width :
                 initial_frame ? initial_frame->width :
                     (source_object ? source_object->width : 0.0f),
+            block_frame ? block_frame->height :
             tree_frame ? tree_frame->height :
                 initial_frame ? initial_frame->height :
                     (source_object ? source_object->height : 0.0f),
             0.0f, 1.0f, 1.0f,
+            block_frame ? block_frame->origin_x :
             tree_frame ? tree_frame->origin_x :
                 initial_frame ? initial_frame->origin_x :
                     (source_object ? source_object->origin_x : 0.0f),
+            block_frame ? block_frame->origin_y :
             tree_frame ? tree_frame->origin_y :
                 initial_frame ? initial_frame->origin_y :
                     (source_object ? source_object->origin_y : 0.0f),
-            rule.image_point
+            rule.image_point,
+            block_frame ? block_frame->tree_frame : 0
         });
         placements_.back().runtime_uid = runtime_id;
         placements_.back().instance_id = static_cast<std::uint64_t>(placements_.size());
@@ -1225,6 +1234,42 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                 placements_[tree_index].linked_runtime_uid=hitbox_uid;
                 // zed_resp is an invisible gameplay trigger layer; do
                 // NOT also add every trunk hitbox as an NPC spawn feature.
+            }
+        }
+
+        // Root create_map_element branches 6033785432522481,
+        // 7238212881044891, 9881460187187066, 1618691315170714
+        // spawn 348 on zed_resp at 210.Imagepoint1. Each uses original
+        // Solid frames 17/21/22/23; omitting them causes walkthroughs.
+        if(block_frame){
+            const auto dest=find_layer_index_by_name(layout_index,"zed_resp");
+            if(dest!=0xffff){
+                const std::size_t index=placements_.size()-1;
+                const auto tree=placements_[index];
+                const float angle=tree.angle*0.01745329251994329577f;
+                const float dx=(block_frame->point_x-block_frame->origin_x)*
+                    tree.width*(tree.scale_x<0.0f?-1.0f:1.0f);
+                const float dy=(block_frame->point_y-block_frame->origin_y)*
+                    tree.height;
+                const float x=tree.x+dx*std::cos(angle)-dy*std::sin(angle);
+                const float y=tree.y+dx*std::sin(angle)+dy*std::cos(angle);
+                const std::uint64_t uid=(std::uint64_t{1}<<63) |
+                    static_cast<std::uint64_t>(placements_.size()+1);
+                placements_.push_back({
+                    dest,348,rule.uid,x,y,0.0f,
+                    block_frame->solid_width,block_frame->solid_height,
+                    tree.angle,1.0f,1.0f,
+                    block_frame->solid_origin_x,block_frame->solid_origin_y,
+                    0,block_frame->solid_frame
+                });
+                auto& solid=placements_.back();
+                solid.runtime_uid=uid;
+                solid.instance_id=static_cast<std::uint64_t>(placements_.size());
+                solid.linked_runtime_uid=tree.runtime_uid;
+                solid.parent_runtime_uid=tree.runtime_uid;
+                solid.source_variable_0=tree.runtime_uid; // 348.var0
+                placements_[index].linked_runtime_uid=uid;
+                placements_[index].source_variable_1=uid; // 210.var1
             }
         }
 
