@@ -15,6 +15,7 @@
 #include "minidayz/generated/source_car_wreck_trunks.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/generated/world_source_data.hpp"
+#include "minidayz/generated/terrain_scatter_source.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -1911,6 +1912,30 @@ void test_new_game_generates_visible_original_world() {
                 marker->marker_type) != nullptr);
         }
         assert(wilderness_markers > 0);
+        // Source SetTile terrain must be generated with the world, and its
+        // original frames must be stable irrespective of camera movement.
+        assert(!world->source_scatter_patches().empty());
+        std::size_t scatter_cells=0;
+        for(const auto& patch:world->source_scatter_patches()){
+            const auto* marker=world->map_marker(patch.marker_index);
+            assert(marker);
+            const auto mask=std::uint8_t{1} << world->generation_level();
+            bool source_rule=false;
+            for(const auto& rule:minidayz::stage1::kTerrainScatterRules)
+                if(rule.marker==marker->marker_type &&
+                   (rule.level_mask&mask))source_rule=true;
+            assert(source_rule);
+            std::uint16_t previous=0;
+            bool first=true;
+            for(const auto& tile:patch.tiles){
+                assert(tile.local_index<33u*33u);
+                if(!first)assert(previous<tile.local_index);
+                first=false;previous=tile.local_index;
+                assert(tile.original_frame<128);
+                ++scatter_cells;
+            }
+        }
+        assert(scatter_cells>0);
         std::size_t drawable_generated_sprites = 0;
         std::size_t generated_loot_markers=0;
         std::size_t original_category15_markers=0;

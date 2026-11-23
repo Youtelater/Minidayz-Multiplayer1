@@ -20,10 +20,15 @@ event[5][0][9][1]=[8,0]
 assert source_level_mask([event])==(1<<4)
 print("PASS source Sprite514 marker (slot 0) and CurrentLevel event gating")
 
-# Terrain patches from a previous level may share the same world seed and
-# marker ID, but must NEVER reuse the cached painted frames after a transition.
-header=(ROOT/"include/minidayz/engine.hpp").read_text(encoding="utf-8")
+# World transitions discard old terrain; source SetTile choices now
+# consume the same RNG stream as original location generation rather than
+# a second, camera-dependent random number generator.
+world=(ROOT/"source/world.cpp").read_text(encoding="utf-8")
 render=(ROOT/"source/terrain_scatter_render.cpp").read_text(encoding="utf-8")
-assert "std::uint8_t level{255};" in header
-assert "candidate.level==world.generation_level()" in render
-assert "patch->level=world.generation_level()" in render
+header=(ROOT/"include/minidayz/world.hpp").read_text(encoding="utf-8")
+assert "source_scatter_patches_.clear();" in world
+assert "rule.level_mask&(std::uint8_t{1}<<generation_level_)" in world
+assert "source_random_bounded(" in world
+assert "WorldScatterPatch" in header
+assert "world.source_scatter_patches()" in render
+assert "std::minstd_rand" not in render

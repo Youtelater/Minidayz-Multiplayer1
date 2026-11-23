@@ -48,7 +48,7 @@ assert 'sprite->animation==placement->source_animation' in main
 assert 'px, py, sx, sy, layer_depth' in main
 assert 'source_sprite_in_view(' in main
 assert 'original_map_detail_230.t3x' in scatter
-assert 'kTerrainScatterChoices' in scatter
+assert 'kTerrainScatterChoices' in (root/'source/world.cpp').read_text(encoding='utf-8')
 assert 'world_source::mapgen_hotspot(' in scatter
 assert 'bounds.width/grid.width()' not in scatter
 assert 'world_source::mapgen_hotspot(x,y)' in (
@@ -60,7 +60,9 @@ scatter_generator=(root / "tools/stage1/build_procedural_environment.py").read_t
 assert 'source_scatter_layer=ground_layers.pop()' in scatter_generator
 scatter_header=(root / "include/minidayz/generated/terrain_scatter_source.hpp").read_text(encoding="utf-8")
 assert 'kSourceScatterGroundLayer=6;' in scatter_header  # Map layer 6 is ground_enviroment
-assert 'patch->cells.fill(kEmpty)' in scatter
+assert 'cells.fill(kEmpty)' in (root/'source/world.cpp').read_text(encoding='utf-8')
+assert 'world.source_scatter_patches()' in scatter
+assert 'std::minstd_rand' not in scatter
 assert 'original_map_ground_p{page:03}.t3x' in ground
 assert 'source.crop((x, y, x + tile_width, y + tile_width))' in ground
 assert 'art.crop((x,y,x+tile_size,y+tile_size))' in details

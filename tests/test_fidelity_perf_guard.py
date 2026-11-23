@@ -44,8 +44,10 @@ assert main.index("source_skin_object,\n                skin_animation") < main.
 assert "std::min(value, 0.25f)" in npc
 assert "sprite_cache_misses_" in engine
 assert "KEY_SELECT" in engine and "measured_frame_seconds_" in engine
-assert "scatter_cache_" in header and "std::vector<ScatterCacheEntry>" in header
-assert "patch->cells" in terrain and "if(!patch)" in terrain
+assert "scatter_cache_" not in header
+assert "world.source_scatter_patches()" in terrain
+assert "std::minstd_rand" not in terrain
+assert "source_scatter_patches_" in (ROOT/"include/minidayz/world.hpp").read_text()
 # The original Tilemap230 ground_enviroment layer is source layer 6, not
 # a guessed GPU constant. Test the source-derived depth path.
 assert "source_world_layer_depth(" in terrain
