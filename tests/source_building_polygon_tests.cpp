@@ -116,6 +116,10 @@ int main(){
     touched.object=346;touched.x=500.0f;touched.y=500.0f;
     touched.width=20.0f;touched.height=20.0f;
     touched.origin_x=touched.origin_y=0.5f;touched.scale_x=1.0f;
+    // Original 302 has a nonrectangular mask; its hotspot may be outside
+    // the painted collision polygon. Anchor this test to an actual vertex.
+    const auto boundary=source_house_mask_vertex(picked,0);
+    touched.x=boundary.x;touched.y=boundary.y;
     assert(source_picked_house_foundation_overlaps_wall(picked,touched));
     touched.x=3000.0f;touched.y=3000.0f;
     assert(!source_picked_house_foundation_overlaps_wall(picked,touched));
