@@ -198,12 +198,35 @@ for level, object_id in enumerate(SOURCE_GROUND):
                         "-o", str(destination_base)], cwd=work, check=True)
     if not destination_base.is_file() or destination_base.stat().st_size < 32:
         raise SystemExit(f"Original source level {level} ground atlas missing")
-# Original road corridors use the existing ground source sheets, not
-# separate invented geometry art. Cell 0 is the stone/paved road texture
-# in each 5x5 original tilemap. Export it for source grid codes 12/13/14.
+# Recover the authored base pavement from the two straight-road paint events.
+# Other location-loader writes can subsequently reshape the tile edges.
+road_actions = {358622687629146, 532767105758898}
+road_tiles = {}
+def collect_road_tiles(events):
+    for event in events:
+        if not isinstance(event, list) or len(event) < 7 or event[0] != 0:
+            continue
+        for action in event[6]:
+            if len(action) < 6 or action[3] not in road_actions:
+                continue
+            if action[:2] != [1066, 202] or action[5][4][:1] != [0]:
+                raise ValueError("Original straight-road paint command changed")
+            literal = action[5][4][1]
+            if literal[0] != 0:
+                raise ValueError("Original straight-road pavement is no longer literal")
+            road_tiles[action[3]] = literal[1]
+        if len(event) > 7:
+            collect_road_tiles(event[7])
+
+collect_road_tiles(dict(project[6])["Game_events"])
+if road_tiles.keys() != road_actions or len(set(road_tiles.values())) != 1:
+    raise ValueError(f"Original straight-road tile mismatch: {road_tiles}")
+road_tile = next(iter(road_tiles.values()))
 for level, object_id in enumerate(SOURCE_GROUND, start=1):
     source = images[object_id]
-    stone_tile = source.crop((0, 0, tile_width, tile_width))
+    x = road_tile % sheet_columns[object_id] * tile_width
+    y = road_tile // sheet_columns[object_id] * tile_width
+    stone_tile = source.crop((x, y, x + tile_width, y + tile_width))
     if stone_tile.getbbox() is None:
         raise SystemExit(f"Original road artwork missing in ground level {level}")
     with tempfile.TemporaryDirectory(prefix=f"mdz_road_{level}_") as tmp:

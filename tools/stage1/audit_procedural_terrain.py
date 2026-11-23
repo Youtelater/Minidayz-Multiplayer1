@@ -23,15 +23,18 @@ DEST = ROOT / "data/stage1/original_terrain_paint_events.json"
 TERRAIN = (208, 211, 418, 230, 482, 687, 688, 776, 980, 1138, 1139)
 # Original Construct Tilemap 'Set tile at' opcode, confirmed from root source.
 SET_TILE = 192
+SET_TILE_RANGE = 202
+GROUND_FAMILY = 1066
 
 
-def original_events(events, ancestors=()):
-    for event in events:
+def original_events(events, ancestors=(), path=()):
+    for index, event in enumerate(events):
         if not isinstance(event, list) or not event or event[0] != 0:
             continue
-        yield event, ancestors
+        location = path + (index,)
+        yield event, ancestors, location
         children = event[7] if len(event) > 7 and isinstance(event[7], list) else ()
-        yield from original_events(children, ancestors + (event,))
+        yield from original_events(children, ancestors + (event,), location)
 
 
 def tile_choices(tree):
@@ -44,7 +47,7 @@ def tile_choices(tree):
         found.extend(int(node[1]) for node in args
                      if isinstance(node, list) and len(node) > 1
                      and node[0] == 0 and isinstance(node[1], int))
-    for child in tree[1:]:
+    for child in tree:
         if isinstance(child, list):
             found.extend(tile_choices(child))
     return found
@@ -81,30 +84,48 @@ def main():
             if im.width % size or im.height % size > 1:
                 raise SystemExit(f"Source tile sheet dimensions changed for {object_id}")
             capacity[object_id] = (im.width // size) * (im.height // size)
+    family_members = next(row[1:] for row in data[4] if row[0] == GROUND_FAMILY)
+    if set(family_members) != set(TERRAIN[4:]):
+        raise SystemExit("Original ground tilemap family changed")
     records = []
+    guard_events = {}
+    location_loaders = {}
     counters = Counter()
     for sheet in data[6]:
-        for event, ancestors in original_events(sheet[1]):
-            for action in event[6] if len(event) > 6 and isinstance(event[6], list) else []:
+        for event, ancestors, path in original_events(sheet[1]):
+            if any(c[:2] == [189, 40] and c[-1] == [[1, [2, "create_map_location"]]]
+                   for c in event[5]):
+                location_loaders.setdefault(sheet[0], []).append({"path": path, "event": event})
+            for action_index, action in enumerate(event[6] if len(event) > 6 else []):
                 if not isinstance(action, list) or len(action) < 6:
                     continue
                 object_id, opcode = action[0], action[1]
-                if object_id not in TERRAIN:
+                if object_id not in capacity and object_id != GROUND_FAMILY:
                     continue
                 counters[(object_id, opcode)] += 1
-                if opcode != SET_TILE:
+                if opcode not in (SET_TILE, SET_TILE_RANGE):
                     continue
                 params = action[5]
-                if not isinstance(params, list) or len(params) < 4:
-                    raise SystemExit(f"Malformed source SetTile action {action[3]}")
-                expr = params[2][1]
-                candidates = tile_choices(expr)
+                tile_parameter = 2 if opcode == SET_TILE else 4
+                if not isinstance(params, list) or len(params) != tile_parameter + 2:
+                    raise SystemExit(f"Malformed tile paint action {action[3]}")
+                expr = params[tile_parameter][1]
+                candidates = [expr[1]] if expr[0] == 0 else tile_choices(expr)
+                targets = family_members if object_id == GROUND_FAMILY else [object_id]
                 for tile in candidates:
-                    if not 0 <= tile < capacity[object_id]:
-                        raise SystemExit(
-                            f"Original terrain image {object_id} has {capacity[object_id]} "
-                            f"tiles but SetTile action {action[3]} chooses {tile}")
+                    for target in targets:
+                        if not 0 <= tile < capacity[target]:
+                            raise SystemExit(f"Tile {tile} outside original sheet {target}")
+                # Retain the full event headers and their order. In particular,
+                # an OR block with two marker codes must never become an AND.
+                sheet_headers = guard_events.setdefault(sheet[0], {})
+                for depth, node in enumerate((*ancestors, event), start=1):
+                    key = ".".join(map(str, path[:depth]))
+                    sheet_headers.setdefault(key, node[:6])
                 records.append({
+                    "command": opcode,
+                    "event_path": path,
+                    "action_index": action_index,
                     "sheet": sheet[0],
                     "object": object_id,
                     "event_uid": event[4],
@@ -118,6 +139,9 @@ def main():
         raise SystemExit("Missing original dynamic terrain SetTile actions")
     report = {
         "status": "Original source events extracted; native 3DS execution not implied",
+        "ground_family_members": family_members,
+        "event_headers": guard_events,
+        "location_loaders": location_loaders,
         "tile_capacity": capacity,
         "action_counts": {f"{obj}:{opcode}": number
                           for (obj, opcode), number in sorted(counters.items())},
