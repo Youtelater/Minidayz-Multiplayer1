@@ -39,8 +39,14 @@ constexpr bool mapgen_duplicate_crossing_tile(
     !(road_width>0.0f))return false;
  const auto center=mapgen_hotspot(array_x,array_y);
  constexpr float epsilon=0.01f;
- return tile_world_x>=center.x-road_width*0.5f-epsilon &&
-        tile_world_x+tile_width<=center.x+road_width*0.5f+epsilon;
+ // Original 17-cell patch starts at the cell anchor minus 8.5
+ // tiles. Its two-cell road occupies indices 8 and 9, hence it begins
+ // half a tile BEFORE the Mapgen hotspot and ends 1.5 tiles after it.
+ // With the source-authored two-tile road_width this is -width/4,
+ // not an invented symmetric -width/2 strip.
+ const float start=center.x-road_width*0.25f;
+ return tile_world_x>=start-epsilon &&
+        tile_world_x+tile_width<=start+road_width+epsilon;
 }
 
 constexpr terrain::RoadBand mapgen_road_band(
@@ -49,10 +55,14 @@ constexpr terrain::RoadBand mapgen_road_band(
  if(!(road_width>0.0f) || (array_horizontal
     ? !terrain::horizontal_road(code) : !terrain::vertical_road(code)))return {};
  const auto c=mapgen_hotspot(array_x,array_y);
+ // Original family1066 paint: 17x2 / 2x17 cells, with the
+ // 2-cell transverse strip beginning at tile index8 of the 17-tile
+ // Mapgen location. The strip center is HALF a tile past the marker,
+ // not centered exactly on the marker as the old native renderer did.
  return array_horizontal
-   ? terrain::RoadBand{c.x-road_width*0.5f,c.y-kMapgenStride*0.5f,
+   ? terrain::RoadBand{c.x-road_width*0.25f,c.y-kMapgenStride*0.5f,
                        road_width,kMapgenStride}
-   : terrain::RoadBand{c.x-kMapgenStride*0.5f,c.y-road_width*0.5f,
+   : terrain::RoadBand{c.x-kMapgenStride*0.5f,c.y-road_width*0.25f,
                        kMapgenStride,road_width};
 }
 
