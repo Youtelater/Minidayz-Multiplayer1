@@ -344,7 +344,7 @@ bool Renderer::draw_menu_art(std::size_t index,float x,float y,float width,float
  C2D_SpriteSetDepth(&sprite,depth);
  return C2D_DrawSprite(&sprite);
 }
-bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float width,float height,std::uint8_t source_level,float second_half_y) noexcept {
+bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float width,float height,std::uint8_t source_level,float second_half_x) noexcept {
  // Exact original Construct Map ground tile placements, generated from the
  // root data.deobfuscated.js into a compact 3DS RomFS tilemap.
  if(width<=0.0f||height<=0.0f) return false;
@@ -428,7 +428,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
  // Keep only the needed original ground theme resident. Loading all seven
  // terrain sheets at startup can exhaust original 3DS texture memory and
  // make every map fail to render, even when the current sheet is valid.
- // The final source map can use a second theme below its row boundary.
+ // The final source map uses a second theme east of its column boundary.
  const auto ensure_ground_sheet=[&](std::uint32_t theme) noexcept -> bool {
   if(theme>=7) return false;
   if(base_floor_sheets_[theme]) return true;
@@ -457,9 +457,9 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
                                    visible)) return false;
  for(int row=visible.first_row;row<visible.last_row;++row)
   for(int col=visible.first_column;col<visible.last_column;++col){
-   const float tile_world_y=(static_cast<float>(row)+0.5f)*base_tile;
+   const float tile_world_x=(static_cast<float>(col)+0.5f)*base_tile;
    const auto theme=terrain::ground_texture_at(
-      source_level,tile_world_y,second_half_y);
+      source_level,tile_world_x,second_half_x);
    if(!ensure_ground_sheet(theme)) return false;
    C2D_Sprite sprite{};
    C2D_SpriteFromSheet(&sprite,base_floor_sheets_[theme],0);
@@ -473,7 +473,7 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
  // Preserve the exact source RLE cells at their original Map positions.
  for(const GroundMap& map:ground_maps_){
   // Source tilemap objects can cross the split-world seam. Resolve the
-  // original terrain object per visible row, not once at map origin.
+  // original terrain object per visible column, not once at map origin.
   const int x0=std::max(0,static_cast<int>(std::floor((camera_x-map.x)/tile)));
   const int y0=std::max(0,static_cast<int>(std::floor((camera_y-map.y)/tile)));
   const int x1=std::min(static_cast<int>(map.columns),
@@ -482,8 +482,8 @@ bool Renderer::draw_original_ground_floor(float camera_x,float camera_y,float wi
               static_cast<int>(std::ceil((camera_y+height-map.y)/tile))+1);
   for(int row=y0;row<y1;++row) for(int col=x0;col<x1;++col){
    const auto map_theme=terrain::ground_texture_at(
-       source_level,map.y+(static_cast<float>(row)+0.5f)*tile,
-       second_half_y);
+       source_level,map.x+(static_cast<float>(col)+0.5f)*tile,
+       second_half_x);
    if(map.object_id!=terrain::kGroundObjectByTexture[map_theme]) continue;
    const std::uint32_t descriptor=map.cells[
      static_cast<std::size_t>(row)*map.columns+static_cast<std::size_t>(col)];
@@ -669,10 +669,10 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
   road_sheets_[theme]=sheet;
   return true;
  };
- // The last source world changes ground art at row 18. Roads must follow
- // that same boundary rather than always using the seventh road sheet.
- const float second_half_y=(source_level==5 && grid.height()==33)
-     ? bounds.height*18.0f/33.0f : 1.0e30f;
+ // The original logical Array Y axis is physically east-west on Map.
+ // On the final map, the second ground theme starts at logical row 18.
+ const float second_half_x=(source_level==5 && grid.height()==33)
+     ? world_source::mapgen_hotspot(0,18).x : 1.0e30f;
  const float road_width=stage1::kOriginalFloorTileSize;
  if(!(road_width>0.0f))return false;
  // Original Map asphalt is a separate Construct layer, before
@@ -723,9 +723,9 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
        static_cast<int>(std::ceil((camera_y+view_height-band.y)/tile)));
    for(int y=first_y;y<last_y;++y)
     for(int x=first_x;x<last_x;++x){
-     const float world_tile_y=band.y+(static_cast<float>(y)+0.5f)*tile;
+     const float world_tile_x=band.x+(static_cast<float>(x)+0.5f)*tile;
      const auto theme=terrain::ground_texture_at(
-         source_level,world_tile_y,second_half_y);
+         source_level,world_tile_x,second_half_x);
      if(!ensure_road_sheet(theme)) return false;
      C2D_Sprite sprite{};
      C2D_SpriteFromSheet(&sprite,road_sheets_[theme],0);

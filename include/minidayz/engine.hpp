@@ -30,7 +30,7 @@ public:
  bool draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f,float opacity=1.0f,float rgb_multiplier=1.0f,bool outline=false) noexcept;
  // Draw the original Construct sprite frame to an exact 3DS rectangle.
  // Keeps source artwork and texture scaling; only the destination changes.
- bool draw_original_ground_floor(float camera_x,float camera_y,float view_width,float view_height,std::uint8_t source_level=0,float second_half_y=1.0e30f) noexcept;
+ bool draw_original_ground_floor(float camera_x,float camera_y,float view_width,float view_height,std::uint8_t source_level=0,float second_half_x=1.0e30f) noexcept;
  bool draw_original_environment_tilemaps(float camera_x,float camera_y,
                                            float view_width,float view_height) noexcept;
  // Render source-derived SetTile scatter events for each generated Map cell.
