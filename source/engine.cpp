@@ -798,11 +798,30 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
      const float clipped_w=std::min(tile,band.width-x*tile);
      const float clipped_h=std::min(tile,band.height-y*tile);
      if(clipped_w<=0.0f||clipped_h<=0.0f)continue;
-     C2D_SpriteSetPos(&sprite,band.x+x*tile,band.y+y*tile);
-     C2D_SpriteSetScale(&sprite,clipped_w/sprite.params.pos.w,
-                              clipped_h/sprite.params.pos.h);
-     C2D_SpriteSetDepth(&sprite,road_depth);
-     if(!C2D_DrawSprite(&sprite))return false;
+     // The original asphalt remains pixel-perfect at cut road edges.
+     // Scaling an entire source tile into a short final corridor segment
+     // squeezes its texture, producing a visible repeating road seam.
+     // Crop source texels instead, including Tex3DS atlas-rotated sprites.
+     if(!sprite.image.subtex)return false;
+     const Tex3DS_SubTexture original=*sprite.image.subtex;
+     Tex3DS_SubTexture cropped=original;
+     const float source_w=static_cast<float>(original.width);
+     const float source_h=static_cast<float>(original.height);
+     if(!(source_w>0.0f&&source_h>0.0f))return false;
+     const float u_fraction=std::clamp(clipped_w/source_w,0.0f,1.0f);
+     const float v_fraction=std::clamp(clipped_h/source_h,0.0f,1.0f);
+     cropped.right=original.left+(original.right-original.left)*u_fraction;
+     cropped.bottom=original.top+(original.bottom-original.top)*v_fraction;
+     cropped.width=static_cast<std::uint16_t>(
+         std::max(1.0f,std::ceil(source_w*u_fraction)));
+     cropped.height=static_cast<std::uint16_t>(
+         std::max(1.0f,std::ceil(source_h*v_fraction)));
+     C2D_Image source_tile=sprite.image;
+     source_tile.subtex=&cropped;
+     if(!C2D_DrawImageAt(source_tile,band.x+x*tile,band.y+y*tile,
+            road_depth,nullptr,
+            clipped_w/static_cast<float>(cropped.width),
+            clipped_h/static_cast<float>(cropped.height)))return false;
     }
   }
  }
