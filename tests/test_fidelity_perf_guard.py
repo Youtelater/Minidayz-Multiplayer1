@@ -33,7 +33,13 @@ assert "ground_loaded_" not in road_renderer
 assert "ensure_road_sheet(theme)" in road_renderer
 assert 'std::strcmp(source_layer.name,"asphalt")==0' in road_renderer
 assert "source_world_layer_depth(" in road_renderer
-assert "C2D_SpriteSetDepth(&sprite,road_depth)" in road_renderer
+# The road atlas now crops its *source pixels* rather than squeezing a
+# full original tile. C2D_DrawImageAt takes road_depth as its own argument;
+# preserving the original asphalt layer does not require SetDepth(sprite).
+assert "source_road_tile_crop(" in road_renderer
+assert "C2D_DrawImageAt(source_tile,band.x+x*tile,band.y+y*tile," in road_renderer
+assert "road_depth,nullptr,crop.scale_x,crop.scale_y" in road_renderer
+assert "C2D_SpriteSetScale(&sprite,clipped_w/sprite.params.pos.w" not in road_renderer
 assert "C2D_SpriteSetDepth(&sprite,0.10f)" not in road_renderer
 assert "clamp(delta_seconds, 0.0f, 0.25f)" in player
 # The renderer tries the real selected survivor first; only a missing
