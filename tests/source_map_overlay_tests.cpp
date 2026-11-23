@@ -1,4 +1,5 @@
 #include "minidayz/source_map_overlay.hpp"
+#include "minidayz/source_minimap_frames.hpp"
 #include <cassert>
 #include <cstring>
 #include <cmath>
@@ -21,6 +22,44 @@ int main(){
     assert(cell_kind(51)==CellKind::shop);
     assert(cell_kind(50)==CellKind::cafe);
     assert(cell_kind(99)==CellKind::gas_station);
+    // Original Sprite519 minimap frames are chosen from the final
+    // Sprite514 type, not raw road-only symbols. All 42 source actions
+    // are covered by the root extraction audit below.
+    minidayz::WorldGrid grid;
+    assert(grid.resize(16,16));
+    const auto check=[&](std::uint16_t code,std::uint8_t frame){
+        const minidayz::WorldMapMarker m{4,5,0,code};
+        assert(original_minimap_frame(grid,m)==frame);
+    };
+    check(50,19);check(51,20);check(108,36);check(109,37);
+    check(67,38);check(52,29);check(9,4);check(4,4);
+    check(7,4);check(16,4);check(17,4);check(1,0);
+    check(2,0);check(8,0);check(10,0);check(23,14);
+    check(3,7);check(32,26);check(5,5);check(22,27);
+    check(70,30);check(6,6);check(21,6);check(11,8);
+    check(14,3);check(15,9);check(20,7);check(30,17);
+    check(31,16);check(53,21);check(54,22);check(55,23);
+    check(56,24);check(102,31);check(103,32);check(104,33);
+    check(105,4);check(106,34);check(110,34);check(107,35);
+    // Original road13 condition reads Array518.At(X,Y+1/Y-1).
+    check(13,1);
+    assert(grid.set(4,6,9));
+    check(13,12);
+    assert(grid.set(4,4,6));
+    check(13,3);
+    assert(grid.set(4,6,0));
+    check(13,13);
+    // Original road12 condition reads Array518.At(X+1/X-1,Y).
+    check(12,2);
+    assert(grid.set(5,5,11));
+    check(12,11);
+    assert(grid.set(3,5,103));
+    check(12,3);
+    assert(grid.set(5,5,0));
+    check(12,10);
+    assert(!original_minimap_marker_is_visible({4,16,13,13}));
+    assert(original_minimap_marker_is_visible({4,17,13,13}));
+
     // Original 514 roadside SetInstanceVariable(0) overrides the raw
     // road (Array518). The touch map labels the marker, not the base road.
     const minidayz::WorldMapMarker gas{2,3,12,30};

@@ -17,6 +17,7 @@
 #include "minidayz/generated/source_roof_foundation_animations.hpp"
 #include "minidayz/source_world_proximity.hpp"
 #include "minidayz/source_map_overlay.hpp"
+#include "minidayz/source_minimap_frames.hpp"
 #include "minidayz/terrain_collision.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
 #include "minidayz/source_tree_visibility_collision.hpp"
@@ -1409,60 +1410,28 @@ public:
         // and settlements with the original POI IDs. Show those cells
         // rather than inventing buildings or revealing ungenerated places.
         const minidayz::map_overlay::MapRect area{12.0f,32.0f,296.0f,170.0f};
-        const auto classify_color=[](minidayz::map_overlay::CellKind k) noexcept {
-            using K=minidayz::map_overlay::CellKind;
-            switch(k){
-            case K::hospital: return C2D_Color32(191,69,63,255);
-            case K::military: return C2D_Color32(127,157,109,255);
-            case K::firestation: return C2D_Color32(215,117,65,255);
-            case K::market: return C2D_Color32(125,172,197,255);
-            case K::gas_station: return C2D_Color32(223,176,91,255);
-            case K::city: return C2D_Color32(228,207,156,255);
-            case K::village: return C2D_Color32(206,189,144,255);
-            default: return C2D_Color32(185,182,147,255);
-            }
-        };
+        // Each source Sprite514 marker creates Sprite519 (20x20 frame)
+        // in original function generate_minimap. Keep the source type,
+        // Array518 neighbor predicates and frame numbers in one helper.
         for(int y=0;y<grid.height();++y){
             for(int x=0;x<grid.width();++x){
-                using minidayz::map_overlay::CellKind;
                 const auto* marker=world_.map_marker(
                     static_cast<std::size_t>(y)*grid.width()+x);
-                if(!marker)continue;
-                const auto kind=minidayz::map_overlay::marker_cell_kind(*marker);
-                // Draw in ORIGINAL world-space, not Array column/row
-                // order. Root Mapgen converts (X,Y) -> (world Y,world X).
+                if(!marker ||
+                   !minidayz::map_overlay::original_minimap_marker_is_visible(
+                       *marker))continue;
+                // Draw the original source Sprite519 tile frame for this
+                // exact Sprite514.var0 and Array518 road-neighbor context.
+                // No invented section art or custom shapes are substituted.
+                // World X/Y projection retains original Mapgen transposition.
                 const auto cell=minidayz::map_overlay::source_cell_rect(
                     x,y,bounds,area);
-                const float xx=cell.x, yy=cell.y;
-                const float cw=cell.width, ch=cell.height;
-                const float roadw=std::max(1.5f,cw*0.20f);
-                const float roadh=std::max(1.5f,ch*0.20f);
-                const auto road_color=C2D_Color32(165,160,129,255);
-                // Original Array road 13 is HORIZONTAL in the Array but
-                // VERTICAL in world coordinates. Code 12 is the reverse.
-                if(kind==CellKind::road_horizontal ||
-                   kind==CellKind::road_crossing)
-                    renderer.draw_solid_rect(xx+(cw-roadw)*0.5f,yy,
-                        roadw,ch,road_color,0.35f);
-                if(kind==CellKind::road_vertical ||
-                   kind==CellKind::road_crossing)
-                    renderer.draw_solid_rect(xx,yy+(ch-roadh)*0.5f,
-                        cw,roadh,road_color,0.36f);
-                if(minidayz::map_overlay::is_location(kind)){
-                    // Don't paint the FIRST minimap_mark-sheet frame for
-                    // every settlement: it is not every site's correct
-                    // authored icon and produced identical green thumbnails.
-                    // Until source icon/type events are ported, use small
-                    // legible native symbols keyed to known original codes.
-                    const float size=std::max(3.0f,
-                        std::min(6.0f,std::min(cw,ch)*0.55f));
-                    const float mx=xx+(cw-size)*0.5f;
-                    const float my=yy+(ch-size)*0.5f;
-                    renderer.draw_solid_rect(mx-1.0f,my-1.0f,
-                        size+2.0f,size+2.0f,C2D_Color32(15,26,20,255),0.48f);
-                    renderer.draw_solid_rect(mx,my,size,size,
-                        classify_color(kind),0.51f);
-                }
+                const auto frame=minidayz::map_overlay::original_minimap_frame(
+                    grid,*marker);
+                (void)renderer.draw_source_sprite_fitted(
+                    minidayz::map_overlay::kOriginalMinimapSprite,
+                    minidayz::map_overlay::kOriginalMinimapAnimation,frame,
+                    cell.x,cell.y,cell.width,cell.height,0.40f);
             }
         }
         const auto point=minidayz::map_overlay::player_point(
