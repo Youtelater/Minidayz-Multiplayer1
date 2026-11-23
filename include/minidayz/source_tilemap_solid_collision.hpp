@@ -19,6 +19,9 @@ namespace minidayz::terrain {
 inline bool source_solid_tile_contains(
     std::uint16_t object,std::uint32_t descriptor,
     float unit_x,float unit_y) noexcept {
+    // Only original Tilemap208 (water) and 211 (forest) carry the
+    // Solid behavior. Tilemap418 (sand) is visible ground, not a wall.
+    if(object!=208 && object!=211)return false;
     if(descriptor==kTileEmpty || !std::isfinite(unit_x) ||
        !std::isfinite(unit_y) ||
        unit_x<0.0f || unit_y<0.0f ||
