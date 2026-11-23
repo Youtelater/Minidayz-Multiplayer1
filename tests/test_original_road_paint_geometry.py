@@ -185,6 +185,37 @@ def trace_road_legs(nodes,parents=()):
 trace_road_legs(dict(project[6])["Game_events"])
 assert found_legs==source_leg_ids
 
+# Source road codes12 and13 also contain optional 9-tile
+# perpendicular arms. Record each exact event/parent predicate before
+# implementing them; a road code alone never authorizes those pixels.
+additional_leg_ids={
+    4140793207746288,1609283690277773,
+    7388915329079069,9705891230602422,
+    6009205636428013,2753364281434062,
+    1939245565475465,4493044907863185,
+}
+seen_extra=set()
+def trace_extra(nodes,anc=()):
+    for e in nodes if isinstance(nodes,list) else ():
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+        for a in e[6] if isinstance(e[6],list) else ():
+            if not isinstance(a,list) or len(a)<6 or a[3] not in additional_leg_ids:
+                continue
+            assert a[:2]==[1066,202] and a[5][4]==[0,[0,15]]
+            seen_extra.add(a[3])
+            conditions=e[5] if isinstance(e[5],list) else []
+            print("SOURCE_ROAD_EXTRA_LEG",json.dumps({
+                "uid":a[3],"event":e[4],
+                "or_block":e[2],
+                "conditions":conditions,
+                "parents":[{"event":p[4],"guards":p[5]} for p in anc[-5:]],
+                "rect":a[5][:4]
+            },separators=(",",":"))[:8000])
+        if len(e)>7 and isinstance(e[7],list):
+            trace_extra(e[7],anc+(e,))
+trace_extra(dict(project[6])["Game_events"])
+assert seen_extra==additional_leg_ids
+
 for row in road_branch_report:
     print("SOURCE_ROAD_BRANCH",json.dumps(row,separators=(",",":"))[:6500])
 
