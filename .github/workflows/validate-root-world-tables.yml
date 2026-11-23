@@ -4,6 +4,15 @@ on:
     branches: [main]
     paths:
       - 'data.deobfuscated.js'
+      - 'c2runtime.js'
+      - 'source/world.cpp'
+      - 'source/construct_expression.cpp'
+      - 'source/location_event_runtime.cpp'
+      - 'source/terrain_scatter_render.cpp'
+      - 'include/minidayz/world.hpp'
+      - 'tests/world_system_tests.cpp'
+      - 'tests/construct_expression_tests.cpp'
+      - 'tests/test_original_world_poi_bounds.py'
       - 'tools/stage1/extract_location_templates.py'
       - 'tools/stage1/build_procedural_environment.py'
       - 'tools/stage1/extract_npc_spawn_calls.py'
