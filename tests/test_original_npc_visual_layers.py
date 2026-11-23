@@ -41,11 +41,13 @@ for skin,body in skin_to_body.items():
         any(action[:2]==[256,73] and action[5][:2]==[
             [4,body],[5,[2,"Zeds"]]]
             for action in event[6] if isinstance(action,list) and len(action)>5)]
-    assert len(branches)==1, f"Original skin {skin} body Spawn changed"
-    branch=branches[0]
-    assert any(action[:3]==[body,57,"Pin2"] and action[5]==[
-        [4,256],[3,1]] for action in branch[6]), (
-        f"Source skin {skin} body no longer pinned to hidden controller")
+    # Source Spawn_NPC has two guarded creation paths for each body.
+    # Checking only the first branch silently loses a whole action family.
+    assert len(branches)==2, f"Original skin {skin} body Spawn branch count changed"
+    for branch in branches:
+        assert any(action[:3]==[body,57,"Pin2"] and action[5]==[
+            [4,256],[3,1]] for action in branch[6]), (
+            f"Source skin {skin} body no longer pinned to hidden controller")
 
 # Every source reference to zed_resp is a spawn/position action, never a
 # visible-world layer-toggle. The controller layer remains hidden.
