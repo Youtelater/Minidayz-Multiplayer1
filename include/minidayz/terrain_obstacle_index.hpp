@@ -71,11 +71,31 @@ public:
             // frame 15. Index the entire possible companion footprint;
             // otherwise a movement query can miss it even though polygon
             // collision below uses the correct source frame.
-            const float radius=std::hypot(p->width,p->height)+
+            float radius=std::hypot(p->width,p->height)+
                 (p->object==349
                     ? std::hypot(world_source::door_solid348::kWidth,
                                  world_source::door_solid348::kHeight)
                     : 0.0f);
+            // Tree collision is anchored at a source image point. Include
+            // the companion's full extent when indexing the fallback so
+            // its edges can still be queried across a bucket boundary.
+            if(standalone_tree){
+                float trunk_x{},trunk_y{};
+                if(source_standing_tree_trunk_position(*p,trunk_x,trunk_y)){
+                    radius=std::max(radius,std::hypot(trunk_x-center_x,trunk_y-center_y)+
+                        std::hypot(world_source::kOriginalTreeHitboxWidth,
+                                   world_source::kOriginalTreeHitboxHeight));
+                }
+                if(p->object==210){
+                    const auto* frame=world_source::source_tree_block_frame(p->source_frame);
+                    if(frame){
+                        const float offset_x=(frame->point_x-frame->origin_x)*p->width;
+                        const float offset_y=(frame->point_y-frame->origin_y)*p->height;
+                        radius=std::max(radius,std::hypot(offset_x,offset_y)+
+                            std::hypot(frame->solid_width,frame->solid_height));
+                    }
+                }
+            }
             const int x0=std::clamp(static_cast<int>(
                 std::floor((center_x-radius)/kCell)),0,cols_-1);
             const int y0=std::clamp(static_cast<int>(
