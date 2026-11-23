@@ -31,6 +31,14 @@ enum=(ROOT/"include/minidayz/stage2_audio.hpp").read_text(encoding="utf-8")
 assert '"romfs:/wav/open.wav"' in audio
 assert 'carTrunkOpen' in enum
 assert 'OriginalWorldSound::carTrunkOpen' in scene
+# One original Sprite241 search event must play one source cue, not two.
+# Checking the interaction function catches duplicated playback without
+# mistaking unrelated scene-wide world sound calls for this car event.
+search_start=scene.index("bool request_source_car_trunk() noexcept {")
+search_end=scene.index("\n    }",search_start)
+assert scene[search_start:search_end].count(
+    "OriginalWorldSound::carTrunkOpen")==1, (
+    "Original car trunk open sound is missing or played more than once")
 assert (ROOT/"romfs/wav/open.wav").is_file()
 
 assert audio.count("source_car_open")>=2

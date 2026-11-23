@@ -3386,14 +3386,9 @@ private:
             source_furniture_feedback_seconds_=3.0f;
             return true;
         }
-        // Original Game_events UID7711324247664447 plays the original
-        // sound resource "open" (-5dB) when the trunk is searched, not
-        // the wood/metal door opening sounds or a guessed car-door sound.
-        stage2_audio_.play_original_world_sound(
-            minidayz::OriginalWorldSound::carTrunkOpen);
-        // Original Game_events Sprite241 searched: cue "open" before
-        // the conditional 1041-overlap loot/XP branch. Play the source
-        // WAV, not the wood-door sample.
+        // Root Game_events UID 7711324247664447 plays "open" (-5dB)
+        // ONCE when Sprite241 is searched. Do not duplicate the source
+        // cue or substitute a door/car sample.
         stage2_audio_.play_original_world_sound(
             minidayz::OriginalWorldSound::carTrunkOpen);
         (void)perks_.award_experience(2);
