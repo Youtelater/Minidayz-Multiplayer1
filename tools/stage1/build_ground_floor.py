@@ -150,47 +150,34 @@ with tempfile.TemporaryDirectory(prefix="mdz_original_ground_") as tmp:
         if not destination.is_file() or destination.stat().st_size < 32:
             raise SystemExit("Original ground sprite atlas failed: " + str(destination))
 
-# The authored Map holds only two very narrow ground tilemap strips.
-# Construct's game events populate the rest of the playable world at runtime.
-# Until the per-cell Construct tile painting events are fully translated,
-# a 3DS renderer must draw a source-art ground tile BEHIND those authored
-# placements; otherwise every generated settlement outside the strips is
-# rendered over a black/empty GPU clear color.
+# The authored Map stores narrow tilemap strips. The runtime Construct
+# SetTile events populate the wider playable world. The 3DS backdrop is
+# only a fallback BEHIND those exact source RLE/SetTile layers.
 #
-# Take the grass-textured lower-right source tile from the ORIGINAL
-# ground_lvl1_tilemap.png; never synthesize artwork or use images/ copies.
-# Keep this separate from source tile IDs so the authored RLE tiles remain
-# exact and the existing source layout verifier is not weakened.
-# CurrentLevel 0/1/2 source events create tilemap objects 482/687/688.
-# A Construct ground sheet is a 5x5 grid of actual 60px tile cells, not
-# a 2x2 set of 150px quadrants. Use each sheet's most frequent authored
-# tile as its level-specific background; never cut across tile boundaries.
+# Source ground_lvl1..7_tilemap.png all contain a 5-column palette of
+# original 60x60 tiles. The earlier fallback picked the most-common tile
+# from the narrow editor strip, which can be an EDGE/TRANSITION tile with
+# a dark boundary. Repeating it made the screenshot's black lines every
+# 60 world pixels, seemingly moving with the player as the camera scrolled.
+#
+# Use the original upper-right plain background CELL (index 4) from the
+# respective level's own unmodified source artwork. No synthesized or
+# repainted world art is permitted. The source Map RLE cells and generated
+# foreground SetTile events are still separate and unaffected. This fallback
+# is not a substitute for completing those original Construct paint events.
 base_tile_pixels = tile_width
+kOriginalPlainGroundTile = 4
 for level, object_id in enumerate(SOURCE_GROUND):
     source = images[object_id]
-    distribution = Counter((raw & TILE_MASK)
-                           for _, _, _, _, cells, inst_object in instances
-                           if inst_object == object_id
-                           for raw in cells if raw != RAW_EMPTY)
-    # Only five ground objects have preauthored Map instances; others
-    # are spawned by source Construct events. Their source sprite sheets
-    # still provide terrain for later levels, and must not be excluded.
-    if distribution:
-        base_id = distribution.most_common(1)[0][0]
-    else:
-        # Select the first visible, nontransparent source tile. Do not
-        # fabricate pixel art or borrow artwork from another level.
-        base_id = None
-        columns = sheet_columns[object_id]
-        for index in range(columns * (source.height // tile_width)):
-            x0 = (index % columns) * tile_width
-            y0 = (index // columns) * tile_width
-            tile = source.crop((x0, y0, x0 + tile_width, y0 + tile_width))
-            if tile.getbbox() is not None:
-                base_id = index
-                break
-        if base_id is None:
-            raise SystemExit(f"Ground level {level} sheet contains no visible tile")
+    if sheet_columns[object_id] != 5 or source.height < tile_width:
+        raise SystemExit(f"Unexpected original 5-column ground atlas {object_id}")
+    base_id = kOriginalPlainGroundTile
+    # Never substitute a fabricated texture or transparent editor tile.
+    # The original source art must contain the selected 60x60 background.
+    plain_x = (base_id % sheet_columns[object_id]) * tile_width
+    source_plain = source.crop((plain_x,0,plain_x + tile_width,tile_width))
+    if source_plain.getbbox() is None:
+        raise SystemExit(f"Original source background tile missing: {object_id}:{base_id}")
     x = (base_id % sheet_columns[object_id]) * tile_width
     y = (base_id // sheet_columns[object_id]) * tile_width
     if level == 0:

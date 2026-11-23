@@ -2587,10 +2587,15 @@ public:
         const auto& p = player_.state();
         constexpr float view_w = 400.0f;
         constexpr float view_h = 240.0f;
-        const float camera_x = std::clamp(p.x - view_w * 0.5f, 0.0f,
-            std::max(0.0f, world_.bounds().width - view_w));
-        const float camera_y = std::clamp(p.y - view_h * 0.5f, 0.0f,
-            std::max(0.0f, world_.bounds().height - view_h));
+        // Original 60px source tile quads must land on integer 3DS pixels.
+        // Subpixel camera translation made adjacent tile borders shimmer
+        // as the survivor walked; world physics and saved XY stay exact.
+        const float camera_x = std::floor(std::clamp(
+            p.x - view_w * 0.5f, 0.0f,
+            std::max(0.0f, world_.bounds().width - view_w)));
+        const float camera_y = std::floor(std::clamp(
+            p.y - view_h * 0.5f, 0.0f,
+            std::max(0.0f, world_.bounds().height - view_h)));
         renderer.set_camera(camera_x, camera_y);
         // The source Map uses Construct Tilemaps, not sprites. The native
         // floor must be drawn from the original ground_lvl1 tile sheet,

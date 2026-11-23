@@ -65,6 +65,11 @@ assert 'world.source_scatter_patches()' in scatter
 assert 'std::minstd_rand' not in scatter
 assert 'original_map_ground_p{page:03}.t3x' in ground
 assert 'source.crop((x, y, x + tile_width, y + tile_width))' in ground
+assert "kOriginalPlainGroundTile = 4" in ground
+assert "base_id = kOriginalPlainGroundTile" in ground
+assert "selected = 4" in (root/"tools/stage1/verify_ground_floor.py").read_text(encoding="utf-8")
+assert "std::floor(std::clamp(" in main
+
 assert 'art.crop((x,y,x+tile_size,y+tile_size))' in details
 assert 'original_map_detail_{object_id}.t3x' in details
 print('PASS: terrain coordinates, original frames, seven level themes, '

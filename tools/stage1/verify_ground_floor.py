@@ -63,34 +63,22 @@ for inst in instances:
     assert len(cells) == cols * rows
     expected.append((float(t[0]), float(t[1]), cols, rows, object_id, cells))
 
-# Verify the specific ORIGINAL 60px tile selected for each backdrop.
-# A non-empty atlas file alone cannot detect a transparent wrong crop.
+# Only the fallback changes: original source-authored RLE tile descriptors
+# remain untouched. The original source palette cell 4 is the plain level-
+# specific ground tile. Repeating a transition tile from a narrow editor
+# strip was the cause of the dark 60px world-grid lines in the emulator.
 for object_id, filename in source_objects.items():
-    population = Counter((v & 0x1fffffff)
-        for x, y, cols, rows, obj, cells in expected
-        if obj == object_id for v in cells if v != -1)
-    if population:
-        selected = population.most_common(1)[0][0]
-    else:
-        # Later maps are created dynamically; they have no preplaced strip.
-        with Image.open(ROOT / "assets/gfx" / filename) as im:
-            original = im.convert("RGBA")
-            columns = original.width // tile_pixels
-            selected = next((i for i in range(columns * (original.height // tile_pixels))
-                if original.crop(((i % columns) * tile_pixels,
-                                  (i // columns) * tile_pixels,
-                                  ((i % columns) + 1) * tile_pixels,
-                                  ((i // columns) + 1) * tile_pixels)).getbbox()), None)
-            assert selected is not None, object_id
+    selected = 4
     with Image.open(ROOT / "assets/gfx" / filename) as image_source:
         source = image_source.convert("RGBA")
         columns = source.width // tile_pixels
+        assert columns == 5 and selected < columns, (object_id,columns)
         x = (selected % columns) * tile_pixels
         y = (selected // columns) * tile_pixels
         base = source.crop((x, y, x + tile_pixels, y + tile_pixels))
         assert base.getbbox() is not None, f"Transparent terrain tile {object_id}:{selected}"
         assert len(base.getcolors(maxcolors=50000) or []) > 8, (
-            f"Incorrect background crop {object_id}:{selected}")
+            f"Incorrect original background crop {object_id}:{selected}")
 per_page = min(128, max(1, 1024 // tile_pixels) ** 2)
 # The atlas now packages the COMPLETE original seven-level tile palette,
 # not only tiles seen in authored source strips. This protects procedural
