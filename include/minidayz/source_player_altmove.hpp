@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <cstdint>
 
 namespace minidayz::stage1 {
 // Root Game_events -> Animations, Set AltMove MaxSpeed action
@@ -17,6 +18,14 @@ struct SourcePlayerAltMoveModifiers {
     float regen_bonus{};      // PlayerBase var5: source perk_regen +10
     float equipment_bonus{};  // PlayerBase var8: source equipment events
 };
+// Root Game_events / Player stats UID 189013257553857:
+ // System Compare perk_regen > 1 (Construct comparator 4) sets
+ // PlayerBase193 instance variable5 to +10. At level 1 this speed
+ // boost MUST remain zero even though other regeneration effects may run.
+inline float source_player_regen_speed_bonus(
+    std::uint8_t source_regen_perk_level) noexcept {
+    return source_regen_perk_level > 1 ? 10.0f : 0.0f;
+}
 inline float source_player_altmove_max_speed(
     const SourcePlayerAltMoveModifiers& m) noexcept {
     return std::max(0.0f,100.0f-m.damage_slowdown-m.terrain_slowdown+
