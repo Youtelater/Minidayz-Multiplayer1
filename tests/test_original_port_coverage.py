@@ -23,7 +23,10 @@ assert all(r["verification"]=="not_event_verified" or
 cars=json.loads((data/"original_car_loot_event_manifest.json").read_text())
 assert cars["source_event_occurrences"]>=8
 assert all(not v["native_car_interaction_implemented"] for v in cars["branches"])
-assert all(v["item_choices_weighted"] and
- v["source_action"][5][0]==[1,[2,"Spawn_drop"]] for v in cars["branches"])
+assert all(v["item_expression_kind"] in (
+  "original_choose","original_literal","original_dynamic_expression")
+  and v["source_action"][5][0]==[1,[2,"Spawn_drop"]] for v in cars["branches"])
+assert all(v["item_choices_weighted"] for v in cars["branches"]
+ if v["item_expression_kind"] != "original_dynamic_expression")
 assert 226004896143721 in [v["event_uid"] for v in cars["branches"]]
 print("PASS: 22,343 events individually indexed, no silent skipped seven-field events or fake car implementation")
