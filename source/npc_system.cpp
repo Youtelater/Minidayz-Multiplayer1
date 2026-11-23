@@ -38,9 +38,9 @@ std::uint16_t body_for_skin(std::uint8_t skin_id) noexcept {
     }
 }
 std::uint64_t stable_spawn_uid(const WorldPlacement& placement) noexcept {
-    // Generated Construct placements currently have no persistent UID. Hash
-    // their exact source coordinates/object so skin selection is stable for
-    // the same generated world and does not collapse to one default skin.
+    // Legacy/imported placements without a runtime instance ID use
+    // stable source coordinates/object as an identity fallback. Never
+    // substitute a shared original event ACTION UID for instance identity.
     std::uint32_t x{}, y{};
     std::memcpy(&x, &placement.x, sizeof(x));
     std::memcpy(&y, &placement.y, sizeof(y));
@@ -64,8 +64,15 @@ bool NpcSystem::initialize(const WorldSystem& world) noexcept {
         for (std::size_t i = 0; i < world.placement_count(); ++i) {
             const auto* placement = world.placement(i);
             if (!placement || placement->object != 216) continue;
-            const std::uint64_t uid = placement->source_uid != 0
-                ? placement->source_uid : stable_spawn_uid(*placement);
+            // Source UID identifies the Construct CREATE ACTION, not
+            // its individual runtime instance. Several original
+            // helicopter/zombie markers share one action UID. Seeding
+            // each NPC from that UID cloned their skin and wander offset,
+            // stacking distinct generated zombies at the same location.
+            // Native WorldSystem assigns a stable unique runtime_uid to
+            // each original instance; preserve source_uid for provenance.
+            const std::uint64_t uid = placement->runtime_uid != 0
+                ? placement->runtime_uid : stable_spawn_uid(*placement);
             if (!spawn_at(placement->x, placement->y, 0.0f, 0, uid)) {
                 reset();
                 return false;
