@@ -72,6 +72,21 @@ def chosen_ids(action):
     if result is not None:return result
   return None
  return visit(action[5])
+def car_item_expression(action):
+ # Second Spawn_drop argument is an expression for the item ID. Some
+ # original tutorial/variant branches pass a single literal, not choose.
+ item=action[5][1] if len(action[5])>1 else None
+ options=chosen_ids(action)
+ if options is not None:return "original_choose",options,item
+ def single_literal(x):
+  if isinstance(x,list):
+   if len(x)==2 and x[0]==0 and isinstance(x[1],int):return x[1]
+   if len(x)==2 and x[0] in (7,13):return single_literal(x[1])
+  return None
+ literal=single_literal(item)
+ if literal is not None:return "original_literal",[literal],item
+ # Never coerce a dynamic source expression into an invented item ID.
+ return "original_dynamic_expression",[],item
 def car_branch(record):
  ancestor=set(record["parent_uids"])
  return bool({7711324247664447,1792234758292318}&ancestor)
@@ -92,13 +107,14 @@ with (out/"every_original_event.jsonl").open("w",encoding="utf-8") as dest:
     if not action[5] or action[5][0]!=[1,[2,"Spawn_drop"]]:
      continue
     if not car_branch(row):continue
-    options=chosen_ids(action)
-    if options is None:raise ValueError((row["key"],"Source car Spawn_drop without literal choice"))
+    choice_kind,options,item_expr=car_item_expression(action)
     car_entries.append({"key":row["key"],"event_uid":row["uid"],
       "sheet":row["sheet"],"path":row["path"],"ancestor_uids":row["parent_uids"],
       "original_inherited_conditions":row["inherited_conditions"],
       "original_conditions":row["conditions"],
-      "source_action":action,"item_choices_weighted":options,
+      "source_action":action,"original_item_expression":item_expr,
+      "item_expression_kind":choice_kind,
+      "item_choices_weighted":options,
       "source_item_choice_count":len(options),
       "verification":row["verification"],
       "native_car_interaction_implemented":False})
@@ -108,7 +124,9 @@ assert stats["seven_field_leaf_events"]==14560,stats
 assert stats["reviewed_event_mappings"]==len(verified),stats
 assert len(car_entries)>=8,len(car_entries)
 assert any(x["event_uid"]==226004896143721 for x in car_entries)
-assert all(x["source_item_choice_count"] for x in car_entries)
+assert all(x["item_expression_kind"] in
+    ("original_choose","original_literal","original_dynamic_expression")
+    for x in car_entries)
 cars={"authority":"root data.deobfuscated.js; original object 241",
       "warning":"Source trace only; car interaction/drop is NOT wired to the 3DS runtime.",
       "source_event_occurrences":len(car_entries),"branches":car_entries}
