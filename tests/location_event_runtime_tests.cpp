@@ -97,6 +97,11 @@ void test_root_original_settlement_array_rows() {
             "ROOT SETTLEMENT ARRAY tile=%d source_uid=%llu rows=%zu count=%zu houses=%zu\n",
             code,static_cast<unsigned long long>(t->event_uid),
             array.height(),count,houses);
+        // A village/city source template has multiple authored houses,
+        // not just one. Check the live interpreter did not overwrite all
+        // original Array525.SetAtXY records at index At(0).
+        assert(count>=4);
+        assert(houses>=2);
     }
 }
 
