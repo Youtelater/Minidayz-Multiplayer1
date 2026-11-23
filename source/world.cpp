@@ -1445,6 +1445,20 @@ bool WorldSystem::set_linked_door_solid_present(
     return true;
 }
 
+bool WorldSystem::mark_source_car_trunk_searched(
+    std::size_t index) noexcept {
+    if(index>=placements_.size())return false;
+    auto& p=placements_[index];
+    if(p.object!=241 || !p.runtime_uid || p.source_variable_0!=0)
+        return false;
+    // Root Player181 OnCollision241 destroys the trunk marker even when
+    // its loot roll fails. Retain a hidden stable native placement so
+    // Continue can replay source_variable_0 and opacity from the sidecar.
+    p.source_variable_0=1;
+    p.opacity=0.0f;
+    return true;
+}
+
 bool WorldSystem::set_placement_sprite_state(
     std::size_t index, std::uint16_t animation, std::uint32_t frame,
     float opacity) noexcept {
