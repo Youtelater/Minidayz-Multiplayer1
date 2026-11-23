@@ -1002,7 +1002,11 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // interior/wall collider and shadow sprites at ORIGINAL imagepoints.
         // These per-frame imagepoints come from source frame[9], including
         // named w1/s1 and numeric 3, not guessed PNG texture rectangles.
-        if(var1==7 || var1==4) {
+        if(var1==7 || var1==4 || var1==6) {
+        // Category 6 is the root original car-wreck scenery family.
+        // Each Sprite213/212/487/... spawns an authored Sprite241 trunk
+        // (and usually a 345/348 Solid). The old 4/7-only filter dropped
+        // the ENTIRE car-trunk and collision companion chain.
         std::vector<std::pair<std::uint16_t,std::size_t>> spawned;
         spawned.emplace_back(rule.object,placements_.size()-1);
         for(const auto& action:world_source::kSourceHouseCompanionSpawns){
@@ -1013,7 +1017,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             if(action.variant!=var2 || action.base_object!=rule.object)continue;
             // Category 4 scenery is distinct from category 7 houses;
             // its exact original event UID also preserves nested variant guards.
-            if(var1==4 && action.event_uid!=rule.uid)continue;
+            if((var1==4 || var1==6) && action.event_uid!=rule.uid)continue;
             auto parent_index=placements_.size();
             for(auto it=spawned.rbegin();it!=spawned.rend();++it){
                 if(it->first==action.parent_object){
