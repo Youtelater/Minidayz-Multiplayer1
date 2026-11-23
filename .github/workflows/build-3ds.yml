@@ -278,6 +278,10 @@ jobs:
             -o /tmp/minidayz_original_building_loot
           /tmp/minidayz_original_building_loot
 
+      - name: Verify original Edrink source timer and PlayerBase speed effect
+        shell: bash
+        run: python3 tests/test_original_energy_drink_source.py
+
       - name: Assert exact original bed ghost and FX sprite coordinates
         shell: bash
         run: python3 tests/test_original_bed_source_contract.py
