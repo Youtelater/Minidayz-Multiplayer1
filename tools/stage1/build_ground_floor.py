@@ -150,29 +150,33 @@ with tempfile.TemporaryDirectory(prefix="mdz_original_ground_") as tmp:
         if not destination.is_file() or destination.stat().st_size < 32:
             raise SystemExit("Original ground sprite atlas failed: " + str(destination))
 
-# The authored Map stores narrow tilemap strips. The runtime Construct
-# SetTile events populate the wider playable world. The 3DS backdrop is
-# only a fallback BEHIND those exact source RLE/SetTile layers.
-#
-# Source ground_lvl1..7_tilemap.png all contain a 5-column palette of
-# original 60x60 tiles. The earlier fallback picked the most-common tile
-# from the narrow editor strip, which can be an EDGE/TRANSITION tile with
-# a dark boundary. Repeating it made the screenshot's black lines every
-# 60 world pixels, seemingly moving with the player as the camera scrolled.
-#
-# Use the original upper-right plain background CELL (index 4) from the
-# respective level's own unmodified source artwork. No synthesized or
-# repainted world art is permitted. The source Map RLE cells and generated
-# foreground SetTile events are still separate and unaffected. This fallback
-# is not a substitute for completing those original Construct paint events.
-base_tile_pixels = tile_width
-kOriginalPlainGroundTile = 4
+# The root original Map's TWO Sprite482 tilemap instances have 5,975
+# authored cells of tile ID 6 each (plus only two transition cells 21/22).
+# Other root Map ground sheets also place ID 6 when occupied. Therefore
+# use the same original *source-authored repeating interior tile* for the
+# 3DS fallback where the root layout contains no floor cell. Tile ID 4
+# is an ORIGINAL transition graphic, NOT a plain background. Tiling it
+# made the user's screenshots show a blatant checkerboard of dark squares.
+# No original PNG is recolored, synthesized or renamed.
+source_base_tile = Counter((raw & TILE_MASK)
+    for _, _, _, _, cells, object_id in instances if object_id == OBJECT
+    for raw in cells if raw != RAW_EMPTY).most_common(1)[0][0]
+if source_base_tile != 6:
+    raise SystemExit(f"Root original Map floor tile changed: {source_base_tile}")
+for object_id in SOURCE_GROUND:
+    authored=Counter((raw & TILE_MASK)
+        for _, _, _, _, cells, oid in instances if oid==object_id
+        for raw in cells if raw != RAW_EMPTY)
+    if authored and authored.most_common(1)[0][0]!=source_base_tile:
+        raise SystemExit(
+            f"Original ground theme {object_id} has different interior tile")
+base_tile_pixels=tile_width
 for level, object_id in enumerate(SOURCE_GROUND):
     source = images[object_id]
     if sheet_columns[object_id] != 5 or source.height < tile_width:
         raise SystemExit(f"Unexpected original 5-column ground atlas {object_id}")
-    base_id = kOriginalPlainGroundTile
-    # Never substitute a fabricated texture or transparent editor tile.
+    base_id = source_base_tile
+    # Retain exact root-authored Map interior cell, not transition tile4.
     # The original source art must contain the selected 60x60 background.
     plain_x = (base_id % sheet_columns[object_id]) * tile_width
     source_plain = source.crop((plain_x,0,plain_x + tile_width,tile_width))

@@ -63,12 +63,14 @@ for inst in instances:
     assert len(cells) == cols * rows
     expected.append((float(t[0]), float(t[1]), cols, rows, object_id, cells))
 
-# Only the fallback changes: original source-authored RLE tile descriptors
-# remain untouched. The original source palette cell 4 is the plain level-
-# specific ground tile. Repeating a transition tile from a narrow editor
-# strip was the cause of the dark 60px world-grid lines in the emulator.
+# Original Map Sprite482 RLE has 5,975 repeats of ground ID6 in each
+# of its two tilestrips; ID4 is a visibly nonuniform transition tile.
+# Preserve every RLE descriptor and use original ID6 as fallback art only.
+original_base_id = Counter(v & 0x1fffffff for _,_,_,_,obj,cells in expected
+                           if obj==482 for v in cells if v!=-1).most_common(1)[0][0]
+assert original_base_id == 6
 for object_id, filename in source_objects.items():
-    selected = 4
+    selected = original_base_id
     with Image.open(ROOT / "assets/gfx" / filename) as image_source:
         source = image_source.convert("RGBA")
         columns = source.width // tile_pixels
