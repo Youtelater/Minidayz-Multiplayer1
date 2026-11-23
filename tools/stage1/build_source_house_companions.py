@@ -45,6 +45,7 @@ def spawn(a):
  if not isinstance(layer,str) or not isinstance(point,(int,str)):return None
  return a[0],target,layer,point
 rules=[];ignored=0;events=0;primaries=[];unverified_primary_conditions=0
+nested_car_trunks=0
 unverified_primary_branches=[]
 for name,nodes in p[6]:
  if name!="Game_events":continue
@@ -77,6 +78,7 @@ for name,nodes in p[6]:
     if any(spawn(a) == (base,241,"Sunset_Dawn",1)
            for a in source_child):
      acts=list(acts)+list(source_child)
+     nested_car_trunks+=1
   # Original child event predicate: Mapgen508 instance variable index2
   # equals the current create_map_element variant. This is stronger than
   # trusting stale generated event UIDs in world_source_data.hpp.
@@ -218,6 +220,11 @@ for name,nodes in p[6]:
                  item["animation"],item["frame"],
                  item["width_delta"],item["height_delta"],
                  item["angle_degrees"],item["opacity"],item["variables"]))
+# All 15 original searchable car wrecks in category6 must retain their
+# nested var3=0 trunk marker; 13/14 have no search marker by source design.
+if nested_car_trunks!=15:
+ raise RuntimeError(f"Missing source category6 nested car trunks: {nested_car_trunks}/15")
+print("Original category6 car wreck searchable Sprite241 companions",nested_car_trunks)
 if not rules:raise SystemExit("No original source house Spawn events recovered")
 # Root category 7 contains 51 primary events, all single literal variant
 # guards. Fail closed if the original changes: runtime does not consult the
