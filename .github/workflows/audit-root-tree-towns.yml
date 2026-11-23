@@ -1,0 +1,15 @@
+name: Audit Root Tree Objects and Multi-Building Location Events
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage1/audit_root_tree_town_parity.py'
+      - '.github/workflows/audit-root-tree-towns.yml'
+  workflow_dispatch:
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect authoritative tree and settlement source event branches
+        run: python3 tools/stage1/audit_root_tree_town_parity.py
