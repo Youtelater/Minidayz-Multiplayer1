@@ -44,3 +44,17 @@ for oid in (193,679):
   if not isinstance(a,list) or len(a)<8:continue
   print("PLAYER_ORIGINAL_ANIMATION",oid,i,a[0],"speed",a[2],"loop",a[4],
      "frames",len(a[7]))
+
+print("PLAYER_BASE_OBJECT_193_SOURCE_FIELDS")
+o=p[3][193]
+for i,v in enumerate(o[:7]):
+ print("PLAYER_BASE_FIELD",i,json.dumps(v,ensure_ascii=False,separators=(",",":"))[:12500])
+print("PLAYER_BASE_GAMEEVENTS_VAR_MODIFIERS")
+count=0
+for node,parents,groups in walk(sheets["Game_events"]):
+ for a in node[6] if isinstance(node[6],list) else ():
+  if isinstance(a,list) and len(a)>5 and a[0]==193 and a[1] in (88,89,90,253):
+   print("PLAYER_BASE_MOD",json.dumps({"uid":a[3],"event":node[4],
+     "groups":groups[-4:],"conds":node[5],"action":a},separators=(",",":"))[:2400])
+   count+=1
+print("PLAYER_BASE_MOD_COUNT",count)
