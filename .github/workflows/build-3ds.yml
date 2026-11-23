@@ -227,6 +227,7 @@ jobs:
           /tmp/minidayz_world_sprite_view
 
       - name: Test original road UV clipping for rotated source atlas tiles
+        shell: bash
         run: |
           set -euo pipefail
           g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
