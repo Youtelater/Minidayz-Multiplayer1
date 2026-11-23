@@ -85,32 +85,46 @@ constexpr bool source_road_neighbor_permits_junction(std::uint16_t code) noexcep
  default:return false;
  }
 }
+// Source original category12/13 also execute four guarded 9-tile
+// extensions AFTER the 17x2 / 2x17 base pavement. Those guards use
+// different 9/10-code sets from category14:
+// - category12 vertical arms exclude neighboring code12,
+// - category13 horizontal arms exclude neighboring code13,
+// - category14 all four arms admit the full 10-code source set.
+constexpr bool source_road_neighbor_permits_arm(
+    std::uint16_t base_code,int arm,std::uint16_t neighbor) noexcept {
+ if(arm<0||arm>=4 || !source_road_neighbor_permits_junction(neighbor))
+     return false;
+ if(base_code==12 && arm<2 && neighbor==12)return false;
+ if(base_code==13 && arm>=2 && neighbor==13)return false;
+ return base_code==12 || base_code==13 || base_code==14;
+}
 template<class Grid>
 inline terrain::RoadBand source_grid_road_segment(
     const Grid& grid,int array_col,int array_row,int segment,
     float road_width) noexcept {
- if(!(road_width>0.0f) || segment<0 || segment>=4)return {};
+ if(!(road_width>0.0f) || segment<0 || segment>=5)return {};
  const auto code=grid.at(array_col,array_row);
- // The root code12 / code13 base SetTileRange actions are 17x2 / 2x17.
- if(code==12) return segment==0?
-     mapgen_road_band(code,false,array_col,array_row,road_width):
-     terrain::RoadBand{};
- if(code==13) return segment==0?
-     mapgen_road_band(code,true,array_col,array_row,road_width):
-     terrain::RoadBand{};
- if(code!=14)return {};
+ if(code!=12 && code!=13 && code!=14)return {};
+ // Source code12/13 first paints the 17-cell straight base, then four
+ // independent 9-cell arms. Source code14 paints only the four arms.
+ // Use the original event/action order in case source arms overlap.
+ if(code!=14 && segment==0)
+    return mapgen_road_band(code,code==13,array_col,array_row,road_width);
+ if(code==14 && segment==4)return {};
+ const int arm=code==14?segment:segment-1;
  const std::uint16_t neighbor=
-     segment==0?grid.at(array_col-1,array_row):
-     segment==1?grid.at(array_col+1,array_row):
-     segment==2?grid.at(array_col,array_row-1):
-                grid.at(array_col,array_row+1);
- if(!source_road_neighbor_permits_junction(neighbor))return {};
+     arm==0?grid.at(array_col-1,array_row):
+     arm==1?grid.at(array_col+1,array_row):
+     arm==2?grid.at(array_col,array_row-1):
+            grid.at(array_col,array_row+1);
+ if(!source_road_neighbor_permits_arm(code,arm,neighbor))return {};
  const auto c=mapgen_hotspot(array_col,array_row);
  const float tile=road_width/static_cast<float>(kOriginalRoadWidthTiles);
  const float beginning_x=c.x-8.5f*tile;
  const float beginning_y=c.y-8.5f*tile;
  const float half_length=9.0f*tile;
- switch(segment){
+ switch(arm){
  case 0: return {beginning_x+8.0f*tile,beginning_y,
                   road_width,half_length};
  case 1: return {beginning_x+8.0f*tile,beginning_y+8.0f*tile,
@@ -144,7 +158,7 @@ template<class Grid>
 inline bool source_grid_road_contains(
     const Grid& grid,int array_col,int array_row,
     float x,float y,float road_width) noexcept {
- for(int segment=0;segment<4;++segment){
+ for(int segment=0;segment<5;++segment){
   const auto band=source_grid_road_segment(
       grid,array_col,array_row,segment,road_width);
   if(band.valid() && x>=band.x && x<band.x+band.width &&
