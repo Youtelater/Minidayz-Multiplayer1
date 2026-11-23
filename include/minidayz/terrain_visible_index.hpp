@@ -43,7 +43,7 @@ public:
             const auto* layer=stage1::find_layer(layout_index,p->layer);
             if(!layer || (p->layer>=44 &&
                !world_source::source_world_high_layer_gameplay_art(
-                    p->object,layer->name)))continue;
+                    p->object,layer->name,p->source_uid)))continue;
             if(layer && (!layer->visible ||
                 std::strstr(layer->name,"respawn")||
                 std::strstr(layer->name,"_resp")||
