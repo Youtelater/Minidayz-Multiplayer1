@@ -9,6 +9,7 @@
 #include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/source_interior_container.hpp"
 #include "minidayz/original_initial_building_loot.hpp"
+#include "minidayz/original_car_trunk.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/generated/world_source_data.hpp"
@@ -704,6 +705,80 @@ void test_source_tree_fall_item_table() {
 // Root Game_events/Hitting_obstacles: branch UID 8754965976446553
 // subtracts 1 from instance variable 0 before child fall UID
 // 2738244684146745 checks that the new value is <=0.
+void test_original_car_trunk_one_time_search() {
+    using namespace minidayz;
+    using namespace minidayz::items;
+    // Root Game_events exact Sprite241 frame-group pools, including
+    // duplicates (which are intended weighted choose() entries).
+    assert(kOriginalCarTrunkBaseChance==50);
+    assert(kOriginalCarTrunkBonusOnTrunkster==10);
+    assert(kOriginalCarTrunkExtraChance==10);
+    assert(kOriginalCarTrunkDropImagepoint==3);
+    assert(kOriginalCarTrunkPools[0].count>0);
+    for(std::uint32_t frame=0;frame<6;++frame) {
+        const auto* pool=original_car_pool(frame);
+        assert(pool && pool->count>0);
+        assert(pool->first+pool->count<=
+            sizeof(kOriginalCarTrunkItems)/sizeof(kOriginalCarTrunkItems[0]));
+        for(std::size_t j=0;j<pool->count;++j)
+            assert(source_item_exists(kOriginalCarTrunkItems[pool->first+j]));
+        assert(original_car_trunk_item(*pool,0));
+    }
+    assert(!original_car_pool(6));
+    assert(original_car_trunk_chance(0));
+    assert(original_car_trunk_chance(0,10));
+    assert(!original_car_trunk_chance(0xffffffffu));
+    assert(!original_car_trunk_chance(0xffffffffu,10));
+    assert(original_car_trunk_extra_chance(0));
+    assert(!original_car_trunk_extra_chance(0xffffffffu));
+    assert(original_car_pool(0)==original_car_pool(3));
+    assert(original_car_pool(3)==original_car_pool(5));
+    assert(original_car_pool(2)==original_car_pool(4));
+    assert(original_car_pool(1)!=original_car_pool(0));
+    assert(original_car_pool(2)!=original_car_pool(1));
+
+    WorldSystem world;
+    assert(world.initialize(0xCA241u));
+    // Trigger the exact original category4 source branches rather than
+    // invent a car marker or custom sprite outside create_map_element.
+    for(std::uint8_t variant=1;variant<=40;++variant)
+        (void)world.expand_map_element(4,variant,0,
+            {14000.0f+variant*350.0f,9000.0f},0.0);
+    std::size_t trunk=world.placement_count();
+    for(std::size_t i=0;i<world.placement_count();++i) {
+        const auto* p=world.placement(i);
+        if(p && p->object==241 && p->opacity>0.0f &&
+           original_car_pool(p->source_frame)) {
+            trunk=i;
+            break;
+        }
+    }
+    assert(trunk<world.placement_count());
+    const auto* before=world.placement(trunk);
+    assert(before && before->source_variable_0==0);
+    const auto* point=world_source::source_house_image_point(
+        before->object,before->source_animation,before->source_frame,"",3);
+    assert(point); // original Sprite241 Imagepoint3 on every car frame
+    GroundLootSystem ground;
+    std::mt19937 random(1u);  // deterministic source sample under 50
+    const auto outcome=source_search_original_car_trunk(
+        world,trunk,ground,0,0,random);
+    assert(outcome==OriginalCarSearchResult::found);
+    assert(ground.count()==1);
+    const auto* searched=world.placement(trunk);
+    assert(searched && searched->source_variable_0==1);
+    assert(searched->opacity==0.0f);
+    assert(source_search_original_car_trunk(world,trunk,ground,0,0,random)
+           ==OriginalCarSearchResult::invalid);
+    assert(ground.count()==1); // car cannot be searched repeatedly
+    const auto* loot=ground.entry(0);
+    assert(loot && source_item_exists(loot->item.item_id));
+    GroundLootSnapshot snapshot=ground.snapshot();
+    GroundLootSystem restored;
+    assert(restored.restore(snapshot));
+    assert(restored.count()==1);
+}
+
 void test_original_source_settlement_building_groups() {
     // Group original category-7 primary house instances by the *source*
     // Mapgen514 1020px cell, not by a guessed density multiplier.
@@ -2134,6 +2209,7 @@ int main() {
     test_grid_semantics();
     test_source_world_instance_animation_state();
     test_source_visual_state_snapshot_roundtrip();
+    test_original_car_trunk_one_time_search();
     test_original_source_settlement_building_groups();
     test_original_tree_block_variants_and_solid_companions();
     test_source_event_tree_hit_health_and_atomic_fall();
