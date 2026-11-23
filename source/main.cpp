@@ -4341,8 +4341,8 @@ private:
         const auto cell=minidayz::world_source::mapgen_cell_at(x,y);
         if(cell.column>=0 && cell.column<grid.width() &&
            cell.row>=0 && cell.row<grid.height() &&
-           minidayz::world_source::point_on_mapgen_road(
-               grid.at(cell.column,cell.row),cell,x,y,
+           minidayz::world_source::source_grid_road_contains(
+               grid,cell.column,cell.row,x,y,
                minidayz::world_source::source_road_painted_width(
                    minidayz::stage1::kOriginalFloorTileSize)))
             return minidayz::terrain::FootstepSurface::road;
