@@ -1,5 +1,6 @@
 #include "minidayz/location_event_runtime.hpp"
 #include "minidayz/generated/location_event_source.hpp"
+#include "minidayz/generated/location_town_group_source.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -278,6 +279,21 @@ bool SourceLocationEventRuntime::execute_action(
     }
     if (action.object_index == 525 &&
         (action.command_id == 199 || action.command_id == 210)) {
+        // Root village/city events contain many original per-building
+        // Array525 SetAtXY descriptors, all with X=Array525.At(0). A
+        // literal cursor translation keeps overwriting one cell (and
+        // SetSize subsequently truncates the rest). The source extractor
+        // maps EACH authored original action UID to its event-order slot.
+        // Only those six explicitly source-matched town branches change;
+        // every original variant/coordinate expression/RNG evaluation is
+        // executed in its original sequence above.
+        if (const auto* group=stage1::location_town_group_action(
+                action.first_parameter)) {
+            if(group->branch_uid==action.branch_uid &&
+               action.parameter_count==3 &&
+               ((action.command_id==210)==group->resize))
+                p[0]=Value::from_number(group->ordinal);
+        }
         return self.location_array_.execute_action(action.command_id, p,
                                                     action.parameter_count);
     }
