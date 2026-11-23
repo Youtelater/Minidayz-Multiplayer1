@@ -412,6 +412,9 @@ jobs:
       - name: Check weather-loop sample matches winter world instead of rain eligibility
         run: python3 tests/test_weather_audio_source_dispatch.py
 
+      - name: Verify Source Player and Equipment Render Layers
+        run: python3 tests/test_original_player_layers.py
+
       - name: Test Original Update_Stats Weather Phase Overrides
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \

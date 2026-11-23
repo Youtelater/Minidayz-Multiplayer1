@@ -1,4 +1,5 @@
 #include "minidayz/player.hpp"
+#include "minidayz/source_player_layers.hpp"
 #include "minidayz/generated/stage1_data.hpp"
 #include "minidayz/terrain_source_collision.hpp"
 
@@ -13,6 +14,14 @@
 using namespace minidayz;
 
 int main() {
+    // Preserve exact original layer relationships among player/equipment
+    // (32..39), building backgrounds (31) and building roofs/walls (41).
+    using namespace minidayz::stage1;
+    assert(kSourcePlayerLayer==32 && kSourcePlayerWeaponLayer==39);
+    for(std::uint16_t i=31;i<41;++i)
+        assert(source_player_layer_depth(i) <
+               source_player_layer_depth(i+1));
+
     const auto novice_rules = source_survival_rules(SurvivalDifficulty::novice);
     const auto regular_rules = source_survival_rules(SurvivalDifficulty::regular);
     const auto veteran_rules = source_survival_rules(SurvivalDifficulty::veteran);

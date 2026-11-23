@@ -26,6 +26,7 @@
 #include "minidayz/generated/player_skin_source.hpp"
 #include "minidayz/generated/player_spawn_source.hpp"
 #include "minidayz/player_equipment_visual.hpp"
+#include "minidayz/source_player_layers.hpp"
 #include "minidayz/npc_system.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/inventory.hpp"
@@ -2761,6 +2762,10 @@ public:
             }
         }
 
+        // Match original Construct Map layer 32 (player) and source
+        // clothing/weapon layer indices 33..39, not hardcoded 3DS Z.
+        const float player_depth=minidayz::stage1::source_player_layer_depth(
+            minidayz::stage1::kSourcePlayerLayer);
         const char* skin_direction="down";
         switch(p.facing){
         case minidayz::PlayerFacing::down: skin_direction="down"; break;
@@ -2799,12 +2804,12 @@ public:
                           weapon_pose,skin_direction);
             sprite_drawn=renderer.draw_source_animation(source_skin_object,
                 armed_animation,player_.source_animation_frame(),
-                p.x,p.y,1.0f,1.0f,0.57f,0.0f,outlined);
+                p.x,p.y,1.0f,1.0f,player_depth,0.0f,outlined);
         }
         if(p.alive && !sprite_drawn)
             sprite_drawn=renderer.draw_source_animation(source_skin_object,
                 skin_animation,player_.source_animation_frame(),
-                p.x,p.y,1.0f,1.0f,0.57f,0.0f,outlined);
+                p.x,p.y,1.0f,1.0f,player_depth,0.0f,outlined);
         // If an optional survivor texture is missing from RomFS, use the
         // game's ORIGINAL default survivor as a last-resort sprite. This
         // keeps the player visible without substituting invented artwork;
@@ -2815,7 +2820,7 @@ public:
             sprite_drawn=renderer.draw_source_animation(
                 minidayz::kSourcePlayerObject,skin_animation,
                 player_.source_animation_frame(),
-                p.x,p.y,1.0f,1.0f,0.57f,0.0f,
+                p.x,p.y,1.0f,1.0f,player_depth,0.0f,
                 source_player_outline_ && minidayz::stage1::source_family_contains(
                     1064,minidayz::kSourcePlayerObject));
         if (p.alive) {
@@ -2839,20 +2844,27 @@ public:
             // Source-authored equipment back-to-front. The originals use
             // separate layers on top of the chosen character base skin.
             draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::pants),false,0.575f);
+                minidayz::items::EquipmentSlot::pants),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerPantsLayer));
             draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::outerwear),false,0.580f);
+                minidayz::items::EquipmentSlot::outerwear),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerClothingLayer));
             draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::vest),false,0.585f);
+                minidayz::items::EquipmentSlot::vest),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerVestLayer));
             draw_equipped_layer(equipment_.equipped(
-                minidayz::items::EquipmentSlot::head),false,0.590f);
-            draw_equipped_layer(inventory_.equipped_backpack(),false,0.595f);
+                minidayz::items::EquipmentSlot::head),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerHelmetLayer));
+            draw_equipped_layer(inventory_.equipped_backpack(),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerBackpackLayer));
             // Original satchels are separate wearable storage equipment,
             // not part of the main backpack slot. Show both when equipped.
-            draw_equipped_layer(inventory_.equipped_satchel(),false,0.600f);
+            draw_equipped_layer(inventory_.equipped_satchel(),false,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerBackpackLayer));
             // Draw only the selected held firearm OR melee overlay, not
             // both weapons through the same hand at the same time.
-            draw_equipped_layer(held_item,true,0.605f);
+            draw_equipped_layer(held_item,true,minidayz::stage1::source_player_layer_depth(
+                    minidayz::stage1::kSourcePlayerWeaponLayer));
         }
         if (!sprite_drawn) {
             renderer.draw_solid_rect(p.x - 5.0f, p.y - 5.0f, 10.0f, 12.0f,

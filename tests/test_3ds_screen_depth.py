@@ -18,7 +18,7 @@ for label,code in (
     ("original road on source asphalt layer","C2D_SpriteSetDepth(&sprite,road_depth)"),
     ("floor title background","0.0f, 0.0f, 400.0f, 240.0f, 0.05f"),
     ("inventory under HUD","0.0f, 0.0f, 320.0f, 240.0f, 0.05f"),
-    ("player over ground at source size","p.x,p.y,1.0f,1.0f,0.57f"),
+    ("player over ground at source size","p.x,p.y,1.0f,1.0f,player_depth"),
     ("source layer grouping before draw","source_sort_visible_layer_order("),
     ("source within-layer depth","source_world_layer_depth("),
     ("source fixture dispatch after door priority","request_source_furniture();"),

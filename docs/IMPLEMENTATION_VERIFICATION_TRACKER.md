@@ -773,3 +773,9 @@ This is a **work queue**, not a claim that any listed system is 100% complete. T
 - [ ] **Deferred source event/integration boundaries, not falsely certified:** exact Sprite796 Fade.StartFade runtime fade parameters and all lootbox category-dependent drops belong to Step 5 item/loot event integration; browser audio event parity, native/browser PRNG sequence and save compatibility are cross-cutting later checks. Original-game-vs-Azahar visible pixels, interior navigation and hardware performance cannot be verified by native or 3DS CI and remain final integration signoff gates.
 
 **Step 3 house/buildings/interiors engineering and automated tests: PASSED.** Next Step 4: Player sprites, original animations, input/movement and collision; defer gameplay-on-emulator visual signoff as agreed, without claiming source-perfect rendering.
+
+
+### Step 4 player sprite and equipment world layers (2026-11-22)
+- [x] Removed hardcoded 3DS depths `0.57f`, `0.575f` .. `0.605f` for player character and wearables. Source Map defines player/equipment at layers **32..39**; now draw with `source_world_layer_depth` to preserve correct depth against Buildings_bg layer 31, Buildings layer 41, and neighboring world objects.
+- [x] Added source-parsed Map layer-name contract, native layer-order assertions, and updated screen depth regression. The original sprites and atlas frame coordinates remain unchanged.
+- [ ] Original event-based movement speed and animation switching, runtime collision fidelity, and actual Azahar visual verification are separate gates for completing Step 4.
