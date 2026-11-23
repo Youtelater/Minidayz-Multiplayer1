@@ -12,6 +12,7 @@
 #include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/source_interior_container.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
+#include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/source_world_sprite_visibility.hpp"
 #include "minidayz/generated/source_roof_foundation_animations.hpp"
 #include "minidayz/source_world_proximity.hpp"
@@ -2477,7 +2478,7 @@ public:
         // The original 16x33 Array is physically transposed: row 18
         // begins the second terrain half toward world X, not world Y.
         const float source_second_half_x=world_.grid().height()==33
-            ? world_source::mapgen_hotspot(0,18).x : 1.0e30f;
+            ? minidayz::world_source::mapgen_hotspot(0,18).x : 1.0e30f;
         if (!renderer.draw_original_ground_floor(
                 camera_x, camera_y, view_w, view_h,
                 world_.generation_level(),source_second_half_x)) {
