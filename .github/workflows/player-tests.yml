@@ -96,6 +96,16 @@ jobs:
           python3 tools/stage2/build_original_timed_loot.py
           python3 tools/stage2/build_original_initial_building_loot.py
 
+      - name: Audit source player and item spritesheet coordinates
+        run: python3 tools/stage2/audit_player_item_frame_coordinates.py
+
+      - name: Upload Step 4 exact player and item image coordinates
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: step4-original-player-item-frames
+          path: audit-output/step4/player_item_sprite_coordinates.json
+
       - name: Verify seven-field original Construct events and complete map generation actions
         run: python3 tests/test_original_world_event_coverage.py
 
