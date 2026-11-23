@@ -317,6 +317,9 @@ jobs:
           set -euo pipefail
           python3 tools/stage1/verify_sprite_catalog_frames.py
 
+      - name: Check original hidden NPC controller and visible Zeds body layer
+        run: python3 tests/test_original_npc_visual_layers.py
+
       - name: Verify original house and interior sprites are packed in RomFS
         shell: bash
         run: |
