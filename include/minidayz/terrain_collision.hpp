@@ -7,6 +7,7 @@
 #include <utility>
 #include "minidayz/terrain_surface.hpp"
 #include "minidayz/source_tilemap_solid_collision.hpp"
+#include "minidayz/source_water_shore_effective_tile.hpp"
 
 namespace minidayz::terrain {
 
@@ -25,7 +26,14 @@ struct SolidTerrainMap {
         const auto col=static_cast<std::uint32_t>(dx/tile_size);
         const auto row=static_cast<std::uint32_t>(dy/tile_size);
         const auto index=static_cast<std::size_t>(row)*columns+col;
-        return index<cells.size() && cells[index]!=0xffffffffu;
+        if(index>=cells.size())return false;
+        if(cells[index]!=kTileEmpty)return true;
+        // The water renderer paints original SetTile shoreline frames on
+        // qualifying EMPTY RLE cells. Collision/footsteps must query that
+        // same effective frame, or visible shores become invisible holes.
+        return object==208 && source_water_shore_effective_tile(
+            cells,columns,rows,static_cast<int>(col),static_cast<int>(row))
+            !=kTileEmpty;
     }
 
     bool blocks(float px,float py) const noexcept {
@@ -40,8 +48,12 @@ struct SolidTerrainMap {
         // shore/forest diagonal openings and original H/V/D flip flags.
         // A plain full-tile occupied() test wrongly blocked transparent
         // source polygon gaps.
+        const auto effective=object==208
+            ? source_water_shore_effective_tile(
+                cells,columns,rows,static_cast<int>(col),static_cast<int>(row))
+            : cells[offset];
         return source_solid_tile_contains(
-            object,cells[offset],fx-static_cast<float>(col),
+            object,effective,fx-static_cast<float>(col),
             fy-static_cast<float>(row));
     }
 };
