@@ -65,6 +65,13 @@ for s in ("kOriginalRadioactiveSprite=1126",
           "kOriginalRadioactivePickedSpawnAction"):
     assert s in h,s
 assert "generate_source_radiation_sites()" in src
-assert "&& p->object!=1126" in vis
+# Original Sprite1126 is visible on source Rain44; the renderer now
+# admits only root-verified high-layer gameplay art, including the
+# Sprite241 car trunk on Sunset_Dawn45. Do not require the obsolete
+# blanket high-layer check that hid every car trunk.
+assert "source_world_high_layer_gameplay_art(" in vis
+source_roles=(ROOT/"include/minidayz/source_world_sprite_visibility.hpp").read_text()
+assert "object==1126 && layer==44" in source_roles
+assert "object==241 && layer==45" in source_roles
 print("PASS root wuranqu source placement: 70 military overlays; "
       "2 level-three and 3-per-half level-four/five radiation zones")
