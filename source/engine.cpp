@@ -751,10 +751,10 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
   const std::uint16_t code=grid.at(col,row);
   if(!terrain::horizontal_road(code)&&!terrain::vertical_road(code))
    continue;
-  // Source code14 paints four independently guarded half-corridors;
-  // the original Array518 neighbors decide which of the four exist.
-  // Straight codes12/13 keep their authored full 17x2 / 2x17 patch.
-  for(int segment=0;segment<4;++segment){
+  // Source code12/13 has a full 17-cell base followed by four
+  // optional 9-tile arms. Code14 has only four neighbor-gated arms.
+  // Draw in original action order and omit overlapping GPU submissions.
+  for(int segment=0;segment<5;++segment){
    const auto band=world_source::source_grid_road_segment(
        grid,col,row,segment,road_width);
    if(!terrain::intersects_view(band,camera_x,camera_y,
