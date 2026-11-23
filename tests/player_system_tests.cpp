@@ -4,6 +4,7 @@
 #include "minidayz/source_equipment_animation.hpp"
 #include "minidayz/source_energy_drink_boost.hpp"
 #include "minidayz/generated/source_dead_skin_art.hpp"
+#include "minidayz/generated/player_hands_source.hpp"
 #include "minidayz/source_player_base_geometry.hpp"
 #include "minidayz/generated/stage1_data.hpp"
 #include "minidayz/terrain_source_collision.hpp"
@@ -26,6 +27,35 @@ int main() {
     for(std::uint16_t i=31;i<41;++i)
         assert(source_player_layer_depth(i) <
                source_player_layer_depth(i+1));
+
+    // Original Start events author 21 distinct PlayerBase skin/hands
+    // variable pairs. The 3DS previously discarded the original hands
+    // Sprite and one original mixed-sheet biker skin (744).
+    assert(kOriginalPlayerHandArtCount==21);
+    assert(kSourcePlayerHandsLayer==34);
+    assert(source_player_hands_object(679)==682);
+    assert(source_player_hands_object(744)==681);
+    assert(source_player_hands_object(1262)==1263);
+    assert(source_player_hands_object(0)==0);
+    for(const auto& entry:kOriginalPlayerHandArt){
+        assert(entry.source_event_uid>0);
+        assert(entry.source_skin_type>=1 && entry.source_skin_type<=21);
+        bool skin_idle=false,hand_idle=false,hand_run=false;
+        for(const auto& animation:kAnimations){
+            if(animation.object==entry.skin &&
+               std::strcmp(animation.name,"idle_down")==0)
+                skin_idle=animation.frames>0;
+            if(animation.object==entry.hands &&
+               std::strcmp(animation.name,"idle_down")==0)
+                hand_idle=animation.frames>0;
+            if(animation.object==entry.hands &&
+               std::strcmp(animation.name,"run_down")==0)
+                hand_run=animation.frames>0;
+        }
+        assert(skin_idle && hand_idle && hand_run);
+        assert(source_equipment_animation_frame(
+            entry.hands,"idle_down",0.0f)==0);
+    }
 
     // Source death event 960074927103799 spawns original Sprite813
     // into Map/items_on_ground18 and picks id_# using the survivor
