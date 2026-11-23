@@ -751,10 +751,12 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
   const std::uint16_t code=grid.at(col,row);
   if(!terrain::horizontal_road(code)&&!terrain::vertical_road(code))
    continue;
-  for(int direction=0;direction<2;++direction){
-   // Original horizontal Array roads run along physical world Y.
-   const auto band=world_source::mapgen_road_band(
-       code,direction==0,col,row,road_width);
+  // Source code14 paints four independently guarded half-corridors;
+  // the original Array518 neighbors decide which of the four exist.
+  // Straight codes12/13 keep their authored full 17x2 / 2x17 patch.
+  for(int segment=0;segment<4;++segment){
+   const auto band=world_source::source_grid_road_segment(
+       grid,col,row,segment,road_width);
    if(!terrain::intersects_view(band,camera_x,camera_y,
                                 view_width,view_height))continue;
    // Repeat native 60px Construct stone tiles instead of stretching
@@ -788,11 +790,11 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
      // A source grid cell is not necessarily a multiple of its 60px
      // road tile. Trim the final tile instead of painting beyond the
      // original corridor, which made road edges bleed into water/forest.
-     // Never submit two overlapping Map asphalt pixels at identical
-     // depth for an original Array518 code14 road junction. The vertical
-     // road already painted the exact central source stone tile.
-     if(world_source::mapgen_duplicate_crossing_tile(code,
-           direction==0,col,row,band.x+x*tile,tile,road_width))continue;
+     // Never submit the same 2x2 junction texel twice when multiple
+     // source code14 neighbor guards select overlapping SetTileRange arms.
+     if(world_source::source_grid_road_tile_was_drawn(
+           grid,col,row,segment,band.x+x*tile,band.y+y*tile,
+           tile,road_width))continue;
      const float clipped_w=std::min(tile,band.width-x*tile);
      const float clipped_h=std::min(tile,band.height-y*tile);
      if(clipped_w<=0.0f||clipped_h<=0.0f)continue;
