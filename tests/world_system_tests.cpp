@@ -2232,6 +2232,32 @@ void test_full_generation_all_source_maps() {
         assert(world.grid().height()==(level>=4?33:16));
         assert(world.map_marker_count()==
             static_cast<std::size_t>(world.grid().width())*world.grid().height());
+        // EVERY original marker eligible for the root-extracted Tilemap230
+        // SetTile program must receive a generated patch, at every map level.
+        // This catches silent gaps on the extended 16x33 split maps, even
+        // when forests and buildings still make the scene appear populated.
+        std::size_t eligible_source_scatter=0;
+        const std::uint8_t level_mask=std::uint8_t{1} << level;
+        for(std::size_t i=0;i<world.map_marker_count();++i){
+            const auto* marker=world.map_marker(i);
+            assert(marker);
+            bool eligible=false;
+            for(const auto& rule:minidayz::stage1::kTerrainScatterRules)
+                if(rule.marker==marker->marker_type &&
+                   (rule.level_mask&level_mask)){eligible=true;break;}
+            if(eligible)++eligible_source_scatter;
+        }
+        const auto& scatter=world.source_scatter_patches();
+        assert(scatter.size()==eligible_source_scatter);
+        assert(!scatter.empty());
+        for(const auto& patch:scatter){
+            assert(patch.marker_index<world.map_marker_count());
+            assert(!patch.tiles.empty());
+            for(const auto& tile:patch.tiles){
+                assert(tile.local_index<33u*33u);
+                assert(tile.original_frame<128);
+            }
+        }
         using minidayz::WorldFeatureKind;
         std::size_t bridges = 0;
         std::size_t bunkers = 0;
