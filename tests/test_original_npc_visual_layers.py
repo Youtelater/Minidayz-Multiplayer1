@@ -11,7 +11,7 @@ import re
 
 ROOT=Path(__file__).resolve().parents[1]
 raw=(ROOT/"data.deobfuscated.js").read_text(encoding="utf-8-sig")
-game=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\\s+(?=\\d)","-",raw))["project"]
+game=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",raw))["project"]
 layout=next(row for row in game[5] if row[0]=="Map")
 layers={row[0]:(index,row) for index,row in enumerate(layout[6])}
 assert layers["Zeds"][0]==29 and layers["Zeds"][1][3] is True
