@@ -1218,7 +1218,9 @@ bool WorldSystem::generate_source_road_vehicles(){
                 static_cast<std::uint64_t>(overlay_index+1);
             overlay.instance_id=overlay_index+1;
             overlay.parent_runtime_uid=parent_uid;
-            body.linked_runtime_uid=overlay.runtime_uid;
+            // push_back may reallocate placements_: the previous body
+            // reference is invalid. Link by stable index after the spawn.
+            placements_[body_index].linked_runtime_uid=overlay.runtime_uid;
         }
     };
     const auto spawn_road=[&](
