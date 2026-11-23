@@ -773,9 +773,16 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     bounds_ = {layout->width, layout->height};
     grid_.clear();
     map_markers_.clear();
+    source_scatter_patches_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();
+    authored_placement_count_=0;
+    source_location_spawn_count_=0;
+    // An authored Map layout is not a fully generated procedural world.
+    // Replacing a layout must invalidate its old terrain and phase state.
+    generation_phase_=0;
+    generation_is_map_=false;
     placements_.reserve(range.size);
     features_.reserve(range.size + stage1::kBunkerSpawnSourceCount +
                       stage1::kBridgeElementSourceCount);
