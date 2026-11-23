@@ -349,9 +349,18 @@ void source_pick_marker(
         if(matching.empty())continue; // Original PickRandom empty selection.
         auto& selected=markers[matching[source_floor_random_bounded(
             rng,static_cast<std::uint32_t>(matching.size()))]];
-        const auto chosen=source_random_bounded(
-            rng,static_cast<std::uint32_t>(outputs.size()));
-        selected.marker_type=outputs.begin()[chosen];
+        // Construct SetInstanceVariable(0,<literal>) does not call
+        // Math.random(). Only a source choose(...) expression does so.
+        // PickRandom above already consumed its source random draw; an
+        // extra choose(only_one_literal) would shift every subsequent
+        // generated POI, terrain tile, vehicle and loot placement.
+        if(outputs.size()==1) {
+            selected.marker_type=*outputs.begin();
+        } else {
+            const auto chosen=source_random_bounded(
+                rng,static_cast<std::uint32_t>(outputs.size()));
+            selected.marker_type=outputs.begin()[chosen];
+        }
     }
 }
 
