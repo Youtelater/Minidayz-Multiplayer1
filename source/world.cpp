@@ -1753,10 +1753,9 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                     const float dy = parent.height * (point->y - point->origin_y);
                     x += dx * std::cos(angle) - dy * std::sin(angle);
                     y += dx * std::sin(angle) + dy * std::cos(angle);
-                } else if (action.point_name && action.point_name[0]) {
-                    continue;
                 }
-                // Missing numeric points use the parent hotspot, as in loot placement.
+                // c2runtime.js Sprite.ai returns the parent's hotspot for
+                // both unknown names and out-of-range numeric points.
             }
             if(!std::isfinite(x)||!std::isfinite(y))continue;
             const auto new_uid=(std::uint64_t{1}<<63) |
@@ -1839,8 +1838,8 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                 const float dy=parent.height*(point->y-point->origin_y);
                 x+=dx*std::cos(angle)-dy*std::sin(angle);
                 y+=dx*std::sin(angle)+dy*std::cos(angle);
-            }else if(action.point_name[0])continue;
-            // Construct's absent numeric imagepoint falls back to the hotspot.
+            }
+            // An absent numeric or named image point resolves to the hotspot.
             if(action.offset_y)y+=parent.height*0.5f+15.0f;
             if(!std::isfinite(x)||!std::isfinite(y))continue;
             const auto new_uid=(std::uint64_t{1}<<63)|
@@ -1955,11 +1954,10 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                 const auto* point=world_source::source_house_image_point(
                     base.object,base.source_animation,base.source_frame,
                     "",car.image_point);
-                if(!point)continue;
                 const float rad=base.angle*0.01745329251994329577f;
-                const float dx=base.width*(point->x-point->origin_x)*
-                               (base.scale_x<0.0f?-1.0f:1.0f);
-                const float dy=base.height*(point->y-point->origin_y);
+                const float dx=point ? base.width*(point->x-point->origin_x)*
+                               (base.scale_x<0.0f?-1.0f:1.0f) : 0.0f;
+                const float dy=point ? base.height*(point->y-point->origin_y) : 0.0f;
                 const float child_x=base.x+dx*std::cos(rad)-dy*std::sin(rad);
                 const float child_y=base.y+dx*std::sin(rad)+dy*std::cos(rad);
                 if(!std::isfinite(child_x)||!std::isfinite(child_y))
