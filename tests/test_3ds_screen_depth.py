@@ -54,6 +54,18 @@ assert "const auto source_skin_object=player_.source_skin();" in main
 assert "kOriginalPlayerSkins[selected_skin_].object;" not in main.split(
     "        // Match original Construct Map layer 32 (player)",1)[1].split(
     "        // Keep source rain/night atlas pages",1)[0]
+# Survivor hand/weapon poses are their own ORIGINAL Construct animations.
+# A posed player's skin must not inherit the unrelated run_* frame index,
+# and every actual clothing overlay uses its original independent clock.
+armed=main.index('char armed_animation[32]{}')
+weapon_frame=main.index('const auto weapon_stance_frame =',armed)
+weapon_draw=main.index('sprite_drawn=renderer.draw_source_animation(',weapon_frame)
+assert armed<weapon_frame<weapon_draw
+assert 'source_skin_object,armed_animation,p.animation_elapsed' in main[weapon_frame:weapon_draw]
+overlay=main.index('const auto original_frame =',weapon_draw)
+assert 'visual->object,name,p.animation_elapsed' in main[overlay:overlay+250]
+assert '#include "minidayz/source_equipment_animation.hpp"' in main
+
 # Original Map weather/night sprite layers must composite above all gameplay
 # layers. Earlier hardcoded .14/.16 rendered both overlays behind the world.
 assert main.index("if (rain_timer_.active()) {",world)>world
