@@ -2729,8 +2729,14 @@ public:
             char armed_animation[32]{};
             std::snprintf(armed_animation,sizeof(armed_animation),"%s_%s",
                           weapon_pose,skin_direction);
+            // An original weapon stance is a DIFFERENT Construct Sprite
+            // animation from run_*/idle_*. Resolve its own authored speed,
+            // frame count and looping, not the survivor's run frame number.
+            const auto weapon_stance_frame =
+                minidayz::stage1::source_equipment_animation_frame(
+                    source_skin_object,armed_animation,p.animation_elapsed);
             sprite_drawn=renderer.draw_source_animation(source_skin_object,
-                armed_animation,player_.source_animation_frame(),
+                armed_animation,weapon_stance_frame,
                 p.x,p.y,1.0f,1.0f,player_depth,0.0f,outlined);
         }
         if(p.alive && !sprite_drawn)
