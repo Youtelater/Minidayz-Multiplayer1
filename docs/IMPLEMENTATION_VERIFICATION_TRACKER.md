@@ -907,3 +907,7 @@ The coordinate audit now reads Map instance width and height from the same field
 - Tree collision indexing now includes the full source trunk or companion footprint. This covers queries on the other side of a collision bucket boundary when testing an authored tree's fallback collider.
 - The road renderer now draws valid road themes even if another theme is unavailable and still reports an incomplete render.
 - The movement line and the remaining visual and gameplay reports require a runtime reproduction. The collision and road fixes address specific code paths and do not establish that they caused every reported symptom.
+
+## Steps 1–3 combined source and runtime review
+
+The root Construct sprite runtime resolves missing image points to the parent hotspot and compares animation and image-point names case-insensitively (Sprite.ai, gF, Zv and rb in c2runtime.js). The 3DS world generator now keeps building companions, loot markers and car attachments when their named or numbered attachment point is absent. The generated building attachment lookup and sprite animation renderer now accept case variants. Native world regression includes an authored wall point under both names. Visual verification of the movement line, road appearance, missing scenery and entering buildings remains open for the user's playtest.
