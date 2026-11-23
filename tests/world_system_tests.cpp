@@ -12,6 +12,7 @@
 #include "minidayz/original_car_trunk.hpp"
 #include "minidayz/generated/source_family_members.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
+#include "minidayz/generated/source_car_wreck_trunks.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
@@ -755,6 +756,26 @@ void test_original_car_trunk_one_time_search() {
             break;
         }
     }
+    // The source has exactly fifteen category6 nested var3=0 trunks.
+    // An older parser dropped all fifteen; a second parser accidentally
+    // duplicating them would be just as wrong. Test their exact source UID,
+    // authored frame and frame-dependent original collision dimensions.
+    std::size_t original_trunks=0;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* p=world.placement(i);
+        if(!p || p->object!=241)continue;
+        ++original_trunks;
+        const auto found=std::find_if(
+            std::begin(world_source::kSourceCarWreckTrunks),
+            std::end(world_source::kSourceCarWreckTrunks),
+            [&](const auto& spec) {
+                return p->source_uid==spec.source_uid &&
+                       p->source_frame==spec.frame &&
+                       p->width==spec.width && p->height==spec.height;
+            });
+        assert(found!=std::end(world_source::kSourceCarWreckTrunks));
+    }
+    assert(original_trunks==15); // root source variants 1..12,15..17
     assert(trunk<world.placement_count());
     const auto* before=world.placement(trunk);
     assert(before && before->source_variable_0==0);
