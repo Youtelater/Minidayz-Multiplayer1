@@ -49,6 +49,23 @@ for skin,body in skin_to_body.items():
             [4,256],[3,1]] for action in branch[6]), (
             f"Source skin {skin} body no longer pinned to hidden controller")
 
+# Do not silently collapse the SPECIAL original Spawn_NPC body branches
+# into the six ordinary walkers. They have independent inherited source
+# guards (function Param2=5/7/17/19, and riot-global state for body932).
+# Native support for these event chains remains an explicit OPEN parity
+# item, not permission to spawn them with guessed probabilities.
+from collections import Counter
+special_bodies=Counter(
+    action[5][0][1]
+    for event in events
+    for action in event[6] if isinstance(action,list) and len(action)>5
+    and action[:2]==[256,73]
+    and action[5][1]==[5,[2,"Zeds"]]
+    and action[5][0][1] not in skin_to_body.values()
+)
+assert special_bodies==Counter({932:1,718:2,956:1,982:2}), (
+    f"Original guarded special NPC bodies changed: {special_bodies}")
+
 # Every source reference to zed_resp is a spawn/position action, never a
 # visible-world layer-toggle. The controller layer remains hidden.
 for sheet,all_events in game[6]:
