@@ -6,6 +6,7 @@
 #include "minidayz/terrain_level.hpp"
 #include "minidayz/terrain_roads.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
+#include "minidayz/source_road_uv_crop.hpp"
 #include "minidayz/terrain_source_tile_flags.hpp"
 #include "minidayz/menu_bitmap_font.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
@@ -805,23 +806,19 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
      if(!sprite.image.subtex)return false;
      const Tex3DS_SubTexture original=*sprite.image.subtex;
      Tex3DS_SubTexture cropped=original;
-     const float source_w=static_cast<float>(original.width);
-     const float source_h=static_cast<float>(original.height);
-     if(!(source_w>0.0f&&source_h>0.0f))return false;
-     const float u_fraction=std::clamp(clipped_w/source_w,0.0f,1.0f);
-     const float v_fraction=std::clamp(clipped_h/source_h,0.0f,1.0f);
-     cropped.right=original.left+(original.right-original.left)*u_fraction;
-     cropped.bottom=original.top+(original.bottom-original.top)*v_fraction;
-     cropped.width=static_cast<std::uint16_t>(
-         std::max(1.0f,std::ceil(source_w*u_fraction)));
-     cropped.height=static_cast<std::uint16_t>(
-         std::max(1.0f,std::ceil(source_h*v_fraction)));
+     world_source::SourceRoadTileCrop crop{};
+     if(!world_source::source_road_tile_crop(
+          original.left,original.top,original.right,original.bottom,
+          original.width,original.height,clipped_w,clipped_h,crop))
+          return false;
+     cropped.right=crop.right;
+     cropped.bottom=crop.bottom;
+     cropped.width=crop.width;
+     cropped.height=crop.height;
      C2D_Image source_tile=sprite.image;
      source_tile.subtex=&cropped;
      if(!C2D_DrawImageAt(source_tile,band.x+x*tile,band.y+y*tile,
-            road_depth,nullptr,
-            clipped_w/static_cast<float>(cropped.width),
-            clipped_h/static_cast<float>(cropped.height)))return false;
+            road_depth,nullptr,crop.scale_x,crop.scale_y))return false;
     }
   }
  }
