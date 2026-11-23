@@ -24,6 +24,7 @@ assert all(r["verification"]=="not_event_verified" or
 # identified by exact event path+ordinal, without claiming 3DS behavior.
 import gzip
 seen=set()
+reviewed_action_count=0
 with gzip.open(data/"every_original_action.jsonl.gz","rt",encoding="utf-8") as ledger:
  for line in ledger:
   entry=json.loads(line)
@@ -31,8 +32,18 @@ with gzip.open(data/"every_original_action.jsonl.gz","rt",encoding="utf-8") as l
   seen.add(entry["action_key"])
   assert "original_action" in entry and "own_conditions" in entry
   assert "inherited_conditions" in entry and "parent_event_uids" in entry
-  assert entry["native_action_parity"]=="not_individually_verified"
+  if entry["native_action_parity"]=="reviewed_action_mapping":
+   assert entry["implementation"] and entry["regression_test"]
+   reviewed_action_count+=1
+  else:
+   assert entry["native_action_parity"]=="not_individually_verified"
 assert len(seen)==summary["action_occurrences_indexed"]==63289
+assert reviewed_action_count==summary["reviewed_original_action_mappings"]
+assert reviewed_action_count==len(json.loads(
+ (ROOT/"data/parity/verified_original_actions.json").read_text())["verified"])
+assert summary["complete_original_port_verified"]==(
+ len(json.loads((ROOT/"data/parity/verified_original_events.json").read_text())["verified"])==22343 and
+ reviewed_action_count==63289)
 
 cars=json.loads((data/"original_car_loot_event_manifest.json").read_text())
 assert cars["source_event_occurrences"]>=8
