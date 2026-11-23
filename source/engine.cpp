@@ -19,6 +19,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <strings.h>
 #include <utility>
 #include <tuple>
 
@@ -826,7 +827,7 @@ bool Renderer::draw_source_animation(std::uint16_t object,const char* animation_
  const auto* found=std::lower_bound(begin,end,object,
   [](const stage1::SpriteAnimationDef& item,std::uint16_t wanted){return item.object<wanted;});
  for(;found!=end&&found->object==object;++found){
-  if(std::strcmp(found->name,animation_name)!=0) continue;
+  if(::strcasecmp(found->name,animation_name)!=0) continue;
   if(found->frame_count==0) return false;
   const std::uint32_t selected=found->loop?frame%found->frame_count:
       std::min(frame,found->frame_count-1);
