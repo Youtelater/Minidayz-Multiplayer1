@@ -120,7 +120,8 @@ range_events=[e for sheet,e,_ in events if sheet=="Game_events"
 if len(range_events)!=1 or not any(
     isinstance(c,list) and len(c)>9 and c[:2]==[-1,51] and
     c[9][1]==[8,3] and c[9][2]==[7,[0,100]] and
-    isinstance(c[9][0],list) and c[9][0][0]==7 and\n    isinstance(c[9][0][1],list) and c[9][0][1][:2]==[19,79]
+    isinstance(c[9][0],list) and c[9][0][0]==7 and
+    isinstance(c[9][0][1],list) and c[9][0][1][:2]==[19,79]
     for c in range_events[0][5]):
  raise SystemExit("Original car mobile interact <=100 source guard changed")
 # Verify the original Sprite241 frame3 drop imagepoint exists for each frame.
