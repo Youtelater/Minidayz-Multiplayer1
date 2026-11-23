@@ -1364,51 +1364,56 @@ public:
         // and settlements with the original POI IDs. Show those cells
         // rather than inventing buildings or revealing ungenerated places.
         const minidayz::map_overlay::MapRect area{12.0f,32.0f,296.0f,170.0f};
-        const float cw=area.width/static_cast<float>(grid.width());
-        const float ch=area.height/static_cast<float>(grid.height());
+        const auto classify_color=[](minidayz::map_overlay::CellKind k) noexcept {
+            using K=minidayz::map_overlay::CellKind;
+            switch(k){
+            case K::hospital: return C2D_Color32(191,69,63,255);
+            case K::military: return C2D_Color32(127,157,109,255);
+            case K::firestation: return C2D_Color32(215,117,65,255);
+            case K::market: return C2D_Color32(125,172,197,255);
+            case K::gas_station: return C2D_Color32(223,176,91,255);
+            case K::city: return C2D_Color32(228,207,156,255);
+            case K::village: return C2D_Color32(206,189,144,255);
+            default: return C2D_Color32(185,182,147,255);
+            }
+        };
         for(int y=0;y<grid.height();++y){
             for(int x=0;x<grid.width();++x){
                 using minidayz::map_overlay::CellKind;
                 const auto kind=minidayz::map_overlay::cell_kind(grid.at(x,y));
-                const float xx=area.x+x*cw, yy=area.y+y*ch;
-                const float roadw=std::max(1.0f,cw*0.34f);
-                const float roadh=std::max(1.0f,ch*0.34f);
-                const auto road_color=C2D_Color32(155,151,127,255);
+                // Draw in ORIGINAL world-space, not Array column/row
+                // order. Root Mapgen converts (X,Y) -> (world Y,world X).
+                const auto cell=minidayz::map_overlay::source_cell_rect(
+                    x,y,bounds,area);
+                const float xx=cell.x, yy=cell.y;
+                const float cw=cell.width, ch=cell.height;
+                const float roadw=std::max(1.5f,cw*0.20f);
+                const float roadh=std::max(1.5f,ch*0.20f);
+                const auto road_color=C2D_Color32(165,160,129,255);
+                // Original Array road 13 is HORIZONTAL in the Array but
+                // VERTICAL in world coordinates. Code 12 is the reverse.
                 if(kind==CellKind::road_horizontal ||
                    kind==CellKind::road_crossing)
-                    renderer.draw_solid_rect(xx,yy+(ch-roadh)*0.5f,
-                        cw,roadh,road_color,0.35f);
+                    renderer.draw_solid_rect(xx+(cw-roadw)*0.5f,yy,
+                        roadw,ch,road_color,0.35f);
                 if(kind==CellKind::road_vertical ||
                    kind==CellKind::road_crossing)
-                    renderer.draw_solid_rect(xx+(cw-roadw)*0.5f,yy,
-                        roadw,ch,road_color,0.36f);
+                    renderer.draw_solid_rect(xx,yy+(ch-roadh)*0.5f,
+                        cw,roadh,road_color,0.36f);
                 if(minidayz::map_overlay::is_location(kind)){
-                    const float size=std::max(3.0f,std::min(cw,ch)*0.8f);
-                    const auto color=kind==CellKind::military
-                        ? C2D_Color32(122,158,109,255)
-                        :kind==CellKind::hospital
-                            ? C2D_Color32(210,185,146,255)
-                            : C2D_Color32(218,204,158,255);
-                    renderer.draw_solid_rect(xx+(cw-size)*0.5f,
-                        yy+(ch-size)*0.5f,size,size,color,0.52f);
-                    // minimap_mark is an atlas of multiple different icons.
-                    // Find one actual source frame in the sprite catalog
-                    // instead of shrinking EVERY atlas icon into each POI.
-                    static const auto* mark_frame=[]() noexcept {
-                        const auto* begin=minidayz::stage1::kSpriteFrames;
-                        const auto* end=begin+minidayz::stage1::kSpriteFrameCount;
-                        for(auto* f=begin;f!=end;++f)
-                            if(std::strncmp(f->sheet,
-                                  "minimap_mark_sheet0_",20)==0)return f;
-                        return end;
-                    }();
-                    if(mark_frame!=minidayz::stage1::kSpriteFrames+
-                                     minidayz::stage1::kSpriteFrameCount)
-                        (void)renderer.draw_source_sprite_fitted(
-                            mark_frame->object,mark_frame->animation,
-                            mark_frame->frame,
-                            xx+(cw-size)*0.5f,yy+(ch-size)*0.5f,
-                            size,size,0.57f);
+                    // Don't paint the FIRST minimap_mark-sheet frame for
+                    // every settlement: it is not every site's correct
+                    // authored icon and produced identical green thumbnails.
+                    // Until source icon/type events are ported, use small
+                    // legible native symbols keyed to known original codes.
+                    const float size=std::max(3.0f,
+                        std::min(6.0f,std::min(cw,ch)*0.55f));
+                    const float mx=xx+(cw-size)*0.5f;
+                    const float my=yy+(ch-size)*0.5f;
+                    renderer.draw_solid_rect(mx-1.0f,my-1.0f,
+                        size+2.0f,size+2.0f,C2D_Color32(15,26,20,255),0.48f);
+                    renderer.draw_solid_rect(mx,my,size,size,
+                        classify_color(kind),0.51f);
                 }
             }
         }
@@ -1431,8 +1436,8 @@ public:
                 player_mark_frame->frame,
                 point.x-6.0f,point.y-6.0f,12.0f,12.0f,0.77f);
         renderer.draw_text("X",point.x-4.0f,point.y-9.0f,0.43f);
-        renderer.draw_text("ROADS     LOCATIONS     X = YOU",
-                           15.0f,207.0f,0.28f);
+        renderer.draw_text("ROADS    TOWNS    X = YOU",
+                           27.0f,207.0f,0.32f);
         renderer.draw_solid_rect(9.0f,222.0f,302.0f,16.0f,
             C2D_Color32(76,66,47,255),0.61f);
         renderer.draw_text("Y / B / TOUCH: BACK TO INVENTORY",

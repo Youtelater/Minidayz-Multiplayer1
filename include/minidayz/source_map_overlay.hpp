@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdint>
 #include "minidayz/world.hpp"
+#include "minidayz/source_mapgen_geometry.hpp"
 
 namespace minidayz::map_overlay {
 
@@ -13,7 +14,7 @@ namespace minidayz::map_overlay {
 enum class CellKind : std::uint8_t {
     ground, road_horizontal, road_vertical, road_crossing,
     village, military, city, hospital, firestation, market,
-    shop, cafe, location
+    shop, cafe, gas_station, location
 };
 
 constexpr CellKind cell_kind(std::uint16_t code) noexcept {
@@ -29,7 +30,10 @@ constexpr CellKind cell_kind(std::uint16_t code) noexcept {
         case 103: return CellKind::market;
         case 51: return CellKind::shop;
         case 50: return CellKind::cafe;
-        default: return code == 0 ? CellKind::ground : CellKind::location;
+        case 99: return CellKind::gas_station;
+        // Original Array has many non-POI marker/temporary codes. Mapping
+        // every nonzero value to a settlement invents dozens of map icons.
+        default: return CellKind::ground;
     }
 }
 
@@ -43,6 +47,26 @@ struct MapRect {
 struct MapPoint {
     float x{},y{};
 };
+
+// Root original create_mapgen UID3669795404796534 transposes Array axes:
+//   world X=700+arrayY*1020, world Y=320+arrayX*1020.
+// The 3DS map previously drew array X horizontally / array Y vertically,
+ // placing towns and roads at different locations from the actual world.
+ // Project every source grid cell through the SAME world coordinates as the
+ // generated buildings. Do not fake a 16x33 grid as 16 columns x 33 rows.
+inline MapRect source_cell_rect(int array_x,int array_y,
+                               const WorldBounds& bounds,
+                               MapRect viewport) noexcept {
+    if(!(bounds.width>0.0f && bounds.height>0.0f))
+        return {viewport.x,viewport.y,0.0f,0.0f};
+    const auto origin=world_source::mapgen_hotspot(array_x,array_y);
+    const float sx=viewport.width/bounds.width;
+    const float sy=viewport.height/bounds.height;
+    const float cell=world_source::kMapgenStride;
+    return {viewport.x+(origin.x-0.5f*cell)*sx,
+            viewport.y+(origin.y-0.5f*cell)*sy,
+            cell*sx,cell*sy};
+}
 
 // Do not project the player using 16x16 grid dimensions alone: the source
 // Map is a much larger world-coordinate space than the procedural Array.

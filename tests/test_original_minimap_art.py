@@ -14,7 +14,9 @@ for file in ("minimap_tile-sheet0.png","minimap_mark-sheet0.png",
     assert f'draw_original_image("{file}"' not in main,file
 assert '"minimap_mark-sheet0.png"' not in main
 assert '"minimap_player-sheet0.png"' not in main
-assert "minimap_mark_sheet0_" in main
+assert "minimap_mark_sheet0_" not in main  # don't repeat first unknown icon per POI
+assert 'source_cell_rect(' in main
+assert 'case 99: return CellKind::gas_station;' in (ROOT/"include/minidayz/source_map_overlay.hpp").read_text()
 assert "minimap_player_sheet0_" in main
 assert "renderer.draw_source_sprite_fitted(" in main
 assert "render_source_map" in main
