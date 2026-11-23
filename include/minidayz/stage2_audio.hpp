@@ -9,7 +9,8 @@ namespace minidayz {
 
 enum class OriginalWorldSound : std::uint8_t {
     chop1, chop2, chop3, chop4, treefall02, treefall03,
-    doorOpen, doorClose, doorMetalOpen, doorMetalClose, carTrunkOpen
+    doorOpen, doorClose, doorMetalOpen, doorMetalClose,
+    carTrunkOpen, carTrunkOpen
 };
 
 // The original Construct drop actions choose drop1/drop2; successful
