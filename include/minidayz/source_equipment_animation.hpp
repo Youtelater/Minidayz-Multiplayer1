@@ -32,6 +32,25 @@ inline std::uint32_t source_animation_frame_at_time(
     return frames>0.0 ? static_cast<std::uint32_t>(frames) : 0u;
 }
 
+// Non-player Sprite systems (e.g. the six original NPC bodies) store
+// Construct's 0-based animation INDEX, not its name. Resolve the source
+// entry for that exact object instead of guessing 8 FPS/4 frames for
+// every body. kAnimations is generated in original object/animation order.
+inline std::uint32_t source_object_animation_frame(
+    std::uint16_t object,std::uint16_t animation_index,
+    float elapsed_seconds) noexcept {
+    const auto* end=kAnimations+kAnimationCount;
+    const auto* found=std::lower_bound(kAnimations,end,object,
+        [](const AnimationDef& a,std::uint16_t id){
+            return a.object<id;
+        });
+    for(std::uint16_t i=0;i<animation_index &&
+        found!=end && found->object==object;++i)
+        ++found;
+    if(found==end || found->object!=object)return 0;
+    return source_animation_frame_at_time(*found,elapsed_seconds);
+}
+
 inline std::uint32_t source_equipment_animation_frame(
     std::uint16_t object,const char* animation_name,
     float elapsed_seconds) noexcept {
