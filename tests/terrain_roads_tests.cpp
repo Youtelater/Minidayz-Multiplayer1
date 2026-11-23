@@ -153,5 +153,37 @@ int main() {
            center.x,center.y-300.0f,source_width));
     assert(source_grid_road_contains(grid,1,1,
            center.x,center.y+300.0f,source_width));
+    // Original code12 and code13 include a 17-cell base plus
+    // four separately guarded 9-cell extensions. Two of those
+    // extensions have a NINE-code whitelist, not code14's ten.
+    grid.code[1][1]=12;
+    grid.code[1][0]=12;
+    assert(!source_road_neighbor_permits_arm(12,0,12));
+    assert(!source_grid_road_segment(grid,1,1,1,source_width).valid());
+    assert(source_grid_road_segment(grid,1,1,0,source_width).valid());
+    grid.code[1][0]=9;
+    assert(source_grid_road_segment(grid,1,1,1,source_width).valid());
+    assert(source_grid_road_contains(grid,1,1,
+           center.x,center.y-300.0f,source_width));
+    grid.code[1][2]=6;
+    assert(source_grid_road_segment(grid,1,1,2,source_width).valid());
+    grid.code[0][1]=12;
+    assert(source_road_neighbor_permits_arm(12,2,12));
+    assert(source_grid_road_segment(grid,1,1,3,source_width).valid());
+
+    grid.code[1][1]=13;
+    grid.code[0][1]=13;
+    assert(!source_road_neighbor_permits_arm(13,2,13));
+    assert(!source_grid_road_segment(grid,1,1,3,source_width).valid());
+    grid.code[0][1]=9;
+    assert(source_grid_road_segment(grid,1,1,3,source_width).valid());
+    grid.code[1][0]=13;
+    assert(source_road_neighbor_permits_arm(13,0,13));
+    assert(source_grid_road_segment(grid,1,1,1,source_width).valid());
+    assert(source_grid_road_segment(grid,1,1,0,source_width).valid());
+    assert(!source_road_neighbor_permits_arm(12,0,7));
+    assert(!source_road_neighbor_permits_arm(13,2,7));
+    assert(!source_road_neighbor_permits_arm(14,4,9));
+
     return 0;
 }
