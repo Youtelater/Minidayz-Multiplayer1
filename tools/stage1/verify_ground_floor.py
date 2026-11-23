@@ -79,8 +79,12 @@ for object_id, filename in source_objects.items():
         y = (selected // columns) * tile_pixels
         base = source.crop((x, y, x + tile_pixels, y + tile_pixels))
         assert base.getbbox() is not None, f"Transparent terrain tile {object_id}:{selected}"
-        assert len(base.getcolors(maxcolors=50000) or []) > 8, (
-            f"Incorrect original background crop {object_id}:{selected}")
+        # The root original snow/late-world plain-ground tiles may have
+        # fewer than eight distinct colors. Color variety is NOT evidence
+        # of authentic source art; compare the exact source tile ID and
+        # require opaque pixels instead of rejecting valid flat textures.
+        assert base.getchannel("A").getextrema() == (255,255), (
+            f"Original base ground has unexpected alpha {object_id}:{selected}")
 per_page = min(128, max(1, 1024 // tile_pixels) ** 2)
 # The atlas now packages the COMPLETE original seven-level tile palette,
 # not only tiles seen in authored source strips. This protects procedural
