@@ -68,3 +68,27 @@ for sheet,events in p[6]:
 print("ROOT_OTHER_PRIMARY_ACTION_COUNTS",len(seen))
 for entry in seen[:120]:
  print("ROOT_OTHER_PRIMARY_ACTION",json.dumps(entry,separators=(",",":"))[:2100])
+
+print("ROOT_SETTLEMENT_ARRAY_PROGRAM")
+wanted=(5581112549586124,6900587140270256,7398632301693316,
+        2975870129601185,6049878429774374,5350540726438238)
+for sheet,events in p[6]:
+ for event,_ in walk(events):
+  if event[4] not in wanted:continue
+  counts={}
+  actions=[]
+  for node,_ in walk([event]):
+   for a in node[6] if isinstance(node[6],list) else []:
+    if not isinstance(a,list) or len(a)<6:continue
+    k=(a[0],a[1])
+    counts[k]=counts.get(k,0)+1
+    actions.append((node[4],a))
+  print("ROOT_SETTLEMENT_OPCODES",event[4],counts,
+        "actions",len(actions))
+  for node_uid,a in actions[:85]:
+   print("ROOT_SETTLEMENT_STEP",event[4],node_uid,
+         json.dumps(a,separators=(",",":"),ensure_ascii=False)[:1600])
+  for node_uid,a in actions:
+   if a[0] in (525,-1) and a[1] not in (199,41,94):
+    print("ROOT_SETTLEMENT_OTHER_ACTION",event[4],node_uid,
+          json.dumps(a,separators=(",",":"),ensure_ascii=False)[:1400])
