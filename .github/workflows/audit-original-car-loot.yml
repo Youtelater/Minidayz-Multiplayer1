@@ -1,0 +1,15 @@
+name: Audit Original Car Loot and Chance Events
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/stage2/trace_original_car_loot.py'
+      - '.github/workflows/audit-original-car-loot.yml'
+  workflow_dispatch:
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect original car probability, loot and interaction events
+        run: python3 tools/stage2/trace_original_car_loot.py
