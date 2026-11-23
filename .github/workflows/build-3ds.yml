@@ -68,6 +68,12 @@ jobs:
             dkp-pacman -S --noconfirm 3ds-dev 3ds-portlibs
           fi
 
+      - name: Audit source ground tile seams against the original PNGs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/audit_ground_tile_repeatability.py
+
       - name: Inspect every original graphics PNG and build visual contact sheets
         shell: bash
         run: |
