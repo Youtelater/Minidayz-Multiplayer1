@@ -1674,6 +1674,11 @@ void test_new_game_generates_visible_original_world() {
             if(candidate && candidate->object==218 &&
                world->bounds().contains({candidate->x,candidate->y})) {
                 ++generated_loot_markers;
+                if(candidate->object==218 &&
+                   candidate->source_loot_category!=0) {
+                    assert(candidate->source_variable_0==
+                           candidate->source_loot_category);
+                }
                 if(candidate->source_loot_category==15)
                     ++original_category15_markers;
                 // No category-15 marker may be inferred from object type

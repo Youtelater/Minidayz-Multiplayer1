@@ -55,6 +55,14 @@ void test_all_original_location_branches() {
                     assert(spawn.frame>=0);
                     assert(std::isfinite(spawn.width)&&
                            std::isfinite(spawn.height));
+                    // The root Sprite218 category belongs to the exact
+                    // generated marker instance, not a global last value.
+                    if (spawn.object == 218) {
+                        const auto category =
+                            spawn.instance_variables[0].as_number();
+                        assert(std::isfinite(category));
+                        assert(category >= 0.0);
+                    }
                 }
                 ++executions;
             }

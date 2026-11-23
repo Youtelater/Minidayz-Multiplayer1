@@ -304,6 +304,14 @@ bool SourceLocationEventRuntime::execute_action(
         spawn.layer = p[1].as_string();
         spawn.x = p[2].as_number();
         spawn.y = p[3].as_number();
+        // Original Construct Create instantiates new per-object Sprite
+        // variables and starts at the default frame. Reusing the previous
+        // generated zed marker's frame/vars makes unrelated map cells
+        // inherit its NPC condition state.
+        if (spawn.object == 216) {
+            self.zed_frame_ = 0;
+            self.zed_variables_ = {};
+        }
         self.spawns_.push_back(std::move(spawn));
         self.last_spawn_index_ = self.spawns_.size() - 1;
         return true;
@@ -315,6 +323,10 @@ bool SourceLocationEventRuntime::execute_action(
         spawn.layer = p[1].as_string();
         spawn.x = self.mapgen_x_;
         spawn.y = self.mapgen_y_;
+        if (spawn.object == 216) {
+            self.zed_frame_ = 0;
+            self.zed_variables_ = {};
+        }
         self.spawns_.push_back(std::move(spawn));
         self.last_spawn_index_ = self.spawns_.size() - 1;
         return true;
@@ -349,7 +361,9 @@ bool SourceLocationEventRuntime::execute_action(
     }
     if (action.object_index == 404 && action.command_id == 103) {
         if (action.parameter_count != 2) return false;
-        if (auto* spawn = self.last_spawn()) {
+        // Construct targets the picked Sprite404, not whichever other
+        // object happened to be created most recently in this location.
+        if (auto* spawn = self.last_spawn(404)) {
             spawn->width = p[0].as_number();
             spawn->height = p[1].as_number();
         }

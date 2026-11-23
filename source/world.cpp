@@ -776,8 +776,15 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             const double c = spawn.instance_variables[0].as_number();
             if (std::isfinite(c) && c >= 1.0 && c <= 65535.0 &&
                 std::floor(c) == c)
-                placed.source_loot_category =
-                    static_cast<std::uint16_t>(c);
+                {
+                    // Preserve the original Sprite218 variable as well as
+                    // the native category index. Otherwise the location
+                    // loader's source SetInstanceVariable has no matching
+                    // per-instance state after creating this marker.
+                    placed.source_variable_0 = static_cast<std::uint64_t>(c);
+                    placed.source_loot_category =
+                        static_cast<std::uint16_t>(c);
+                }
         }
         WorldFeatureKind kind{};
         if (const auto* source_layer = stage1::find_layer(layout_index, layer);
