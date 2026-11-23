@@ -49,7 +49,8 @@ void SourceLocationEventRuntime::set_mapgen(std::uint16_t tile_code,
 
     mapgen_variables_[0] = Value::from_number(tile_code);
     mapgen_variables_[1] = Value::from_number(grid_y);
-    mapgen_variables_[2] = Value::from_number(static_cast<double>(grid_x) + 1.0);
+    // Sprite514 slot2 is original loopindex modulo Map_size_X, zero-based.
+    mapgen_variables_[2] = Value::from_number(grid_x);
     function_parameters_[0] = Value::from_number(tile_code);
 
     set_variable("hotspotX", Value::from_number(world_x));
