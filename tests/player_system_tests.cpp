@@ -126,6 +126,17 @@ int main() {
     assert(energy.restore(24.0f) && energy.bonus()==15.0f);
     assert(energy.restore(0.0f) && energy.bonus()==0.0f);
 
+    // Original Game_events UID189013257553857 checks perk_regen > 1.
+    // Buying the first Regen level does NOT increase AltMove speed.
+    assert(stage1::source_player_regen_speed_bonus(0)==0.0f);
+    assert(stage1::source_player_regen_speed_bonus(1)==0.0f);
+    assert(stage1::source_player_regen_speed_bonus(2)==10.0f);
+    stage1::SourcePlayerAltMoveModifiers regen_speed{};
+    regen_speed.regen_bonus=stage1::source_player_regen_speed_bonus(1);
+    assert(stage1::source_player_altmove_max_speed(regen_speed)==100.0f);
+    regen_speed.regen_bonus=stage1::source_player_regen_speed_bonus(2);
+    assert(stage1::source_player_altmove_max_speed(regen_speed)==110.0f);
+
     // Exact Construct PlayerBase193 AltMove source expression:
     // 100-var6-var7+var4+var3+var5+var8, before native collision.
     minidayz::stage1::SourcePlayerAltMoveModifiers v{};
