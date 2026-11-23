@@ -1866,6 +1866,28 @@ void test_original_map_layout_and_descriptors() {
     assert(npcs.initialize(world));
     assert(npcs.count() == source_zed_points);
     assert(npcs.count() > 0);
+    // The Construct source event/action UID can create MORE THAN ONE
+    // object216 at different map sites. Those are different instances,
+    // even if their original creation action UID is identical. Regression
+    // against NPC identity/random-skin/offset accidentally collapsing.
+    std::unordered_set<std::uint64_t> seen_spawn_instances;
+    std::unordered_map<std::uint64_t,std::uint32_t> seeded_action_instances;
+    std::size_t npc_index=0;
+    for(std::size_t i=0;i<world.placement_count();++i) {
+        const auto* spawn=world.placement(i);
+        if(!spawn || spawn->object!=216)continue;
+        const auto* actor=npcs.actor(npc_index++);
+        assert(actor && spawn->runtime_uid!=0);
+        assert(seen_spawn_instances.insert(spawn->runtime_uid).second);
+        if(spawn->source_uid==0)continue;
+        const auto found=seeded_action_instances.find(spawn->source_uid);
+        if(found==seeded_action_instances.end())
+            seeded_action_instances.emplace(spawn->source_uid,actor->random_state);
+        else
+            assert(actor->random_state!=found->second &&
+                "Two NPCs from one original source Spawn action reused one RNG seed");
+    }
+    assert(npc_index==npcs.count());
     for (std::size_t i = 0; i < npcs.count(); ++i) {
         const auto* actor = npcs.actor(i);
         assert(actor && actor->alive);
