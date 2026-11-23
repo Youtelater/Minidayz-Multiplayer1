@@ -10,12 +10,15 @@ Run `python3 tools/parity/audit_original_port_coverage.py` and `python3 tests/te
 
 The report contains **every original event occurrence** (including duplicate UIDs and seven-field leaf events), its full path, parent IDs, inherited conditions, exact action AST, original sheet/group and fingerprint. Each event is identified by its **sheet ordinal and child-index path**, not UID alone.
 
+The **63,289** original action occurrences have independent event-path-and-action-index keys. Original actions remain `not_individually_verified` until `data/parity/verified_original_actions.json` explicitly maps the exact action fingerprint to its native implementation and passing regression test. Full-port completion requires **all event mappings AND all independent action mappings**; a verified parent event alone does not prove all its actions.
+
 Events remain `not_event_verified` until `data/parity/verified_original_events.json` explicitly identifies that precise event with its fingerprint, C++ implementation file, and passing regression test. An object appearing on screen is not evidence that its AI, collision, interactions, sound, loot, animation, or persistence works.
 
 A verified implementation mapping must be reviewed against **all** inherited conditions and action ordering—not just direct children. This strict register starts with no falsely signed-off events. That does **not** mean no C++ systems exist: it means individual event-by-event parity has not been certified.
 
 The CI artifact `exact-source-port-coverage-and-car-loot` contains:
 - `every_original_event.jsonl` — exact source event index and implementation status
+- `every_original_action.jsonl.gz` — original action AST, inherited conditions and independent verification status for every source action
 - `original_car_loot_event_manifest.json` — full original car-open source chains, individual weighted drop choices, probability/variant/perk guards, and world/touch-mode ancestry
 - `parity_summary.json` — source hash, per-sheet totals, unverified system groups, and closure gate
 
