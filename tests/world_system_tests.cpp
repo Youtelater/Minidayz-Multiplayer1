@@ -1845,6 +1845,34 @@ void test_seed_reproducibility() {
     }
 }
 
+void test_source_scatter_reproduction_and_layout_replacement() {
+    // Original ground scatter must follow the same world seed, regardless
+    // of camera movement or whether the renderer exists.
+    const std::uint32_t seed=0x345aabe2u;
+    minidayz::WorldSystem a,b;
+    assert(a.generate_from_source(seed,"Map",0));
+    assert(b.generate_from_source(seed,"Map",0));
+    const auto& lhs=a.source_scatter_patches();
+    const auto& rhs=b.source_scatter_patches();
+    assert(!lhs.empty() && lhs.size()==rhs.size());
+    for(std::size_t p=0;p<lhs.size();++p){
+        assert(lhs[p].marker_index==rhs[p].marker_index);
+        assert(lhs[p].tiles.size()==rhs[p].tiles.size());
+        for(std::size_t k=0;k<lhs[p].tiles.size();++k){
+            assert(lhs[p].tiles[k].local_index==rhs[p].tiles[k].local_index);
+            assert(lhs[p].tiles[k].original_frame==
+                   rhs[p].tiles[k].original_frame);
+        }
+    }
+    assert(a.load_source_layout("Map"));
+    // A second authored layout must not inherit a previous generated
+    // forest, loot markers or a misleading completed-generation phase.
+    assert(!a.generation_complete());
+    assert(a.source_scatter_patches().empty());
+    assert(a.map_marker_count()==0);
+    assert(a.source_location_spawn_count()==0);
+}
+
 // New Game must not reuse an old, static Map. Confirm that two different
 // seeds change the original-generated grid AND populate the display layers
 // with original Construct sprites that the 3DS world renderer can draw.
@@ -2633,6 +2661,7 @@ int main() {
     test_source_profiles();
     test_original_map_layout_and_descriptors();
     test_seed_reproducibility();
+    test_source_scatter_reproduction_and_layout_replacement();
     test_generated_original_exterior_roofs_visible_in_world();
     test_new_game_generates_visible_original_world();
     test_level_four_split_grid();
