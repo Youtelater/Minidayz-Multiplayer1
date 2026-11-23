@@ -13,6 +13,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+      - name: Regenerate player animation definitions from authoritative root game
+        run: python3 tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
+
       - name: Generate Construct family membership used by native collision headers
         run: python3 tools/stage1/build_source_family_members.py
 
