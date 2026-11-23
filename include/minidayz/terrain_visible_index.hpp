@@ -2,6 +2,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_extents.hpp"
+#include "minidayz/source_world_sprite_visibility.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -37,7 +38,9 @@ public:
             // function wuranqu. Index only those source-authorized
             // world overlays; do not expose arbitrary GUI/logic sprites.
             if(!p||p->layer==32||
-               (p->layer>=44 && p->object!=1126))
+               (p->layer>=44 &&
+                !world_source::source_world_high_layer_gameplay_art(
+                    p->object,p->layer)))
                 continue;
             const auto* object=stage1::find_object(p->object);
             if(!object||object->type!=18)continue;

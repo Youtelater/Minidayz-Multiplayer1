@@ -2719,7 +2719,9 @@ void test_reported_world_seed_original_frame_integrity() {
         map-stage1::kLayoutTable);
     for(std::size_t i=0;i<world.placement_count();++i) {
         const auto* p=world.placement(i);
-        if(!p||p->opacity<=0.0f||p->layer==32||p->layer>=44||
+        if(!p||p->opacity<=0.0f||p->layer==32||(p->layer>=44 &&
+           !world_source::source_world_high_layer_gameplay_art(
+               p->object,p->layer))||
            world_source::source_world_logic_marker_not_art(p->object)||
            world_source::source_world_preview_needs_live_event(p->object))
             continue;
@@ -2754,6 +2756,14 @@ void test_reported_world_seed_original_frame_integrity() {
                 invalid_frames,world.placement_count());
     assert(visible_art>100);
     assert(trees>10);
+    // Original 241 car trunk is drawn above Trees43 on Sunset_Dawn45.
+    // The old index/render filters wrongly treated it as a browser-only
+    // night/weather layer and hid every original source car trunk.
+    assert(world_source::source_world_high_layer_gameplay_art(241,45));
+    assert(world_source::source_world_high_layer_gameplay_art(1126,44));
+    assert(!world_source::source_world_high_layer_gameplay_art(241,44));
+    assert(!world_source::source_world_high_layer_gameplay_art(241,46));
+    assert(!world_source::source_world_high_layer_gameplay_art(404,45));
     assert(invalid_frames==0 && "original world sprite frame not in source");
 }
 

@@ -74,3 +74,15 @@ assert "sprite_cache_failed_draws_" in engine
 assert "DROPS %lu" in engine
 assert "if(std::isfinite(opacity) && opacity<=0.0f)return true;" in engine
 print("PASS: all 15 root-proven visual roles, original green ghost staging templates, Building mode action ancestry and nonvisual world sprite filters")
+
+# Source category6 car trunks are Sprite241 on original Map Sunset_Dawn45:
+# do not filter them away as browser-only overlay sprites. Only root-audited
+# 241/45 and 1126/44 may pass the higher-layer generic world art gate.
+world_view=(ROOT/"include/minidayz/terrain_visible_index.hpp").read_text(encoding="utf-8")
+world_art=(ROOT/"include/minidayz/source_world_sprite_visibility.hpp").read_text(encoding="utf-8")
+assert "source_world_high_layer_gameplay_art(" in world_view
+assert "source_world_high_layer_gameplay_art(" in main
+assert "object==241 && layer==45" in world_art
+assert "object==1126 && layer==44" in world_art
+assert "p->object!=1126" not in world_view
+assert "placement->object!=1126" not in main

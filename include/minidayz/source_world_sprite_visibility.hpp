@@ -28,6 +28,20 @@ constexpr bool source_world_logic_marker_not_art(
     }
 }
 
+// Source-exact exceptions to the top world-scene cutoff before browser
+// overlays and GUI. The original category6 create_map_element event emits
+// REAL Sprite241 car-lootbox art onto "Sunset_Dawn" (Map layer45), not
+// Buildings/vehicle layers. Previous global layer>=44 culling hid ALL of
+// those original overlays even though source spawn states were present.
+// Root generator tools/stage1/build_source_car_wreck_trunks.py verifies
+// the original Sprite241 layer and imagepoint from data.deobfuscated.js.
+// Sprite1126 is original world radiation art on Rain layer44.
+constexpr bool source_world_high_layer_gameplay_art(
+    std::uint16_t object,std::uint16_t layer) noexcept {
+    return (object==241 && layer==45) ||
+           (object==1126 && layer==44);
+}
+
 // build_ghost-sheet0 (571) and build_ghost_obstacle-sheet0/1 (573)
 // are *real* source animation frames, but only drawn under the original
 // GUI/Building mode event conditions. Their Map layout instances are staged

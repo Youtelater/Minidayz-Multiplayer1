@@ -2821,7 +2821,9 @@ public:
                 const auto i=visible_world_placements_[visible_slot];
                 const auto* placement=world_.placement(i);
                 if(!placement ||
-                   (placement->layer>=44 && placement->object!=1126))
+                   (placement->layer>=44 &&
+                    !minidayz::world_source::source_world_high_layer_gameplay_art(
+                        placement->object,placement->layer)))
                     continue;
                 if(visible_slot>=layer_end){
                     layer_begin=visible_slot;
