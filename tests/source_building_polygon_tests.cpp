@@ -104,6 +104,25 @@ int main(){
     assert(source_house_sprites_overlap(other,zone));
     other.width=0.0f;
     assert(!source_house_sprites_overlap(zone,other));
+    // Root House_transparenting UID8794469330826744 must match the
+    // 1048 foundation overlapped by the SAME 346 wall, not any base
+    // elsewhere in the world. Previously a remote house wall faded an
+    // unrelated roof because the game scanned every foundation.
+    WorldPlacement picked{};
+    picked.object=302; picked.x=500.0f; picked.y=500.0f;
+    picked.width=100.0f; picked.height=100.0f;
+    picked.origin_x=picked.origin_y=0.5f;picked.scale_x=1.0f;
+    WorldPlacement touched{};
+    touched.object=346;touched.x=500.0f;touched.y=500.0f;
+    touched.width=20.0f;touched.height=20.0f;
+    touched.origin_x=touched.origin_y=0.5f;touched.scale_x=1.0f;
+    assert(source_picked_house_foundation_overlaps_wall(picked,touched));
+    touched.x=3000.0f;touched.y=3000.0f;
+    assert(!source_picked_house_foundation_overlaps_wall(picked,touched));
+    picked.object=349;
+    assert(!source_picked_house_foundation_overlaps_wall(picked,touched));
+    picked.object=302; touched.object=347;touched.x=500.0f;touched.y=500.0f;
+    assert(!source_picked_house_foundation_overlaps_wall(picked,touched));
     WorldPlacement missing{};
     missing.object=9999;
     missing.width=missing.height=20.0f;

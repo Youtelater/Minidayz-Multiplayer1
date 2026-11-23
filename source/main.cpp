@@ -3124,32 +3124,32 @@ private:
             const bool has_base=base!=nullptr;
             // Original 8794469330826744 selects foundations by actual
             // overlap with the picked 346 wall-zone, not generated UIDs.
-            const bool player_in_wall=!source_overlapping_wall_indices_.empty();
+            // Root UID 8794469330826744 picks a 1048 foundation
+            // overlapping the SAME wall346 that the player overlaps.
+            // Do not let a wall in another house fade this roof: the old
+            // code checked ANY foundation here, so every touched wall
+            // could force every neighboring overlapped roof transparent.
             bool touching_wall=false;
-            if(overlap && player_in_wall){
+            if(overlap && base){
                 for(const auto w:source_overlapping_wall_indices_){
                     const auto* wall=world_.placement(w);
-                    if(!wall)continue;
-                    for(const auto j:source_house_foundation_indices_){
-                        const auto* candidate=world_.placement(j);
-                        if(candidate && source_house_sprites_overlap(*candidate,*wall)){
-                            touching_wall=true;
-                            break;
-                        }
+                    if(wall && source_picked_house_foundation_overlaps_wall(
+                            *base,*wall)){
+                        touching_wall=true;
+                        break;
                     }
-                    if(touching_wall)break;
                 }
             }
-            sheltered=sheltered || (overlap && player_in_wall);
+            sheltered=sheltered || (overlap && touching_wall);
             auto decision=source_house_roof_decision(
                 *roof,*frame,player_pos,has_base,touching_wall);
             // The wall-zone branch does not evaluate the outside thresholds.
-            if(overlap && player_in_wall){
+            if(overlap && touching_wall){
                 decision.opacity=touching_wall?0.0f:roof->opacity;
                 decision.move_background=touching_wall ||
                     roof->layer==source_roof_background_layer_;
             }
-            if(overlap && !player_in_wall && base){
+            if(overlap && !touching_wall && base){
                 const auto* anim=source_roof_foundation_animations(base->object);
                 if(anim && base->source_animation!=anim->out_animation)
                     (void)world_.set_placement_sprite_state(
@@ -3179,7 +3179,7 @@ private:
                 }
                 reverse_pick_matches=picked==index;
             }
-            if(base && reverse_pick_matches && !player_in_wall &&
+            if(base && reverse_pick_matches && !touching_wall &&
                (overlap || base->layer==source_roof_base_top_layer_)){
                 const auto base_layer=decision.foundation_top?
                     source_roof_base_top_layer_:source_roof_base_layer_;
@@ -3199,22 +3199,24 @@ private:
             }
             // Original events 6437471853562815 / 7764770537466591
             // pick door 349 by mask overlap with the roof or wall-zone.
-            if(overlap && (!player_in_wall || touching_wall)){
+            if(overlap){
                 for(const auto i:source_door_indices_){
                     const auto* door=world_.placement(i);
                     if(!door)continue;
-                    bool picked=!player_in_wall &&
+                    bool picked=!touching_wall &&
                         source_house_sprites_overlap(*door,*roof);
-                    if(player_in_wall){
+                    if(touching_wall && base){
                         for(const auto w:source_overlapping_wall_indices_){
                             const auto* wall=world_.placement(w);
-                            if(wall && source_house_sprites_overlap(*door,*wall)){
+                            if(wall && source_picked_house_foundation_overlaps_wall(
+                                    *base,*wall) &&
+                               source_house_sprites_overlap(*door,*wall)){
                                 picked=true;break;
                             }
                         }
                     }
                     if(!picked)continue;
-                    const float opacity=player_in_wall?0.25f:1.0f;
+                    const float opacity=touching_wall?0.25f:1.0f;
                     if(std::fabs(door->opacity-opacity)>0.001f)
                         (void)world_.set_placement_sprite_state(
                             i,door->source_animation,door->source_frame,opacity);

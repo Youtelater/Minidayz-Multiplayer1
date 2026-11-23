@@ -157,6 +157,16 @@ inline bool source_house_sprites_overlap(const WorldPlacement& a,
     return false;
 }
 
+// Root House_transparenting event UID 8794469330826744 picks a
+// family-1048 foundation overlapping the *picked* family-1041 wall 346.
+// A wall from a neighboring house must never fade an unrelated roof.
+inline bool source_picked_house_foundation_overlaps_wall(
+    const WorldPlacement& foundation,const WorldPlacement& wall) noexcept {
+    return stage1::source_family_contains(1048,foundation.object) &&
+           wall.object==346 &&
+           source_house_sprites_overlap(foundation,wall);
+}
+
 inline float source_roof_in_world_y(
     const WorldPlacement& roof,const SourceRoofMemberPoint& point) noexcept {
     const float a=roof.angle*0.01745329251994329577f;
