@@ -48,3 +48,23 @@ for sheet,events in p[6]:
    print("ROOT_LOCATION_MULTIPLICITY",branch[4],"writes",writes,"literal_columns",sorted(cols)[:45])
    if writes>120: print("ROOT_MULTI_BUILDING_TEMPLATE",branch[4],"writes",writes)
   break
+
+# Spot other original per-object SetFrame and companion-spawn actions that
+# a primary-only native emit_source_rule would silently omit.
+print("ROOT_PRIMARY_FRAME_AND_COMPANION_AUDIT")
+seen=[]
+for sheet,events in p[6]:
+ for e,_ in walk(events):
+  actions=e[6] if isinstance(e[6],list) else []
+  main=[a[5][0][1] for a in actions if isinstance(a,list) and len(a)>5
+        and a[:2]==[508,73] and a[5] and isinstance(a[5][0],list)
+        and a[5][0][:1]==[4] and isinstance(a[5][0][1],int)]
+  for obj in main:
+   updates=[a for a in actions if isinstance(a,list) and len(a)>5
+            and a[0]==obj and a[1] in (72,73,88,103,169)]
+   if updates and not (obj in (184,207,209,210,576,577,581)):
+    seen.append({"uid":e[4],"object":obj,"sheet":sheet,
+        "updates":[[a[1],a[5][:4]] for a in updates][:12]})
+print("ROOT_OTHER_PRIMARY_ACTION_COUNTS",len(seen))
+for entry in seen[:120]:
+ print("ROOT_OTHER_PRIMARY_ACTION",json.dumps(entry,separators=(",",":"))[:2100])
