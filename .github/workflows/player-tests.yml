@@ -37,6 +37,10 @@ jobs:
           python3 tools/stage1/extract_construct.py data.deobfuscated.js --out data/stage1
           python3 tools/stage1/extract_location_templates.py
           python3 tools/stage1/extract_npc_spawn_calls.py
+          # WorldSystem now executes source Tilemap230 SetTile rules itself;
+          # native world tests need the SAME root-generated rule catalog
+          # that the 3DS build already generates.
+          python3 tools/stage1/build_procedural_environment.py
           python3 tools/stage1/build_source_door_points.py
           python3 tools/stage1/build_source_tree_impact_points.py
           python3 tools/stage1/build_source_family_members.py
