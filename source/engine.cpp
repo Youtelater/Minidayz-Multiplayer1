@@ -693,6 +693,30 @@ bool Renderer::draw_source_ponds(const WorldSystem& world,
     }
     return true;
 }
+bool Renderer::draw_source_special_terrain(const WorldSpecialTerrain& map,
+    float camera_x,float camera_y,float view_width,float view_height,float depth) noexcept {
+    if(map.empty())return true;
+    if(view_width<=0||view_height<=0||map.columns==0||map.rows==0||
+       map.cells.size()!=static_cast<std::size_t>(map.columns)*map.rows)return false;
+    constexpr float tile=30.0f;
+    for(int y=0;y<map.rows;++y)for(int x=0;x<map.columns;++x){
+        const float xx=map.x+x*tile,yy=map.y+y*tile;
+        if(xx>=map.x+map.width||yy>=map.y+map.height||
+           xx>=camera_x+view_width||yy>=camera_y+view_height||
+           xx+tile<=camera_x||yy+tile<=camera_y)continue;
+        const auto frame=map.cells[static_cast<std::size_t>(y)*map.columns+x];
+        if(frame==0xffffffffu)continue;
+        if(!detail_sheets_[3]){
+            auto sheet=C2D_SpriteSheetLoad("romfs:/gfx/original_map_detail_230.t3x");
+            if(!sheet)return false;
+            if(C2D_SpriteSheetCount(sheet)==0){C2D_SpriteSheetFree(sheet);return false;}
+            detail_sheets_[3]=sheet;
+        }
+        if(!draw_original_tile(detail_sheets_[3],frame,xx,yy,tile,depth))
+            return false;
+    }
+    return true;
+}
 bool Renderer::draw_source_road_grid(const WorldSystem& world,
                                     float camera_x,float camera_y,
                                     float view_width,float view_height,

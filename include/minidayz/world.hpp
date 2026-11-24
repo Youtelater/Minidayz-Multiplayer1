@@ -80,6 +80,16 @@ struct WorldScatterPatch {
     std::vector<WorldScatterTile> tiles{};
     std::int16_t offset_x{-500},offset_y{-500};
 };
+// Independently authored Tilemap230 for bridge/tutorial/menu events.
+// Raw source frame descriptors retain the original flip bits and RLE cells.
+struct WorldSpecialTerrain {
+    float x{},y{},width{},height{};
+    std::uint16_t columns{},rows{},layer{};
+    std::uint64_t source_action_uid{};
+    std::vector<std::uint32_t> cells{};
+    std::uint32_t writes{};
+    bool empty() const noexcept {return cells.empty();}
+};
 struct WorldGroundPatch {
     std::size_t marker_index{};
     std::uint16_t source_object{};
@@ -274,6 +284,12 @@ public:
         return source_ground_patches_;
     }
     int source_ground_frame_at(float x,float y) const noexcept;
+    const WorldSpecialTerrain& source_special_terrain() const noexcept {
+        return source_special_terrain_;
+    }
+    // Only the source onBridge state may execute bridge-specific writes.
+    // Reload_locations_aftersave has its own original tilemap origin.
+    bool run_source_bridge_terrain(bool on_bridge,bool after_save);
     const std::vector<WorldScatterPatch>& source_pond_patches() const noexcept {
         return source_pond_patches_;
     }
@@ -298,6 +314,8 @@ private:
     std::vector<WorldMapMarker> map_markers_{};
     std::vector<WorldScatterPatch> source_scatter_patches_{};
     std::vector<WorldGroundPatch> source_ground_patches_{};
+    WorldSpecialTerrain source_special_terrain_{};
+    bool source_layout_is_map_{};
     std::vector<WorldScatterPatch> source_pond_patches_{};
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};

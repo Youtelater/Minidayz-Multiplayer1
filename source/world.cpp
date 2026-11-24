@@ -1,6 +1,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/source_location_terrain.hpp"
+#include "minidayz/source_special_terrain.hpp"
 #include "minidayz/source_pond_paint.hpp"
 #include "minidayz/source_tilemap_solid_collision.hpp"
 #include "minidayz/generated/original_initial_building_loot.hpp"
@@ -509,6 +510,9 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
         bounds.width <= 0.0f || bounds.height <= 0.0f) return false;
     bounds_ = bounds;
     seed_ = seed;
+    rng_.seed(seed);
+    source_special_terrain_={};
+    source_layout_is_map_=false;
     grid_.clear();
     map_markers_.clear();
     source_scatter_patches_.clear();
@@ -807,6 +811,8 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     const auto index = static_cast<std::uint16_t>(layout - stage1::kLayoutTable);
     const auto range = stage1::instances_for_layout(index);
     bounds_ = {layout->width, layout->height};
+    source_special_terrain_={};
+    source_layout_is_map_=name=="Map";
     grid_.clear();
     map_markers_.clear();
     source_scatter_patches_.clear();
@@ -854,9 +860,33 @@ bool WorldSystem::load_source_layout(std::string_view name) {
                              src.object,src.w,src.h,src.angle,0});
     }
     initialized_ = true;
+    if(name=="Tutorial"||name=="Menu"){
+        const auto event=name=="Tutorial"?
+            world_source::SourceSpecialTerrainEvent::TutorialStart:
+            world_source::SourceSpecialTerrainEvent::MenuStart;
+        if(!world_source::build_special_terrain(event,rng_,source_special_terrain_))
+            return false;
+    }
     return true;
 }
 
+bool WorldSystem::run_source_bridge_terrain(bool on_bridge,bool after_save) {
+    if(!initialized_||!source_layout_is_map_||!on_bridge)return false;
+    const auto event=after_save?world_source::SourceSpecialTerrainEvent::BridgeReload:
+        world_source::SourceSpecialTerrainEvent::BridgeLoad;
+    if(!world_source::build_special_terrain(event,rng_,source_special_terrain_))
+        return false;
+    const auto* layout=stage1::find_layout("Map");
+    if(!layout)return false;
+    const auto index=static_cast<std::uint16_t>(layout-stage1::kLayoutTable);
+    for(const auto& layer:stage1::kLayerTable)
+        if(layer.layout==index&&std::strcmp(layer.name,"ground_enviroment")==0){
+            source_special_terrain_.layer=layer.index;
+            return true;
+        }
+    source_special_terrain_={};
+    return false;
+}
 
 // Compile and execute the actual original location terrain tree, including
 // every source family1066 range, single tile, edge scan and the ordered
@@ -1567,6 +1597,8 @@ bool WorldSystem::load_source_bridge_elements() {
 }
 
 void WorldSystem::reset() noexcept {
+    source_special_terrain_={};
+    source_layout_is_map_=false;
     grid_.clear();
     map_markers_.clear();
     source_scatter_patches_.clear();

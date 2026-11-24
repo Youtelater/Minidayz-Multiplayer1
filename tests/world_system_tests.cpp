@@ -18,6 +18,7 @@
 #include "minidayz/generated/location_event_source.hpp"
 #include "minidayz/generated/terrain_scatter_source.hpp"
 #include "minidayz/source_location_terrain.hpp"
+#include "minidayz/source_special_terrain.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -1990,6 +1991,52 @@ void test_original_perk_dao_world_scatter_branch() {
     assert(perk.scatter==snow.scatter);
 }
 
+void test_original_special_terrain_contexts() {
+    using namespace minidayz::world_source;
+    using E=SourceSpecialTerrainEvent;
+    static_assert(kSourceLocationTerrainPaintCount+kSourceSpecialTerrainPaintCount==638);
+    static_assert(kSourceTotalTerrainPaintCount==638);
+    std::mt19937 a(8271),b(8271),c(8271),d(8271);
+    minidayz::WorldSpecialTerrain load{},reload{},tutorial{},menu{};
+    assert(build_special_terrain(E::BridgeLoad,a,load));
+    assert(build_special_terrain(E::BridgeReload,b,reload));
+    assert(load.writes==250 && reload.writes==250 && load.cells==reload.cells && a==b);
+    assert(load.source_action_uid==895209268453600ULL);
+    assert(reload.source_action_uid==458228549101251ULL);
+    assert(load.x==148&&load.y==18391&&reload.y==18351);
+    for(int y=0;y<load.rows;++y)for(int x=231;x<load.columns;++x)
+        assert(load.cells[y*load.columns+x]==0xffffffffu);
+    assert(build_special_terrain(E::TutorialStart,c,tutorial));
+    assert(tutorial.writes==1250&&tutorial.source_action_uid==506106248958134ULL);
+    assert(tutorial.columns==226&&tutorial.rows==97&&tutorial.x==693&&tutorial.y==533);
+    for(int y=26;y<tutorial.rows;++y)for(int x=0;x<tutorial.columns;++x){
+        const auto i=y*tutorial.columns+x;
+        assert(tutorial.cells[i]==kTutorialStartAuthored[i]);
+    }
+    assert(build_special_terrain(E::MenuStart,d,menu));
+    assert(menu.writes==400&&menu.source_action_uid==2084078328497493ULL);
+    assert(menu.columns==91&&menu.rows==50&&menu.x==-9&&menu.y==-6);
+    for(int y=0;y<menu.rows;++y)for(int x=83;x<menu.columns;++x){
+        const auto i=y*menu.columns+x;
+        assert(menu.cells[i]==kMenuStartAuthored[i]);
+    }
+    minidayz::WorldSystem world;
+    assert(world.initialize(8271));
+    assert(world.load_source_layout("Map"));
+    assert(world.source_special_terrain().empty());
+    assert(!world.run_source_bridge_terrain(false,true));
+    assert(world.run_source_bridge_terrain(true,false));
+    assert(world.source_special_terrain().source_action_uid==load.source_action_uid);
+    assert(world.run_source_bridge_terrain(true,true));
+    assert(world.source_special_terrain().source_action_uid==reload.source_action_uid);
+    assert(world.load_source_layout("Tutorial"));
+    assert(world.source_special_terrain().writes==1250);
+    assert(!world.run_source_bridge_terrain(true,true));
+    assert(world.load_source_layout("Menu"));
+    assert(world.source_special_terrain().writes==400);
+    assert(world.load_source_layout("Map")&&world.source_special_terrain().empty());
+}
+
 void test_compiled_original_location_terrain_program() {
     using minidayz::world_source::SourceLocationTerrain;
     static_assert(minidayz::world_source::kSourceLocationTerrainPaintCount==634);
@@ -3063,6 +3110,7 @@ void test_reported_world_seed_original_frame_integrity() {
 } // namespace
 
 int main() {
+    test_original_special_terrain_contexts();
     test_original_high_layer_spawn_visibility();
     test_building_attachment_name_case();
     test_source_furniture_and_pump();

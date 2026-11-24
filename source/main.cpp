@@ -1,4 +1,5 @@
 #include "minidayz/engine.hpp"
+#include "minidayz/source_special_terrain.hpp"
 #include "minidayz/boot_menu.hpp"
 #include "minidayz/menu_preferences.hpp"
 #include "minidayz/generated/menu_source_catalog.hpp"
@@ -278,6 +279,10 @@ public:
         // Original Menu_Events starts ambient on entering the main menu.
         // Playback uses the same day-loop channel as gameplay, at -10 dB.
         stage2_audio_.start_menu_ambience();
+        std::mt19937 menu_rng(world_seed_);
+        (void)minidayz::world_source::build_special_terrain(
+            minidayz::world_source::SourceSpecialTerrainEvent::MenuStart,
+            menu_rng,menu_source_terrain_);
     }
 
     void on_exit() noexcept override {
@@ -2563,6 +2568,10 @@ public:
             renderer.draw_solid_rect(0.0f, 0.0f, 400.0f, 240.0f,
                                      C2D_Color32(24, 34, 29, 255),0.01f);
             (void)renderer.draw_menu_art(2, 0.0f, 0.0f, 400.0f, 240.0f, 0.05f);
+            // Original Menu_Events/Animateds paints Tilemap230 once,
+            // not once per frame or into the survival world's RNG stream.
+            (void)renderer.draw_source_special_terrain(
+                menu_source_terrain_,0.0f,0.0f,400.0f,240.0f,0.06f);
             if (!renderer.draw_menu_art(0, 42.0f, 50.0f, 316.0f, 80.0f))
                 renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
             renderer.draw_text("3DS EDITION", 143.0f, 156.0f, 0.43f);
@@ -4484,6 +4493,7 @@ private:
     }
 
     minidayz::WorldSystem world_{};
+    minidayz::WorldSpecialTerrain menu_source_terrain_{};
     minidayz::terrain::SolidTerrain terrain_collision_{};
     minidayz::terrain::SourceObstacleIndex collision_index_{};
     struct SourceDoorWait {
