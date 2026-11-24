@@ -2123,18 +2123,33 @@ void test_source_scatter_reproduction_and_layout_replacement() {
     const auto& ground_a=a.source_ground_patches();
     const auto& ground_b=b.source_ground_patches();
     assert(ground_a.size()==a.map_marker_count() && ground_a.size()==ground_b.size());
-    std::size_t painted=0,edges=0;
+    std::size_t painted=0,edges=0,aligned_roads=0;
     for(std::size_t p=0;p<ground_a.size();++p){
         const auto& ga=ground_a[p];
         const auto& gb=ground_b[p];
         assert(ga.marker_index==p && gb.marker_index==p);
         assert(ga.source_object==gb.source_object&&ga.cells==gb.cells);
+        const auto* marker=a.map_marker(p);
+        assert(marker);
+        if(ga.source_object && (marker->marker_type==12 || marker->marker_type==13)){
+            // Root startup action 8480552636662138 shifts the marker by 500
+            // before create_map_location creates ground at shifted X/Y-500.
+            // The original road tile origin equals the pre-shift marker.
+            assert(ga.offset_x==0 && ga.offset_y==0);
+            const auto origin=minidayz::world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
+            for(int ty=0;ty<17;++ty)for(int tx=0;tx<17;++tx){
+                const auto frame=ga.cells[ty*17+tx];
+                assert(a.source_ground_frame_at(origin.x+tx*60.0f+30.0f,
+                                               origin.y+ty*60.0f+30.0f)==frame);
+                if(frame==15)++aligned_roads;
+            }
+        }
         for(auto frame:ga.cells){
             if(frame==15)++painted;
             if(frame>=0&&frame<=12&&frame!=6)++edges;
         }
     }
-    assert(painted>0&&edges>0);
+    assert(painted>0&&edges>0&&aligned_roads>0);
     const auto& pond_a=a.source_pond_patches();
     const auto& pond_b=b.source_pond_patches();
     assert(pond_a.size()==pond_b.size());
@@ -2144,8 +2159,8 @@ void test_source_scatter_reproduction_and_layout_replacement() {
         assert(marker && marker->marker_type==3);
         assert(pond_a[i].tiles.size()==pond_b[i].tiles.size());
         const auto center=minidayz::world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
-        assert(a.source_pond_contains(center.x+10,center.y+10,false));
-        assert(a.source_pond_contains(center.x+10,center.y+10,true));
+        assert(a.source_pond_contains(center.x+510,center.y+510,false));
+        assert(a.source_pond_contains(center.x+510,center.y+510,true));
         for(std::size_t j=0;j<pond_a[i].tiles.size();++j){
             assert(pond_a[i].tiles[j].local_index==pond_b[i].tiles[j].local_index);
             assert(pond_a[i].tiles[j].original_frame==pond_b[i].tiles[j].original_frame);
