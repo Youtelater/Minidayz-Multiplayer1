@@ -58,6 +58,27 @@ if parsed.is_file() and original.is_file():
                 "Original object/layout tables are nonempty")
         require(any(layout[0] == "Map" for layout in project[5]),
                 "Original Map layout is present")
+        def walk_source(events):
+            for event in events:
+                if not isinstance(event,list) or len(event)<7: continue
+                if event[0] in (0,1): yield event
+                if event[0]==0 and len(event)>7:
+                    yield from walk_source(event[7])
+        events=list(walk_source(dict(project[6])["Game_events"]))
+        by_id={e[4]:e for e in events if e[0]==0}
+        require(any(e[0]==1 and e[1:4]==["respawn_radius2",0,1800]
+                    for e in events),"Root original reload radius is 1800")
+        def radius_guard(uid,op,radius_expr):
+            return any(c[:2]==[-1,89] and len(c)>9 and c[9][2]==[8,op]
+                       and c[9][3]==[7,radius_expr] for c in by_id[uid][5])
+        require(radius_guard(4231114617418879,3,[4,[23,"respawn_radius2"],[0,1000]])
+                and radius_guard(312510647899376,4,[23,"respawn_radius2"])
+                and radius_guard(597693887903437,3,[23,"respawn_radius2"]),
+                "Root startup, erase and create reload radius expressions")
+        timer=by_id[583575774431491][5]
+        require(any(c[:2]==[-1,77] and c[9]==[[0,[0,1]]] for c in timer)
+                and any(c[:2]==[-1,51] and c[9][1:]==[[8,4],[7,[0,400]]]
+                        for c in timer),"Root reload one-second timer and >400 movement guard")
     except (OSError, ValueError, KeyError, IndexError, TypeError) as exc:
         errors.append("Original Construct tree invalid: " + str(exc))
 
@@ -94,6 +115,9 @@ require("generation_phase_ = 1" in world and
         world.index("case 3: ok") < world.index("case 4: ok") <
         world.index("case 5: ok"),
         "All five implemented world-generation stages are wired in source proposal/load order")
+require("start_source_location_reload(" in game and "update_source_location_reload(" in game and
+        "source_placement_active(*p)" in game and "source_location_active(patch.marker_index)" in renderer,
+        "Root reload active selection controls live native world rendering and collision")
 require("menu_active_ = false" in game and "npc_ready_ = npcs_.initialize(world_)" in game,
         "Successful generation enables gameplay and initializes NPCs")
 require("draw_original_ground_floor(" in game and

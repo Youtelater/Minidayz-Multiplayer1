@@ -143,6 +143,9 @@ struct WorldPlacement {
     // native provenance, one-based; it is not a Construct instance variable.
     std::uint64_t source_variable_2{};
     std::size_t source_map_marker_index{};
+    // One-based owner of an element created by create_map_location;
+    // zero means persistent/authored or otherwise not a streamed element.
+    std::size_t source_reload_marker{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
@@ -310,6 +313,15 @@ public:
         return source_pond_patches_;
     }
     bool source_pond_contains(float x,float y,bool solid_only) const noexcept;
+    bool start_source_location_reload(WorldPoint player) noexcept;
+    bool update_source_location_reload(WorldPoint actor,float seconds) noexcept;
+    bool source_location_active(std::size_t marker_index) const noexcept {
+        return !source_reload_started_ || (marker_index<map_markers_.size() &&
+            marker_index<source_active_locations_.size() && source_active_locations_[marker_index]!=0);
+    }
+    bool source_placement_active(const WorldPlacement& placement) const noexcept {
+        return !placement.source_reload_marker || source_location_active(placement.source_reload_marker-1);
+    }
     std::uint8_t generation_level() const noexcept { return generation_level_; }
     std::uint8_t generation_perk_dao() const noexcept { return generation_perk_dao_; }
     bool source_start_position(WorldPoint& point) const noexcept {
@@ -353,6 +365,14 @@ private:
     bool source_start_events_{};
     bool source_start_ready_{};
     WorldPoint source_start_position_{};
+    // Root Array518 is at most 16x33; retain dormant native geometry and
+    // stable save IDs while applying the exact source active-location set.
+    std::array<std::uint8_t,16*33> source_active_locations_{};
+    WorldPoint source_reload_anchor_{};
+    float source_reload_elapsed_{};
+    bool source_reload_started_{};
+    void clear_source_location_reload() noexcept;
+    void select_source_active_locations(WorldPoint actor,float radius) noexcept;
     std::uint8_t generation_level_{};
     std::uint8_t generation_perk_dao_{};
     bool generation_is_map_{};

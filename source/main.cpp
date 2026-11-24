@@ -403,6 +403,8 @@ public:
                         "sdmc:/3ds/Minidayz/world_visual.sav");
                     continue_world_visual_state_=false;
                 }
+                (void)world_.start_source_location_reload(
+                    {player_.state().x,player_.state().y});
                 collision_index_.rebuild(world_);
                 visibility_index_.rebuild(world_);
                 rebuild_source_automatic_doors();
@@ -1406,6 +1408,8 @@ public:
         preview_rules_.run_speed=source_speed;
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
+        (void)world_.update_source_location_reload(
+            {player_.state().x,player_.state().y},dt);
         // Re-evaluate after movement for source-frame-1 closing transitions
         // and newly reached door triggers. The frame guard prevents double
         // sounds when both checks observe the same state.
@@ -2966,6 +2970,11 @@ public:
                 : 0;
             visibility_index_.query(camera_x,camera_y,view_w,view_h,
                                     visible_world_placements_);
+            visible_world_placements_.erase(std::remove_if(
+                visible_world_placements_.begin(),visible_world_placements_.end(),
+                [&](std::uint32_t i){const auto* p=world_.placement(i);
+                    return !p || !world_.source_placement_active(*p);}),
+                visible_world_placements_.end());
             std::size_t world_source_requested=0;
             std::size_t world_source_drawn=0;
             std::size_t world_source_bad_frames=0;
@@ -4462,8 +4471,8 @@ private:
                 const auto* kind= minidayz::stage1::find_object(placement->object);
                 if (kind && kind->type==16) continue;
             }
-            if (!placement || placement->width <= 0.0f ||
-                placement->height <= 0.0f ||
+            if (!placement || !scene->world_.source_placement_active(*placement) ||
+                placement->width <= 0.0f || placement->height <= 0.0f ||
                 minidayz::terrain::source_visual_roof_overlay(
                     placement->object)) continue;
             const auto* layer = minidayz::stage1::find_layer(

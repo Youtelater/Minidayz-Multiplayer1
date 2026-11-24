@@ -668,6 +668,7 @@ bool Renderer::draw_source_ponds(const WorldSystem& world,
     constexpr float tile=world_source::kPondTileSize;
     const float depth=world_source::source_world_layer_depth(19,0,0);
     for(const auto& patch:world.source_pond_patches()){
+        if(!world.source_location_active(patch.marker_index))continue;
         const auto* marker=world.map_marker(patch.marker_index);
         if(!marker)return false;
         const auto center=world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
@@ -736,7 +737,7 @@ bool Renderer::draw_source_road_grid(const WorldSystem& world,
  const float depth=world_source::source_world_layer_depth(bg->index,0,0);
  constexpr float tile=stage1::kOriginalFloorTileSize;
  for(const auto& patch:world.source_ground_patches()){
-     if(!patch.source_object)continue;
+     if(!patch.source_object||!world.source_location_active(patch.marker_index))continue;
      const auto* marker=world.map_marker(patch.marker_index);
      if(!marker)return false;
      const auto center=world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);

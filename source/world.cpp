@@ -540,6 +540,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     source_start_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
+    clear_source_location_reload();
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     initialized_ = true;
@@ -625,6 +626,7 @@ bool WorldSystem::generate_from_source(std::uint32_t seed, std::string_view name
 bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t seed) {
     if (!initialized_) return false;
     map_markers_.clear();
+    clear_source_location_reload();
     source_scatter_patches_.clear();
     source_ground_patches_.clear();
     source_location_proposals_.clear();
@@ -863,6 +865,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     source_special_terrain_={};
     source_bridge_solids_.clear();
     source_layout_is_map_=name=="Map";
+    clear_source_location_reload();
     grid_.clear();
     map_markers_.clear();
     source_scatter_patches_.clear();
@@ -1006,7 +1009,7 @@ int WorldSystem::source_ground_frame_at(float x,float y) const noexcept {
     const int row=static_cast<int>(std::floor((x-world_source::kMapgenStartX)/world_source::kMapgenStride));
     if(col<0||row<0||col>=grid_.width()||row>=grid_.height())return -1;
     const auto index=static_cast<std::size_t>(row)*grid_.width()+col;
-    if(index>=source_ground_patches_.size())return -1;
+    if(index>=source_ground_patches_.size()||!source_location_active(index))return -1;
     const auto& patch=source_ground_patches_[index];
     if(!patch.source_object||patch.marker_index!=index)return -1;
     const auto center=world_source::mapgen_hotspot(col,row);
@@ -1216,7 +1219,10 @@ bool WorldSystem::materialize_source_locations() {
         while(next<source_location_proposals_.size() &&
               source_location_proposals_[next].marker_index==marker){
             const auto& p=source_location_proposals_[next++];
+            const auto first=placements_.size();
             (void)expand_map_element(p.type,p.variant,p.extra,p.position,p.state);
+            for(std::size_t i=first;i<placements_.size();++i)
+                placements_[i].source_reload_marker=marker+1;
         }
         if(!build_source_location_terrain(marker))return false;
     }
@@ -1705,6 +1711,7 @@ bool WorldSystem::create_source_door_companions() {
         solid.linked_runtime_uid=door.runtime_uid;
         solid.parent_runtime_uid=door.runtime_uid;
         solid.house_base_runtime_uid=door.house_base_runtime_uid;
+        solid.source_reload_marker=door.source_reload_marker;
         if(!sync_source_door_solid_placement(door,solid))return false;
         placements_[i].linked_runtime_uid=runtime_id;
         // Original close event 243854400993751 writes
@@ -1780,6 +1787,7 @@ void WorldSystem::reset() noexcept {
     source_start_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
+    clear_source_location_reload();
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     seed_ = 0;
@@ -2617,9 +2625,61 @@ bool WorldTravel::advance() noexcept {
     return false;
 }
 
+// Root Game_events Reload_locations_start / Reload_locations:
+// 1456743768298146 -> 4231114617418879, distance <= radius2+1000;
+// 4959923607871348 -> 312510647899376 / 597693887903437,
+// erase > radius2, create <= radius2, with per-marker var3 state.
+// Root respawn_radius2 declaration 3289331792847243 is 1800.
+// A 3DS resident cache preserves stable object IDs and changed element
+// state; activation controls terrain and geometry rather than freeing
+// and reallocating the cached objects or pretending to replay all events.
+void WorldSystem::clear_source_location_reload() noexcept {
+    source_active_locations_.fill(0);
+    source_reload_anchor_={};
+    source_reload_elapsed_=0;
+    source_reload_started_=false;
+}
+void WorldSystem::select_source_active_locations(WorldPoint actor,float radius) noexcept {
+    for(std::size_t i=0;i<map_markers_.size();++i){
+        const auto& marker=map_markers_[i];
+        const auto h=world_source::mapgen_hotspot(marker.cell_x,marker.cell_y);
+        // 8480552636662138 shifts all Sprite514 by (+500,+500)
+        // before the original distance-pick functions.
+        const double dx=static_cast<double>(actor.x)-(h.x+500.0);
+        const double dy=static_cast<double>(actor.y)-(h.y+500.0);
+        source_active_locations_[i]=(dx*dx+dy*dy<=static_cast<double>(radius)*radius)?1:0;
+    }
+}
+bool WorldSystem::start_source_location_reload(WorldPoint player) noexcept {
+    clear_source_location_reload();
+    if(!generation_complete() || !generation_is_map_ || map_markers_.empty() ||
+       map_markers_.size()>source_active_locations_.size() ||
+       !std::isfinite(player.x)||!std::isfinite(player.y))return false;
+    select_source_active_locations(player,2800.0f);
+    source_reload_anchor_=player;
+    source_reload_started_=true;
+    return true;
+}
+bool WorldSystem::update_source_location_reload(WorldPoint actor,float seconds) noexcept {
+    if(!source_reload_started_ || !std::isfinite(actor.x)||!std::isfinite(actor.y)||
+       !std::isfinite(seconds)||seconds<=0.0f)return false;
+    // Root 583575774431491: Every 1 second AND distance(517,225)>400.
+    source_reload_elapsed_+=seconds;
+    if(source_reload_elapsed_<1.0f)return false;
+    source_reload_elapsed_=std::fmod(source_reload_elapsed_,1.0f);
+    const double dx=static_cast<double>(actor.x)-source_reload_anchor_.x;
+    const double dy=static_cast<double>(actor.y)-source_reload_anchor_.y;
+    if(dx*dx+dy*dy<=400.0*400.0)return false;
+    // Source Reload_locations destroys previous anchor517 and spawns a
+    // fresh one at 225 before erasing and creating selected locations.
+    source_reload_anchor_=actor;
+    select_source_active_locations(actor,1800.0f);
+    return true;
+}
 bool WorldSystem::source_pond_contains(float x,float y,bool solid_only) const noexcept {
     if(!std::isfinite(x)||!std::isfinite(y))return false;
     for(const auto& patch:source_pond_patches_){
+        if(!source_location_active(patch.marker_index))continue;
         const auto* marker=map_marker(patch.marker_index);
         if(!marker)continue;
         const auto center=world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);

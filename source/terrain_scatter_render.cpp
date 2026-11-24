@@ -21,6 +21,7 @@ bool Renderer::draw_source_procedural_environment(
  const float view_right=camera_x+view_width;
  const float view_bottom=camera_y+view_height;
  for(const auto& patch:world.source_scatter_patches()){
+  if(!world.source_location_active(patch.marker_index))continue;
   const auto* marker=world.map_marker(patch.marker_index);
   if(!marker)return false;
   const auto center=world_source::mapgen_hotspot(

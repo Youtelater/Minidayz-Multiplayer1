@@ -3306,7 +3306,53 @@ static void test_source_start_event_order() {
     assert(destination.y==373.0f);
 }
 
+static void test_original_location_reload_selection() {
+    minidayz::WorldSystem world;
+    assert(world.generate_from_source(123456u,"Map",0));
+    const auto h=minidayz::world_source::mapgen_hotspot(3,3);
+    minidayz::WorldPoint start{h.x+500.0f,h.y+500.0f};
+    const auto snapshot=world.source_random();
+    const auto placements=world.placement_count();
+    assert(world.start_source_location_reload(start));
+    const auto verify=[&](minidayz::WorldPoint actor,double radius){
+        unsigned count=0;
+        for(std::size_t i=0;i<world.map_marker_count();++i){
+            const auto* m=world.map_marker(i);
+            const auto h=minidayz::world_source::mapgen_hotspot(m->cell_x,m->cell_y);
+            const double dx=actor.x-(h.x+500.0),dy=actor.y-(h.y+500.0);
+            const bool active=dx*dx+dy*dy<=radius*radius;
+            assert(world.source_location_active(i)==active);
+            if(active)++count;
+        }
+        assert(count>0 && count<world.map_marker_count());
+        unsigned linked=0;
+        for(std::size_t i=0;i<world.placement_count();++i){
+            const auto* p=world.placement(i);
+            if(p->source_reload_marker){
+                assert(world.source_placement_active(*p)==
+                    world.source_location_active(p->source_reload_marker-1));
+                ++linked;
+            }else assert(world.source_placement_active(*p));
+        }
+        assert(linked>0);
+    };
+    verify(start,2800.0);
+    assert(!world.update_source_location_reload({start.x+400.0f,start.y},1.0f));
+    assert(!world.update_source_location_reload({start.x+401.0f,start.y},0.5f));
+    assert(world.update_source_location_reload({start.x+401.0f,start.y},0.5f));
+    verify({start.x+401.0f,start.y},1800.0);
+    assert(!world.update_source_location_reload({start.x+801.0f,start.y},1.0f));
+    assert(world.update_source_location_reload({start.x+1800.0f,start.y},1.0f));
+    verify({start.x+1800.0f,start.y},1800.0);
+    assert(world.update_source_location_reload(start,1.0f));
+    verify(start,1800.0);
+    assert(world.placement_count()==placements && world.source_random()==snapshot);
+    assert(world.load_source_layout("Menu"));
+    assert(world.source_location_active(0));
+}
+
 int main() {
+    test_original_location_reload_selection();
     test_source_start_event_order();
     test_original_split_road_save_compatibility();
     test_poi_order_save_compatibility();
