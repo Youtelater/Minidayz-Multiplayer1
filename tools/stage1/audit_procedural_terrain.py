@@ -165,6 +165,43 @@ def main():
     DEST.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(f"Source procedural terrain: {len(records)} SetTile actions; "
           f"recorded to {DEST}")
+    # Compact coverage information for implementation, not a fabricated
+    # execution count. Include both the complete original function/marker
+    # ancestry and the exact action and condition opcode profiles.
+    from collections import defaultdict
+    by_scope=defaultdict(list)
+    for record in records:
+        sheet=record["sheet"]
+        headers=guard_events[sheet]
+        path=record["event_path"]
+        chain=[headers[".".join(map(str,path[:d]))] for d in range(1,len(path)+1)]
+        function="<sheet>"
+        marker=[]
+        for node in chain:
+            for condition in node[5]:
+                if len(condition)>9 and condition[:2]==[189,40]:
+                    params=condition[9]
+                    if params and params[0][0]==1:
+                        function=params[0][1][1]
+                if len(condition)>9 and condition[:2]==[514,71]:
+                    params=condition[9]
+                    if len(params)==3 and params[0]==[10,0]:
+                        marker.append(params[2])
+        key=(sheet,function,json.dumps(marker,separators=(",",":")))
+        by_scope[key].append(record)
+    for (sheet,function,marker),scope in by_scope.items():
+        profile=Counter(f"{r['object']}:{r['command']}" for r in scope)
+        leaf=Counter(f"{c[0]}:{c[1]}" for r in scope for c in r["conditions"])
+        print("STEP1_TERRAIN_SCOPE",json.dumps({
+            "sheet":sheet,"function":function,"marker":json.loads(marker),
+            "count":len(scope),"actions":dict(profile),"leaf_conditions":dict(leaf)
+        },separators=(",",":")))
+    # All non-ground environment writes: exact expressions and direct
+    # conditions from original data, with full paths for ancestor lookups.
+    for record in records:
+        if record["object"]!=GROUND_FAMILY:
+            print("STEP1_ENVIRONMENT_PAINT",json.dumps(record,separators=(",",":")))
+
 
 
 if __name__ == "__main__":
