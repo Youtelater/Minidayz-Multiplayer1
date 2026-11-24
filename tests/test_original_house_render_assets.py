@@ -12,7 +12,11 @@ def rows(source,name):
             for s in parts[1].split("};",1)[0].splitlines()
             if s.strip().startswith("{")]
 bases={(int(p[1]),0,0) for p in rows(houses,"kSourceHousePrimarySpawns")}
-companions={(int(p[5]),int(p[9]),int(p[10])) for p in rows(houses,"kSourceHouseCompanionSpawns")}
+# Header now retains BOTH source event UID and exact Spawn action UID.
+# The added provenance field shifts object/animation/frame one position;
+# reading old positions falsely reports dozens of "missing" sprites.
+companions={(int(p[6]),int(p[10]),int(p[11]))
+            for p in rows(houses,"kSourceHouseCompanionSpawns")}
 assert len(bases)>=15 and len(companions)>=20,(len(bases),len(companions))
 frames={}
 for p in rows(sprites,"kSpriteFrames"):
