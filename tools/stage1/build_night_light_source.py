@@ -17,7 +17,31 @@ night=next(l for l in layout[6] if l[0]=="night")
 assert night[9] is True # force own texture
 lamp=next(i for i in night[14] if i[1]==663)
 assert lamp[0][10]==8 and lamp[0][7]==0.5
-assert "case 8:b.Qc=d.ZERO;b.Jc=d.ONE_MINUS_SRC_ALPHA" in (ROOT/"c2runtime.js").read_text(encoding="utf-8")
+runtime=(ROOT/"c2runtime.js").read_text(encoding="utf-8")
+assert "case 8:b.Qc=d.ZERO;b.Jc=d.ONE_MINUS_SRC_ALPHA" in runtime
+assert "front *= back.a;" in runtime[runtime.index("overlay:{src:"):]
+assert objects[663][12]==[["overlay","Overlay"]]
+# The GUI Color_effect is separate from the Map night layer. Validate
+# the source Fade behaviour and both creation events before compiling.
+gui=next(l for l in source[5] if l[0]=="GUI_layout")
+color_layer=next(l for l in gui[6] if l[0]=="Color_effect")
+twilight=next(i for i in color_layer[14] if i[1]==971)
+assert twilight[4][0]==[1,65,0,25,1]
+assert len(objects[971][7][0][7])==2
+def find_event(events,uid):
+    for e in events:
+        if not isinstance(e,list) or not e: continue
+        if e[0]==0 and len(e)>6 and e[4]==uid:return e
+        if e[0]==0 and len(e)>7:
+            found=find_event(e[7],uid)
+            if found is not None:return found
+    return None
+events=next(s[1] for s in source[6] if s[0]=="Game_events")
+for uid,minute in ((316761403775120,1110),(347882179964897,330)):
+    event=find_event(events,uid)
+    assert event is not None and event[5][0][9]==[[11,"Timer_ALL"],[8,0],[7,[0,minute]]]
+    assert any(a[0]==-1 and a[1]==94 and a[5][0]==[4,971]
+               and a[5][1]==[5,[2,"Color_effect"]] for a in event[6])
 def frame_image(frame):
     x,y,w,h=map(int,frame[2:6])
     path=ROOT/"assets/gfx"/Path(frame[0]).name
