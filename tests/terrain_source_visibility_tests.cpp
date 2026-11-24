@@ -62,6 +62,12 @@ int main() {
     // including crowded visible slices in large original town clusters.
     assert(source_world_layer_depth(41,5000,10000)<
            source_world_layer_depth(42,0,0));
+    using minidayz::world_source::source_dynamic_layer_depth;
+    for(std::uint16_t layer: {17,18,41}){
+        assert(source_world_layer_depth(layer,999,1000)<source_dynamic_layer_depth(layer,0,20));
+        assert(source_dynamic_layer_depth(layer,0,20)<source_dynamic_layer_depth(layer,19,20));
+        assert(source_dynamic_layer_depth(layer,19,20)<source_world_layer_depth(layer+1,0,0));
+    }
     // Avoid out-of-bounds math for bad source geometry.
     assert(!source_sprite_in_view(NAN,0,32,32,.5f,.5f,1,1,0,0,0,400,240));
     assert(!source_sprite_in_view(0,0,0,32,.5f,.5f,1,1,0,0,0,400,240));

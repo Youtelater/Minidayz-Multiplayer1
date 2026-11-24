@@ -3182,7 +3182,7 @@ public:
                 tent->y < camera_y - 65.0f ||
                 tent->y > camera_y + view_h + 65.0f) continue;
             (void)renderer.draw_source_sprite(398,0,0,tent->x,tent->y,
-                1.0f,1.0f,minidayz::world_source::source_world_layer_depth(17,0,1));
+                1.0f,1.0f,minidayz::world_source::source_dynamic_layer_depth(17,i,tents_.tent_count()));
         }
         draw_world_through(18);
         for (std::size_t i = 0; i < stashes_.count(); ++i) {
@@ -3193,7 +3193,7 @@ public:
                 stash->y > camera_y + view_h + 24.0f) continue;
             (void)renderer.draw_item_icon(
                 minidayz::items::kOriginalSuppliesStashItemId,
-                stash->x, stash->y, 28.0f, 28.0f, minidayz::world_source::source_world_layer_depth(18,0,1));
+                stash->x, stash->y, 28.0f, 28.0f, minidayz::world_source::source_dynamic_layer_depth(18,i,stashes_.count()+ground_loot_.count()));
         }
 
         for (std::size_t i = 0; i < ground_loot_.count(); ++i) {
@@ -3203,13 +3203,14 @@ public:
                 loot->y < camera_y - 24.0f ||
                 loot->y > camera_y + view_h + 24.0f) continue;
             (void)renderer.draw_item_icon(loot->item.item_id,
-                loot->x, loot->y, 18.0f, 18.0f, minidayz::world_source::source_world_layer_depth(18,0,1));
+                loot->x, loot->y, 18.0f, 18.0f, minidayz::world_source::source_dynamic_layer_depth(18,stashes_.count()+i,stashes_.count()+ground_loot_.count()));
         }
 
+        if(!p.alive)draw_player(false);
         draw_world_through(29);
         draw_npcs();
         draw_world_through(31);
-        draw_player(false);
+        if(p.alive)draw_player(false);
         draw_world_through(41);
         if(world_ready_){
             // Root event 622329722190205 also emits the original
@@ -3286,7 +3287,7 @@ public:
                                actor.y+15.0f>=roof.y-33.0f &&
                                actor.y-15.0f<=roof.y+32.0f;
             (void)renderer.draw_source_sprite(397,0,0,tent->x,tent->y,
-                                               1.0f,1.0f,minidayz::world_source::source_world_layer_depth(41,0,1),0.0f,
+                                               1.0f,1.0f,minidayz::world_source::source_dynamic_layer_depth(41,i,tents_.tent_count()),0.0f,
                                                overlap?0.25f:1.0f);
         }
 
@@ -3307,7 +3308,8 @@ public:
                 minidayz::stage1::kOriginalNightOverlayArt.frame,
                 camera_x, camera_y, view_w, view_h,
                 minidayz::world_source::source_world_layer_depth(46,0,0));
-        }        draw_world_through(0xffff);
+        }
+        draw_world_through(0xffff);
         renderer.set_world_sprite_stats(
             visible_world_placements_.size(),world_source_requested,
             world_source_drawn,world_source_bad_frames);

@@ -27,6 +27,15 @@ inline float source_world_layer_depth(
     return std::clamp(base+offset,0.15f,0.80f);
 }
 
+// Runtime-created instances follow the resident world placement list.
+inline float source_dynamic_layer_depth(std::uint16_t layer,
+    std::size_t index,std::size_t count) noexcept {
+    const float base=source_world_layer_depth(layer,0,0);
+    const float rank=count?static_cast<float>(std::min(index,count-1)+1)/
+        static_cast<float>(count+1):0.0f;
+    return std::min(0.80f,base+0.0100f+0.0020f*rank);
+}
+
 // The visible-index query returns unique placement indices in original
 // Construct creation order. Stable-sort by the CURRENT layer (which the
 // original House_transparenting events can change at runtime), retaining

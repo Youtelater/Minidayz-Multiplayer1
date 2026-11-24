@@ -77,14 +77,19 @@ assert Path(objects[975][7][0][7][0][0]).name=='z_spawner-sheet0.png'
 assert 'case 975:' in header
 assert 'if (!bridge || minidayz::world_source::source_world_logic_marker_not_art(feature->source_object))' in main
 # Verify original dynamic object layer assignment and native painter ordering.
-events={e[4]:e for _,sheet in project[6] for e,_ in walk(sheet)}
+def all_events(nodes):
+    for e in nodes:
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+        yield e
+        if len(e)>7:yield from all_events(e[7])
+events={e[4]:e for _,sheet in project[6] for e in all_events(sheet)}
 for uid in (297398672474814,1391504325547996):
     actions=events[uid][6]
     assert any(a[1]==73 and a[5][:2]==[[4,397],[5,[2,'Buildings']]] for a in actions)
     assert any(a[1]==73 and a[5][:2]==[[4,398],[5,[2,'Buildings_base']]] for a in actions)
 assert layout[6][17][0]=='Buildings_base' and layout[6][18][0]=='items_on_ground'
 assert layout[6][41][0]=='Buildings' and layout[6][43][0]=='Trees'
-assert main.index('draw_world_through(17);')<main.index('draw_world_through(18);')<main.index('draw_world_through(29);')<main.index('draw_world_through(31);')<main.index('draw_player(false);')<main.index('draw_world_through(41);')<main.index('draw_world_through(43);')
+assert main.index('draw_world_through(17);')<main.index('draw_world_through(18);')<main.index('draw_world_through(29);')<main.index('draw_world_through(31);')<main.index('if(p.alive)draw_player(false);')<main.index('draw_world_through(41);')<main.index('draw_world_through(43);')
 assert 'set_source_texture_reservation(true)' in main
 print("PASS: source visual roles, original dynamic layers and source layer paint order")
 
