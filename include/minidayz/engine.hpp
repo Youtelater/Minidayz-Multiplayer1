@@ -13,12 +13,15 @@ struct WorldBounds;
 struct InputState { u32 held{}, pressed{}, released{}; circlePosition circle{}; touchPosition touch{}; bool touching{}; };
 class Renderer {
 public:
- static constexpr std::size_t kMaxSheets=32;
+ // Retain the original small resident working set; dense frames may
+ // allocate additional slots on demand without recycling queued GPU data.
+ static constexpr std::size_t kResidentSheets=32;
+ static constexpr std::size_t kMaxSheets=128;
  bool initialize() noexcept; void shutdown() noexcept;
  void begin_frame() noexcept; void begin_screen(gfxScreen_t screen) noexcept; void end_frame() noexcept;
  std::size_t sprite_cache_misses() const noexcept { return sprite_cache_misses_; }
  // Requests that couldn't be drawn: missing source frames, failed textures,
- // or >32 distinct in-use GPU atlas pages in the same rendered frame.
+ // or exhaustion of the actual texture allocation / overflow slot budget.
  std::size_t sprite_cache_failed_draws() const noexcept { return sprite_cache_failed_draws_; }
  // Per-frame source placement census for distinguishing absent world
  // generation from hidden sprites or actual 3DS texture load failures.
@@ -62,7 +65,7 @@ public:
  bool draw_source_road_grid(const class WorldSystem& world,
                             float camera_x,float camera_y,float view_width,float view_height,
                             std::uint8_t source_level=0) noexcept;
-  bool draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth=0.4f) noexcept;
+  bool draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth=0.4f,float opacity=1.0f) noexcept;
   bool draw_source_animation(std::uint16_t object,const char* animation_name,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f,bool outline=false) noexcept;
  // Render any original assets/gfx PNG by its exact source filename.
  bool draw_original_image(const char* original_png,float x,float y,float width,float height,float depth=0.5f) noexcept;

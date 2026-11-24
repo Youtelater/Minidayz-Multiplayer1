@@ -5,6 +5,18 @@
 using namespace minidayz::items;
 
 int main() {
+    const auto near=[](float x,float y){return std::fabs(x-y)<0.0001f;};
+    assert(near(source_outdoor_night_opacity(19,30),0.30f));
+    assert(near(source_outdoor_night_opacity(20,0),0.60f));
+    assert(near(source_outdoor_night_opacity(24,0),0.60f));
+    assert(near(source_outdoor_night_opacity(0,30),0.795f));
+    assert(near(source_outdoor_night_opacity(1,0),1.0f));
+    assert(near(source_outdoor_night_opacity(4,59),1.0f));
+    assert(near(source_outdoor_night_opacity(5,30),0.507f));
+    assert(near(source_outdoor_night_opacity(5,59),0.0169f));
+    assert(near(source_outdoor_night_opacity(6,0),0.0f));
+    assert(near(source_outdoor_night_opacity(18,59),0.0f));
+    assert(near(source_outdoor_night_opacity(20,0,2),0.58f));
     SourceDayNightClock clock;
     assert(clock.snapshot().timer_all==361);
     assert(clock.hour()==6 && clock.minute()==1 && clock.day_mode());

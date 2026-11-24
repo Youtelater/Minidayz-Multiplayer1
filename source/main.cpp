@@ -2957,7 +2957,11 @@ public:
         draw_npcs();
         renderer.set_source_texture_reservation(false);
         // Keep source rain/night atlas pages resident in GPU memory before
-        // world trees and houses exhaust the original 32-page draw budget.
+        // dense scenery needs additional atlas slots.
+        const float night_opacity=minidayz::items::source_outdoor_night_opacity(
+            day_night_.hour(),day_night_.minute(),
+            perks_.level(minidayz::items::SourcePerk::eye)==2?2.0f:0.0f);
+        const bool night_layer_visible=day_night_.hour()<=5 || day_night_.hour()>=19;
         // These calls do not submit pixels or alter the source event state;
         // actual alpha overlays still draw AFTER scenery at Map layers44/46.
         if (rain_timer_.active()) {
@@ -2966,7 +2970,7 @@ public:
                 minidayz::stage1::kOriginalRainFadeArt.animation,
                 minidayz::stage1::kOriginalRainFadeArt.frame);
         }
-        if (!day_night_.day_mode()) {
+        if (night_layer_visible) {
             (void)renderer.pin_source_sprite_texture(
                 minidayz::stage1::kOriginalNightOverlayArt.object,
                 minidayz::stage1::kOriginalNightOverlayArt.animation,
@@ -3091,7 +3095,7 @@ public:
                         placement->source_uid)))continue;
                 if (source_layer && !source_layer->visible) continue;
                 // Root night layer visibility events hide its children during daylight.
-                if(placement->layer==46 && day_night_.day_mode())continue;
+                if(placement->layer==46 && !night_layer_visible)continue;
                 if (source_layer &&
                     (std::strstr(source_layer->name, "respawn") ||
                      std::strstr(source_layer->name, "_resp") ||
@@ -3301,13 +3305,13 @@ public:
                 minidayz::world_source::source_world_layer_depth(44,0,0));
         }
         draw_world_through(45);
-        if (!day_night_.day_mode()) {
+        if (night_layer_visible) {
             (void)renderer.draw_source_sprite_fitted(
                 minidayz::stage1::kOriginalNightOverlayArt.object,
                 minidayz::stage1::kOriginalNightOverlayArt.animation,
                 minidayz::stage1::kOriginalNightOverlayArt.frame,
                 camera_x, camera_y, view_w, view_h,
-                minidayz::world_source::source_world_layer_depth(46,0,0));
+                minidayz::world_source::source_world_layer_depth(46,0,0),night_opacity);
         }
         draw_world_through(0xffff);
         renderer.set_world_sprite_stats(

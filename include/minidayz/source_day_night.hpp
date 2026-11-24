@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 
@@ -16,6 +17,26 @@ struct SourceDayNightSnapshot {
     float elapsed_seconds{};
     bool day_mode{true};
 };
+
+// Root Game_events -> Time cyles and weather / Day&Night:
+// 8443703214790502 midnight: 60 + abs(0-Timer_Minutes)*0.65;
+// 152562407051636 hours1..4: 100; 5643670373586102 dawn:
+// abs(60-Timer_Minutes)*1.69; 446293525979786 hour19:
+// abs(0-Timer_Minutes)*1; 826094463252853 hours20..24: 60.
+// This is the ordinary outdoor overlay opacity, NOT Day_mode (which
+// remains daytime for survival stats at hours19..23). Equipment,
+// bunker/raid and force-own-texture effects are separate overrides.
+inline float source_outdoor_night_opacity(unsigned hour,unsigned minute,
+                                         float night_light_addition=0.0f) noexcept {
+    float percent=0.0f;
+    const float m=static_cast<float>(std::min(minute,59u));
+    if(hour==0)percent=60.0f+m*0.65f;
+    else if(hour>=1 && hour<=4)percent=100.0f;
+    else if(hour==5)percent=(60.0f-m)*1.69f;
+    else if(hour==19)percent=m;
+    else if(hour>=20 && hour<=24)percent=60.0f;
+    return std::clamp((percent-night_light_addition)*0.01f,0.0f,1.0f);
+}
 
 class SourceDayNightClock {
 public:

@@ -467,13 +467,16 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/audit_asset_coverage.py
+          python3 tools/audit_offline_manifest.py
 
       - name: Preserve graphics and audio coverage inventory
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: minidayz-original-asset-coverage
-          path: data/asset_coverage.json
+          path: |
+            data/asset_coverage.json
+            data/offline_manifest_coverage.json
           if-no-files-found: warn
 
       - name: Audit original MiniDAYZ code and 3DS port parity

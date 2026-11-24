@@ -92,6 +92,9 @@ void Renderer::begin_frame() noexcept {
  sprite_cache_drawn_this_frame_.fill(false);
  source_texture_reservation_=false;
  C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+ // FrameBegin(SYNCDRAW) has completed the prior queued frame. Release
+ // overflow pages here, not while either screen still references them.
+ for(std::size_t i=kResidentSheets;i<kMaxSheets;++i)unload_sheet(i);
  C2D_TargetClear(top_,C2D_Color32(12,16,18,255));
  C2D_TargetClear(bottom_,C2D_Color32(18,22,24,255));
 }
@@ -197,14 +200,24 @@ void Renderer::unload_all() noexcept { for(std::size_t i=0;i<kMaxSheets;++i) unl
 // This bounds GPU memory while preventing silent house/roof texture reuse.
 std::size_t Renderer::choose_sprite_cache_slot() noexcept {
  std::size_t candidate=kMaxSheets;
- for(std::size_t offset=0;offset<kMaxSheets;++offset){
-  const auto i=(next_sprite_cache_+offset)%kMaxSheets;
+ // Prefer the usual 32 resident slots; only grow when all normal
+ // slots have been used or pinned by this GPU frame. Do not evict a
+ // queued texture, even when allocation fails.
+ for(std::size_t offset=0;offset<kResidentSheets;++offset){
+  const auto i=(next_sprite_cache_+offset)%kResidentSheets;
   if(sprite_cache_drawn_this_frame_[i])continue;
   if(!sheets_[i]){candidate=i;break;}
   if(candidate==kMaxSheets)candidate=i;
  }
+ if(candidate==kMaxSheets){
+  for(std::size_t i=kResidentSheets;i<kMaxSheets;++i){
+   if(sprite_cache_drawn_this_frame_[i])continue;
+   if(!sheets_[i]){candidate=i;break;}
+   if(candidate==kMaxSheets)candidate=i;
+  }
+ }
  if(candidate==kMaxSheets)return candidate;
- next_sprite_cache_=(candidate+1)%kMaxSheets;
+ if(candidate<kResidentSheets)next_sprite_cache_=(candidate+1)%kResidentSheets;
  unload_sheet(candidate);
  return candidate;
 }
@@ -775,7 +788,7 @@ bool Renderer::draw_source_road_grid(const WorldSystem& world,
  }
  return true;
 }
-bool Renderer::draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth) noexcept {
+bool Renderer::draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth,float opacity) noexcept {
  if(width<=0.0f||height<=0.0f) return false;
  const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,animation,frame};
  const auto* begin=stage1::kSpriteFrames;
@@ -788,7 +801,7 @@ bool Renderer::draw_source_sprite_fitted(std::uint16_t object,std::uint16_t anim
  const float sx=width/selected->width;
  const float sy=height/selected->height;
  return draw_source_sprite(object,animation,frame,
-    x+selected->origin_x*width,y+selected->origin_y*height,sx,sy,depth);
+    x+selected->origin_x*width,y+selected->origin_y*height,sx,sy,depth,0.0f,opacity);
 }
 bool Renderer::draw_source_animation(std::uint16_t object,const char* animation_name,
                                       std::uint32_t frame,float x,float y,
