@@ -229,6 +229,28 @@ def main():
                              for n in ancestors[-3:]]
             },separators=(",",":")))
     assert pond_written, "Original procedural pond branch missing"
+    # Small source trace with all single writes OTHER than repeating
+    # edge predicates, plus ground-instance creation and selection.
+    for record in records:
+        if record["object"]!=GROUND_FAMILY or record["command"]!=SET_TILE:continue
+        event,ancestors=event_lookup[(record["sheet"],tuple(record["event_path"]))]
+        if any(c[:2]==[1066,205] for c in event[5]):continue
+        print("STEP1_GROUND_SINGLE",json.dumps({
+            "path":record["event_path"],"uid":record["action_uid"],
+            "params":record["parameters"],"guards":event[5],
+            "ancestors":[{"uid":n[4],"guards":n[5],"actions":n[6],"or":n[2]}
+                         for n in ancestors[-4:]]
+        },separators=(",",":")))
+    for (sheet,path),(event,ancestors) in event_lookup.items():
+        if sheet!="Game_events":continue
+        for a in event[6]:
+            if not isinstance(a,list) or len(a)<6:continue
+            if (a[:2]==[514,88] and a[5][0]==[10,6]) or (
+                a[:2]==[-1,94] and a[5][0][0]==4 and a[5][0][1] in family_members):
+                print("STEP1_GROUND_INSTANCE",json.dumps({"path":path,"action":a,
+                    "guards":event[5],"siblings":event[6],
+                    "ancestors":[{"uid":n[4],"guards":n[5],"actions":n[6]}
+                                 for n in ancestors[-3:]]},separators=(",",":")))
 
 
 
