@@ -301,6 +301,7 @@ bool SourceLocationEventRuntime::execute_action(
         if (action.parameter_count != 4 || p[1].kind != Value::Kind::String) return false;
         SourceLocationSpawn spawn{};
         spawn.object = static_cast<std::uint16_t>(p[0].as_number());
+        spawn.source_action_uid = action.action_uid;
         spawn.layer = p[1].as_string();
         spawn.x = p[2].as_number();
         spawn.y = p[3].as_number();
@@ -320,6 +321,7 @@ bool SourceLocationEventRuntime::execute_action(
         if (action.parameter_count != 3 || p[1].kind != Value::Kind::String) return false;
         SourceLocationSpawn spawn{};
         spawn.object = static_cast<std::uint16_t>(p[0].as_number());
+        spawn.source_action_uid = action.action_uid;
         spawn.layer = p[1].as_string();
         spawn.x = self.mapgen_x_;
         spawn.y = self.mapgen_y_;
