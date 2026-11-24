@@ -458,12 +458,15 @@ void test_every_source_mapped_house_spawn_chain() {
             // atlas animation/frame and visible placement. Testing
             // only the first roof missed wall 346, shadow 347 and door.
             for(const auto& child:world_source::kSourceHouseCompanionSpawns){
+                assert(child.action_uid!=0 &&
+                       "Original source companion must be an action, not only an event");
                 if(child.base_object!=action.base_object ||
                    child.variant!=action.variant)continue;
                 bool found=false;
                 for(std::size_t j=first;j<last;++j){
                     const auto* p=world.placement(j);
                     if(p->object==child.object &&
+                       p->source_uid==child.action_uid &&
                        p->source_animation==child.animation &&
                        p->source_frame==child.frame){
                         // Exact literal original post-Spawn effects must
