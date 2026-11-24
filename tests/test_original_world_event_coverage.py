@@ -81,3 +81,29 @@ assert "kMapgenCreateEvent=3669795404796534ULL" in cpp
 assert "Value::from_number(grid_x);" in (
     ROOT/"source/location_event_runtime.cpp").read_text()
 print("PASS original events: 22,343 total, 14,560 7-field leaves; 102 mapgen-to-array and 5,747 location actions preserved")
+
+# Source pump interactions: check both original branches, not just
+# the creation-time 100/200 water roll. The high-water branch subtracts
+# rounded deficit BEFORE Wait, the low-water branch empties AFTER Wait.
+game=next(seq for sheet,seq in source[6] if sheet=="Game_events")
+def locate(seq,uid):
+    for e in seq:
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+        if e[4]==uid:return e
+        if len(e)>7:
+            result=locate(e[7],uid)
+            if result is not None:return result
+    return None
+high=locate(game,401776724287473)
+low=locate(game,5981791044814398)
+assert high and low
+assert high[5][0][9]==[[10,0],[8,4],[7,[0,25]]]
+assert low[5][0][9]==[[10,0],[8,3],[7,[0,25]]]
+assert high[6][0][:2]==[442,87] and high[6][0][5][1][1][:2]==[19,80]
+assert high[6][2][:2]==[-1,54] and high[6][2][5]==[[0,[0,2]]]
+assert high[6][4][:2]==[181,83] and high[6][4][5]==[[10,14],[7,[0,25]]]
+assert low[6][0][5][0]==[11,"water_left"]
+assert low[6][2][:2]==[-1,54] and low[6][2][5]==[[0,[0,2]]]
+assert low[6][4][:2]==[442,88] and low[6][4][5]==[[10,0],[7,[0,0]]]
+assert low[6][5][:2]==[181,83] and low[6][5][5]==[[10,14],[7,[23,"water_left"]]]
+print("PASS original water pump high/low volume branches and action order")
