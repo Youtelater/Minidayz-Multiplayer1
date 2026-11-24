@@ -35,10 +35,14 @@ inline std::uint32_t source_water_shore_effective_tile(
         return authored;
 
     for(const auto& rule:stage1::kWaterShoreRules) {
-        // The exact Tilemap208 CompareTile guards below determine
-        // whether the source paints this tile. Do not require a
-        // neighboring positive match while ignoring a center check.
-        // Some rules explicitly check the target itself.
+        // Ignore zero-positive rules until the original procedural
+        // water-creation loop and its selection scope are implemented:
+        // otherwise an all-empty Map could acquire invented water tiles.
+        bool has_original_water=false;
+        for(std::uint16_t i=0;i<rule.count;++i)
+            if(stage1::kWaterShoreChecks[rule.first+i].requires_water)
+                has_original_water=true;
+        if(!has_original_water)continue;
         bool match=true;
         for(std::uint16_t i=0;i<rule.count;++i) {
             const auto& check=stage1::kWaterShoreChecks[rule.first+i];
