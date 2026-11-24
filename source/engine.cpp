@@ -671,8 +671,8 @@ bool Renderer::draw_source_ponds(const WorldSystem& world,
         const auto* marker=world.map_marker(patch.marker_index);
         if(!marker)return false;
         const auto center=world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
-        const float left=center.x-world_source::kPondOffset;
-        const float top=center.y-world_source::kPondOffset;
+        const float left=center.x+patch.offset_x;
+        const float top=center.y+patch.offset_y;
         if(left>=camera_x+width||top>=camera_y+height||
             left+world_source::kPondSide*tile<=camera_x||
             top+world_source::kPondSide*tile<=camera_y)continue;
@@ -697,167 +697,53 @@ bool Renderer::draw_source_road_grid(const WorldSystem& world,
                                     float camera_x,float camera_y,
                                     float view_width,float view_height,
                                     std::uint8_t source_level) noexcept {
- const auto& grid=world.grid();
- const auto& bounds=world.bounds();
- // Roads use independent original road atlases. A damaged/missing ground
- // layout must NOT suppress an otherwise valid generated road network.
- // The scene already draws a visible floor-load diagnostic independently.
- if(grid.width()==0||grid.height()==0) return false;
- if(!(bounds.width>0.0f && bounds.height>0.0f)) return false;
- // Cache load failures for this pass so a missing theme cannot suppress
- // the other half of the map or cause repeated ROMFS reads per tile.
- bool missing_theme[7]{};
- bool roads_drawn=true;
- const auto ensure_road_sheet=[&](std::uint32_t theme) noexcept -> bool {
-  if(theme>=7 || missing_theme[theme]) return false;
-  if(road_sheets_[theme]) return true;
-  char name[80]{};
-  std::snprintf(name,sizeof(name),"romfs:/gfx/original_map_road_lvl%u.t3x",
-                static_cast<unsigned>(theme+1));
-  auto sheet=C2D_SpriteSheetLoad(name);
-  if(!sheet || C2D_SpriteSheetCount(sheet)<14){
-   if(sheet)C2D_SpriteSheetFree(sheet);
-   missing_theme[theme]=true;
-   return false;
-  }
-  road_sheets_[theme]=sheet;
-  return true;
- };
- // The original logical Array Y axis is physically east-west on Map.
- // On the final map, the second ground theme starts at logical row 18.
- const float second_half_x=(source_level==5 && grid.height()==33)
-     ? world_source::mapgen_hotspot(0,18).x : 1.0e30f;
- // Original 1066.SetTileRange paints 17x2 / 2x17 rectangles;
- // never collapse this into one source tile of pavement.
- const float road_width=world_source::source_road_painted_width(
-     stage1::kOriginalFloorTileSize);
- if(!(road_width>0.0f))return false;
- // Original Map asphalt is a separate Construct layer, before
- // ground_enviroment. Resolve the source layer rather than choosing
- // an arbitrary 3DS Z such as 0.10, which can break layer ordering.
- const stage1::LayoutDef* original_map=nullptr;
- for(const auto& layout:stage1::kLayoutTable)
-  if(std::strcmp(layout.name,"Map")==0){original_map=&layout;break;}
- if(!original_map)return false;
- const auto original_layout=static_cast<std::uint16_t>(
-      original_map-stage1::kLayoutTable);
- const stage1::LayerDef* asphalt_source_layer=nullptr;
- for(const auto& source_layer:stage1::kLayerTable)
-  if(source_layer.layout==original_layout &&
-     std::strcmp(source_layer.name,"asphalt")==0){
-    asphalt_source_layer=&source_layer;break;
-  }
- if(!asphalt_source_layer)return false;
- const float road_depth=world_source::source_world_layer_depth(
-     asphalt_source_layer->index,0,0);
- // The source physical grid axes are transposed. Scan at most 16x33
- // logical cells, then reject every band outside the viewport.
- // Keep the original Map asphalt-layer depth, behind the authored
- // ground_enviroment layer but in front of the base ground floor.
- // Render only clipped, camera-visible source Array road corridor pieces.
- for(int row=0;row<grid.height();++row)
-  for(int col=0;col<grid.width();++col){
-  const std::uint16_t code=grid.at(col,row);
-  if(!terrain::horizontal_road(code)&&!terrain::vertical_road(code))
-   continue;
-  // Source code12/13 has a full 17-cell base followed by four
-  // optional 9-tile arms. Code14 has only four neighbor-gated arms.
-  // Draw in original action order and omit overlapping GPU submissions.
-  for(int segment=0;segment<5;++segment){
-   const auto band=world_source::source_grid_road_segment(
-       grid,col,row,segment,road_width);
-   if(!terrain::intersects_view(band,camera_x,camera_y,
-                                view_width,view_height))continue;
-   // Repeat native 60px Construct stone tiles instead of stretching
-   // one source tile across a 2300px world cell. Limit draw calls to
-   // the pieces visible in the 400x240 native top-screen camera.
-   const float tile=stage1::kOriginalFloorTileSize;
-   const int first_x=std::max(0,static_cast<int>(
-       std::floor((camera_x-band.x)/tile)));
-   const int first_y=std::max(0,static_cast<int>(
-       std::floor((camera_y-band.y)/tile)));
-   const int last_x=std::min(static_cast<int>(std::ceil(band.width/tile)),
-       static_cast<int>(std::ceil((camera_x+view_width-band.x)/tile)));
-   const int last_y=std::min(static_cast<int>(std::ceil(band.height/tile)),
-       static_cast<int>(std::ceil((camera_y+view_height-band.y)/tile)));
-   for(int y=first_y;y<last_y;++y)
-    for(int x=first_x;x<last_x;++x){
-     const float world_tile_x=band.x+(static_cast<float>(x)+0.5f)*tile;
-     const auto theme=terrain::ground_texture_at(
-         source_level,world_tile_x,second_half_x);
-     if(!ensure_road_sheet(theme)){
-      roads_drawn=false;
-      continue;
+ // This legacy entry point now renders the complete family1066 source
+ // tilemap state (roads, villages, military, forest and special sites).
+ // Source Create selected a concrete theme object on layer bg.
+ (void)source_level;
+ if(!world.generation_complete()||view_width<=0||view_height<=0)return false;
+ const auto* layout=stage1::find_layout("Map");
+ if(!layout)return false;
+ const auto layout_index=static_cast<std::uint16_t>(layout-stage1::kLayoutTable);
+ const stage1::LayerDef* bg=nullptr;
+ for(const auto& layer:stage1::kLayerTable)
+     if(layer.layout==layout_index&&std::strcmp(layer.name,"bg")==0){bg=&layer;break;}
+ if(!bg)return false;
+ const float depth=world_source::source_world_layer_depth(bg->index,0,0);
+ constexpr float tile=stage1::kOriginalFloorTileSize;
+ for(const auto& patch:world.source_ground_patches()){
+     if(!patch.source_object)continue;
+     const auto* marker=world.map_marker(patch.marker_index);
+     if(!marker)return false;
+     const auto center=world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
+     const float ox=center.x+patch.offset_x,oy=center.y+patch.offset_y;
+     if(ox>=camera_x+view_width||oy>=camera_y+view_height||
+        ox+17*tile<=camera_x||oy+17*tile<=camera_y)continue;
+     const stage1::OriginalGroundPalette* palette=nullptr;
+     for(const auto& entry:stage1::kOriginalGroundPalettes)
+         if(entry.object==patch.source_object){palette=&entry;break;}
+     if(!palette)return false;
+     for(int y=0;y<17;++y)for(int x=0;x<17;++x){
+         const float xx=ox+x*tile,yy=oy+y*tile;
+         if(xx>=camera_x+view_width||yy>=camera_y+view_height||
+            xx+tile<=camera_x||yy+tile<=camera_y)continue;
+         const int frame=patch.cells[static_cast<std::size_t>(y)*17+x];
+         if(frame<0)continue;
+         if(static_cast<std::uint32_t>(frame)>=palette->count)return false;
+         const auto index=palette->first+static_cast<std::uint32_t>(frame);
+         const auto page=index/stage1::kOriginalFloorTilesPerPage;
+         const auto slot=index%stage1::kOriginalFloorTilesPerPage;
+         if(page>=stage1::kOriginalFloorAtlasPages||page>=8)return false;
+         if(!floor_sheets_[page]){
+             char path[80]{};
+             std::snprintf(path,sizeof(path),"romfs:/gfx/original_map_ground_p%03u.t3x",page);
+             floor_sheets_[page]=C2D_SpriteSheetLoad(path);
+             if(!floor_sheets_[page])return false;
+         }
+         if(!draw_original_tile(floor_sheets_[page],slot,xx,yy,tile,depth))return false;
      }
-     C2D_Sprite sprite{};
-     C2D_SpriteFromSheet(&sprite,road_sheets_[theme],0);
-     if(sprite.params.pos.w<=0.0f||sprite.params.pos.h<=0.0f){
-      missing_theme[theme]=true;
-      roads_drawn=false;
-      continue;
-     }
-     // A source grid cell is not necessarily a multiple of its 60px
-     // road tile. Trim the final tile instead of painting beyond the
-     // original corridor, which made road edges bleed into water/forest.
-     // Never submit the same 2x2 junction texel twice when multiple
-     // source code14 neighbor guards select overlapping SetTileRange arms.
-     if(world_source::source_grid_road_tile_was_drawn(
-           grid,col,row,segment,band.x+x*tile,band.y+y*tile,
-           tile,road_width))continue;
-     const float clipped_w=std::min(tile,band.width-x*tile);
-     const float clipped_h=std::min(tile,band.height-y*tile);
-     if(clipped_w<=0.0f||clipped_h<=0.0f)continue;
-     // The original asphalt remains pixel-perfect at cut road edges.
-     // Scaling an entire source tile into a short final corridor segment
-     // squeezes its texture, producing a visible repeating road seam.
-     // Crop source texels instead, including Tex3DS atlas-rotated sprites.
-     if(!sprite.image.subtex)return false;
-     const Tex3DS_SubTexture original=*sprite.image.subtex;
-     Tex3DS_SubTexture cropped=original;
-     world_source::SourceRoadTileCrop crop{};
-     if(!world_source::source_road_tile_crop(
-          original.left,original.top,original.right,original.bottom,
-          original.width,original.height,clipped_w,clipped_h,crop))
-          return false;
-     cropped.right=crop.right;
-     cropped.bottom=crop.bottom;
-     cropped.width=crop.width;
-     cropped.height=crop.height;
-     C2D_Image source_tile=sprite.image;
-     source_tile.subtex=&cropped;
-     if(!C2D_DrawImageAt(source_tile,band.x+x*tile,band.y+y*tile,
-            road_depth,nullptr,crop.scale_x,crop.scale_y))return false;
-    }
-  }
  }
-
- // Source SetTile leaves paint the original road-edge frames around the
- // tile15 ranges. The world generation phase already evaluated the 12
- // source rules. Do not run new RNG or paint over a tile15 submission.
- const float tile=stage1::kOriginalFloorTileSize;
- for(const auto& patch:world.source_road_edge_patches()){
-   const auto* marker=world.map_marker(patch.marker_index);
-   if(!marker)continue;
-   const auto center=world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
-   const float ox=center.x-8.5f*tile,oy=center.y-8.5f*tile;
-   if(ox>=camera_x+view_width || oy>=camera_y+view_height ||
-      ox+17.0f*tile<=camera_x || oy+17.0f*tile<=camera_y)continue;
-   for(const auto& cell:patch.tiles){
-     const float x=ox+(cell.local_index%17)*tile;
-     const float y=oy+(cell.local_index/17)*tile;
-     if(x>=camera_x+view_width||y>=camera_y+view_height||
-        x+tile<=camera_x||y+tile<=camera_y)continue;
-     const auto theme=terrain::ground_texture_at(
-         source_level,x+0.5f*tile,second_half_x);
-     if(cell.original_frame>12 || !ensure_road_sheet(theme)){
-       roads_drawn=false;continue;
-     }
-     // Atlas slot0 retains original tile15. Slots1..13 map tiles0..12.
-     if(!draw_original_tile(road_sheets_[theme],cell.original_frame+1u,
-                            x,y,tile,road_depth))return false;
-   }
- }
- return roads_drawn;
+ return true;
 }
 bool Renderer::draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth) noexcept {
  if(width<=0.0f||height<=0.0f) return false;

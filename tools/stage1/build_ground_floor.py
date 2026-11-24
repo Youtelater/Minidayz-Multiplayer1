@@ -281,6 +281,10 @@ HEADER.write_text("#pragma once\n#include <cstdint>\nnamespace minidayz::stage1 
     f"inline constexpr float kOriginalFloorTileSize={float(tile_width):.1f}f;\n" +
     f"inline constexpr float kOriginalFloorBaseTileSize={float(base_tile_pixels):.1f}f;" + chr(10) +
     f"inline constexpr std::uint32_t kOriginalFloorAtlasPages={page_count};\n" +
+    f"inline constexpr std::uint32_t kOriginalFloorTilesPerPage={per_page};\n" +
+    "struct OriginalGroundPalette {std::uint16_t object;std::uint32_t first,count;};\n" +
+    "inline constexpr OriginalGroundPalette kOriginalGroundPalettes[]={\n" +
+    "".join(f" {{{oid},{tile_keys.index((oid,0))},{sum(1 for obj,_ in tile_keys if obj==oid)}}},\n" for oid in sorted(SOURCE_GROUND)) + "};\n" +
     "}\n", encoding="utf-8")
 print(f"Original Map: {len(instances)} authored tilemap strips; {len(tile_keys)} original source tiles across all seven ground sheets; "
       f"{page_count} authored atlases plus {len(SOURCE_GROUND)} original map-level ground bases; "

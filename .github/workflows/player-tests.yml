@@ -64,6 +64,7 @@ jobs:
           # native world tests need the SAME root-generated rule catalog
           # that the 3DS build already generates.
           python3 tools/stage1/build_procedural_environment.py
+          python3 tools/stage1/build_location_terrain_program.py
           python3 tools/stage1/build_source_door_points.py
           python3 tools/stage1/build_source_tree_impact_points.py
           python3 tools/stage1/build_source_family_members.py

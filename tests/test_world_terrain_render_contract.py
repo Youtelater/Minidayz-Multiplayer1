@@ -30,20 +30,14 @@ assert 'draw_original_ground_floor(' in main
 assert 'draw_original_environment_tilemaps(' in main
 road=engine.split("bool Renderer::draw_source_road_grid(",1)[1].split(
     "bool Renderer::draw_source_sprite_fitted(",1)[0]
-assert 'std::strcmp(source_layer.name,"asphalt")==0' in road
+# Family1066 is created on bg, not the separate asphalt layer.
+assert 'std::strcmp(layer.name,"bg")==0' in road
 assert 'source_world_layer_depth(' in road
-# UV-cropped original road pixel artwork is submitted with its real
-# Construct asphalt layer depth directly to C2D_DrawImageAt.
-assert 'source_road_tile_crop(' in road
-assert 'C2D_DrawImageAt(source_tile,band.x+x*tile,band.y+y*tile,' in road
-assert 'road_depth,nullptr,crop.scale_x,crop.scale_y' in road
-assert 'C2D_SpriteSetScale(&sprite,clipped_w/sprite.params.pos.w' not in road
-# The authored source code14 junction is four independently guarded
-# 9-cell arms, not unconditional full-cross geometry. Keep both the
-# original Sprite514 Mapgen anchor and the Array518 neighbor predicates.
-assert 'world_source::source_grid_road_segment(' in road
-assert 'world_source::source_grid_road_tile_was_drawn(' in road
-assert 'world_source::source_road_painted_width(' in road
+assert 'world.source_ground_patches()' in road
+assert 'patch.source_object' in road and 'patch.cells[' in road
+assert 'kOriginalGroundPalettes' in road
+assert 'draw_original_tile(floor_sheets_[page],slot' in road
+assert 'source_grid_road_segment(' not in road
 source_roads=(root/"include/minidayz/source_mapgen_geometry.hpp").read_text(
     encoding="utf-8")
 assert 'mapgen_road_band(' in source_roads
@@ -51,8 +45,7 @@ assert 'source_road_neighbor_permits_junction(' in source_roads
 assert 'source_grid_road_segment(' in source_roads
 assert 'source_grid_road_tile_was_drawn(' in source_roads
 assert 'source_grid_road_contains(' in source_roads
-assert 'source_grid_road_contains(' in main
-assert 'for(int row=0;row<grid.height();++row)' in road
+assert 'world_.source_ground_frame_at(x,y)==15' in main
 assert 'bounds.width/grid.width()' not in road
 assert 'draw_source_procedural_environment(' in main
 # Each instance may be in a different original Construct animation (e.g.
@@ -66,7 +59,7 @@ assert 'sprite->animation==placement->source_animation' in main
 assert 'px, py, sx, sy, layer_depth' in main
 assert 'source_sprite_in_view(' in main
 assert 'original_map_detail_230.t3x' in scatter
-assert 'kTerrainScatterChoices' in (root/'source/world.cpp').read_text(encoding='utf-8')
+assert 'SourceLocationTerrain p(' in (root/'source/world.cpp').read_text(encoding='utf-8')
 assert 'world_source::mapgen_hotspot(' in scatter
 assert 'bounds.width/grid.width()' not in scatter
 assert 'world_source::mapgen_hotspot(x,y)' in (
@@ -78,7 +71,7 @@ scatter_generator=(root / "tools/stage1/build_procedural_environment.py").read_t
 assert 'source_scatter_layer=ground_layers.pop()' in scatter_generator
 scatter_header=(root / "include/minidayz/generated/terrain_scatter_source.hpp").read_text(encoding="utf-8")
 assert 'kSourceScatterGroundLayer=6;' in scatter_header  # Map layer 6 is ground_enviroment
-assert 'cells.fill(kEmpty)' in (root/'source/world.cpp').read_text(encoding='utf-8')
+assert 'p.execute()' in (root/'source/world.cpp').read_text(encoding='utf-8')
 assert 'world.source_scatter_patches()' in scatter
 assert 'std::minstd_rand' not in scatter
 assert 'original_map_ground_p{page:03}.t3x' in ground

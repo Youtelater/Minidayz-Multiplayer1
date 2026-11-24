@@ -78,6 +78,13 @@ struct WorldScatterTile { std::uint16_t local_index{}, original_frame{}; };
 struct WorldScatterPatch {
     std::size_t marker_index{};
     std::vector<WorldScatterTile> tiles{};
+    std::int16_t offset_x{-500},offset_y{-500};
+};
+struct WorldGroundPatch {
+    std::size_t marker_index{};
+    std::uint16_t source_object{};
+    std::int16_t offset_x{-500},offset_y{-500};
+    std::array<std::int16_t,17*17> cells{};
 };
 
 struct WorldPlacement {
@@ -263,9 +270,10 @@ public:
     const std::vector<WorldScatterPatch>& source_scatter_patches() const noexcept {
         return source_scatter_patches_;
     }
-    const std::vector<WorldScatterPatch>& source_road_edge_patches() const noexcept {
-        return source_road_edge_patches_;
+    const std::vector<WorldGroundPatch>& source_ground_patches() const noexcept {
+        return source_ground_patches_;
     }
+    int source_ground_frame_at(float x,float y) const noexcept;
     const std::vector<WorldScatterPatch>& source_pond_patches() const noexcept {
         return source_pond_patches_;
     }
@@ -289,7 +297,7 @@ private:
     WorldGrid grid_{};
     std::vector<WorldMapMarker> map_markers_{};
     std::vector<WorldScatterPatch> source_scatter_patches_{};
-    std::vector<WorldScatterPatch> source_road_edge_patches_{};
+    std::vector<WorldGroundPatch> source_ground_patches_{};
     std::vector<WorldScatterPatch> source_pond_patches_{};
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
@@ -302,7 +310,7 @@ private:
     std::uint8_t generation_perk_dao_{};
     bool generation_is_map_{};
     bool generate_source_locations(std::uint8_t level);
-    bool build_source_scatter_patch(std::size_t marker_index);
+    bool build_source_location_terrain(std::size_t marker_index);
     bool generate_source_crash_sites();
     bool generate_source_road_vehicles();
     bool generate_source_radiation_sites();

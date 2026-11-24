@@ -31,7 +31,9 @@ jobs:
       - name: Generate locations and world event tables from root original
         run: python3 tools/stage1/extract_location_templates.py
       - name: Generate procedural ground scatter from root original
-        run: python3 tools/stage1/build_procedural_environment.py
+        run: |
+          python3 tools/stage1/build_procedural_environment.py
+          python3 tools/stage1/build_location_terrain_program.py
       - name: Validate source table signatures and counts
         run: |
           python3 - <<'PY'

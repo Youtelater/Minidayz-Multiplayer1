@@ -4348,13 +4348,7 @@ private:
            bounds.width<=0.0f||bounds.height<=0.0f||x<0.0f||y<0.0f||
            x>=bounds.width||y>=bounds.height)
             return surface;
-        const auto cell=minidayz::world_source::mapgen_cell_at(x,y);
-        if(cell.column>=0 && cell.column<grid.width() &&
-           cell.row>=0 && cell.row<grid.height() &&
-           minidayz::world_source::source_grid_road_contains(
-               grid,cell.column,cell.row,x,y,
-               minidayz::world_source::source_road_painted_width(
-                   minidayz::stage1::kOriginalFloorTileSize)))
+        if(world_.source_ground_frame_at(x,y)==15)
             return minidayz::terrain::FootstepSurface::road;
         // The fifth original ground sheet is snow and has its own
         // snow_run WAV set; don't use ordinary hard-earth footsteps there.

@@ -1997,21 +1997,21 @@ void test_source_scatter_reproduction_and_layout_replacement() {
                    rhs[p].tiles[k].original_frame);
         }
     }
-    const auto& road_a=a.source_road_edge_patches();
-    const auto& road_b=b.source_road_edge_patches();
-    assert(!road_a.empty() && road_a.size()==road_b.size());
-    for(std::size_t p=0;p<road_a.size();++p){
-        assert(road_a[p].marker_index==road_b[p].marker_index);
-        const auto* marker=a.map_marker(road_a[p].marker_index);
-        assert(marker && marker->marker_type>=12 && marker->marker_type<=14);
-        assert(road_a[p].tiles.size()==road_b[p].tiles.size());
-        for(std::size_t i=0;i<road_a[p].tiles.size();++i){
-            const auto& cell=road_a[p].tiles[i];
-            assert(cell.local_index<289 && cell.original_frame<=12 && cell.original_frame!=6);
-            assert(cell.local_index==road_b[p].tiles[i].local_index &&
-                   cell.original_frame==road_b[p].tiles[i].original_frame);
+    const auto& ground_a=a.source_ground_patches();
+    const auto& ground_b=b.source_ground_patches();
+    assert(ground_a.size()==a.map_marker_count() && ground_a.size()==ground_b.size());
+    std::size_t painted=0,edges=0;
+    for(std::size_t p=0;p<ground_a.size();++p){
+        const auto& ga=ground_a[p];
+        const auto& gb=ground_b[p];
+        assert(ga.marker_index==p && gb.marker_index==p);
+        assert(ga.source_object==gb.source_object&&ga.cells==gb.cells);
+        for(auto frame:ga.cells){
+            if(frame==15)++painted;
+            if(frame>=0&&frame<=12&&frame!=6)++edges;
         }
     }
+    assert(painted>0&&edges>0);
     const auto& pond_a=a.source_pond_patches();
     const auto& pond_b=b.source_pond_patches();
     assert(pond_a.size()==pond_b.size());
@@ -2033,7 +2033,7 @@ void test_source_scatter_reproduction_and_layout_replacement() {
     // forest, loot markers or a misleading completed-generation phase.
     assert(!a.generation_complete());
     assert(a.source_scatter_patches().empty());
-    assert(a.source_road_edge_patches().empty());
+    assert(a.source_ground_patches().empty());
     assert(a.source_pond_patches().empty());
     assert(a.map_marker_count()==0);
     assert(a.source_location_spawn_count()==0);
@@ -2149,7 +2149,7 @@ void test_new_game_generates_visible_original_world() {
             std::uint16_t previous=0;
             bool first=true;
             for(const auto& tile:patch.tiles){
-                assert(tile.local_index<33u*33u);
+                assert(tile.local_index<35u*35u);
                 if(!first)assert(previous<tile.local_index);
                 first=false;previous=tile.local_index;
                 assert(tile.original_frame<128);
@@ -2437,7 +2437,9 @@ void test_full_generation_all_source_maps() {
             bool eligible=false;
             for(const auto& rule:minidayz::stage1::kTerrainScatterRules)
                 if(rule.marker==marker->marker_type &&
-                   (rule.level_mask&level_mask) && rule.perk_gate!=1){
+                   (rule.level_mask&level_mask) &&
+                   (rule.perk_gate==0 || (rule.perk_gate==1 && level==4 && world.generation_perk_dao()==5) ||
+                    (rule.perk_gate==2 && !(level==4 && world.generation_perk_dao()==5)))){
                     eligible=true;break;
                 }
             if(eligible)++eligible_source_scatter;
@@ -2449,7 +2451,7 @@ void test_full_generation_all_source_maps() {
             assert(patch.marker_index<world.map_marker_count());
             assert(!patch.tiles.empty());
             for(const auto& tile:patch.tiles){
-                assert(tile.local_index<33u*33u);
+                assert(tile.local_index<35u*35u);
                 assert(tile.original_frame<128);
             }
         }

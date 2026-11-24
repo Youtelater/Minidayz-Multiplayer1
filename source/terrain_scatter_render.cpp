@@ -16,8 +16,8 @@ bool Renderer::draw_source_procedural_environment(
     float view_width,float view_height) noexcept {
  if(!world.generation_complete()||world.map_marker_count()==0)return true;
  if(view_width<=0.0f||view_height<=0.0f)return false;
- constexpr float kSourceTile=30.0f, kHalfPatch=500.0f;
- constexpr int kPatchCells=33;
+ constexpr float kSourceTile=30.0f;
+ constexpr int kPatchCells=35;
  const float view_right=camera_x+view_width;
  const float view_bottom=camera_y+view_height;
  for(const auto& patch:world.source_scatter_patches()){
@@ -25,8 +25,8 @@ bool Renderer::draw_source_procedural_environment(
   if(!marker)return false;
   const auto center=world_source::mapgen_hotspot(
       marker->cell_x,marker->cell_y);
-  const float left=center.x-kHalfPatch;
-  const float top=center.y-kHalfPatch;
+  const float left=center.x+patch.offset_x;
+  const float top=center.y+patch.offset_y;
   if(left>=view_right||top>=view_bottom||
      left+kPatchCells*kSourceTile<=camera_x||
      top+kPatchCells*kSourceTile<=camera_y)continue;

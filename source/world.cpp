@@ -1,6 +1,6 @@
 #include "minidayz/world.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
-#include "minidayz/source_road_edge_paint.hpp"
+#include "minidayz/source_location_terrain.hpp"
 #include "minidayz/source_pond_paint.hpp"
 #include "minidayz/source_tilemap_solid_collision.hpp"
 #include "minidayz/generated/original_initial_building_loot.hpp"
@@ -512,7 +512,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     grid_.clear();
     map_markers_.clear();
     source_scatter_patches_.clear();
-    source_road_edge_patches_.clear();
+    source_ground_patches_.clear();
     source_pond_patches_.clear();
     features_.clear();
     placements_.clear();
@@ -596,7 +596,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     if (!initialized_) return false;
     map_markers_.clear();
     source_scatter_patches_.clear();
-    source_road_edge_patches_.clear();
+    source_ground_patches_.clear();
     source_pond_patches_.clear();
     WorldGenerationProfile profile{};
     if (!source_world_profile(level, profile) ||
@@ -604,6 +604,12 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
 
     seed_ = seed;
     rng_.seed(seed);
+    // Original start-of-layout event 3298356887887951 selects
+    // choose(4,5,7) for CurrentLevel>=5 and default map_dao=0.
+    if(level>=5 && generation_perk_dao_==0){
+        constexpr std::uint16_t variants[]={4,5,7};
+        generation_perk_dao_=static_cast<std::uint8_t>(choose_marker(variants,rng_));
+    }
     const int first_min_y = 1;
     // Floor(random(1,Map_size_Y)) has an exclusive end; for 16 rows it
     // yields check_Y 1..15 and stores at Y-1 -> rows 0..14.
@@ -646,7 +652,7 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
     if (!initialized_ || grid_.width() == 0 || grid_.height() == 0) return false;
     map_markers_.clear();
     source_scatter_patches_.clear();
-    source_road_edge_patches_.clear();
+    source_ground_patches_.clear();
     source_pond_patches_.clear();
     map_markers_.reserve(static_cast<std::size_t>(grid_.width()) * grid_.height());
     (void)seed; // The source uses one global random stream across generation stages.
@@ -804,7 +810,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     grid_.clear();
     map_markers_.clear();
     source_scatter_patches_.clear();
-    source_road_edge_patches_.clear();
+    source_ground_patches_.clear();
     source_pond_patches_.clear();
     features_.clear();
     placements_.clear();
@@ -852,49 +858,56 @@ bool WorldSystem::load_source_layout(std::string_view name) {
 }
 
 
-// Reproduce root-extracted Tilemap230 SetTile repetitions and weighted
-// frame choices during each Mapgen514 event, in the shared world RNG stream.
-// Camera-dependent minstd_rand hashes never existed in original gameplay.
-// Source branches not yet decoded by the strict extractor are not invented.
-bool WorldSystem::build_source_scatter_patch(std::size_t marker_index) {
-    if(marker_index>=map_markers_.size() || generation_level_>=6)return false;
-    constexpr std::size_t kSide=33, kCells=kSide*kSide;
-    constexpr std::uint16_t kEmpty=0xffffu;
-    const auto marker=map_markers_[marker_index];
-    std::array<std::uint16_t,kCells> cells{};
-    cells.fill(kEmpty);
-    bool has_source_rule=false;
-    for(const auto& rule:stage1::kTerrainScatterRules){
-        if(rule.marker!=marker.marker_type ||
-           !(rule.level_mask&(std::uint8_t{1}<<generation_level_)))continue;
-        const bool special=generation_level_==4 && generation_perk_dao_==5;
-        if((rule.perk_gate==1 && !special)||
-           (rule.perk_gate==2 && special))continue;
-        if(rule.repeat==0 || rule.x_min>=rule.x_max ||
-           rule.y_min>=rule.y_max || rule.x_max>kSide ||
-           rule.y_max>kSide || rule.tile_count==0 ||
-           rule.tile_offset+rule.tile_count>
-               stage1::kTerrainScatterChoiceCount)return false;
-        has_source_rule=true;
-        for(std::uint16_t n=0;n<rule.repeat;++n){
-            const std::size_t x=rule.x_min+source_floor_random_bounded(
-                rng_,static_cast<std::uint32_t>(rule.x_max-rule.x_min));
-            const std::size_t y=rule.y_min+source_floor_random_bounded(
-                rng_,static_cast<std::uint32_t>(rule.y_max-rule.y_min));
-            const auto choice=source_random_bounded(
-                rng_,static_cast<std::uint32_t>(rule.tile_count));
-            cells[y*kSide+x]=stage1::kTerrainScatterChoices[
-                rule.tile_offset+choice];
-        }
-    }
-    if(!has_source_rule)return true;
-    WorldScatterPatch patch{};
-    patch.marker_index=marker_index;
-    for(std::size_t i=0;i<kCells;++i)
-        if(cells[i]!=kEmpty)
-            patch.tiles.push_back({static_cast<std::uint16_t>(i),cells[i]});
-    source_scatter_patches_.push_back(std::move(patch));
+// Compile and execute the actual original location terrain tree, including
+// every source family1066 range, single tile, edge scan and the ordered
+// Tilemap208/230 writes. No separate random terrain generator.
+bool WorldSystem::build_source_location_terrain(std::size_t marker_index) {
+    if(marker_index>=map_markers_.size()||generation_level_>=6)return false;
+    const auto& marker=map_markers_[marker_index];
+    world_source::SourceLocationTerrain p(grid_,rng_,marker.cell_x,marker.cell_y,
+        marker.marker_type,generation_level_,generation_perk_dao_);
+    if(!p.execute())return false;
+    // Keep dense marker indexing so collision/audio can query the same
+    // generated source frame in O(1) rather than re-derive a road corridor.
+    WorldGroundPatch ground{};
+    ground.marker_index=marker_index;
+    ground.source_object=static_cast<std::uint16_t>(p.ground_object);
+    ground.offset_x=static_cast<std::int16_t>(p.ground_x);
+    ground.offset_y=static_cast<std::int16_t>(p.ground_y);
+    ground.cells=p.ground;
+    source_ground_patches_.push_back(std::move(ground));
+    const auto append=[&](const auto& cells,bool created,int ox,int oy,auto& patches){
+        if(!created)return;
+        WorldScatterPatch patch{};
+        patch.marker_index=marker_index;
+        patch.offset_x=static_cast<std::int16_t>(ox);
+        patch.offset_y=static_cast<std::int16_t>(oy);
+        for(std::size_t i=0;i<cells.size();++i)
+            if(cells[i]>=0)
+                patch.tiles.push_back({static_cast<std::uint16_t>(i),
+                                       static_cast<std::uint16_t>(cells[i])});
+        if(!patch.tiles.empty())patches.push_back(std::move(patch));
+    };
+    append(p.scatter,p.scatter_created,p.scatter_x,p.scatter_y,source_scatter_patches_);
+    append(p.water,p.water_created,p.water_x,p.water_y,source_pond_patches_);
     return true;
+}
+
+int WorldSystem::source_ground_frame_at(float x,float y) const noexcept {
+    if(!std::isfinite(x)||!std::isfinite(y))return -1;
+    // Original Create positions: Mapgen514.X/Y minus 500, not minus 510.
+    const int col=static_cast<int>(std::floor((y-world_source::kMapgenStartY+500.0f)/world_source::kMapgenStride));
+    const int row=static_cast<int>(std::floor((x-world_source::kMapgenStartX+500.0f)/world_source::kMapgenStride));
+    if(col<0||row<0||col>=grid_.width()||row>=grid_.height())return -1;
+    const auto index=static_cast<std::size_t>(row)*grid_.width()+col;
+    if(index>=source_ground_patches_.size())return -1;
+    const auto& patch=source_ground_patches_[index];
+    if(!patch.source_object||patch.marker_index!=index)return -1;
+    const auto center=world_source::mapgen_hotspot(col,row);
+    const int tx=static_cast<int>(std::floor((x-center.x-patch.offset_x)/60.0f));
+    const int ty=static_cast<int>(std::floor((y-center.y-patch.offset_y)/60.0f));
+    if(tx<0||ty<0||tx>=17||ty>=17)return -1;
+    return patch.cells[static_cast<std::size_t>(ty)*17+tx];
 }
 
 bool WorldSystem::generate_source_locations(std::uint8_t level) {
@@ -928,9 +941,10 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
     if (map_markers_.size() !=
         static_cast<std::size_t>(grid_.width()) * grid_.height()) return false;
     source_scatter_patches_.clear();
-    source_road_edge_patches_.clear();
+    source_ground_patches_.clear();
     source_pond_patches_.clear();
     source_scatter_patches_.reserve(map_markers_.size());
+    source_ground_patches_.reserve(map_markers_.size());
     std::size_t added = 0;
     for (int y = 0; y < grid_.height(); ++y) {
         for (int x = 0; x < grid_.width(); ++x) {
@@ -997,32 +1011,7 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             }
             const std::size_t marker_index=
                 static_cast<std::size_t>(y)*grid_.width()+x;
-            // Root code12/13/14 edge SetTile leaves are independent of
-            // camera visibility. Other final marker types (e.g. gas
-            // station/cafe/shop) own separate source paint branches.
-            if(code>=12&&code<=14 && grid_.at(x,y)==code){
-                const auto painted=world_source::source_grid_road_paint_patch(grid_,x,y);
-                WorldScatterPatch edges{};
-                edges.marker_index=marker_index;
-                for(std::size_t i=0;i<painted.cells.size();++i){
-                    const auto frame=painted.cells[i];
-                    if(frame!=15 && frame!=world_source::kUnpaintedRoadTile)
-                        edges.tiles.push_back({static_cast<std::uint16_t>(i),frame});
-                }
-                if(!edges.tiles.empty())
-                    source_road_edge_patches_.push_back(std::move(edges));
-            }
-            if(code==3){
-                WorldScatterPatch pond{};
-                pond.marker_index=marker_index;
-                const auto painted=world_source::source_pond_cells();
-                for(std::size_t i=0;i<painted.size();++i)
-                    if(painted[i]!=terrain::kTileEmpty)
-                        pond.tiles.push_back({static_cast<std::uint16_t>(i),
-                            static_cast<std::uint16_t>(painted[i])});
-                source_pond_patches_.push_back(std::move(pond));
-            }
-            if(!build_source_scatter_patch(marker_index))return false;
+            if(!build_source_location_terrain(marker_index))return false;
         }
     }
 
@@ -1581,7 +1570,7 @@ void WorldSystem::reset() noexcept {
     grid_.clear();
     map_markers_.clear();
     source_scatter_patches_.clear();
-    source_road_edge_patches_.clear();
+    source_ground_patches_.clear();
     source_pond_patches_.clear();
     features_.clear();
     placements_.clear();
@@ -2431,8 +2420,8 @@ bool WorldSystem::source_pond_contains(float x,float y,bool solid_only) const no
         const auto* marker=map_marker(patch.marker_index);
         if(!marker)continue;
         const auto center=world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
-        const float fx=(x-center.x+world_source::kPondOffset)/world_source::kPondTileSize;
-        const float fy=(y-center.y+world_source::kPondOffset)/world_source::kPondTileSize;
+        const float fx=(x-center.x-patch.offset_x)/world_source::kPondTileSize;
+        const float fy=(y-center.y-patch.offset_y)/world_source::kPondTileSize;
         if(fx<0||fy<0||fx>=world_source::kPondSide||fy>=world_source::kPondSide)continue;
         const int col=static_cast<int>(fx),row=static_cast<int>(fy);
         const int index=row*world_source::kPondSide+col;
