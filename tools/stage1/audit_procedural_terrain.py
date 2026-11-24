@@ -238,7 +238,7 @@ def main():
             return (a[:2]==[189,69] and a[5][0][1] in (
                 [2,"Load_bridge_level"],[2,"Reload_locations_start"],
                 [2,"Reload_locations_aftersave"],[2,"mapgen_toelements"])) or (
-                a[:2]==[-1,41] and a[5][0] in ([11,"onBridge"],[11,"inRaid"]))
+                a[:2]==[-1,41] and a[5][0] in ([11,"onBridge"],[11,"inRaid"]) and len(event[6])<60)
         if event[4] in (1131020651387518,482054460208135,793361912924261) or any(
                 relevant_bridge(a) for a in event[6]):
             print("STEP1_BRIDGE_LIFECYCLE",json.dumps({
@@ -246,6 +246,17 @@ def main():
                 "parents":[{"uid":n[4],"guards":n[5],"actions":n[6]}
                            for n in ancestors[-3:]]
             },separators=(",",":")))
+    lifecycle_names={"generate_mapgen_toelements","Reload_locations_start",
+                     "Reload_locations","Reload_locations_aftersave","Load_bridge_level"}
+    for (sheet,path),(event,ancestors) in event_lookup.items():
+        if sheet!="Game_events":continue
+        if not any(c[:2]==[189,40] and len(c)>9 and c[9] and
+                   c[9][0][1][1] in lifecycle_names for c in event[5]):continue
+        name=next(c[9][0][1][1] for c in event[5] if c[:2]==[189,40])
+        for child,parents,subpath in original_events([event]):
+            print("STEP1_LIFECYCLE_NODE",json.dumps({"name":name,
+                  "path":path+subpath[1:],"uid":child[4],"or":child[2],
+                  "guards":child[5],"actions":child[6]},separators=(",",":")))
     other_ids={895209268453600,458228549101251,506106248958134,2084078328497493}
     for record in records:
         if record["action_uid"] not in other_ids:continue
