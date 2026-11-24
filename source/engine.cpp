@@ -94,12 +94,14 @@ void Renderer::begin_frame() noexcept {
  sprite_cache_failed_draws_=0;
  world_sprite_candidates_=world_sprite_requested_=0;
  world_sprite_rendered_=world_sprite_invalid_=0;
- sprite_cache_drawn_this_frame_.fill(false);
  source_texture_reservation_=false;
  C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
- // FrameBegin(SYNCDRAW) has completed the prior queued frame. Release
- // overflow pages here, not while either screen still references them.
- for(std::size_t i=kResidentSheets;i<kMaxSheets;++i)unload_sheet(i);
+ // Preserve hot overflow pages used by the preceding frame. Reclaim
+ // cold ones only after synchronization; unloading all extras here
+ // would reread dense-scene textures from ROMFS on every frame.
+ for(std::size_t i=kResidentSheets;i<kMaxSheets;++i)
+  if(!sprite_cache_drawn_this_frame_[i])unload_sheet(i);
+ sprite_cache_drawn_this_frame_.fill(false);
  C2D_TargetClear(top_,C2D_Color32(12,16,18,255));
  C2D_TargetClear(bottom_,C2D_Color32(18,22,24,255));
 }
@@ -240,8 +242,16 @@ std::size_t Renderer::acquire_source_sprite_page(const char* sheet) noexcept {
  if(slot==kMaxSheets){++sprite_cache_failed_draws_;return kMaxSheets;}
  char path[192]{};
  const int n=std::snprintf(path,sizeof(path),"romfs:/gfx/%s.t3x",sheet);
- if(n<=0||static_cast<std::size_t>(n)>=sizeof(path)||
-    !load_sheet(slot,path)){++sprite_cache_failed_draws_;return kMaxSheets;}
+ if(n<=0||static_cast<std::size_t>(n)>=sizeof(path)){
+  ++sprite_cache_failed_draws_;return kMaxSheets;
+ }
+ if(!load_sheet(slot,path)){
+  // Memory pressure: free only pages not yet referenced by this frame,
+  // then try once more. Actor reservations and queued GPU data survive.
+  for(std::size_t i=0;i<kMaxSheets;++i)
+   if(i!=slot && sheets_[i] && !sprite_cache_drawn_this_frame_[i])unload_sheet(i);
+  if(!load_sheet(slot,path)){++sprite_cache_failed_draws_;return kMaxSheets;}
+ }
  std::snprintf(sprite_cache_[slot].sheet,sizeof(sprite_cache_[slot].sheet),"%s",sheet);
  sprite_cache_[slot].slot=slot;
  return slot;

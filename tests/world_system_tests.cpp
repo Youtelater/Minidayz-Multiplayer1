@@ -3414,6 +3414,7 @@ static void test_original_category5_elements(){
         if(v>=12&&v<=14){
             const auto* light=world.placement(first+2);
             assert(light->object==663 && light->source_frame==(v==13?0u:1u));
+            assert(light->opacity==0.5f);
             assert(light->parent_runtime_uid==base->runtime_uid);
             assert(light->source_variable_0==base->runtime_uid);
             assert(light->scale_x==(v==14?-1.0f:1.0f));
