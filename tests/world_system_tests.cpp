@@ -2023,12 +2023,18 @@ void test_compiled_original_location_terrain_program() {
     assert(road.ground_x==-500 && road.ground_y==-500);
     assert(road.ground[8*17+8]==15&&road.ground[9*17+8]==15);
     assert(road.ground[7*17+8]==11&&road.ground[10*17+8]==1);
-    // Neighbor-gated village arm: original Array518 value9 permits
-    // the source x8/y0 pavement into the adjacent village.
+    // Original village event 9929737684894666 accepts only Array518
+    // road values 12, 13, 14 for its negative-column connection.
     assert(grid.set(3,2,9));
-    SourceLocationTerrain village(grid,rng,4,2,9,0,0);
-    assert(village.execute());
-    assert(village.ground[8]==15);
+    SourceLocationTerrain unconnected(grid,rng,4,2,9,0,0);
+    assert(unconnected.execute());
+    assert(unconnected.ground[8]!=15);
+    for(int neighbor:{12,13,14}){
+        assert(grid.set(3,2,neighbor));
+        SourceLocationTerrain village(grid,rng,4,2,9,0,0);
+        assert(village.execute());
+        assert(village.ground[8]==15);
+    }
 }
 
 void test_source_scatter_reproduction_and_layout_replacement() {
