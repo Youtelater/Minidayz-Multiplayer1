@@ -9,12 +9,13 @@ p=decode((ROOT/"data.deobfuscated.js").read_bytes())
 uid=6938246402369311
 def walk(nodes):
  for e in nodes if isinstance(nodes,list) else ():
-  if not isinstance(e,list) or len(e)<8:continue
+  if not isinstance(e,list) or len(e)<7:continue
   if e[0]==0:yield e
-  if e[0]==0:yield from walk(e[7])
+  if e[0]==0 and len(e)>7 and isinstance(e[7],list):
+   yield from walk(e[7])
 root=next(e for _,events in p[6] for e in walk(events) if e[4]==uid)
 expressions={"check_X":set(),"check_Y":set()}
-for e in walk(root[7]):
+for e in walk(root[7] if len(root)>7 else []):
  for a in e[6]:
   if isinstance(a,list) and len(a)>5 and a[:2]==[-1,41] and len(a[5])>=2:
    param=a[5][0]
