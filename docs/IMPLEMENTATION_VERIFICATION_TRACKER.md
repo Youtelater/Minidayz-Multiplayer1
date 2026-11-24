@@ -1220,3 +1220,5 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 - [ ] Final 3DS/emulator visual comparison, original night compositor effects and dense-scene 32-page cache capacity remain unverified; Step 1 outstanding event parity remains tracked.
 
 - [x] Source layer-order follow-up: include seven-field leaf actions in the tent audit; reserve a final per-layer depth interval for runtime-created tents and drops, and draw corpse Sprite813 at original layer18 before NPC/player foreground. Added native layer depth checks. Current CI pending.
+
+- [x] Resolve build workflow's legacy `test_3ds_screen_depth.py` source-text guard: verify the new actor reservation pass still precedes all world atlas pressure, returns without GPU drawing, and the actual actor draw occurs after original layer31 and before layer41. Earlier build failed at the obsolete comment anchor, not C++ compilation. Re-run required.

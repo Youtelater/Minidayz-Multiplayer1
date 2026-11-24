@@ -41,17 +41,25 @@ assert "source_world_layer_depth(bg->index,0,0)" in engine
 # otherwise the menu background vanishes as soon as the depth order is fixed.
 assert "C2D_Color32(22,26,24,255),0.01f" in main
 assert "C2D_Color32(24, 34, 29, 255),0.01f" in main
-# The 32-atlas-frame budget must never hide the original survivor and
-# equipment behind an arbitrary 33rd tree/house PNG. GPU depth, not
-# draw submission order, preserves the original Construct Map layers.
-start=main.index("        // World sprite atlases can consume all 32 GPU cache slots")
-actor=main.index("        // Keep original pixel-art proportions.",start)
+# Preserve the original actor-cache priority, but reserve textures
+# without submitting pixels until the actual original Map layer pass.
+start=main.index("        // Reserve the actual selected actor pages")
+actor=main.index("const auto draw_npcs=",start)
 player=main.index("        // Match original Construct Map layer 32 (player)",actor)
-world=main.index("            // WorldGrid codes 12/13/14",start)
-assert 0<=start<actor<player<world, "source actor must be rendered before world sprite cache pressure"
-assert main.index("source_tree_render_depth(",world)>world, "world draw depth still controls original layering"
-assert main.index("draw_equipped_layer(held_item,true",player)<world, "held source overlay must be resident"
-assert main.count("        // Match original Construct Map layer 32 (player)")==1, "duplicate player draw"
+reserve=main.index("renderer.set_source_texture_reservation(true)",player)
+reserved_player=main.index("draw_player(true);",reserve)
+reserved_npcs=main.index("draw_npcs();",reserved_player)
+finish=main.index("renderer.set_source_texture_reservation(false)",reserved_npcs)
+world=main.index("            // WorldGrid codes 12/13/14",finish)
+assert 0<=start<actor<player<reserve<reserved_player<reserved_npcs<finish<world
+assert main.index("source_tree_render_depth(",world)>world
+assert main.index("draw_equipped_layer(held_item,true",player)<reserve
+assert main.count("        // Match original Construct Map layer 32 (player)")==1
+assert main.index("draw_world_through(31);",world)<main.index("if(p.alive)draw_player(false);",world)<main.index("draw_world_through(41);",world)
+assert "if(source_texture_reservation_){" in engine
+reservation=engine.split("if(source_texture_reservation_){",1)[1].split("}",1)[0]
+assert "sprite_cache_drawn_this_frame_[slot]=true" in reservation
+assert "return true;" in reservation and "draw_sprite(" not in reservation
 # Never render a different original skin from the PlayerSystem's animation
 # object. Menu selection can change independently of a restored save.
 assert "const auto source_skin_object=player_.source_skin();" in main
