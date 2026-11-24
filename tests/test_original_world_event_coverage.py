@@ -43,7 +43,8 @@ assert any(a[0]==442 and a[1]==88 and
  for a in index[3903561981802149][6])
 for name in ("extract_location_templates.py","trace_source_map_grid_parity.py",
              "audit_original_mapgen_dispatch.py","trace_original_mapgen_coordinates.py",
-             "audit_original_road_dispatch.py"):
+             "audit_original_road_dispatch.py",
+             "audit_original_world_priority.py"):
  code=(ROOT/"tools/stage1"/name).read_text()
  assert "len(node) < 8" not in code
  assert "len(e)<8" not in code
