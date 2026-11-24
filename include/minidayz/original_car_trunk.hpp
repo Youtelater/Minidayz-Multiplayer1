@@ -26,10 +26,12 @@ enum class OriginalCarSearchResult : std::uint8_t {
 // The source spawn event also links the search marker to its car body.
 inline bool original_car_trunk_has_source_body(
     const WorldSystem& world,const WorldPlacement& marker) noexcept {
-    if(marker.object!=241 || marker.opacity<=0.0f || !world.source_placement_active(marker))return false;
+    if(marker.object!=241 || marker.opacity<=0.0f || !marker.parent_runtime_uid ||
+       !world.source_placement_active(marker))return false;
     for(std::size_t i=0;i<world.placement_count();++i){
         const auto* body=world.placement(i);
-        if(!body || !world.source_placement_active(*body) || body->opacity<=0.0f ||
+        if(!body || body->runtime_uid!=marker.parent_runtime_uid ||
+           !world.source_placement_active(*body) || body->opacity<=0.0f ||
            !stage1::source_family_contains(1041,body->object))continue;
         if(world_source::source_house_sprites_overlap(*body,marker))
             return true;
