@@ -214,12 +214,76 @@ def main():
     emit_siblings(branches,1)
     assert counts==Counter({(1066,192):398,(1066,202):163,
                            (230,192):58,(208,192):12,(208,202):3}),counts
-    lines+=["}",
-            "inline constexpr std::size_t kSourceLocationTerrainPaintCount=634;",
-            "}"]
+    lines+=["}", "inline constexpr std::size_t kSourceLocationTerrainPaintCount=634;"]
+    # Compile the four remaining paint occurrences from their ORIGINAL
+    # entrypoints. Bridge is a substate of Map, not a separate layout.
+    # The tutorial and animated menu use their own authored Tilemap230.
+    specs=[
+        ("BridgeLoad","Game_events",895209268453600,333642970431083,250,
+         [6835885414231505,678685540581074,482054460208135]),
+        ("BridgeReload","Game_events",458228549101251,295534247678022,250,
+         [6835885414231505,3280162310690592,793361912924261,441502873929221,606434895649703]),
+        ("TutorialStart","Game_events",506106248958134,168499501893569,1250,
+         [918656831349451,750535811603967]),
+        ("MenuStart","Menu_Events",2084078328497493,7854813639071787,400,
+         [6983171607608507,2477186353766075]),
+    ]
+    def chain_walk(events,parents=()):
+        for e in events:
+            if isinstance(e,list) and len(e)>=7 and e[0]==0:
+                yield e,parents
+                yield from chain_walk(children(e),parents+(e,))
+    lines+=["enum class SourceSpecialTerrainEvent { BridgeLoad, BridgeReload, TutorialStart, MenuStart };",
+            "inline constexpr std::size_t kSourceSpecialTerrainPaintCount=4;"]
+    for name,sheet_name,uid,event_uid,repeats,ancestry in specs:
+        matches=[(e,parents,a) for e,parents in chain_walk(dict(project[6])[sheet_name])
+                 for a in e[6] if a[3]==uid and a[:2]==[230,192]]
+        assert len(matches)==1,(uid,len(matches))
+        e,parents,a=matches[0]
+        assert e[4]==event_uid and [n[4] for n in parents]==ancestry
+        assert len(e[5])==1 and e[5][0][:2]==[-1,123]
+        assert e[5][0][9]==[[0,[0,repeats]]] and a[5][-1]==[3,0]
+        if name=="BridgeReload":
+            assert parents[-2][5][0][9]==[[11,"onBridge"],[8,0],[7,[0,1]]]
+        if name.startswith("Bridge"):
+            create=next(a for a in parents[-1][6] if a[:2]==[-1,94] and a[5][0]==[4,230])
+            size=next(a for a in parents[-1][6] if a[:2]==[230,189])
+            assert size[5]==[[0,[0,7838]],[0,[0,270]]]
+            assert create[5][1:3]==[[5,[2,"ground_enviroment"]],[0,[23,"HotspotX"]]]
+            assert create[5][3]==[0,[4 if name=="BridgeLoad" else 5,[23,"HotspotY"],[0,10 if name=="BridgeLoad" else 30]]]
+        lines.append("template<class C> void execute_source_"+name+"(C& c) {")
+        emit("for(int loopindex=0;loopindex<"+str(repeats)+";++loopindex) {",1)
+        emit_action(a,2)
+        emit("}",1)
+        lines.append("}")
+    assert sum(counts.values())==638,counts
+    # Preserve the authored tilemap contents, not only the generated writes.
+    # Source coordinates and frame/flip descriptors are in the root layout.
+    for name,layout_name in (("TutorialStart","Tutorial"),("MenuStart","Menu")):
+        layout=next(l for l in project[5] if l[0]==layout_name)
+        matches=[(li,inst) for li,layer in enumerate(layout[6])
+            for inst in layer[14] if len(layer)>14 and isinstance(layer[14],list)
+            if isinstance(inst,list) and len(inst)>=6 and inst[1]==230]
+        assert len(matches)==1,(layout_name,len(matches))
+        li,inst=matches[0]
+        t=inst[0];cols,rows,rle=t[13][:3]
+        assert inst[5][1:3]==[30,30]
+        raw=[]
+        for part in rle.split(","):
+            q=part.split("x")
+            raw.extend([int(q[-1])]*(int(q[0]) if len(q)==2 else 1))
+        assert len(raw)==cols*rows
+        lines.append(f"inline constexpr int k{name}Columns={cols}, k{name}Rows={rows};")
+        lines.append(f"inline constexpr int k{name}Layer={li};")
+        lines.append(f"inline constexpr float k{name}X={float(t[0])}f, k{name}Y={float(t[1])}f;")
+        lines.append(f"inline constexpr float k{name}Width={float(t[3])}f, k{name}Height={float(t[4])}f;")
+        lines.append(f"inline constexpr unsigned k{name}Authored[]={{")
+        lines.extend("    "+",".join(str(v & 0xffffffff)+"u" for v in raw[i:i+24])+"," for i in range(0,len(raw),24))
+        lines.append("};")
+    lines+=["inline constexpr std::size_t kSourceTotalTerrainPaintCount=638;","}"]
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
     OUTPUT.write_text("\n".join(lines)+"\n",encoding="utf-8")
-    print("Compiled original location terrain:",dict(counts),
+    print("Compiled original location and special-context terrain:",dict(counts),
           "total",sum(counts.values()),"source actions")
 
 if __name__=="__main__":
