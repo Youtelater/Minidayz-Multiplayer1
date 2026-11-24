@@ -49,6 +49,9 @@ public:
  // Reserve exact source overlay textures until their later Map-layer pass.
  bool pin_source_sprite_texture(std::uint16_t object,std::uint16_t animation,
                                 std::uint32_t frame) noexcept;
+ // Compose source Sprite663 lamp holes in the isolated night layer.
+ bool draw_source_night_mask(const WorldSystem& world,const std::vector<std::uint32_t>& visible,
+     float camera_x,float camera_y,float opacity,float depth) noexcept;
  // Draw the original Construct sprite frame to an exact 3DS rectangle.
  // Keeps source artwork and texture scaling; only the destination changes.
  bool draw_original_ground_floor(float camera_x,float camera_y,float view_width,float view_height,std::uint8_t source_level=0,float second_half_x=1.0e30f) noexcept;
@@ -77,6 +80,9 @@ public:
  void reset_camera() noexcept { set_camera(0.0f,0.0f); }
 private:
  C3D_RenderTarget* top_{}; C3D_RenderTarget* bottom_{}; C2D_SpriteSheet floor_sheets_[8]{}; C2D_SpriteSheet base_floor_sheets_[7]{}; C2D_SpriteSheet road_sheets_[7]{}; C2D_SpriteSheet detail_sheets_[4]{}; C2D_SpriteSheet menu_sheets_[3]{};
+ C3D_Tex night_mask_texture_{};
+ bool night_mask_ready_{};
+ std::vector<std::uint8_t> night_mask_pixels_{};
   struct GroundMap {float x{},y{};std::uint32_t columns{},rows{},object_id{};std::vector<std::uint32_t> cells;};
   struct DetailMap {
     float x{},y{};

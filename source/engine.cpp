@@ -19,6 +19,9 @@
 #include "minidayz/world.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
 #include "minidayz/generated/original_image_catalog.hpp"
+#include "minidayz/generated/source_night_light.hpp"
+#include "minidayz/source_night_mask.hpp"
+#include "minidayz/source_world_sprite_visibility.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -69,6 +72,8 @@ bool Renderer::initialize() noexcept {
  return true;
 }
 void Renderer::shutdown() noexcept {
+ if(night_mask_ready_){C3D_TexDelete(&night_mask_texture_);night_mask_ready_=false;}
+ night_mask_pixels_.clear();
  unload_all();
  for(auto& sheet:floor_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
  for(auto& sheet:base_floor_sheets_){if(sheet){C2D_SpriteSheetFree(sheet);sheet=nullptr;}}
@@ -787,6 +792,47 @@ bool Renderer::draw_source_road_grid(const WorldSystem& world,
      }
  }
  return true;
+}
+bool Renderer::draw_source_night_mask(const WorldSystem& world,
+    const std::vector<std::uint32_t>& visible,float camera_x,float camera_y,
+    float opacity,float depth) noexcept {
+ if(!(opacity>0.0f))return true;
+ constexpr unsigned sw=400,sh=240,tw=512,th=256;
+ bool any=false;
+ const auto eligible=[&](const WorldPlacement* p){
+  return p && p->object==663 && p->layer==46 && p->source_animation==0 &&
+      p->source_frame<2 && p->opacity>0 && world.source_placement_active(*p) &&
+      world_source::source_world_high_layer_gameplay_art(663,"night",p->source_uid);
+ };
+ for(const auto i:visible)if(eligible(world.placement(i))){any=true;break;}
+ if(!any)return false; // caller uses ordinary original Sprite240, no extra allocation
+ if(!night_mask_ready_){
+  if(!C3D_TexInit(&night_mask_texture_,tw,th,GPU_RGBA8))return false;
+  C3D_TexSetFilter(&night_mask_texture_,GPU_NEAREST,GPU_NEAREST);
+  night_mask_ready_=true;
+ }
+ night_mask_pixels_.assign(sw*sh,static_cast<std::uint8_t>(
+    std::lround(std::clamp(opacity,0.0f,1.0f)*255)));
+ for(const auto i:visible){
+  const auto* p=world.placement(i);
+  if(!eligible(p))continue;
+  const auto& frame=world_source::kSourceNightLampFrames[p->source_frame];
+  world_source::source_night_apply_light(night_mask_pixels_.data(),sw,sh,
+      frame.alpha,frame.w,frame.h,p->x-camera_x,p->y-camera_y,
+      p->width,p->height,p->origin_x,p->origin_y,
+      p->angle*0.01745329251994329577f,p->scale_x<0,p->opacity);
+ }
+ // RGBA8 texture memory is A,B,G,R; little-endian word RRGGBBAA.
+ // Update only once per synchronized frame. Never free a queued texture.
+ auto* dst=static_cast<std::uint32_t*>(night_mask_texture_.data);
+ for(unsigned y=0;y<sh;++y)for(unsigned x=0;x<sw;++x)
+  dst[world_source::source_night_tiled_index(x,y,tw)]=
+      world_source::kSourceNightRgb|night_mask_pixels_[y*sw+x];
+ C3D_TexFlush(&night_mask_texture_);
+ static const Tex3DS_SubTexture area{sw,sh,0.0f,1.0f,
+     static_cast<float>(sw)/tw,1.0f-static_cast<float>(sh)/th};
+ const C2D_Image image{&night_mask_texture_,&area};
+ return C2D_DrawImageAt(image,camera_x,camera_y,depth);
 }
 bool Renderer::draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth,float opacity) noexcept {
  if(width<=0.0f||height<=0.0f) return false;

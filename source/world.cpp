@@ -2119,7 +2119,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                     placements_.push_back({light_layer,663,light_actions[n],
                         parent.x+(light_points[n][0]-g.ox)*g.w,
                         parent.y+(light_points[n][1]-g.oy)*g.h,
-                        0.0f,125.0f,tall?199.0f:119.0f,0.0f,1.0f,
+                        0.0f,125.0f,tall?199.0f:119.0f,0.0f,0.5f,
                         var2==14?-1.0f:1.0f,
                         tall?.4639999866485596f:.9279999732971191f,
                         tall?.02010050229728222f:.03361344709992409f,

@@ -1,4 +1,6 @@
 #include "minidayz/source_day_night.hpp"
+#include "minidayz/source_night_mask.hpp"
+#include <array>
 #include <cassert>
 #include <limits>
 
@@ -17,6 +19,24 @@ int main() {
     assert(near(source_outdoor_night_opacity(6,0),0.0f));
     assert(near(source_outdoor_night_opacity(18,59),0.0f));
     assert(near(source_outdoor_night_opacity(20,0,2),0.58f));
+    using namespace minidayz::world_source;
+    assert(source_night_destination_out(255,255,0.5f)==127);
+    assert(source_night_destination_out(200,0,1.0f)==200);
+    assert(source_night_destination_out(200,255,1.0f)==0);
+    std::array<std::uint8_t,16> mask{};
+    const std::uint8_t alpha[]{255,0,128,255};
+    mask.fill(200);
+    source_night_apply_light(mask.data(),4,4,alpha,2,2,1,1,2,2,0,0,0,false,1);
+    assert(mask[5]==0 && mask[6]==200 && mask[9]==100 && mask[10]==0);
+    mask.fill(200);
+    source_night_apply_light(mask.data(),4,4,alpha,2,2,3,1,2,2,0,0,0,true,1);
+    assert(mask[5]==200 && mask[6]==0 && mask[9]==0 && mask[10]==100);
+    assert(source_night_tiled_index(0,0,512)==0);
+    assert(source_night_tiled_index(1,0,512)==1);
+    assert(source_night_tiled_index(0,1,512)==2);
+    assert(source_night_tiled_index(7,7,512)==63);
+    assert(source_night_tiled_index(8,0,512)==64);
+    assert(source_night_tiled_index(0,8,512)==4096);
     SourceDayNightClock clock;
     assert(clock.snapshot().timer_all==361);
     assert(clock.hour()==6 && clock.minute()==1 && clock.day_mode());

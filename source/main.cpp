@@ -3096,6 +3096,9 @@ public:
                 if (source_layer && !source_layer->visible) continue;
                 // Root night layer visibility events hide its children during daylight.
                 if(placement->layer==46 && !night_layer_visible)continue;
+                // Sprite663 is a destination-out mask, not visible foreground art.
+                // Its source pixels are consumed by draw_source_night_mask below.
+                if(placement->layer==46 && placement->object==663)continue;
                 if (source_layer &&
                     (std::strstr(source_layer->name, "respawn") ||
                      std::strstr(source_layer->name, "_resp") ||
@@ -3305,7 +3308,9 @@ public:
                 minidayz::world_source::source_world_layer_depth(44,0,0));
         }
         draw_world_through(45);
-        if (night_layer_visible) {
+        if (night_layer_visible && !renderer.draw_source_night_mask(world_,
+                visible_world_placements_,camera_x,camera_y,night_opacity,
+                minidayz::world_source::source_world_layer_depth(46,0,0))) {
             (void)renderer.draw_source_sprite_fitted(
                 minidayz::stage1::kOriginalNightOverlayArt.object,
                 minidayz::stage1::kOriginalNightOverlayArt.animation,
