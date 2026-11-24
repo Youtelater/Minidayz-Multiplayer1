@@ -8,6 +8,7 @@
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/source_interior_container.hpp"
+#include "minidayz/source_box_simple_drops.hpp"
 #include "minidayz/original_initial_building_loot.hpp"
 #include "minidayz/original_car_trunk.hpp"
 #include "minidayz/generated/source_family_members.hpp"
@@ -2983,6 +2984,22 @@ void test_original_constructed_bed_journal_v4() {
     std::remove(temp);
 }
 
+void test_original_box_drop_catalog() {
+    using namespace minidayz::items;
+    const auto* rice=source_box_category(1);
+    assert(rice && rice->event==803253084945045ULL && rice->count==2);
+    const auto& first=kSourceBoxDrops[rice->first];
+    const auto& second=kSourceBoxDrops[rice->first+1];
+    assert(kSourceBoxChoices[first.first]==4 && first.dx==10 && first.dy==5);
+    assert(kSourceBoxChoices[second.first]==4 && second.dx==-10 && second.dy==5);
+    const auto* mixed=source_box_category(110);
+    assert(mixed && mixed->count==4);
+    assert(kSourceBoxDrops[mixed->first].choose);
+    assert(kSourceBoxDrops[mixed->first].count==6);
+    assert(!source_box_category(0));
+    assert(!source_box_category(51)); // nested RNG requires further port
+}
+
 void test_original_bunker_container_open_save_replay() {
     using namespace minidayz;
     using namespace minidayz::world_source;
@@ -3811,6 +3828,7 @@ int main() {
     test_category4_variant40_building_spawns();
     test_location_state_gates_existing_placement();
     test_original_house_loot_marker_spawns();
+    test_original_box_drop_catalog();
     test_original_bunker_container_open_save_replay();
     test_original_building_specific_loot_on_generated_world();
     test_every_source_mapped_house_spawn_chain();
