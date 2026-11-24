@@ -28,8 +28,14 @@ for name,uid in uids.items():
  # Array518==0 checks for EMPTY CELLS being painted as roads, NOT new
  # nonzero road anchor types. The old 8-field-only walker missed them.
  print("ROAD_ROOT_ARRAY_COMPARE_CODES",name,codes)
- anchors=[code for code in codes if code!=0]
+ # The vertical function additionally tests code13: a horizontal
+ # road that becomes a crossing (14) after vertical pavement connects.
+ # It is a PAINT TARGET, never an anchor for the first/second marker.
+ paint_targets={0,13} if name=="vertical" else {0}
+ assert paint_targets.issubset(codes),(name,codes)
+ anchors=[code for code in codes if code not in paint_targets]
  print("ROAD_ROOT_ANCHORS",name,anchors)
+ print("ROAD_ROOT_PAINT_TARGETS",name,sorted(paint_targets))
  assert anchors==[6,9,11,15,103],(name,codes)
  # Native array road generation must keep zero as paintable ground, never
  # treat it as an anchor that would connect every empty map location.
