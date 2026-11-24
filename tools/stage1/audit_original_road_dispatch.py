@@ -13,7 +13,7 @@ def walk(nodes,parents=()):
   if e[0]==0:yield e,parents
   if e[0]==0 and len(e)>7 and isinstance(e[7],list):
    yield from walk(e[7],parents+(e[4],))
-uids={"horizontal":921061167763666,"vertical":484111970403648}
+uids={"horizontal":921061167763666,"horizontal_split":218522443826106,"vertical":484111970403648}
 for name,uid in uids.items():
  e=next(e for _,events in p[6] for e,_ in walk(events) if e[4]==uid)
  guards=[]
@@ -64,8 +64,15 @@ for sheet,events in p[6]:
  variables(events)
 # Root Map-size defaults are 16; challenge/test flags may explicitly
 # set them to 3, then restore 16. The ordinary 16x33 map still uses the
-# original 16-row horizontal pass and second-half vertical Y+17 pass.
+# original 16-row horizontal pass, the additional 33-row pass at
+# CurrentLevel >= 4, and the second-half vertical Y+17 pass.
 world_source=(ROOT/"source/world.cpp").read_text(encoding="utf-8")
-assert "for (int row = 0; row < grid.width() && row < grid.height(); ++row)" in world_source
+assert "add_horizontal_roads(grid.width());" in world_source
+assert "if (level >= 4 && !legacy_split_roads) add_horizontal_roads(33);" in world_source
+split=next(e for _,events in p[6] for e,_ in walk(events) if e[4]==218522443826106)
+assert [-1,46,None,0,False,False,False,213132789622999,False,[[11,"CurrentLevel"],[8,5],[7,[0,4]]]] in split[5]
+for uid in (670277067257685,645572479399798):
+ repeat=next(e for e,_ in walk(split[7]) if e[4]==uid)
+ assert any(c[:2]==[-1,123] and c[9]==[[0,[0,33]]] for c in repeat[5])
 assert "if (level >= 4) add_vertical_roads(17);" in world_source
 print("PASS original road array anchor source extraction and split-map axis bounds")

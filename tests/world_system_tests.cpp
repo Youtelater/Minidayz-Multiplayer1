@@ -1043,6 +1043,20 @@ void test_original_crash_site_world_generation() {
         for(std::size_t i=0;i<world.placement_count();++i){
             const auto* p=world.placement(i);
             if(!p)continue;
+            if(p->object==344 && p->source_uid==667245097137285ULL){
+                assert(p->source_variable_1>0);
+                const auto* m=world.map_marker(p->source_variable_1-1);
+                assert(m);
+                const auto h=minidayz::world_source::mapgen_hotspot(m->cell_x,m->cell_y);
+                assert(p->x==h.x+500.0f && p->y==h.y+500.0f);
+            }
+            if(p->object==434 && (p->source_uid==770992642019829ULL || p->source_uid==515255034690416ULL)){
+                assert(p->house_base_runtime_uid>0);
+                const auto* m=world.map_marker(p->house_base_runtime_uid-1);
+                assert(m);
+                const auto h=minidayz::world_source::mapgen_hotspot(m->cell_x,m->cell_y);
+                assert(p->x==h.x+500.0f && p->y==h.y+600.0f);
+            }
             if(p->object==246 &&
                (p->source_uid==453361015394042ULL ||
                 p->source_uid==416326667732045ULL ||

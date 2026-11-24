@@ -535,6 +535,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     generation_level_ = 0;
     legacy_world_generation_ = false;
     legacy_split_roads_ = false;
+    legacy_crash_coordinates_ = false;
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     initialized_ = true;
@@ -545,13 +546,15 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           std::string_view name,
                                           std::uint8_t level,
                                           std::uint8_t perk_dao, bool legacy_world_generation,
-                                          bool legacy_split_roads) {
+                                          bool legacy_split_roads,
+                                          bool legacy_crash_coordinates) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
     }
     legacy_world_generation_ = legacy_world_generation;
     legacy_split_roads_ = legacy_world_generation || legacy_split_roads;
+    legacy_crash_coordinates_ = legacy_split_roads_ || legacy_crash_coordinates;
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -1283,7 +1286,11 @@ bool WorldSystem::generate_source_crash_sites() {
             const auto& marker=map_markers_[i];
             const auto hotspot=world_source::mapgen_hotspot(
                 marker.cell_x,marker.cell_y);
-            const float x=hotspot.x-500.0f,y=hotspot.y-500.0f;
+            // Root Spawn at Sprite514 imagepoint 0, then action 629217245088326
+            // adds (+500,+500) BEFORE the startup marker shift. Art and
+            // loot are later spawned from the anchor, not the old marker.
+            const float offset=legacy_crash_coordinates_?-500.0f:500.0f;
+            const float x=hotspot.x+offset,y=hotspot.y+offset;
             const auto anchor=make(world_source::kHeliAnchor,buildings,
                 667245097137285ULL,x,y);
             auto& point=placements_[anchor];
@@ -1330,7 +1337,9 @@ bool WorldSystem::generate_source_crash_sites() {
             const auto& marker=map_markers_[i];
             const auto hotspot=world_source::mapgen_hotspot(
                 marker.cell_x,marker.cell_y);
-            const float x=hotspot.x-500.0f,y=hotspot.y-600.0f;
+            // Actions 525441183319823 / 207285229110160 add (+500,+600).
+            const float sign=legacy_crash_coordinates_?-1.0f:1.0f;
+            const float x=hotspot.x+sign*500.0f,y=hotspot.y+sign*600.0f;
             const auto anchor=make(world_source::kHammerAnchor,buildings,
                 marker.marker_type==13?770992642019829ULL:
                     515255034690416ULL,x,y);
@@ -1687,6 +1696,7 @@ void WorldSystem::reset() noexcept {
     generation_level_ = 0;
     legacy_world_generation_ = false;
     legacy_split_roads_ = false;
+    legacy_crash_coordinates_ = false;
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     seed_ = 0;
