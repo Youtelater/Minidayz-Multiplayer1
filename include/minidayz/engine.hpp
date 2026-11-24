@@ -9,6 +9,7 @@
 
 namespace minidayz {
 class WorldGrid;
+class WorldSystem;
 struct WorldBounds;
 struct InputState { u32 held{}, pressed{}, released{}; circlePosition circle{}; touchPosition touch{}; bool touching{}; };
 class Renderer {
