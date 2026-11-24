@@ -2012,12 +2012,29 @@ void test_source_scatter_reproduction_and_layout_replacement() {
                    cell.original_frame==road_b[p].tiles[i].original_frame);
         }
     }
+    const auto& pond_a=a.source_pond_patches();
+    const auto& pond_b=b.source_pond_patches();
+    assert(pond_a.size()==pond_b.size());
+    for(std::size_t i=0;i<pond_a.size();++i){
+        assert(pond_a[i].marker_index==pond_b[i].marker_index);
+        const auto* marker=a.map_marker(pond_a[i].marker_index);
+        assert(marker && marker->marker_type==3);
+        assert(pond_a[i].tiles.size()==pond_b[i].tiles.size());
+        const auto center=minidayz::world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
+        assert(a.source_pond_contains(center.x+10,center.y+10,false));
+        assert(a.source_pond_contains(center.x+10,center.y+10,true));
+        for(std::size_t j=0;j<pond_a[i].tiles.size();++j){
+            assert(pond_a[i].tiles[j].local_index==pond_b[i].tiles[j].local_index);
+            assert(pond_a[i].tiles[j].original_frame==pond_b[i].tiles[j].original_frame);
+        }
+    }
     assert(a.load_source_layout("Map"));
     // A second authored layout must not inherit a previous generated
     // forest, loot markers or a misleading completed-generation phase.
     assert(!a.generation_complete());
     assert(a.source_scatter_patches().empty());
     assert(a.source_road_edge_patches().empty());
+    assert(a.source_pond_patches().empty());
     assert(a.map_marker_count()==0);
     assert(a.source_location_spawn_count()==0);
 }

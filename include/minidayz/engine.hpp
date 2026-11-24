@@ -49,6 +49,8 @@ public:
  bool draw_original_environment_tilemaps(float camera_x,float camera_y,
                                            float view_width,float view_height) noexcept;
  // Render source-derived SetTile scatter events for each generated Map cell.
+ bool draw_source_ponds(const class WorldSystem& world,float camera_x,float camera_y,
+                       float width,float height) noexcept;
  bool draw_source_procedural_environment(const class WorldSystem& world,
      float camera_x,float camera_y,float view_width,float view_height) noexcept;
  bool draw_source_road_grid(const class WorldSystem& world,

@@ -2887,6 +2887,10 @@ public:
                 renderer.draw_text("ORIGINAL ENVIRONMENT TILES FAILED TO LOAD",
                                    camera_x+12.0f,camera_y+40.0f,0.30f);
             }
+            if (!renderer.draw_source_ponds(world_,camera_x,camera_y,view_w,view_h)) {
+                renderer.draw_text("PROCEDURAL WATER TILES FAILED",
+                                   camera_x+12.0f,camera_y+68.0f,0.30f);
+            }
             // Original Game_events scatter source Tilemap object 230 per
             // generated location cell. These are real 30px sprites from
             // assets/gfx/ground_enviroment_tilemap.png, not placeholder art.
@@ -4333,6 +4337,8 @@ private:
 
     minidayz::terrain::FootstepSurface terrain_surface_at(
         float x,float y) const noexcept {
+        if(world_.source_pond_contains(x,y,false))
+            return minidayz::terrain::FootstepSurface::shallow_water;
         const auto surface=terrain_collision_.surface_at(x,y);
         if (surface!=minidayz::terrain::FootstepSurface::ground)
             return surface;
@@ -4370,7 +4376,8 @@ private:
             map_layout - minidayz::stage1::kLayoutTable);
         // Original Construct instance positions are relative to their
         // sprite origins, not always their upper-left corners.
-        if (scene->terrain_collision_.blocked(x,y)) return true;
+        if (scene->terrain_collision_.blocked(x,y) ||
+            scene->world_.source_pond_contains(x,y,true)) return true;
         // Original deployed tent foundation Sprite398 has Solid behavior.
         // It lives in the survivor tent store, not the static world index.
         // Root frame[10] is a concave U-shaped wall with an open entrance.

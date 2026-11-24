@@ -1,6 +1,8 @@
 #include "minidayz/world.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/source_road_edge_paint.hpp"
+#include "minidayz/source_pond_paint.hpp"
+#include "minidayz/source_tilemap_solid_collision.hpp"
 #include "minidayz/generated/original_initial_building_loot.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
@@ -511,6 +513,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     map_markers_.clear();
     source_scatter_patches_.clear();
     source_road_edge_patches_.clear();
+    source_pond_patches_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();
@@ -594,6 +597,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     map_markers_.clear();
     source_scatter_patches_.clear();
     source_road_edge_patches_.clear();
+    source_pond_patches_.clear();
     WorldGenerationProfile profile{};
     if (!source_world_profile(level, profile) ||
         !grid_.resize(profile.map_size_x, profile.grid_height)) return false;
@@ -643,6 +647,7 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
     map_markers_.clear();
     source_scatter_patches_.clear();
     source_road_edge_patches_.clear();
+    source_pond_patches_.clear();
     map_markers_.reserve(static_cast<std::size_t>(grid_.width()) * grid_.height());
     (void)seed; // The source uses one global random stream across generation stages.
     WorldGenerationProfile profile{};
@@ -800,6 +805,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     map_markers_.clear();
     source_scatter_patches_.clear();
     source_road_edge_patches_.clear();
+    source_pond_patches_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();
@@ -923,6 +929,7 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
         static_cast<std::size_t>(grid_.width()) * grid_.height()) return false;
     source_scatter_patches_.clear();
     source_road_edge_patches_.clear();
+    source_pond_patches_.clear();
     source_scatter_patches_.reserve(map_markers_.size());
     std::size_t added = 0;
     for (int y = 0; y < grid_.height(); ++y) {
@@ -1004,6 +1011,16 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
                 }
                 if(!edges.tiles.empty())
                     source_road_edge_patches_.push_back(std::move(edges));
+            }
+            if(code==3){
+                WorldScatterPatch pond{};
+                pond.marker_index=marker_index;
+                const auto painted=world_source::source_pond_cells();
+                for(std::size_t i=0;i<painted.size();++i)
+                    if(painted[i]!=terrain::kTileEmpty)
+                        pond.tiles.push_back({static_cast<std::uint16_t>(i),
+                            static_cast<std::uint16_t>(painted[i])});
+                source_pond_patches_.push_back(std::move(pond));
             }
             if(!build_source_scatter_patch(marker_index))return false;
         }
@@ -1565,6 +1582,7 @@ void WorldSystem::reset() noexcept {
     map_markers_.clear();
     source_scatter_patches_.clear();
     source_road_edge_patches_.clear();
+    source_pond_patches_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();
@@ -2407,4 +2425,23 @@ bool WorldTravel::advance() noexcept {
     return false;
 }
 
+bool WorldSystem::source_pond_contains(float x,float y,bool solid_only) const noexcept {
+    if(!std::isfinite(x)||!std::isfinite(y))return false;
+    for(const auto& patch:source_pond_patches_){
+        const auto* marker=map_marker(patch.marker_index);
+        if(!marker)continue;
+        const auto center=world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
+        const float fx=(x-center.x+world_source::kPondOffset)/world_source::kPondTileSize;
+        const float fy=(y-center.y+world_source::kPondOffset)/world_source::kPondTileSize;
+        if(fx<0||fy<0||fx>=world_source::kPondSide||fy>=world_source::kPondSide)continue;
+        const int col=static_cast<int>(fx),row=static_cast<int>(fy);
+        const int index=row*world_source::kPondSide+col;
+        for(const auto& tile:patch.tiles){
+            if(tile.local_index!=index)continue;
+            if(!solid_only||terrain::source_solid_tile_contains(
+                208,tile.original_frame,fx-col,fy-row))return true;
+        }
+    }
+    return false;
+}
 } // namespace minidayz

@@ -1,6 +1,7 @@
 #include "minidayz/generated/water_shore_source.hpp"
 #include "minidayz/source_water_shore_effective_tile.hpp"
 #include "minidayz/terrain_collision.hpp"
+#include "minidayz/source_pond_paint.hpp"
 #include <cassert>
 #include <cstdint>
 #include <initializer_list>
@@ -36,6 +37,14 @@ int main() {
     // Previously, the screen drew a generated source shore sprite atop an
     // EMPTY authored water cell while the player collision stayed EMPTY.
     using namespace minidayz::terrain;
+    const auto pond=minidayz::world_source::source_pond_cells();
+    assert(pond.size()==289);
+    assert(pond[8*17+8]==4u);
+    assert(pond[0]==kTileEmpty);
+    assert(pond[16*17+16]==kTileEmpty);
+    unsigned wet=0,shore=0;
+    for(const auto f:pond)if(f!=kTileEmpty){++wet;if(f!=4u)++shore;}
+    assert(wet>64 && shore>0);
     std::vector<std::uint32_t> water(9,kTileEmpty);
     assert(source_water_shore_effective_tile(water,3,3,1,1)==kTileEmpty);
     // Exact root action 1933741965756872 writes frame1 ABOVE

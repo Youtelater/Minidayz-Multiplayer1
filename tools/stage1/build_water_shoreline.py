@@ -36,11 +36,16 @@ def main():
     project=json.loads(re.sub(r"(?<![A-Za-z0-9_.])-\s+(?=\d)","-",
         PROJECT.read_text(encoding="utf-8-sig")))["project"]
     rules=[]
+    pond_ranges=[]
     for sheet in project[6]:
         if sheet[0]!="Game_events":continue
         for event,ancestors in walk(sheet[1]):
             for action in event[6] if len(event)>6 and isinstance(event[6],list) else []:
-                if not isinstance(action,list) or len(action)<6 or action[0]!=208 or action[1]!=192:
+                if not isinstance(action,list) or len(action)<6 or action[0]!=208:
+                    continue
+                if action[1]==202 and event[4]==9368941097190071:
+                    pond_ranges.append([p[1][1] for p in action[5][:-1]])
+                if action[1]!=192:
                     continue
                 conds=[c for node in ancestors+(event,)
                        for c in (node[5] if len(node)>5 and isinstance(node[5],list) else [])
@@ -60,6 +65,8 @@ def main():
                 if not 7<=len(checks)<=9:
                     raise SystemExit("Unrecognized source water shoreline predicate")
                 rules.append((frame,action[3],checks))
+    if pond_ranges!=[[4,4,8,8,4],[3,5,10,5,4],[6,3,4,10,4]]:
+        raise SystemExit("Original marker3 pond SetTileRange geometry changed")
     if len(rules)!=12:
         raise SystemExit(f"Expected twelve original shoreline SetTile branches; found {len(rules)}")
     original=ROOT/"assets/gfx/tilemap_water.png"

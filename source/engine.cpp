@@ -7,6 +7,7 @@
 #include "minidayz/terrain_roads.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/source_road_edge_paint.hpp"
+#include "minidayz/source_pond_paint.hpp"
 #include "minidayz/source_road_uv_crop.hpp"
 #include "minidayz/terrain_source_tile_flags.hpp"
 #include "minidayz/menu_bitmap_font.hpp"
@@ -639,7 +640,7 @@ bool Renderer::draw_original_environment_tilemaps(
   for(int row=y0;row<y1;++row)for(int col=x0;col<x1;++col){
    auto frame=map.cells[static_cast<std::size_t>(row)*
                          map.columns+static_cast<std::size_t>(col)];
-   if(map.object_id==208 && frame==terrain::kTileEmpty)
+   if(map.object_id==208)
     frame=terrain::source_water_shore_effective_tile(
         map.cells,map.columns,map.rows,col,row);
    if(frame==0xffffffffu)continue;
@@ -659,6 +660,38 @@ bool Renderer::draw_original_environment_tilemaps(
   }
  }
  return true;
+}
+bool Renderer::draw_source_ponds(const WorldSystem& world,
+    float camera_x,float camera_y,float width,float height) noexcept {
+    if(!world.generation_complete())return true;
+    if(width<=0||height<=0)return false;
+    constexpr float tile=world_source::kPondTileSize;
+    const float depth=world_source::source_world_layer_depth(19,0,0);
+    for(const auto& patch:world.source_pond_patches()){
+        const auto* marker=world.map_marker(patch.marker_index);
+        if(!marker)return false;
+        const auto center=world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
+        const float left=center.x-world_source::kPondOffset;
+        const float top=center.y-world_source::kPondOffset;
+        if(left>=camera_x+width||top>=camera_y+height||
+            left+world_source::kPondSide*tile<=camera_x||
+            top+world_source::kPondSide*tile<=camera_y)continue;
+        for(const auto& cell:patch.tiles){
+            const float x=left+(cell.local_index%world_source::kPondSide)*tile;
+            const float y=top+(cell.local_index/world_source::kPondSide)*tile;
+            if(x>=camera_x+width||y>=camera_y+height||
+               x+tile<=camera_x||y+tile<=camera_y)continue;
+            if(!detail_sheets_[0]){
+                auto sheet=C2D_SpriteSheetLoad("romfs:/gfx/original_map_detail_208.t3x");
+                if(!sheet)return false;
+                if(C2D_SpriteSheetCount(sheet)==0){C2D_SpriteSheetFree(sheet);return false;}
+                detail_sheets_[0]=sheet;
+            }
+            if(!draw_original_tile(detail_sheets_[0],cell.original_frame,x,y,tile,depth))
+                return false;
+        }
+    }
+    return true;
 }
 bool Renderer::draw_source_road_grid(const WorldSystem& world,
                                     float camera_x,float camera_y,

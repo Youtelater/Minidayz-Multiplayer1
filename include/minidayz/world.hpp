@@ -266,6 +266,10 @@ public:
     const std::vector<WorldScatterPatch>& source_road_edge_patches() const noexcept {
         return source_road_edge_patches_;
     }
+    const std::vector<WorldScatterPatch>& source_pond_patches() const noexcept {
+        return source_pond_patches_;
+    }
+    bool source_pond_contains(float x,float y,bool solid_only) const noexcept;
     std::uint8_t generation_level() const noexcept { return generation_level_; }
     std::uint8_t generation_perk_dao() const noexcept { return generation_perk_dao_; }
 
@@ -286,6 +290,7 @@ private:
     std::vector<WorldMapMarker> map_markers_{};
     std::vector<WorldScatterPatch> source_scatter_patches_{};
     std::vector<WorldScatterPatch> source_road_edge_patches_{};
+    std::vector<WorldScatterPatch> source_pond_patches_{};
     std::vector<WorldFeature> features_{};
     std::vector<WorldPlacement> placements_{};
     std::vector<WorldSpriteState> original_sprite_states_{};
