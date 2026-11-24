@@ -20,6 +20,9 @@ def walk(events):
 
 def compile_source(p):
     objects=p[3]
+    # Construct layer lookup is case-insensitive. The native index uses
+    # exact canonical names; resolve all source Spawn layer literals here.
+    map_layers={l[0].lower():l[0] for l in next(l for l in p[5] if l[0]=='Map')[6]}
     events={e[4]:e for e in walk(dict(p[6])["Game_events"])}
     groups={4:events[1506402191387381],6:events[4174243855126541],7:events[4949969985883762]}
     secret_event=823979540040328
@@ -87,7 +90,7 @@ def compile_source(p):
                     child=args[0][1];parent=-1 if obj==508 else current(obj)
                     x,y=point(parent,expr(args[2][1]));f=frame_data(child,0)
                     rows.append(dict(event=event[4],action=a[3],object=child,
-                        layer=expr(args[1][1]),parent=parent,frame=0,anim=0,x=x,y=y,
+                        layer=map_layers[expr(args[1][1]).lower()],parent=parent,frame=0,anim=0,x=x,y=y,
                         w=float(f[4]),h=float(f[5]),ox=f[7],oy=f[8],sx=1.,
                         v0=0,v1=0,v2=0,v3=0,v5=0,loot=False))
                 elif obj==508 and op==88:

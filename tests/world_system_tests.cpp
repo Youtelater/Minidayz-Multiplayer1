@@ -3492,6 +3492,10 @@ static void test_original_category7_event_chains(){
         if(c.category!=7)continue;
         const auto first=world.placement_count();
         const auto roots=world.expand_map_element(7,c.variant,0,pos,c.state);
+        if(world.placement_count()!=first+c.count)
+            std::fprintf(stderr,"category7 variant %u state %u expected %u placements got %zu\n",
+                static_cast<unsigned>(c.variant),static_cast<unsigned>(c.state),
+                static_cast<unsigned>(c.count),world.placement_count()-first);
         assert(world.placement_count()==first+c.count);
         unsigned expected=0;
         for(unsigned j=0;j<c.count;++j){
