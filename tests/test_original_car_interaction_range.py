@@ -43,3 +43,16 @@ assert (ROOT/"romfs/wav/open.wav").is_file()
 
 assert audio.count("source_car_open")>=2
 assert audio.count("0.56234133f")>=2
+
+# The proximity event is an ancestor, not the complete interaction.
+# Both original mobile branches require Player181 overlap with Sprite241.
+def find(nodes,uid):
+    return [e for e in walk(nodes) if e[4]==uid]
+assert len(find(events[0][7],1792234758292318))==1
+overlap=find(events[0][7],1792234758292318)[0]
+assert any(c[:2]==[181,108] and c[9]==[[4,241]] for c in overlap[5])
+assert "source_player_overlaps_world_sprite(" in scene[search_start:search_end]
+assert "marker->origin_x,marker->origin_y" in scene[search_start:search_end]
+header=(ROOT/"include/minidayz/original_car_trunk.hpp").read_text()
+assert "body->runtime_uid!=marker.parent_runtime_uid" in header
+print("PASS original mobile trunk range and inherited overlap; linked body checked")
