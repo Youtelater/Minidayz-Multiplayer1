@@ -115,6 +115,8 @@ if parsed.is_file() and original.is_file():
                     "Original category5 light branch "+str(variant))
         require(any(a[:2]==[663,159] and a[5]==[[3,0]]
                     for a in by_id[3429345725247912][6]),"Original third lamp mirror")
+        require('source_category46_events_ && (var1==4 || var1==6)' in (ROOT/'source/world.cpp').read_text(encoding='utf-8'),
+                'Live world uses compiled original category4/6 event chains')
         timer=by_id[583575774431491][5]
         require(any(c[:2]==[-1,77] and c[9]==[[0,[0,1]]] for c in timer)
                 and any(c[:2]==[-1,51] and c[9][1:]==[[8,4],[7,[0,400]]]
@@ -140,7 +142,7 @@ floor = text("tools/stage1/build_ground_floor.py")
 ui_builder = text("tools/stage2/build_inventory_ui_art.py")
 makefile = text("Makefile")
 require("start_new_game()" in game and
-        'begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_, !legacy_category5_events_)' in game and
+        'begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_, !legacy_category5_events_, !legacy_category46_events_)' in game and
         'world_level_ = 0;' in game and
         "advance_source_generation()" in game and
         "generation_complete()" in game,

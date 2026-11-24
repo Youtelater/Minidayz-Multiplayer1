@@ -13,6 +13,7 @@
 #include "minidayz/generated/source_door_points.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/generated/source_car_wreck_trunks.hpp"
+#include "minidayz/generated/category46_source.hpp"
 #include "minidayz/generated/source_family_members.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
@@ -540,6 +541,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     source_start_events_ = false;
     source_category3_events_ = false;
     source_category5_events_ = false;
+    source_category46_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -557,7 +559,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           bool legacy_crash_coordinates,
                                           bool legacy_site_generation,
                                           bool source_start_events, bool source_category3_events,
-                                          bool source_category5_events) {
+                                          bool source_category5_events, bool source_category46_events) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
@@ -569,6 +571,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
     source_start_events_ = source_start_events && !legacy_site_generation_ && name == "Map";
     source_category3_events_ = source_category3_events && name == "Map";
     source_category5_events_ = source_category5_events && name == "Map";
+    source_category46_events_ = source_category46_events && name == "Map";
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -1792,6 +1795,7 @@ void WorldSystem::reset() noexcept {
     source_start_events_ = false;
     source_category3_events_ = false;
     source_category5_events_ = false;
+    source_category46_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -1816,6 +1820,72 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
     if (!layout) return 0;
     const auto layout_index = static_cast<std::uint16_t>(layout - stage1::kLayoutTable);
 
+    // Root category4/6 are deterministic action chains, not just Spawn
+    // tables. Their compiled records preserve original conditional frames,
+    // signed sizing, named/numeric imagepoints, UID links and loot dispatch.
+    // The legacy path below remains only for older saved world identities.
+    if(source_category46_events_ && (var1==4 || var1==6)){
+        const unsigned state=var3==0.0?0u:var3==1.0?1u:2u;
+        const unsigned subtype=std::min<unsigned>(var6,7u);
+        const unsigned count=var1==4?48u:17u;
+        if(var2==0 || var2>count)return 0;
+        const unsigned index=(var1==6?48u*24u:0u)+(var2-1u)*24u+subtype*3u+state;
+        const auto& rule=world_source::kCategory46Cases[index];
+        if(rule.category!=var1 || rule.variant!=var2 ||
+           rule.subtype!=subtype || rule.state!=state)return 0;
+        const auto first=placements_.size();
+        for(unsigned j=0;j<rule.count;++j){
+            const auto& r=world_source::kCategory46Placements[rule.first+j];
+            if(find_layer_index_by_name(layout_index,r.layer)==0xffff)return 0;
+        }
+        const auto uid=[&](unsigned j){
+            return (std::uint64_t{1}<<63)|static_cast<std::uint64_t>(first+j+1);
+        };
+        const auto value=[&](int encoded)->std::uint64_t{
+            return encoded<0?uid(static_cast<unsigned>(-encoded-1)):
+                static_cast<std::uint64_t>(encoded);
+        };
+        std::size_t roots=0;
+        for(unsigned j=0;j<rule.count;++j){
+            const auto& r=world_source::kCategory46Placements[rule.first+j];
+            const auto layer=find_layer_index_by_name(layout_index,r.layer);
+            // Preserve primary event and trunk event provenance used by
+            // the existing original-source rendering/interaction gates.
+            const auto source_uid=(r.parent<0 || r.object==241)?r.event_uid:r.action_uid;
+            placements_.push_back({layer,r.object,source_uid,
+                position.x+r.x,position.y+r.y,0.0f,r.w,r.h,0.0f,1.0f,
+                r.sx,r.ox,r.oy,0,r.frame});
+            auto& created=placements_.back();
+            created.instance_id=placements_.size();
+            created.runtime_uid=uid(j);
+            created.source_variable_0=value(r.var0);
+            created.source_variable_1=value(r.var1);
+            if(r.object==218){
+                created.source_loot_category=static_cast<std::uint16_t>(created.source_variable_0);
+                created.source_initial_loot_trigger=r.loot;
+            }
+            if(r.parent>=0){
+                const auto pi=first+static_cast<unsigned>(r.parent);
+                auto& parent=placements_[pi];
+                created.parent_runtime_uid=parent.runtime_uid;
+                created.house_base_runtime_uid=parent.house_base_runtime_uid?
+                    parent.house_base_runtime_uid:parent.runtime_uid;
+                created.linked_runtime_uid=parent.runtime_uid;
+                if(r.object==345 || r.object==348)
+                    parent.linked_runtime_uid=created.runtime_uid;
+            }else{
+                ++roots;
+                WorldFeatureKind kind{};
+                if(classify_source_layer(r.layer,kind)){
+                    const std::uint32_t variant=(static_cast<std::uint32_t>(var1)<<16)|
+                        (static_cast<std::uint32_t>(var2)<<8)|var6;
+                    features_.push_back({kind,{created.x,created.y},source_uid,variant,
+                        layer,r.object,r.w,r.h,0.0f,0});
+                }
+            }
+        }
+        return roots;
+    }
     std::size_t added = 0;
     // Apply precisely one original source Spawn descriptor. The primary
     // original world table has some known stale/missing house branches;
@@ -2741,12 +2811,12 @@ const WorldPlacement* WorldSystem::placement_by_instance_id(
 
 bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level,
                         std::uint8_t perk_dao, bool source_start_events, bool source_category3_events,
-                        bool source_category5_events) noexcept {
+                        bool source_category5_events, bool source_category46_events) noexcept {
     cancel();
     try {
         auto candidate = std::make_unique<WorldSystem>();
         if (!candidate->begin_source_generation(seed, "Map", level, perk_dao,
-                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events)) return false;
+                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events, source_category46_events)) return false;
         destination_ = std::move(candidate);
         return true;
     } catch (const std::bad_alloc&) {

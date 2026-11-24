@@ -13,6 +13,7 @@
 #include "minidayz/generated/source_family_members.hpp"
 #include "minidayz/generated/source_house_companions.hpp"
 #include "minidayz/generated/source_car_wreck_trunks.hpp"
+#include "minidayz/generated/category46_source.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/generated/location_event_source.hpp"
@@ -3424,7 +3425,63 @@ static void test_original_category5_elements(){
     assert(legacy.placement_count()==n+1);
 }
 
+static void test_original_category46_event_chains(){
+    using namespace minidayz;
+    WorldSystem world;
+    assert(world.begin_source_generation(123456u,"Map",0,0,false,false,false,false,true,true,true,true));
+    const auto rng=world.source_random();
+    const WorldPoint position{1000,2000};
+    for(const auto& c:world_source::kCategory46Cases){
+        const auto first=world.placement_count();
+        const auto roots=world.expand_map_element(c.category,c.variant,c.subtype,position,c.state);
+        assert(world.placement_count()==first+c.count);
+        unsigned expected_roots=0;
+        for(unsigned j=0;j<c.count;++j){
+            const auto& r=world_source::kCategory46Placements[c.first+j];
+            const auto* p=world.placement(first+j);
+            assert(p && p->object==r.object && p->source_frame==r.frame);
+            assert(std::fabs(p->x-position.x-r.x)<0.001f &&
+                   std::fabs(p->y-position.y-r.y)<0.001f);
+            assert(p->width==r.w && p->height==r.h && p->origin_x==r.ox &&
+                   p->origin_y==r.oy && p->scale_x==r.sx);
+            if(r.parent<0)++expected_roots;
+            else assert(p->parent_runtime_uid==world.placement(first+r.parent)->runtime_uid);
+            const auto value=[&](int v)->std::uint64_t{
+                return v<0?world.placement(first+static_cast<unsigned>(-v-1))->runtime_uid:
+                    static_cast<std::uint64_t>(v);
+            };
+            assert(p->source_variable_0==value(r.var0));
+            assert(p->source_variable_1==value(r.var1));
+            assert(p->source_initial_loot_trigger==r.loot);
+        }
+        assert(roots==expected_roots);
+    }
+    // Independently assert concrete root cases: fence frame2 chooses
+    // obstacle frame12; category4 variant36's loot uses half-width+15;
+    // opened wreck has frame1 and no search marker; fresh wreck mirrors
+    // its trunk and links both original children.
+    auto n=world.placement_count();
+    assert(world.expand_map_element(4,1,2,position,0)==1);
+    assert(world.placement(n)->object==319 && world.placement(n)->source_frame==2);
+    assert(world.placement(n+1)->object==345 && world.placement(n+1)->source_frame==12);
+    n=world.placement_count();
+    assert(world.expand_map_element(4,36,0,position,0)==1);
+    const auto* loot=world.placement(n+2);
+    assert(loot && loot->object==218 && loot->source_loot_category==38);
+    assert(loot->source_initial_loot_trigger && std::fabs(loot->x-1043.5f)<0.001f);
+    n=world.placement_count();
+    assert(world.expand_map_element(6,1,0,position,0)==1);
+    assert(world.placement(n+2)->object==241 && world.placement(n+2)->scale_x==-1.0f);
+    assert(world.placement(n)->source_variable_0==world.placement(n+1)->runtime_uid);
+    assert(world.placement(n)->source_variable_1==world.placement(n+2)->runtime_uid);
+    n=world.placement_count();
+    assert(world.expand_map_element(6,1,0,position,1)==1);
+    assert(world.placement(n)->source_frame==1 && world.placement_count()==n+2);
+    assert(world.source_random()==rng);
+}
+
 int main() {
+    test_original_category46_event_chains();
     test_original_category5_elements();
     test_original_category3_elements();
     test_original_location_reload_selection();
