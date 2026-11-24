@@ -1933,13 +1933,13 @@ void test_seed_reproducibility() {
 
 void test_original_perk_dao_world_scatter_branch() {
     // Root UIDs 606281189890536 / 982873373809928 /
-    // 990933237254084 select perk_dao==5 AND CurrentLevel==4.
+    // 990933237254084 are OR blocks: perk_dao==5 OR CurrentLevel==4.
     // Their immediately following Else nodes select ordinary art.
     std::size_t special_count=0,else_count=0;
     for(const auto& rule:minidayz::stage1::kTerrainScatterRules){
         if(rule.perk_gate==1){
             ++special_count;
-            assert(rule.level_mask==(1u<<4));
+            assert(rule.level_mask==0x3fu);
             assert(rule.repeat==200);
         } else if(rule.perk_gate==2)++else_count;
         else assert(rule.perk_gate==0);
@@ -1976,7 +1976,18 @@ void test_original_perk_dao_world_scatter_branch() {
                left[i].tiles[k].original_frame!=right[i].tiles[k].original_frame)
                 changed=true;
     }
-    assert(changed);
+    // Both are already level4: changing the perk cannot change these
+    // scatter guards. Earlier approximations treated the OR as AND.
+    assert(!changed);
+    minidayz::WorldGrid grid;
+    assert(grid.resize(16,16));
+    std::mt19937 a_rng(seed),b_rng(seed),c_rng(seed);
+    minidayz::world_source::SourceLocationTerrain plain(grid,a_rng,4,2,2,3,0);
+    minidayz::world_source::SourceLocationTerrain perk(grid,b_rng,4,2,2,3,5);
+    minidayz::world_source::SourceLocationTerrain snow(grid,c_rng,4,2,2,4,0);
+    assert(plain.execute() && perk.execute() && snow.execute());
+    assert(plain.scatter!=perk.scatter);
+    assert(perk.scatter==snow.scatter);
 }
 
 void test_compiled_original_location_terrain_program() {
@@ -2480,8 +2491,8 @@ void test_full_generation_all_source_maps() {
             for(const auto& rule:minidayz::stage1::kTerrainScatterRules)
                 if(rule.marker==marker->marker_type &&
                    (rule.level_mask&level_mask) &&
-                   (rule.perk_gate==0 || (rule.perk_gate==1 && level==4 && world.generation_perk_dao()==5) ||
-                    (rule.perk_gate==2 && !(level==4 && world.generation_perk_dao()==5)))){
+                   (rule.perk_gate==0 || (rule.perk_gate==1 && (level==4 || world.generation_perk_dao()==5)) ||
+                    (rule.perk_gate==2 && !(level==4 || world.generation_perk_dao()==5)))){
                     eligible=true;break;
                 }
             if(eligible)++eligible_source_scatter;

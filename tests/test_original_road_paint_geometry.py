@@ -68,8 +68,11 @@ renderer=(ROOT/"source/engine.cpp").read_text(encoding="utf-8")
 scene=(ROOT/"source/main.cpp").read_text(encoding="utf-8")
 assert "kOriginalRoadLengthTiles=17" in native
 assert "kOriginalRoadWidthTiles=2" in native
-assert "source_road_painted_width(" in renderer
-assert "source_road_painted_width(" in scene
+assert "world.source_ground_patches()" in renderer
+assert "patch.cells[" in renderer
+assert "world_.source_ground_frame_at(x,y)==15" in scene
+program=(ROOT/"tools/stage1/build_location_terrain_program.py").read_text()
+assert "(1066,202):163" in program and "(1066,192):398" in program
 
 # Resolve the original tile-space origin before changing the native
 # corridor world coordinates. The source uses TilemapspotX/Y to anchor

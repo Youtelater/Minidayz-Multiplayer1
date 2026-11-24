@@ -18,7 +18,10 @@ assert source_level_mask([event])==0b110000
 assert source_level_mask([])==0x3f
 event[5][0][9][1]=[8,0]
 assert source_level_mask([event])==(1<<4)
-print("PASS source Sprite514 marker (slot 0) and CurrentLevel event gating")
+event[2]=True
+event[5].append([-1,46,None,0,False,False,False,4,False,[[11,"perk_dao"],[8,0],[7,[0,5]]]])
+assert source_level_mask([event])==0x3f
+print("PASS source Sprite514 marker (slot 0) and CurrentLevel OR perk_dao event gating")
 
 # World transitions discard old terrain; source SetTile choices now
 # consume the same RNG stream as original location generation rather than

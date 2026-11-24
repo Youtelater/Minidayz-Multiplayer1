@@ -99,6 +99,11 @@ def source_level_mask(ancestry):
                 return 0
             rules.append(sum(1<<lv for lv in range(6) if source_comparison(op,lv,value)))
         if rules:
+            # A mixed OR block may pass via another predicate, e.g.
+            # CurrentLevel==4 OR perk_dao==5. Its level mask alone
+            # cannot exclude any level; the perk gate handles the pair.
+            if bool(event[2]) and original_perk5(event):
+                continue
             # Construct's event[2] is the OR-block flag.
             mask_for_node=0 if bool(event[2]) else 0x3f
             for rule in rules:
@@ -107,7 +112,7 @@ def source_level_mask(ancestry):
     return mask
 
 def original_perk5(node):
-    """Exact root condition: CurrentLevel==4 AND perk_dao==5."""
+    """Exact root OR condition: CurrentLevel==4 OR perk_dao==5."""
     level=perk=False
     for c in node[5] if len(node)>5 and isinstance(node[5],list) else []:
         if not isinstance(c,list) or len(c)<=9 or c[:2]!=[-1,46]:continue
@@ -119,6 +124,8 @@ def original_perk5(node):
             if args[1]!=[8,0] or original_literal(args[2])!=5:
                 raise SystemExit(f"Unexpected original perk condition {args}")
             perk=True
+    if level and perk and not node[2]:
+        raise SystemExit("Original mixed level/perk OR changed")
     return level and perk
 
 def source_perk_gate(ancestry):
