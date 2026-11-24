@@ -6,6 +6,8 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <memory>
+#include <new>
 #include <sys/stat.h>
 
 namespace minidayz::persistence {
@@ -371,10 +373,14 @@ bool consume_legacy_padding(std::FILE* file, std::size_t bytes) noexcept {
 }
 
 bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
-    SavedGame candidate{};
     if (!path || path[0] == '\0') return false;
     std::FILE* file = std::fopen(path, "rb");
     if (!file) return false;
+    // The current 512-entry save and its validation copies do not belong
+    // on the small ARM11 main stack (especially during boot).
+    auto candidate_buffer=std::unique_ptr<SavedGame>(new(std::nothrow) SavedGame{});
+    if(!candidate_buffer){std::fclose(file);return false;}
+    auto& candidate=*candidate_buffer;
     const bool header_ok =
         std::fread(&candidate.magic, sizeof(candidate.magic), 1, file) == 1 &&
         std::fread(&candidate.version, sizeof(candidate.version), 1, file) == 1 &&
@@ -671,7 +677,9 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.quick_pistol=old.quick_pistol;
         }
     } else if (header_ok && candidate.version == 21u) {
-        SavedGameV21 old{};
+        auto old_buffer=std::unique_ptr<SavedGameV21>(new(std::nothrow) SavedGameV21{});
+        if(!old_buffer){std::fclose(file);return false;}
+        auto& old=*old_buffer;
         body_ok=std::fseek(file,0,SEEK_SET)==0 &&
                 std::fread(&old,sizeof(old),1,file)==1;
         if(body_ok) {
@@ -738,7 +746,9 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
     minidayz::PlayerSystem player_validation(candidate.player);
     minidayz::items::InventorySystem inventory_validation;
     minidayz::items::EquipmentSystem equipment_validation;
-    minidayz::items::GroundLootSystem ground_loot_validation;
+    auto ground_loot_validation=std::unique_ptr<minidayz::items::GroundLootSystem>(
+        new(std::nothrow) minidayz::items::GroundLootSystem{});
+    if(!ground_loot_validation)return false;
     minidayz::items::TentStorageSystem tent_validation;
     minidayz::items::StashStorageSystem stash_validation;
     minidayz::items::SourceDayNightClock time_validation;
@@ -751,7 +761,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
         !equipment_validation.restore_with_fraction(
             candidate.equipment, candidate.equipment_fraction) ||
         !equipment_validation.restore_quick_pistol(candidate.quick_pistol) ||
-        !ground_loot_validation.restore(candidate.ground_loot) ||
+        !ground_loot_validation->restore(candidate.ground_loot) ||
         !tent_validation.restore(candidate.tents) ||
         !stash_validation.restore(candidate.stashes) ||
         !time_validation.restore(candidate.source_time) ||
@@ -796,7 +806,9 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     if (!target_path || !temporary_path || !target_path[0] || !temporary_path[0] ||
         std::strcmp(target_path, temporary_path) == 0 || seed == 0 ||
         world_level > 5u) return false;
-    SavedGame save{};
+    auto save_buffer=std::unique_ptr<SavedGame>(new(std::nothrow) SavedGame{});
+    if(!save_buffer)return false;
+    auto& save=*save_buffer;
     save.version = legacy_world_generation ? 22u : (legacy_split_roads ? 23u : (legacy_crash_coordinates ? 24u : (legacy_site_generation ? 25u : (legacy_start_order ? 26u : (legacy_category3_events ? 27u : (legacy_category5_events ? 28u : (legacy_category46_events ? 29u : (legacy_category7_events ? 30u : (legacy_exact_crash_selection ? 31u : (legacy_active_location_events ? 32u : kSaveVersion))))))))));
     save.seed = seed;
     save.world_level = world_level;
@@ -831,7 +843,9 @@ bool write_saved_game_to_paths(std::uint32_t seed,
     minidayz::PlayerSystem player_validation(save.player);
     minidayz::items::InventorySystem inventory_validation;
     minidayz::items::EquipmentSystem equipment_validation;
-    minidayz::items::GroundLootSystem ground_validation;
+    auto ground_validation=std::unique_ptr<minidayz::items::GroundLootSystem>(
+        new(std::nothrow) minidayz::items::GroundLootSystem{});
+    if(!ground_validation)return false;
     minidayz::items::TentStorageSystem tent_validation;
     minidayz::items::StashStorageSystem stash_validation;
     minidayz::items::SourceDayNightClock time_validation;
@@ -844,7 +858,7 @@ bool write_saved_game_to_paths(std::uint32_t seed,
         !equipment_validation.restore_with_fraction(
             save.equipment, save.equipment_fraction) ||
         !equipment_validation.restore_quick_pistol(save.quick_pistol) ||
-        !ground_validation.restore(save.ground_loot) ||
+        !ground_validation->restore(save.ground_loot) ||
         !tent_validation.restore(save.tents) ||
         !stash_validation.restore(save.stashes) ||
         !time_validation.restore(save.source_time) ||
