@@ -85,6 +85,15 @@ jobs:
             tests/source_building_polygon_tests.cpp -o /tmp/minidayz_building_collision
           /tmp/minidayz_building_collision
 
+      - name: Check original shoreline SetTile source and collision parity
+        run: |
+          set -euo pipefail
+          python3 tools/stage1/build_water_shoreline.py
+          c++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude \
+            tests/water_shoreline_tests.cpp \
+            -o /tmp/minidayz_water_shoreline
+          /tmp/minidayz_water_shoreline
+
       - name: Test root Tilemap208/211 Solid polygons and flips
         run: |
           set -euo pipefail
