@@ -1763,7 +1763,10 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             const auto new_uid=(std::uint64_t{1}<<63) |
                 static_cast<std::uint64_t>(placements_.size()+1);
             placements_.push_back({
-                destination,action.object,action.event_uid,
+                // Retain the actual original SpawnAnotherObject action UID;
+                // its enclosing event UID is distinct and can create more
+                // than one companion in an authored building cluster.
+                destination,action.object,action.action_uid,
                 x,y,0.0f,w,h,
                 action.angle_degrees==99999.0f ?
                     parent.angle : action.angle_degrees,
