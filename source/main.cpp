@@ -4067,10 +4067,16 @@ private:
         // Root Check_space_inventory gives back Woodpiles50 and the
         // original Deer714 / Bear784 hide. Use ground if bag is full.
         auto after_inventory=inventory_;
-        auto after_ground=ground_loot_;
+        auto after_ground=std::unique_ptr<minidayz::items::GroundLootSystem>(
+            new(std::nothrow) minidayz::items::GroundLootSystem(ground_loot_));
+        if(!after_ground){
+            source_furniture_feedback_="BED RECOVERY: MEMORY FULL";
+            source_furniture_feedback_seconds_=3.0f;
+            return;
+        }
         const auto add=[&](std::uint16_t id) noexcept {
             if(after_inventory.add(id,1))return true;
-            return after_ground.add({id,1,
+            return after_ground->add({id,1,
                 minidayz::items::kUseSourceItemCondition,0},
                 bed->x,bed->y);
         };
@@ -4078,7 +4084,7 @@ private:
             source_furniture_feedback_="BED RECOVERY: BAG/GROUND FULL";
         }else if(world_.dismantle_source_bed(pending.index)){
             inventory_=after_inventory;
-            ground_loot_=after_ground;
+            ground_loot_=*after_ground;
             source_furniture_feedback_="BED DISMANTLED: MATERIALS RETURNED";
             rebuild_source_furniture();
             visibility_index_.rebuild(world_);
