@@ -1431,14 +1431,15 @@ public:
         // inventing full Construct touchscreen pathfinding. A selected item
         // retains its own independent inventory-use action above.
         if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0 &&
-            !source_bed_build_.active && !request_source_manual_door() &&
+            !source_bed_build_.active && !source_pump_pending_.runtime_uid &&
+            !request_source_manual_door() &&
             !request_source_car_trunk())
             request_source_furniture();
         if ((input.pressed & KEY_X) && selected_inventory_slot_ < 0 &&
             !source_bed_build_.active)
             request_source_bed_dismantle();
         update_source_automatic_doors();
-        if(source_bed_build_.active)movement={};
+        if(source_bed_build_.active || source_pump_pending_.runtime_uid)movement={};
         // Source PlayerBase193 AltMove MaxSpeed UID156884066447061.
         // Apply only the verified runtime modifiers currently provided by
         // their original event subsystems. Remaining original damage,
@@ -3854,14 +3855,20 @@ private:
         if(source_pump_pending_.runtime_uid)return;
         if(p->source_variable_0==0){
             source_furniture_feedback_="WATER PUMP EMPTY";
-        }else if(player_.state().thirst>=kPumpThirstMax){
+        }else if(player_.state().thirst>=preview_rules_.max_thirst){
             source_furniture_feedback_="THIRST ALREADY FULL";
         }else{
-            // Original pump branch contains System Wait(2): don't add
-            // thirst before the wait or grant two drinks from one press.
+            const auto use=source_pump_draw(player_.state().thirst,
+                p->source_variable_0,preview_rules_.max_thirst);
+            if(!use.can_use)return;
+            // Root 401776724287473 deducts water BEFORE the wait.
+            // Root 5981791044814398 captures the remaining low volume
+            // and empties the pump AFTER the wait.
+            if(use.consume_before_wait && !world_.set_source_pump_water(
+                    chosen,p->source_variable_0-use.consumed))return;
             source_pump_pending_={
                 p->runtime_uid,static_cast<std::uint32_t>(chosen),
-                kPumpUseDelay};
+                kPumpUseDelay,use.thirst_gain,use.consume_before_wait};
             source_furniture_feedback_="DRINKING FROM WATER PUMP";
         }
         source_furniture_feedback_seconds_=3.0f;
@@ -3878,19 +3885,13 @@ private:
         if(!p || !world_.source_placement_active(*p) || p->runtime_uid!=waiting.runtime_uid ||
            !minidayz::world_source::source_furniture_active(*p) ||
            p->object!=minidayz::world_source::kFurniturePump)return;
-        const auto use=minidayz::world_source::source_pump_draw(
-            player_.state().thirst,p->source_variable_0);
-        if(!use.can_use || use.consumed>p->source_variable_0)return;
-        // Commit the exact original object's water once, THEN update the
-        // source player thirst. This mutation also goes into the v3 world
-        // save sidecar instead of resetting all pumps on Continue.
-        if(world_.set_source_pump_water(waiting.index,
-                p->source_variable_0-use.consumed)){
-            player_.adjust_thirst(use.thirst_gain,
-                minidayz::world_source::kPumpThirstMax);
-            source_furniture_feedback_="DRANK ORIGINAL PUMP WATER";
-            source_furniture_feedback_seconds_=3.0f;
-        }
+        if(!waiting.consumed_before_wait &&
+           !world_.set_source_pump_water(waiting.index,0))return;
+        // The original adds the captured amount, then Update_Stats clamps
+        // it; do not recalculate the drink using post-wait thirst.
+        player_.adjust_thirst(waiting.thirst_gain,preview_rules_.max_thirst);
+        source_furniture_feedback_="DRANK ORIGINAL PUMP WATER";
+        source_furniture_feedback_seconds_=3.0f;
     }
 
     void update_source_furniture_bed_frame() noexcept {
@@ -4673,6 +4674,8 @@ private:
         std::uint64_t runtime_uid{};
         std::uint32_t index{};
         float seconds{};
+        float thirst_gain{};
+        bool consumed_before_wait{};
     };
     struct SourceBedBuild {
         bool active{};
