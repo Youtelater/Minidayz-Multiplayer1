@@ -1,6 +1,7 @@
 #include "minidayz/engine.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"
 #include "minidayz/generated/stage1_data.hpp"
+#include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/ground_floor_source.hpp"
 #include "minidayz/terrain_tiling.hpp"
 #include "minidayz/terrain_level.hpp"
@@ -640,9 +641,8 @@ bool Renderer::draw_original_environment_tilemaps(
   for(int row=y0;row<y1;++row)for(int col=x0;col<x1;++col){
    auto frame=map.cells[static_cast<std::size_t>(row)*
                          map.columns+static_cast<std::size_t>(col)];
-   if(map.object_id==208)
-    frame=terrain::source_water_shore_effective_tile(
-        map.cells,map.columns,map.rows,col,row);
+   // The static Map water RLE is authored artwork. Only the original
+   // marker3 Create/SetTile program repaints its own dynamic instance.
    if(frame==0xffffffffu)continue;
    if(!detail_sheets_[slot]){
     char path[80]{};

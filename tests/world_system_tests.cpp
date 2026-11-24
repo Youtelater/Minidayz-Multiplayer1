@@ -17,6 +17,7 @@
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/generated/location_event_source.hpp"
 #include "minidayz/generated/terrain_scatter_source.hpp"
+#include "minidayz/source_location_terrain.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_obstacle_index.hpp"
@@ -1978,6 +1979,47 @@ void test_original_perk_dao_world_scatter_branch() {
     assert(changed);
 }
 
+void test_compiled_original_location_terrain_program() {
+    using minidayz::world_source::SourceLocationTerrain;
+    static_assert(minidayz::world_source::kSourceLocationTerrainPaintCount==634);
+    minidayz::WorldGrid grid;
+    assert(grid.resize(16,33));
+    std::mt19937 rng(0x4d445a33u);
+    // Exercise every distinct source location marker at each level and
+    // both halves, including the original perk-dao theme selectors.
+    constexpr int markers[]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,
+        21,22,23,24,25,26,27,28,29,30,31,32,40,41,42,43,44,45,46,47,
+        48,49,50,51,52,60,61,62,63,64,65,66,67,70,99,100,101,102,
+        103,104,105,106,107,108,109,110,998,999};
+    for(int level=0;level<6;++level)
+        for(int row:{2,17,18})
+            for(int marker:markers){
+                SourceLocationTerrain p(grid,rng,4,row,marker,level,
+                                        level==5?7:0);
+                assert(p.execute());
+                assert(p.ground_object!=0);
+                if(row>=17)assert(p.ground_object==1138);
+                for(auto frame:p.ground)assert(frame>=0&&frame<25);
+                if(marker==3){
+                    assert(p.water_created);
+                    assert(p.water[8*17+8]==4);
+                }
+            }
+    // Original family1066 paints road code12 across local y8..9;
+    // original source origin is -500, not the old -510 road model.
+    SourceLocationTerrain road(grid,rng,4,2,12,0,0);
+    assert(road.execute() && road.ground_object==482);
+    assert(road.ground_x==-500 && road.ground_y==-500);
+    assert(road.ground[8*17+8]==15&&road.ground[9*17+8]==15);
+    assert(road.ground[7*17+8]==11&&road.ground[10*17+8]==1);
+    // Neighbor-gated village arm: original Array518 value9 permits
+    // the source x8/y0 pavement into the adjacent village.
+    assert(grid.set(3,2,9));
+    SourceLocationTerrain village(grid,rng,4,2,9,0,0);
+    assert(village.execute());
+    assert(village.ground[8]==15);
+}
+
 void test_source_scatter_reproduction_and_layout_replacement() {
     // Original ground scatter must follow the same world seed, regardless
     // of camera movement or whether the renderer exists.
@@ -3038,6 +3080,7 @@ int main() {
     test_reported_world_seed_original_frame_integrity();
     test_original_car_overlay_uses_visible_source_layer();
     test_seed_reproducibility();
+    test_compiled_original_location_terrain_program();
     test_source_scatter_reproduction_and_layout_replacement();
     test_original_perk_dao_world_scatter_branch();
     test_generated_original_exterior_roofs_visible_in_world();

@@ -27,13 +27,9 @@ struct SolidTerrainMap {
         const auto row=static_cast<std::uint32_t>(dy/tile_size);
         const auto index=static_cast<std::size_t>(row)*columns+col;
         if(index>=cells.size())return false;
-        if(cells[index]!=kTileEmpty)return true;
-        // The water renderer paints original SetTile shoreline frames on
-        // qualifying EMPTY RLE cells. Collision/footsteps must query that
-        // same effective frame, or visible shores become invisible holes.
-        return object==208 && source_water_shore_effective_tile(
-            cells,columns,rows,static_cast<int>(col),static_cast<int>(row))
-            !=kTileEmpty;
+        // Authored Map water/forest cells are not the picked dynamic
+        // marker3 Tilemap208. Preserve their source RLE without repaint.
+        return cells[index]!=kTileEmpty;
     }
 
     bool blocks(float px,float py) const noexcept {
@@ -48,10 +44,7 @@ struct SolidTerrainMap {
         // shore/forest diagonal openings and original H/V/D flip flags.
         // A plain full-tile occupied() test wrongly blocked transparent
         // source polygon gaps.
-        const auto effective=object==208
-            ? source_water_shore_effective_tile(
-                cells,columns,rows,static_cast<int>(col),static_cast<int>(row))
-            : cells[offset];
+        const auto effective=cells[offset];
         return source_solid_tile_contains(
             object,effective,fx-static_cast<float>(col),
             fy-static_cast<float>(row));

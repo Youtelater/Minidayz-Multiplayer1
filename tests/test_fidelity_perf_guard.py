@@ -25,22 +25,20 @@ assert "kSnowPlayerStartXMin" in spawn and "kSnowPlayerStartY" in spawn
 assert "blocked(this," not in spawn and "local_offsets" not in spawn
 assert "for(int attempt" not in spawn and "state.x=px;" in spawn
 assert "delta_seconds_=std::clamp(dt,0.0f,0.25f);" in engine
-# Source roads must render from their own atlas even when the original
-# ground RLE layout is damaged. Otherwise both terrain and roads vanish.
+# Generated ground paint state is independent of authored RLE load,
+# and only camera-visible source frames are submitted (no per-frame RNG).
 road_renderer=engine.split("bool Renderer::draw_source_road_grid(",1)[1].split(
     "bool Renderer::draw_source_sprite_fitted(",1)[0]
 assert "ground_loaded_" not in road_renderer
-assert "ensure_road_sheet(theme)" in road_renderer
-assert 'std::strcmp(source_layer.name,"asphalt")==0' in road_renderer
+assert "world.source_ground_patches()" in road_renderer
+assert "patch.source_object" in road_renderer
+assert "xx>=camera_x+view_width" in road_renderer
+assert "kOriginalGroundPalettes" in road_renderer
+assert 'std::strcmp(layer.name,"bg")==0' in road_renderer
 assert "source_world_layer_depth(" in road_renderer
-# The road atlas now crops its *source pixels* rather than squeezing a
-# full original tile. C2D_DrawImageAt takes road_depth as its own argument;
-# preserving the original asphalt layer does not require SetDepth(sprite).
-assert "source_road_tile_crop(" in road_renderer
-assert "C2D_DrawImageAt(source_tile,band.x+x*tile,band.y+y*tile," in road_renderer
-assert "road_depth,nullptr,crop.scale_x,crop.scale_y" in road_renderer
-assert "C2D_SpriteSetScale(&sprite,clipped_w/sprite.params.pos.w" not in road_renderer
-assert "C2D_SpriteSetDepth(&sprite,0.10f)" not in road_renderer
+assert "draw_original_tile(floor_sheets_[page],slot" in road_renderer
+assert "source_grid_road_segment(" not in road_renderer
+assert "std::minstd_rand" not in road_renderer
 assert "clamp(delta_seconds, 0.0f, 0.25f)" in player
 # The renderer tries the real selected survivor first; only a missing
 # source sprite may fall back to the original player_skin_def_2 object.

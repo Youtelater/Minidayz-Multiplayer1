@@ -27,7 +27,12 @@ world=(ROOT/"source/world.cpp").read_text(encoding="utf-8")
 render=(ROOT/"source/terrain_scatter_render.cpp").read_text(encoding="utf-8")
 header=(ROOT/"include/minidayz/world.hpp").read_text(encoding="utf-8")
 assert "source_scatter_patches_.clear();" in world
-assert "rule.level_mask&(std::uint8_t{1}<<generation_level_)" in world
+assert "SourceLocationTerrain p(" in world
+assert "p.execute()" in world
+assert "append(p.scatter,p.scatter_created" in world
+program=(ROOT/"include/minidayz/generated/location_terrain_program.hpp").read_text()
+assert "kSourceLocationTerrainPaintCount=634" in program
+assert "c.level" in program and "c.perk" in program
 assert "source_random_bounded(" in world
 assert "WorldScatterPatch" in header
 assert "world.source_scatter_patches()" in render

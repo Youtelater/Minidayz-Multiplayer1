@@ -85,6 +85,10 @@ int main() {
     map.object=208;map.tile_size=60;
     map.columns=3;map.rows=3;
     map.cells=water;
+    // The procedural instance explicitly stores its resulting frame;
+    // static authored Tilemap RLE is not reprocessed on a read.
+    assert(!map.occupied(90.0f,90.0f));
+    map.cells[4]=rendered;
     assert(map.occupied(90.0f,90.0f));
     const auto expected_solid=source_solid_tile_contains(
         208,rendered,0.5f,0.5f);

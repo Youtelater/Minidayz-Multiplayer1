@@ -50,7 +50,7 @@ jobs:
         with:
           path: |
             romfs/gfx
-          key: graphics-v4-${{ hashFiles('assets/gfx/**/*.png', 'images/**/*.png', 'data.deobfuscated.js', 'mp_itemtable.js', 'l_eng_items.xml', 'l_eng_new.xml', 'l_eng_ui.xml', 'l_eng_log.xml', 'data/stage1/construct_project_parsed.json', 'tools/build_textures.py', 'tools/stage1/build_sprite_catalog.py') }}
+          key: graphics-v4-${{ hashFiles('assets/gfx/**/*.png', 'images/**/*.png', 'data.deobfuscated.js', 'mp_itemtable.js', 'l_eng_items.xml', 'l_eng_new.xml', 'l_eng_ui.xml', 'l_eng_log.xml', 'data/stage1/construct_project_parsed.json', 'tools/build_textures.py', 'tools/stage1/build_sprite_catalog.py', 'tools/stage1/build_ground_floor.py', 'tools/stage1/build_environment_tilemaps.py') }}
 
       # Texture conversion is handled incrementally by the Makefile from assets/gfx.
       - name: Prepare 3DS toolchain and Python texture dependencies
