@@ -323,7 +323,7 @@ def main():
                 current["w"]=p[0][1][1]
             elif cmd==72:
                 current["frame"]=p[0][1][1]
-    assert len(pieces)==9 and sum(p["object"]==348 for p in pieces)==4,pieces
+    assert len(pieces)==10 and sum(p["object"]==348 for p in pieces)==4,pieces
     assert all(p["frame"]==26 for p in pieces if p["object"]==348)
     # The original save restores bridge art, then the reload branch
     # recreates the four Solid sprites with fresh source action IDs.
@@ -347,7 +347,7 @@ def main():
         vals += [str(float(p[k]))+"f" for k in ("x","y","w","h","ox","oy","opacity")]
         vals += [json.dumps(p["layer"]),json.dumps(p["png"])]
         lines.append("    {"+",".join(vals)+"},")
-    lines+=["};","inline constexpr std::size_t kSourceBridgeBasePieceCount=9;",
+    lines+=["};","inline constexpr std::size_t kSourceBridgeBasePieceCount=10;",
             "inline constexpr std::size_t kSourceTotalTerrainPaintCount=638;","}"]
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
     OUTPUT.write_text("\n".join(lines)+"\n",encoding="utf-8")
