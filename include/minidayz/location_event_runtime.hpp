@@ -14,6 +14,8 @@ namespace minidayz::construct {
 
 struct SourceLocationSpawn {
     std::uint16_t object{};
+    // Root Construct System.Create/SpawnAnotherObject action identity.
+    std::uint64_t source_action_uid{};
     std::string layer{};
     double x{};
     double y{};
