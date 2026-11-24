@@ -12,6 +12,7 @@
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/source_interior_container.hpp"
+#include "minidayz/source_box_simple_drops.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/generated/ground_floor_source.hpp"
@@ -4165,14 +4166,10 @@ private:
             // collider and hotspot, not a guessed radius or touch button.
             if(!minidayz::world_source::source_player_overlaps_world_sprite(
                   *box,player_pos,box->origin_x,box->origin_y))continue;
-            // Root 796.SetFrame(1), Fade.StartFade, var1=true. Frame1
-            // is an independent source atlas rectangle in every authored
-            // bunker-lootbox animation. The existing v4 world sprite
-            // sidecar persists frame1 so it cannot be looted repeatedly.
-            (void)world_.open_source_bunker_lootbox(idx);
-            // Contents dispatch belongs to original category-specific
-            // bunker loot drops, not invented storage slots. Do not grant
-            // guessed items or replay open events on a saved box.
+            // Do not consume an unopened box before its original contents
+            // can be created. Unsupported source categories remain closed.
+            (void)minidayz::items::source_open_simple_box(
+                world_,idx,player_pos,ground_loot_,world_.source_random());
         }
     }
 
