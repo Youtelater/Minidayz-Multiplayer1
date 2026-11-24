@@ -76,6 +76,9 @@ for sheet,events in project[6]:
 if not source_car_parents:raise SystemExit("Missing original Sprite241 wreck-parent spawns")
 building.update(source_car_parents)
 building.add(241)
+# Root create_map_element overlap guards (OR blocks) for the seven tree
+# objects and their three exact target Sprite kinds use full frame masks.
+building.update((184,207,209,576,577,581,210,246,430,433))
 print("Original source car wreck parent frame geometry:",
       len(source_car_parents),"source parent objects")
 rows=[];vertices=[]

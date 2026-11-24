@@ -155,6 +155,9 @@ struct WorldPlacement {
     bool source_reload_randomize{};
     // Tombstone of an original normal-mode Trigger_spawn marker.
     bool source_initial_loot_consumed{};
+    // Transient equivalent of Destroy(tree) and Destroy(linked solid)
+    // during original create_map_element overlap rejection.
+    bool source_overlap_rejected{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
@@ -337,7 +340,8 @@ public:
             marker_index<source_active_locations_.size() && source_active_locations_[marker_index]!=0);
     }
     bool source_placement_active(const WorldPlacement& placement) const noexcept {
-        return !placement.source_reload_marker || source_location_active(placement.source_reload_marker-1);
+        return !placement.source_overlap_rejected &&
+            (!placement.source_reload_marker || source_location_active(placement.source_reload_marker-1));
     }
     std::uint8_t generation_level() const noexcept { return generation_level_; }
     std::uint8_t generation_perk_dao() const noexcept { return generation_perk_dao_; }

@@ -3723,7 +3723,48 @@ static void test_source_first_visit_creation(){
     std::remove(tmp);
 }
 
+static void test_original_tree_overlap_or_guards(){
+    using namespace minidayz;
+    using namespace minidayz::world_source;
+    WorldPlacement tree{},target{};
+    tree.x=target.x=1000;tree.y=target.y=2000;
+    tree.width=target.width=100;tree.height=target.height=100;
+    tree.origin_x=tree.origin_y=target.origin_x=target.origin_y=0.5f;
+    tree.scale_x=target.scale_x=1;
+    for(std::uint16_t o:{184,207,209,576,577,581}){
+        tree.object=o;
+        for(std::uint16_t t:{246,430,433}){
+            target.object=t;
+            assert(source_tree_creation_rejects_overlap(tree,target));
+        }
+        target.object=345;
+        assert(!source_tree_creation_rejects_overlap(tree,target));
+    }
+    tree.object=210;tree.source_uid=6033785432522481ULL;
+    target.object=433;assert(source_tree_creation_rejects_overlap(tree,target));
+    target.object=430;assert(!source_tree_creation_rejects_overlap(tree,target));
+    target.object=246;assert(source_tree_creation_rejects_overlap(tree,target));
+    for(auto uid:{7238212881044891ULL,9881460187187066ULL,1618691315170714ULL}){
+        tree.source_uid=uid;
+        target.object=430;assert(source_tree_creation_rejects_overlap(tree,target));
+        target.object=433;assert(!source_tree_creation_rejects_overlap(tree,target));
+        target.object=246;assert(source_tree_creation_rejects_overlap(tree,target));
+    }
+    target.x+=500;
+    assert(!source_tree_creation_rejects_overlap(tree,target));
+    // Root frame10 masks must not be silently replaced with rectangles.
+    assert(stage1::source_building_collision_polygon(184,0,0));
+    assert(stage1::source_building_collision_polygon(246,0,0));
+    assert(stage1::source_building_collision_polygon(430,0,0));
+    assert(stage1::source_building_collision_polygon(433,0,0));
+    WorldSystem world;
+    assert(world.source_placement_active(tree));
+    tree.source_overlap_rejected=true;
+    assert(!world.source_placement_active(tree));
+}
+
 int main() {
+    test_original_tree_overlap_or_guards();
     test_source_first_visit_creation();
     test_source_crash_rejection_order();
     test_original_location_transient_recreation();

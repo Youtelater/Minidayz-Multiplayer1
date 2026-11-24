@@ -157,6 +157,34 @@ inline bool source_house_sprites_overlap(const WorldPlacement& a,
     return false;
 }
 
+// Root tree creation OR guards 4022421404306508, 1500516857956351,
+// 4636543226443086, 1716838093260716, 1095195508750329,
+// 170745275051737 and 9169782288583728/3168512109561106/
+// 6951772919838151/5343463397271491. Sprite210 variant7 tests 246
+// or 433; variants8/9/10 test 246 or 430. The six individual trees
+// test all three. Use the authored sprite masks, not trunk rectangles.
+inline bool source_tree_creation_rejects_overlap(const WorldPlacement& tree,
+                                                const WorldPlacement& target) noexcept {
+    const bool six=tree.object==184 || tree.object==207 || tree.object==209 ||
+                   tree.object==576 || tree.object==577 || tree.object==581;
+    if(six){
+        if(target.object!=246 && target.object!=430 && target.object!=433)return false;
+    }else if(tree.object==210){
+        const bool seven=tree.source_uid==6033785432522481ULL;
+        const bool other=tree.source_uid==7238212881044891ULL ||
+                         tree.source_uid==9881460187187066ULL ||
+                         tree.source_uid==1618691315170714ULL;
+        if(!seven && !other)return false;
+        if(target.object!=246 && target.object!=(seven?433:430))return false;
+    }else return false;
+    // Cheap conservative rejection before the original polygon test.
+    const float extent=std::hypot(tree.width,tree.height)+
+                       std::hypot(target.width,target.height);
+    if(std::fabs(tree.x-target.x)>extent || std::fabs(tree.y-target.y)>extent)
+        return false;
+    return source_house_sprites_overlap(tree,target);
+}
+
 // Root House_transparenting event UID 8794469330826744 picks a
 // family-1048 foundation overlapping the *picked* family-1041 wall 346.
 // A wall from a neighboring house must never fade an unrelated roof.

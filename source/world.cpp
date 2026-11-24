@@ -1,6 +1,7 @@
 #include "minidayz/world.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/source_location_terrain.hpp"
+#include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/source_special_terrain.hpp"
 #include "minidayz/source_pond_paint.hpp"
 #include "minidayz/source_tilemap_solid_collision.hpp"
@@ -2960,6 +2961,7 @@ void WorldSystem::replay_source_location_transitions(
         if(!p.source_reload_marker || p.source_reload_marker>previous.size())continue;
         const auto owner=p.source_reload_marker-1;
         if(!previous[owner] || source_active_locations_[owner])continue;
+        p.source_overlap_rejected=false;
         const auto linked_index=[&](std::uint64_t uid)->const WorldPlacement*{
             if(!(uid&(std::uint64_t{1}<<63)))return nullptr;
             const auto slot=uid&~(std::uint64_t{1}<<63);
@@ -3058,6 +3060,35 @@ bool WorldSystem::execute_source_location_creation(items::GroundLootSystem& grou
         const bool create=source_pending_location_creation_[marker]!=0;
         for(auto& p:placements_){
             if(p.source_reload_marker!=marker+1 || crash_loot(p))continue;
+            if(create && (p.object==210 || world_source::source_tree_impact_point(p.object))){
+                // The source rejects the just-created tree against already
+                // existing Sprite246/430/433, not against future elements.
+                // Resident slots for later locations are not yet created.
+                for(const auto& target:placements_){
+                    if(target.object!=246 && target.object!=430 && target.object!=433)
+                        continue;
+                    if(!source_placement_active(target))continue;
+                    if(target.source_reload_marker){
+                        const auto owner=target.source_reload_marker-1;
+                        if(owner==marker){
+                            // Helicopter artwork is created after Array525
+                            // element actions in this location, never before.
+                            if(target.object==246 || &target>=&p)continue;
+                        }else if(source_pending_location_creation_[owner])continue;
+                    }
+                    if(!world_source::source_tree_creation_rejects_overlap(p,target))continue;
+                    p.source_overlap_rejected=true;
+                    const auto uid=p.linked_runtime_uid;
+                    const auto slot=uid&~(std::uint64_t{1}<<63);
+                    if((uid&(std::uint64_t{1}<<63)) && slot>0 && slot<=placements_.size()){
+                        auto& solid=placements_[slot-1];
+                        if((solid.object==345 || solid.object==348) &&
+                           solid.linked_runtime_uid==p.runtime_uid)
+                            solid.source_overlap_rejected=true;
+                    }
+                    break;
+                }
+            }
             if(create && p.source_reload_randomize){
                 if(p.object==296)p.source_frame=source_random_bounded(rng_,2u);
                 else if(p.object==442)p.source_variable_0=100u+100u*source_random_bounded(rng_,2u);

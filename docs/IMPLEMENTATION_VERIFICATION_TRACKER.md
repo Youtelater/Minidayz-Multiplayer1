@@ -1198,3 +1198,8 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 - [x] Commit `17d20d4017896d4d4484e86f73784c88bb2b942a`: root-original world-table validation, graphics/sprite-sheet audit, native system regression suite and 3DS executable build all reported success in GitHub Actions.
 - [x] User reported that emulator verification was all good. This is a user-reported gameplay pass; exact tested build, seed, map levels and individual test cases were not supplied.
 - [ ] Full original-source parity remains open for tree overlap deletion, remaining create_map_location quest/secret/NPC branches and remaining source RNG order. Physical 3DS verification has not been reported. Do not equate a successful emulator smoke test with proof of all original events.
+
+### Step 1 — tree creation overlap rejection
+
+- [x] Root OR conditions 4022421404306508, 1500516857956351, 4636543226443086, 1716838093260716, 1095195508750329, 170745275051737 and 9169782288583728/3168512109561106/6951772919838151/5343463397271491 now apply the original Sprite246/430/433 overlap target sets during deferred location creation. Include exact root frame[10] polygons; reject both the tree and its linked obstacle, reset rejection on unload, and only consider already-created instances (not future resident slots or same-location crash art). Stable slots retained rather than physically destroyed. Added predicate/mask regression. CI pending.
+- [ ] Remaining source quest/secret/NPC branches and full RNG parity still open; previous user emulator pass refers to the earlier revision.
