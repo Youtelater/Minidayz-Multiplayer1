@@ -14,12 +14,23 @@ inline std::uint8_t source_night_destination_out(std::uint8_t dest,
     return static_cast<std::uint8_t>((dest*(255u-erase)+127u)/255u);
 }
 
+// c2runtime.js overlay shader: front *= back.a. The runtime's kE/ot
+// paths feed the isolated night layer as samplerBack, then use blend8
+// (ZERO, ONE_MINUS_SRC_ALPHA). Thus RGB from Overlay is discarded, but
+// its alpha multiplication is essential at dusk and overlapping lights.
+inline std::uint8_t source_night_overlay_destination_out(std::uint8_t dest,
+    std::uint8_t src,float opacity) noexcept {
+    const auto erase=static_cast<unsigned>(std::lround(
+        src*std::clamp(opacity,0.0f,1.0f)*dest/255.0f));
+    return static_cast<std::uint8_t>((dest*(255u-erase)+127u)/255u);
+}
+
 // Rasterize an original Sprite frame with its signed width, hotspot and
 // rotation. Pixel-center sampling matches nearest pixel-art filtering.
 inline void source_night_apply_light(std::uint8_t* mask,unsigned sw,unsigned sh,
     const std::uint8_t* source,unsigned fw,unsigned fh,
     float x,float y,float width,float height,float ox,float oy,
-    float angle,bool mirror,float opacity) noexcept {
+    float angle,bool mirror,float opacity,bool overlay_effect=false) noexcept {
     if(!mask||!source||!fw||!fh||!sw||!sh||!(width>0&&height>0&&opacity>0))return;
     const float co=std::cos(angle),si=std::sin(angle);
     const float mx=mirror?-1.0f:1.0f;
@@ -41,7 +52,8 @@ inline void source_night_apply_light(std::uint8_t* mask,unsigned sw,unsigned sh,
         const auto a=source[std::min(static_cast<unsigned>(v*fh),fh-1)*fw+
                             std::min(static_cast<unsigned>(u*fw),fw-1)];
         auto& dest=mask[row*sw+col];
-        dest=source_night_destination_out(dest,a,opacity);
+        dest=overlay_effect ? source_night_overlay_destination_out(dest,a,opacity)
+                            : source_night_destination_out(dest,a,opacity);
     }
 }
 
