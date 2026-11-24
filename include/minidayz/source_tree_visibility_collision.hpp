@@ -103,8 +103,13 @@ inline bool source_tree_occludes_player(
                        (block?block->height:point->height);
     const float origin_x=block?block->origin_x:point->origin_x;
     const float origin_y=block?block->origin_y:point->origin_y;
-    if(!source_solid_sprite_contains(tree.x,tree.y,width,height,
-        origin_x,origin_y,tree.angle,player_x,player_y,tree.scale_x))
+    // The source canopy mask excludes transparent corner regions.
+    // Only the actual overlapping source silhouette triggers the 3DS
+    // readability adaptation, not its entire rectangular atlas frame.
+    WorldPlacement canopy=tree;
+    canopy.width=width;canopy.height=height;
+    canopy.origin_x=origin_x;canopy.origin_y=origin_y;
+    if(!source_world_solid_mask_contains(canopy,player_x,player_y))
         return false;
     if(block){
         const float mid_y=tree.y+

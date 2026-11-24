@@ -79,6 +79,23 @@ building.add(241)
 # Root create_map_element overlap guards (OR blocks) for the seven tree
 # objects and their three exact target Sprite kinds use full frame masks.
 building.update((184,207,209,576,577,581,210,246,430,433))
+# Source world-element creation can change animation and frame for
+# non-building sprites as well. Collect all exact Sprite Spawn targets
+# from create_map_element, including nested conditional branches.
+# Do not infer object IDs from filenames or manually slice atlases.
+game_events=next(events for sheet,events in project[6] if sheet=="Game_events")
+element_root=next(e for e in original_event_nodes(game_events)
+                  if e[4]==3673396466799513)
+world_element_sprites=set()
+for e in original_event_nodes([element_root]):
+    for a in e[6]:
+        if len(a)>5 and a[1]==73 and a[5] and a[5][0][0]==4:
+            oid=a[5][0][1]
+            if 0<=oid<len(objects) and objects[oid][1]==18:
+                world_element_sprites.add(oid)
+assert {184,210,296,345,348,439,663}<=world_element_sprites
+building.update(world_element_sprites)
+print("Original create_map_element Sprite geometry:",len(world_element_sprites),"objects")
 print("Original source car wreck parent frame geometry:",
       len(source_car_parents),"source parent objects")
 rows=[];vertices=[]

@@ -25,6 +25,7 @@
 #include "minidayz/source_tree_visibility_collision.hpp"
 #include "minidayz/terrain_visible_index.hpp"
 #include "minidayz/terrain_source_collision.hpp"
+#include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/terrain_source_visibility.hpp"
 #include "minidayz/terrain_roads.hpp"
 #include "minidayz/generated/sprite_catalog.hpp"

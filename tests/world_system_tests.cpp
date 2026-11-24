@@ -1284,8 +1284,16 @@ void test_original_tree_block_variants_and_solid_companions() {
         assert(solid->linked_runtime_uid==tree->runtime_uid);
         assert(tree->source_variable_1==solid->runtime_uid);
         assert(solid->source_variable_0==tree->runtime_uid);
+        // Frame21's actual mask is below its hotspot. Do not assume
+        // every source collision polygon contains its own origin.
+        const auto* mask=minidayz::stage1::source_building_collision_polygon(
+            solid->object,solid->source_animation,solid->source_frame);
+        assert(mask && mask->points>=3);
+        const auto q=minidayz::world_source::source_house_mask_vertex(*solid,0);
+        assert(minidayz::terrain::source_tree_block_solid_contains(*tree,q.x,q.y));
         assert(minidayz::terrain::source_tree_block_solid_contains(
-            *tree,solid->x,solid->y));
+            *tree,solid->x,solid->y)==
+            minidayz::terrain::source_world_solid_mask_contains(*solid,solid->x,solid->y));
         assert(!minidayz::terrain::source_tree_block_solid_contains(
             *tree,solid->x+1500.0f,solid->y+1500.0f));
     }
