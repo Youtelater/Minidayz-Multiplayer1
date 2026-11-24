@@ -12,7 +12,7 @@ import json
 import re
 from collections import Counter
 from pathlib import Path
-from PIL import Image
+import struct
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "data.deobfuscated.js"
@@ -80,10 +80,17 @@ def main():
             size = cell_sizes.get(482, 60)
         if size is None or size <= 0:
             raise SystemExit(f"Unknown source tile size for object {object_id}")
-        with Image.open(original) as im:
-            if im.width % size or im.height % size > 1:
-                raise SystemExit(f"Source tile sheet dimensions changed for {object_id}")
-            capacity[object_id] = (im.width // size) * (im.height // size)
+        # Audit the exact source PNG's IHDR dimensions without requiring
+        # Pillow or altering an original image / generated atlas.
+        with original.open("rb") as stream:
+            ihdr=stream.read(24)
+        if (len(ihdr)!=24 or ihdr[:8]!=bytes((137,80,78,71,13,10,26,10))
+                or ihdr[12:16]!=b"IHDR"):
+            raise SystemExit(f"Bad original source PNG for {object_id}")
+        width,height=struct.unpack(">II",ihdr[16:24])
+        if width<=0 or height<=0 or width%size or height%size>1:
+            raise SystemExit(f"Source tile sheet dimensions changed for {object_id}")
+        capacity[object_id]=(width//size)*(height//size)
     family_members = next(row[1:] for row in data[4] if row[0] == GROUND_FAMILY)
     if set(family_members) != set(TERRAIN[4:]):
         raise SystemExit("Original ground tilemap family changed")
@@ -137,6 +144,13 @@ def main():
                 })
     if not records or not any(r["object"] == 230 for r in records):
         raise SystemExit("Missing original dynamic terrain SetTile actions")
+    # The seven original ground-theme family1066 paints must ALL remain in
+    # the Step 1 evidence manifest, including source event paths/guards.
+    if (counters[GROUND_FAMILY,SET_TILE] != 398 or
+            counters[GROUND_FAMILY,SET_TILE_RANGE] != 163):
+        raise SystemExit("Original ground paint action count changed: "
+                         f"{counters[GROUND_FAMILY,SET_TILE]}/"
+                         f"{counters[GROUND_FAMILY,SET_TILE_RANGE]}")
     report = {
         "status": "Original source events extracted; native 3DS execution not implied",
         "ground_family_members": family_members,
