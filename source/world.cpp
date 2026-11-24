@@ -512,6 +512,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     seed_ = seed;
     rng_.seed(seed);
     source_special_terrain_={};
+    source_bridge_solids_.clear();
     source_layout_is_map_=false;
     grid_.clear();
     map_markers_.clear();
@@ -816,6 +817,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     const auto range = stage1::instances_for_layout(index);
     bounds_ = {layout->width, layout->height};
     source_special_terrain_={};
+    source_bridge_solids_.clear();
     source_layout_is_map_=name=="Map";
     grid_.clear();
     map_markers_.clear();
@@ -887,9 +889,24 @@ bool WorldSystem::run_source_bridge_terrain(bool on_bridge,bool after_save) {
     for(const auto& layer:stage1::kLayerTable)
         if(layer.layout==index&&std::strcmp(layer.name,"ground_enviroment")==0){
             source_special_terrain_.layer=layer.index;
-            return true;
+            const auto buildings=find_layer_index_by_name(index,"Buildings");
+            if(buildings==0xffff)return false;
+            source_bridge_solids_.clear();
+            for(const auto& piece:world_source::kSourceBridgeBasePieces){
+                if(piece.object!=348)continue;
+                WorldPlacement p{};
+                p.object=piece.object;p.source_frame=piece.frame;
+                p.source_uid=after_save?piece.reload_uid:piece.uid;
+                p.layer=buildings;p.x=piece.x;p.y=piece.y;
+                p.width=piece.w;p.height=piece.h;
+                p.origin_x=piece.ox;p.origin_y=piece.oy;
+                p.scale_x=1.0f;p.opacity=1.0f;
+                source_bridge_solids_.push_back(p);
+            }
+            return source_bridge_solids_.size()==4;
         }
     source_special_terrain_={};
+    source_bridge_solids_.clear();
     return false;
 }
 
@@ -1627,6 +1644,7 @@ bool WorldSystem::load_source_bridge_elements() {
 
 void WorldSystem::reset() noexcept {
     source_special_terrain_={};
+    source_bridge_solids_.clear();
     source_layout_is_map_=false;
     grid_.clear();
     map_markers_.clear();

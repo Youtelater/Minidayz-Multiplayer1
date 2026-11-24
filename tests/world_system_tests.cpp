@@ -2027,9 +2027,26 @@ void test_original_special_terrain_contexts() {
     assert(!world.run_source_bridge_terrain(false,true));
     assert(world.run_source_bridge_terrain(true,false));
     assert(world.source_special_terrain().source_action_uid==load.source_action_uid);
+    assert(world.source_bridge_active());
+    assert(world.source_bridge_solids().size()==4);
+    const auto initial_solids=world.source_bridge_solids();
+    assert(initial_solids[0].source_uid==405637541386025ULL);
+    assert(initial_solids[0].source_frame==26);
+    assert(initial_solids[0].x==48 && initial_solids[0].y==18356);
+    assert(initial_solids[0].width==7200 && initial_solids[0].height==50);
+    assert(initial_solids[1].height==100 && initial_solids[2].height==350);
+    assert(initial_solids[3].x==7148);
     assert(world.run_source_bridge_terrain(true,true));
     assert(world.source_special_terrain().source_action_uid==reload.source_action_uid);
+    assert(world.source_bridge_solids().size()==4);
+    assert(world.source_bridge_solids()[0].source_uid==272428373652722ULL);
+    for(std::size_t i=0;i<4;++i){
+        const auto& p=world.source_bridge_solids()[i];
+        assert(p.x==initial_solids[i].x && p.y==initial_solids[i].y);
+        assert(p.width==initial_solids[i].width && p.height==initial_solids[i].height);
+    }
     assert(world.load_source_layout("Tutorial"));
+    assert(!world.source_bridge_active());
     assert(world.source_special_terrain().writes==1250);
     assert(!world.run_source_bridge_terrain(true,true));
     assert(world.load_source_layout("Menu"));

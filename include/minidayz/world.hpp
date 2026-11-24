@@ -290,6 +290,13 @@ public:
     // Only the source onBridge state may execute bridge-specific writes.
     // Reload_locations_aftersave has its own original tilemap origin.
     bool run_source_bridge_terrain(bool on_bridge,bool after_save);
+    // Active bridge Solid348 geometry is separate from ordinary Map art.
+    const std::vector<WorldPlacement>& source_bridge_solids() const noexcept {
+        return source_bridge_solids_;
+    }
+    bool source_bridge_active() const noexcept {
+        return !source_bridge_solids_.empty();
+    }
     const std::vector<WorldScatterPatch>& source_pond_patches() const noexcept {
         return source_pond_patches_;
     }
@@ -315,6 +322,7 @@ private:
     std::vector<WorldScatterPatch> source_scatter_patches_{};
     std::vector<WorldGroundPatch> source_ground_patches_{};
     WorldSpecialTerrain source_special_terrain_{};
+    std::vector<WorldPlacement> source_bridge_solids_{};
     bool source_layout_is_map_{};
     std::vector<WorldScatterPatch> source_pond_patches_{};
     std::vector<WorldFeature> features_{};

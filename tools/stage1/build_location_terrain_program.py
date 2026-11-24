@@ -280,7 +280,75 @@ def main():
         lines.append(f"inline constexpr unsigned k{name}Authored[]={{")
         lines.extend("    "+",".join(str(v & 0xffffffff)+"u" for v in raw[i:i+24])+"," for i in range(0,len(raw),24))
         lines.append("};")
-    lines+=["inline constexpr std::size_t kSourceTotalTerrainPaintCount=638;","}"]
+    # Root bridge base creation, not a guessed rectangle or the old
+    # 318-only feature list.  First authored instance is Construct's
+    # default instance for System.CreateObject.  Explicit source SetSize
+    # and SetWidth replace those dimensions.
+    bridge=next(e for e in walk(sheet) if e[4]==482054460208135)
+    reload=next(e for e in walk(sheet) if e[4]==606434895649703)
+    defaults={}
+    for layout in project[5]:
+        for layer in layout[6]:
+            for inst in layer[14] if len(layer)>14 and isinstance(layer[14],list) else []:
+                if isinstance(inst,list) and len(inst)>=6:
+                    defaults.setdefault(inst[1],inst[0])
+    def bridge_coord(p):
+        e=p[1]
+        if e[0]==23:
+            return {"HotspotX":148,"HotspotY":18381}[e[1]]
+        assert e[0] in (4,5) and e[1][0]==23 and e[2][0]==0,p
+        return bridge_coord([0,e[1]])+(1 if e[0]==4 else -1)*e[2][1]
+    pieces=[]
+    current=None
+    for a in bridge[6]:
+        obj,cmd=a[:2]
+        p=a[5] if len(a)>5 else []
+        if (obj,cmd)==(-1,94):
+            target=p[0][1]
+            current=None
+            if target not in (974,976,977,978,979,348):continue
+            d=defaults[target]
+            kind=project[3][target][1]
+            assert kind in (14,18)
+            png=Path(project[3][target][6][0]).name if kind==14 else ""
+            current=dict(uid=a[3],object=target,kind=kind,frame=0,
+                x=bridge_coord(p[2]),y=bridge_coord(p[3]),
+                w=d[3],h=d[4],ox=d[8],oy=d[9],opacity=d[7],png=png,
+                layer=p[1][1][1])
+            pieces.append(current)
+        elif current is not None and obj==current["object"]:
+            if cmd in (103,190):
+                current["w"],current["h"]=[q[1][1] for q in p]
+            elif cmd==156:
+                current["w"]=p[0][1][1]
+            elif cmd==72:
+                current["frame"]=p[0][1][1]
+    assert len(pieces)==9 and sum(p["object"]==348 for p in pieces)==4,pieces
+    assert all(p["frame"]==26 for p in pieces if p["object"]==348)
+    # The original save restores bridge art, then the reload branch
+    # recreates the four Solid sprites with fresh source action IDs.
+    reload_solids=[]
+    for i,a in enumerate(reload[6]):
+        if a[:2]==[-1,94] and a[5][0]==[4,348]:
+            assert reload[6][i+1][:2]==[348,72] and reload[6][i+1][5]==[[0,[0,26]]]
+            assert reload[6][i+2][:2]==[348,103]
+            reload_solids.append((a[3],bridge_coord(a[5][2]),bridge_coord(a[5][3]),
+                                  *[q[1][1] for q in reload[6][i+2][5]]))
+    solids=[p for p in pieces if p["object"]==348]
+    assert len(reload_solids)==4
+    for p,q in zip(solids,reload_solids):
+        assert (p["x"],p["y"],p["w"],p["h"])==q[1:]
+        p["reload_uid"]=q[0]
+    lines+=["struct SourceBridgePiece { unsigned long long uid,reload_uid; unsigned short object,frame; unsigned char kind; float x,y,w,h,ox,oy,opacity; const char* layer; const char* png; };",
+            "inline constexpr SourceBridgePiece kSourceBridgeBasePieces[]={"]
+    for p in pieces:
+        vals=[str(p["uid"])+"ULL",str(p.get("reload_uid",p["uid"]))+"ULL",
+              str(p["object"]),str(p["frame"]),str(p["kind"])]
+        vals += [str(float(p[k]))+"f" for k in ("x","y","w","h","ox","oy","opacity")]
+        vals += [json.dumps(p["layer"]),json.dumps(p["png"])]
+        lines.append("    {"+",".join(vals)+"},")
+    lines+=["};","inline constexpr std::size_t kSourceBridgeBasePieceCount=9;",
+            "inline constexpr std::size_t kSourceTotalTerrainPaintCount=638;","}"]
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
     OUTPUT.write_text("\n".join(lines)+"\n",encoding="utf-8")
     print("Compiled original location and special-context terrain:",dict(counts),

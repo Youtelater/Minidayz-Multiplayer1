@@ -4387,6 +4387,15 @@ private:
             map_layout - minidayz::stage1::kLayoutTable);
         // Original Construct instance positions are relative to their
         // sprite origins, not always their upper-left corners.
+        for(const auto& solid:scene->world_.source_bridge_solids()){
+            bool known=false;
+            if(minidayz::world_source::source_building_polygon_contains(
+                    solid,{x,y},known))return true;
+            if(!known && minidayz::terrain::source_solid_sprite_contains(
+                    solid.x,solid.y,solid.width,solid.height,
+                    solid.origin_x,solid.origin_y,solid.angle,x,y,solid.scale_x))
+                return true;
+        }
         if (scene->terrain_collision_.blocked(x,y) ||
             scene->world_.source_pond_contains(x,y,true)) return true;
         // Original deployed tent foundation Sprite398 has Solid behavior.
