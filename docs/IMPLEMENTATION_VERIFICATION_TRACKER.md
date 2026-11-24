@@ -1192,3 +1192,9 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - [x] Prior 884ad204: native/root-world tests and graphics audit passed; 3DS build stopped at a mistyped source erase-door UID, fixed in f79a75e. v33 maps cache stable deterministic geometry but defer berry/pump choices, per-location terrain/scatter creation, initial loot markers and secret-house drops until source 2800/1800 distance selection activates the location. Execute ordinary element actions before terrain and crash loot. Erase ground/scatter patches on unload and recreate on return. Source Trigger_spawn marker destruction is persisted as a tombstone in MDWS v5, compatible with v1–v4; v33 Continue requires the journal. Older world save behavior retained. Native capacity retries preserve the failed marker's random draw. Added first-visit dispatch, one-shot marker, journal roundtrip and v32 compatibility tests.
 - [ ] CI, tree overlap deletion, remaining create_map_location quest/secret/NPC branches, remaining source RNG order and emulator/hardware verification remain open. The resident geometry cache is a native adaptation, not a complete Construct instance allocator.
+
+### Step 1 — verification update (2026-11-24)
+
+- [x] Commit `17d20d4017896d4d4484e86f73784c88bb2b942a`: root-original world-table validation, graphics/sprite-sheet audit, native system regression suite and 3DS executable build all reported success in GitHub Actions.
+- [x] User reported that emulator verification was all good. This is a user-reported gameplay pass; exact tested build, seed, map levels and individual test cases were not supplied.
+- [ ] Full original-source parity remains open for tree overlap deletion, remaining create_map_location quest/secret/NPC branches and remaining source RNG order. Physical 3DS verification has not been reported. Do not equate a successful emulator smoke test with proof of all original events.
