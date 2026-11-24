@@ -246,18 +246,25 @@ public:
         return used;
     }
 
-    bool write_scene_save() noexcept {
+    bool write_survivor_save(std::uint32_t seed, std::uint8_t level,
+                             const minidayz::PlayerState& survivor,
+                             const minidayz::items::GroundLootSystem& loot,
+                             const minidayz::items::TentStorageSystem& tents,
+                             const minidayz::items::StashStorageSystem* stashes) noexcept {
         minidayz::persistence::PendingCraftSnapshot craft{};
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount &&
             pending_craft_seconds_ > 0.0f) {
             craft.recipe_index = static_cast<std::uint16_t>(pending_craft_recipe_);
             craft.seconds_remaining = pending_craft_seconds_;
         }
-        if (!write_saved_game(world_seed_, player_.state(), inventory_,
-            equipment_, ground_loot_, tents_, &item_use_runtime_, &perks_,
-            &stashes_, &day_night_, &rain_timer_, &loot_timer_, &craft,
-            world_level_, &source_energy_drink_)) return false;
-        // The existing v20 survivor save remains backward-compatible.
+        return write_saved_game(seed, survivor, inventory_, equipment_, loot,
+            tents, &item_use_runtime_, &perks_, stashes, &day_night_,
+            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_);
+    }
+
+    bool write_scene_save() noexcept {
+        if (!write_survivor_save(world_seed_, world_level_, player_.state(),
+                                 ground_loot_, tents_, &stashes_)) return false;
         // Persist changed original object frames separately, with the same
         // seed/level and a checksum. Do not report Save success unless
         // world state is recorded too.
@@ -327,10 +334,24 @@ public:
                         return; // Never silently omit source loot at capacity.
                     }
                 }
-                if ((new_game_generation_ || traveling) &&
-                    !place_new_player_on_generated_map(generating, traveling)) {
-                    fail_world_generation(traveling);
-                    return;
+                if (new_game_generation_ || traveling) {
+                    auto survivor = traveling ? player_.state() : make_initial_state();
+                    if (!place_new_player_on_generated_map(generating, survivor)) {
+                        fail_world_generation(traveling);
+                        return;
+                    }
+                    if (traveling) {
+                        const minidayz::items::TentStorageSystem empty_tents{};
+                        if (!write_survivor_save(generating.seed(), generating.generation_level(),
+                                survivor, *generated_initial_loot, empty_tents, nullptr)) {
+                            fail_world_generation(true);
+                            return;
+                        }
+                        has_saved_game_ = true;
+                    }
+                    player_ = minidayz::PlayerSystem(survivor);
+                    player_.set_source_skin(
+                        minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
                 }
                 if (traveling) {
                     world_seed_ = generating.seed();
@@ -377,7 +398,7 @@ public:
                 if (rain_timer_.active()) stage2_audio_.start_rain_loop(world_level_==4);
                 else stage2_audio_.stop_rain_loop();
                 // Only overwrite the existing save after a new world succeeds.
-                has_saved_game_ = write_scene_save();
+                if (!traveling && write_scene_save()) has_saved_game_ = true;
             }
             return;
         }
@@ -4269,7 +4290,7 @@ private:
     // Never retry, snap to a road, or shift the position on collision:
     // those extra rules changed the original starting position.
     bool place_new_player_on_generated_map(minidayz::WorldSystem& destination,
-                                           bool traveling) noexcept {
+                                           minidayz::PlayerState& state) noexcept {
         const auto& bounds=destination.bounds();
         if(!(bounds.width>0.0f && bounds.height>0.0f))return false;
         // Original Construct Start events (PlayerBase193.SetPosition) use
@@ -4294,12 +4315,8 @@ private:
             static_cast<float>(
                 minidayz::stage1::kNormalPlayerStartYBase+unit*range);
         if(!std::isfinite(px)||!std::isfinite(py))return false;
-        auto state=traveling?player_.state():make_initial_state();
         state.x=px;
         state.y=py;
-        player_=minidayz::PlayerSystem(state);
-        player_.set_source_skin(
-            minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
         return true;
     }
 
