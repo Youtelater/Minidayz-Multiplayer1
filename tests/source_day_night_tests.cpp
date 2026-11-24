@@ -100,6 +100,17 @@ int main() {
     assert(clock.restore({359,0.0f,false}));
     assert(clock.update(1.5f));
     assert(clock.hour()==6 && clock.minute()==0 && clock.day_mode());
+    // Original bunker/FinalStand creation disables the night layer and
+    // forces Day_mode=1 even if the player entered at midnight.
+    for(unsigned h=0;h<=24;++h){
+        assert(!source_night_layer_visible(h,true));
+        assert(source_night_layer_visible(h,false)==(h<=5||h>=19));
+    }
+    assert(clock.restore({1439,0.0f,false}));
+    clock.enter_bunker();
+    assert(clock.day_mode());
+    assert(clock.update(3.0f,true));
+    assert(clock.hour()==0 && clock.day_mode());
     // Bunker guard suppresses Day_mode writes, not Timer_ALL itself.
     assert(clock.restore({359,0.0f,false}));
     assert(clock.update(1.5f,true));
