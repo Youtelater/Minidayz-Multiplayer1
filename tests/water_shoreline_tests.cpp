@@ -38,6 +38,16 @@ int main() {
     using namespace minidayz::terrain;
     std::vector<std::uint32_t> water(9,kTileEmpty);
     assert(source_water_shore_effective_tile(water,3,3,1,1)==kTileEmpty);
+    // Exact root action 1933741965756872 writes frame1 ABOVE
+    // an original frame4 water neighbor at y+1. The opposite
+    // root action 7728687892712172 writes frame7 BELOW water.
+    water[7]=4u;
+    assert(source_water_shore_effective_tile(water,3,3,1,1)==1u);
+    water[7]=kTileEmpty;water[1]=4u;
+    assert(source_water_shore_effective_tile(water,3,3,1,1)==7u);
+    water[4]=4u;
+    assert(source_water_shore_effective_tile(water,3,3,1,1)==4u);
+    water.assign(9,kTileEmpty);
     const WaterShoreRule* chosen=nullptr;
     for(const auto& rule:kWaterShoreRules){
         bool positive=false,uses_center=false;

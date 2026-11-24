@@ -25,8 +25,11 @@ def walk(events,ancestors=()):
 def offset(expr,axis):
     if expr==[23,axis]:return 0
     if isinstance(expr,list) and len(expr)==3 and expr[1]==[23,axis] and expr[2]==[0,1]:
-        if expr[0]==5:return 1
-        if expr[0]==4:return -1
+        # Construct expression opcode 4 is add; 5 is subtract.
+        # Reversing these offsets puts every original shore on the
+        # opposite side of the authored water polygon.
+        if expr[0]==4:return 1
+        if expr[0]==5:return -1
     raise ValueError(f"Unexpected original water neighbor coordinate {expr}")
 
 def main():

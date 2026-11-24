@@ -201,6 +201,34 @@ def main():
     for record in records:
         if record["object"]!=GROUND_FAMILY:
             print("STEP1_ENVIRONMENT_PAINT",json.dumps(record,separators=(",",":")))
+    # Extract the original pond creation, size, origin, and loop
+    # ancestors along with all family range writes. These must be
+    # represented in world state, not guessed from static Map RLE.
+    event_lookup={}
+    for sheet in data[6]:
+        for event,ancestors,path in original_events(sheet[1]):
+            event_lookup[(sheet[0],path)]=(event,ancestors)
+    pond_written=False
+    for record in records:
+        event,ancestors=event_lookup[(record["sheet"],tuple(record["event_path"]))]
+        if record["object"]==208 and record["command"]==SET_TILE_RANGE and not pond_written:
+            pond_written=True
+            print("STEP1_POND_ROOT",json.dumps({
+                "path":record["event_path"],
+                "ancestors":[{"uid":n[4],"guards":n[5],"actions":n[6]}
+                             for n in ancestors[-3:]+(event,)],
+                "children":[{"uid":n[4],"guards":n[5],"actions":n[6]}
+                            for n in event[7] if isinstance(n,list) and len(n)>=7 and n[0]==0]
+            },separators=(",",":")))
+        if record["object"]==GROUND_FAMILY and record["command"]==SET_TILE_RANGE:
+            print("STEP1_GROUND_RANGE",json.dumps({
+                "path":record["event_path"],"uid":record["action_uid"],
+                "params":record["parameters"],
+                "guards":record["conditions"],"or":event[2],
+                "ancestors":[{"uid":n[4],"guards":n[5],"actions":n[6]}
+                             for n in ancestors[-3:]]
+            },separators=(",",":")))
+    assert pond_written, "Original procedural pond branch missing"
 
 
 

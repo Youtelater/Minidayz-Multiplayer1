@@ -59,6 +59,8 @@ inline std::uint32_t source_water_shore_effective_tile(
         }
         if(match)return rule.frame;
     }
-    return kTileEmpty;
+    // No matching original SetTile event means no write. In
+    // particular, the interior source water tile4 must not disappear.
+    return authored;
 }
 } // namespace minidayz::terrain
