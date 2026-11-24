@@ -2964,7 +2964,10 @@ public:
         const float night_opacity=minidayz::items::source_outdoor_night_opacity(
             day_night_.hour(),day_night_.minute(),
             perks_.level(minidayz::items::SourcePerk::eye)==2?2.0f:0.0f);
-        const bool night_layer_visible=day_night_.hour()<=5 || day_night_.hour()>=19;
+        // This scene currently generates outdoor Map only. Bunker/FinalStand
+        // entry must pass its actual scene state when those transitions are ported.
+        const bool night_layer_visible=minidayz::items::source_night_layer_visible(
+            day_night_.hour(),false);
         // These calls do not submit pixels or alter the source event state;
         // actual alpha overlays still draw AFTER scenery at Map layers44/46.
         if (rain_timer_.active()) {
