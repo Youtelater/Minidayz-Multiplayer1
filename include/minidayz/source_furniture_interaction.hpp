@@ -96,21 +96,27 @@ struct SourcePumpDraw {
     std::uint16_t consumed{};
     float thirst_gain{};
     bool can_use{};
+    bool consume_before_wait{};
 };
-// Original Construct 2626558775459672 / 5959987082061273:
-// 2-second pump interaction, max 25 thirst restored, drain remaining
-// water (or all remaining when under 25); cap player thirst at 100.
+// Root 401776724287473: water >25, deduct round(min(25, deficit))
+// BEFORE Wait(2), then add 25 thirst. Root 5981791044814398:
+// water <=25, capture ALL remaining water, Wait(2), set pump to 0,
+// then add captured water. Update_Stats clamps thirst after the addition.
+// Normal single-player maximum is 100; the original perk_pz==1
+// expression uses 200 when that separate source state becomes available.
 inline SourcePumpDraw source_pump_draw(float thirst,
-                                      std::uint64_t water) noexcept {
+                                      std::uint64_t water,
+                                      float thirst_max=kPumpThirstMax) noexcept {
     SourcePumpDraw draw{};
-    if(!std::isfinite(thirst)||thirst<0.0f||thirst>=kPumpThirstMax||
+    if(!std::isfinite(thirst)||!std::isfinite(thirst_max)||
+       thirst_max<=0.0f||thirst<0.0f||thirst>=thirst_max||
        water==0||water>kPumpMaxWater)return draw;
-    const float gain=std::min<float>(kPumpSip,
-        std::min<float>(kPumpThirstMax-thirst,static_cast<float>(water)));
-    if(gain<=0.0f)return draw;
-    draw.consumed=static_cast<std::uint16_t>(std::ceil(gain));
-    draw.thirst_gain=gain;
-    draw.can_use=draw.consumed>0;
+    draw.can_use=true;
+    draw.consume_before_wait=water>25;
+    draw.consumed=draw.consume_before_wait
+        ?static_cast<std::uint16_t>(std::floor(std::min(kPumpSip,thirst_max-thirst)+0.5f))
+        :static_cast<std::uint16_t>(water);
+    draw.thirst_gain=draw.consume_before_wait?kPumpSip:static_cast<float>(water);
     return draw;
 }
 
