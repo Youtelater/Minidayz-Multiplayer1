@@ -47,7 +47,7 @@ for layout in layouts:
 event_refs=defaultdict(list)
 def walk(events,sheet,groups=()):
  for e in events if isinstance(events,list) else ():
-  if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+  if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
   group=e[1][1] if isinstance(e[1],list) and len(e[1])>1 and isinstance(e[1][1],str) else None
   gn=groups+((group,) if group else ())
   for kind,entries in (("condition",e[5]),("action",e[6])):
@@ -56,7 +56,7 @@ def walk(events,sheet,groups=()):
      event_refs[item[0]].append({"kind":kind,"sheet":sheet,
       "event_uid":e[4],"cmd":item[1],"group":gn[-4:],
       "conditions":e[5],"actions":e[6]})
-  walk(e[7],sheet,gn)
+  if len(e)>7 and isinstance(e[7],list):walk(e[7],sheet,gn)
 for sheet,events in sheets:walk(events,sheet)
 summary=Counter()
 result={}
