@@ -323,6 +323,11 @@ def main():
                 current["w"]=p[0][1][1]
             elif cmd==72:
                 current["frame"]=p[0][1][1]
+                # Construct Sprite SetFrame updates its active frame
+                # hotspot. Do not retain the default frame0 hotspot
+                # when testing the original Solid348 frame26 polygon.
+                frame=project[3][obj][7][0][7][current["frame"]]
+                current["ox"],current["oy"]=frame[7],frame[8]
     assert len(pieces)==10 and sum(p["object"]==348 for p in pieces)==4,pieces
     assert all(p["frame"]==26 for p in pieces if p["object"]==348)
     # The original save restores bridge art, then the reload branch
