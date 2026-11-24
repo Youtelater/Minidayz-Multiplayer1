@@ -8,6 +8,416 @@
 #include <new>
 #include <random>
 namespace minidayz::items {
+// Original Game_events 389950912936355, normal (non-map_fs-extra) branches.
+// Original unlock variables initialize to zero; these branches use that state
+// until achievement unlock state is connected. No synthetic random item pool.
+inline bool source_box_default_nested_drops(std::uint64_t category,
+    std::mt19937& random,GroundLootSystem& ground,float x,float y) noexcept {
+    const auto pick=[&](const auto& a) noexcept {
+        return a[source_initial_loot_choice_index(random(),sizeof(a)/sizeof(a[0]))];
+    };
+    const auto drop=[&](std::uint16_t item,int dx,int dy) noexcept {
+        const auto id=source_initial_item_after_default_unlocks(item);
+        return id && source_item_exists(id) &&
+            ground.add({id,1,kUseSourceItemCondition},x+dx,y+dy);
+    };
+    switch(category){
+    case 51: { // 655155288571769
+        constexpr int pool[]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24};
+        int randy=pick(pool);
+        if(randy==1) { // 224628769285970
+            if(!drop(12,10,5))return false; // 341072457540630
+            if(!drop(16,-10,5))return false; // 138172642090691
+            if(!drop(69,0,10))return false; // 841738167996245
+            if(!drop(100,0,-10))return false; // 158336073542787
+            return true;
+        }
+        if(randy==2) { // 577503117603168
+            if(!drop(14,10,5))return false; // 330239042677980
+            if(!drop(15,-10,5))return false; // 395700614071643
+            if(!drop(11,0,10))return false; // 570821553775105
+            if(!drop(13,10,-5))return false; // 898500240411734
+            if(!drop(13,-10,-5))return false; // 428379451772826
+            if(!drop(138,10,-5))return false; // 907449288286404
+            if(!drop(138,-10,-5))return false; // 727882003143457
+            if(!drop(14,0,-10))return false; // 451864189227711
+            return true;
+        }
+        if(randy==3) { // 229243283012988
+            if(!drop(13,10,5))return false; // 568900972104273
+            if(!drop(13,-10,5))return false; // 772278977211026
+            if(!drop(138,10,-5))return false; // 946189700239626
+            if(!drop(138,-10,-5))return false; // 823665232915735
+            if(!drop(14,0,10))return false; // 278885534088386
+            if(!drop(14,10,-5))return false; // 905993740088333
+            if(!drop(15,-10,-5))return false; // 315864404341686
+            if(!drop(15,0,-10))return false; // 798639111631180
+            return true;
+        }
+        if(randy==4) { // 761452656206848
+            if(!drop(29,10,5))return false; // 245068389315024
+            if(!drop(710,-10,5))return false; // 128947333566913
+            if(!drop(708,-10,5))return false; // 659002315176998
+            if(!drop(702,-10,5))return false; // 971294095925664
+            return true;
+        }
+        if(randy==5) { // 590327086533953
+            if(!drop(39,10,5))return false; // 349592499037026
+            if(!drop(39,-10,5))return false; // 338674932866822
+            if(!drop(36,0,10))return false; // 662056180769272
+            return true;
+        }
+        if(randy==6) { // 283020191578477
+            if(!drop(35,10,5))return false; // 258691435905951
+            if(!drop(39,-10,5))return false; // 221320316964194
+            return true;
+        }
+        if(randy==7) { // 182792820248994
+            if(!drop(56,10,5))return false; // 678819495826661
+            if(!drop(21,-10,5))return false; // 426956334356787
+            if(!drop(119,0,10))return false; // 176717040815973
+            return true;
+        }
+        if(randy==8) { // 186264085228139
+            if(!drop(55,-10,5))return false; // 891404416437224
+            if(!drop(20,0,10))return false; // 795316610516030
+            return true;
+        }
+        if(randy==9) { // 365929261561048
+            if(!drop(263,-10,5))return false; // 206716667173676
+            if(!drop(3,10,5))return false; // 668431279508805
+            return true;
+        }
+        if(randy==10) { // 509873148243044
+            if(!drop(251,-10,5))return false; // 278520638889606
+            if(!drop(3,10,5))return false; // 164334425275235
+            return true;
+        }
+        if(randy==11) { // 487852413921679
+            if(!drop(34,10,5))return false; // 331717289972571
+            if(!drop(24,-10,5))return false; // 179975116596132
+            if(!drop(25,0,10))return false; // 363622328816209
+            return true;
+        }
+        if(randy==12) { // 304163162015679
+            if(!drop(400,-10,5))return false; // 273785213033424
+            return true;
+        }
+        if(randy==13) { // 703740455302062
+            if(!drop(401,-10,5))return false; // 109611386005626
+            return true;
+        }
+        if(randy==14) { // 934827794311758
+            if(!drop(105,10,5))return false; // 733585619737365
+            return true;
+        }
+        if(randy==15) { // 135953224917191
+            if(!drop(106,10,5))return false; // 183947583068688
+            return true;
+        }
+        if(randy==16) { // 332732062276886
+            if(!drop(173,0,5))return false; // 623696350210612
+            if(!drop(12,10,5))return false; // 561092114678947
+            if(!drop(12,-10,5))return false; // 779252381839352
+            return true;
+        }
+        if(randy==17) { // 499281199478444
+            if(!drop(169,0,5))return false; // 475534827298404
+            if(!drop(69,10,5))return false; // 237168415623762
+            if(!drop(69,-10,5))return false; // 329918214166962
+            return true;
+        }
+        if(randy==18) { // 879603291390376
+            if(!drop(161,0,5))return false; // 953970195491000
+            if(!drop(15,10,5))return false; // 115540935596528
+            if(!drop(15,-10,5))return false; // 531558288708713
+            return true;
+        }
+        if(randy==19) { // 664260007289222
+            if(!drop(111,10,5))return false; // 504525317887341
+            return true;
+        }
+        if(randy==20) { // 291649104694131
+            if(!drop(112,10,5))return false; // 814438928463793
+            return true;
+        }
+        if(randy==21) { // 660329834477926
+            if(!drop(119,10,5))return false; // 798050248789640
+            if(!drop(21,-10,5))return false; // 284557576876317
+            return true;
+        }
+        if(randy==22) { // 431779808776797
+            if(!drop(124,10,5))return false; // 382932873932608
+            return true;
+        }
+        if(randy==23) { // 930866247970766
+            if(!drop(153,10,5))return false; // 465688157819537
+            if(!drop(16,-10,5))return false; // 549915918372866
+            return true;
+        }
+        if(randy==24) { // 130615969376544
+            if(!drop(53,10,5))return false; // 591294292656169
+            if(!drop(53,-10,5))return false; // 267690034932547
+            return true;
+        }
+        return false;
+    }
+    case 52: { // 527994098352019
+        constexpr int pool[]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,29,30};
+        int randy=pick(pool);
+        if(randy==15) { // 499068344635560 aug_unlock
+            constexpr int retry[]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,20,21}; randy=pick(retry);
+        }
+        if(randy==16) { // 451188469757604 mac10_unlock
+            constexpr int retry[]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,20,21}; randy=pick(retry);
+        }
+        if(randy==17) { // 901362518451381 saiga12_unlock
+            constexpr int retry[]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,20,21}; randy=pick(retry);
+        }
+        if(randy==19) { // 813083311525689 sv98_unlock
+            constexpr int retry[]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,20,21}; randy=pick(retry);
+        }
+        if(randy==29) { // 988273294794662 vss_unlock
+            constexpr int retry[]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,20,21}; randy=pick(retry);
+        }
+        if(randy==1) { // 520511069647202
+            if(!drop(46,10,5))return false; // 979055932262915
+            if(!drop(28,-10,5))return false; // 651661791407113
+            return true;
+        }
+        if(randy==2) { // 805269486271720
+            if(!drop(29,10,5))return false; // 399679966523401
+            if(!drop(19,-10,5))return false; // 835825718677370
+            return true;
+        }
+        if(randy==3) { // 651327478842048
+            if(!drop(36,10,5))return false; // 316008873280536
+            if(!drop(39,-10,5))return false; // 642517530932209
+            if(!drop(35,0,10))return false; // 389637830351896
+            return true;
+        }
+        if(randy==4) { // 684392900181342
+            if(!drop(55,-10,5))return false; // 735705353742115
+            if(!drop(43,0,5))return false; // 131741824792972
+            return true;
+        }
+        if(randy==5) { // 702845354857274
+            if(!drop(76,10,5))return false; // 246030833407942
+            return true;
+        }
+        if(randy==6) { // 371744567717729
+            if(!drop(77,10,5))return false; // 894395481920946
+            return true;
+        }
+        if(randy==7) { // 650040066615148
+            if(!drop(78,10,5))return false; // 679981102970303
+            return true;
+        }
+        if(randy==8) { // 965423007796566
+            if(!drop(17,10,5))return false; // 130598157684298
+            if(!drop(83,-10,5))return false; // 963061598001837
+            if(!drop(17,0,10))return false; // 973138909500164
+            return true;
+        }
+        if(randy==9) { // 581107264664527
+            if(!drop(168,0,5))return false; // 404794170010330
+            if(!drop(13,10,5))return false; // 499870582735253
+            if(!drop(13,-10,5))return false; // 920045739026960
+            return true;
+        }
+        if(randy==10) { // 617335203441160
+            if(!drop(251,0,10))return false; // 212330747774503
+            if(!drop(402,0,10))return false; // 450396738410996
+            return true;
+        }
+        if(randy==11) { // 532071944305238
+            if(!drop(403,0,10))return false; // 573179221405793
+            return true;
+        }
+        if(randy==12) { // 793781925993314
+            if(!drop(400,0,10))return false; // 754074714461023
+            if(!drop(251,0,10))return false; // 648253196691250
+            return true;
+        }
+        if(randy==13) { // 847365527549426
+            if(!drop(451,0,10))return false; // 690874205763255
+            return true;
+        }
+        if(randy==14) { // 739448180098924
+            if(!drop(457,0,10))return false; // 642940001610215
+            return true;
+        }
+        if(randy==15) { // 854163761469334
+            if(!drop(177,0,5))return false; // 358444916837261
+            if(!drop(11,10,5))return false; // 365094560800317
+            if(!drop(11,-10,5))return false; // 305135979400683
+            return true;
+        }
+        if(randy==16) { // 241923305762439
+            if(!drop(178,0,5))return false; // 337958274230843
+            if(!drop(17,10,5))return false; // 386583859665113
+            if(!drop(17,-10,5))return false; // 903434207133880
+            return true;
+        }
+        if(randy==17) { // 750087626877265
+            if(!drop(179,0,5))return false; // 149250551341124
+            if(!drop(69,10,5))return false; // 197136260367743
+            if(!drop(69,-10,5))return false; // 563707850493946
+            return true;
+        }
+        if(randy==18) { // 155999400131315
+            if(!drop(185,0,5))return false; // 500694993192033
+            if(!drop(101,10,5))return false; // 212268811735441
+            if(!drop(101,-10,5))return false; // 784124134297597
+            return true;
+        }
+        if(randy==19) { // 764689319510755
+            if(!drop(186,0,5))return false; // 161178717396196
+            if(!drop(13,10,5))return false; // 795420655019705
+            if(!drop(13,-10,5))return false; // 629368734035074
+            return true;
+        }
+        if(randy==20) { // 919955499650716
+            if(!drop(85,0,10))return false; // 831899605495167
+            return true;
+        }
+        if(randy==21) { // 997634851585064
+            if(!drop(99,0,10))return false; // 240581781339691
+            if(!drop(99,0,-10))return false; // 612954614524371
+            if(!drop(119,0,-10))return false; // 156192264360261
+            return true;
+        }
+        if(randy==22) { // 795275896664899
+            if(!drop(184,0,10))return false; // 141301897953175
+            if(!drop(101,0,-10))return false; // 895697762062266
+            if(!drop(101,0,-10))return false; // 798926092280535
+            return true;
+        }
+        if(randy==23) { // 639348120064537
+            if(!drop(162,0,10))return false; // 269344811346881
+            if(!drop(11,0,-10))return false; // 624901454171790
+            if(!drop(11,0,-10))return false; // 927027906725834
+            return true;
+        }
+        if(randy==24) { // 733005784480654
+            if(!drop(188,0,10))return false; // 273081619652494
+            if(!drop(15,10,5))return false; // 714862407771073
+            if(!drop(15,-10,5))return false; // 145875892580353
+            return true;
+        }
+        if(randy==25) { // 575631532380424
+            if(!drop(159,0,10))return false; // 148825356158586
+            if(!drop(14,0,-10))return false; // 145476592143020
+            if(!drop(14,0,-10))return false; // 952756605624325
+            return true;
+        }
+        if(randy==26) { // 368351889378706
+            if(!drop(106,0,10))return false; // 779971889441691
+            if(!drop(108,0,10))return false; // 369764677742885
+            return true;
+        }
+        if(randy==27) { // 757981211909566
+            if(!drop(105,0,10))return false; // 630925840077002
+            if(!drop(107,0,10))return false; // 190352957010369
+            return true;
+        }
+        if(randy==28) { // 814240079907708
+            if(!drop(230,0,10))return false; // 866710583333903
+            if(!drop(105,0,10))return false; // 482702966956706
+            if(!drop(105,0,10))return false; // 846224277794608
+            return true;
+        }
+        if(randy==29) { // 463410724486494
+            if(!drop(240,0,5))return false; // 453759969703972
+            if(!drop(101,10,5))return false; // 475072160507233
+            if(!drop(101,-10,5))return false; // 633080415759642
+            return true;
+        }
+        if(randy==30) { // 815565865215371
+            if(!drop(747,0,5))return false; // 629638495560392
+            if(!drop(747,-10,5))return false; // 455930880788884
+            return true;
+        }
+        return false;
+    }
+    case 53: { // 483637851273824
+        constexpr int pool[]={1,2,3,4,5,6,7,8,9,11,12,13,14,15,16};
+        int randy=pick(pool);
+        if(randy==1) { // 115783717796652
+            if(!drop(80,0,5))return false; // 899349381162600
+            if(!drop(15,10,5))return false; // 201893392791397
+            return true;
+        }
+        if(randy==2) { // 547694938580643
+            if(!drop(81,0,5))return false; // 635065904101770
+            if(!drop(11,10,5))return false; // 465030475767658
+            return true;
+        }
+        if(randy==3) { // 205332696864288
+            if(!drop(75,0,5))return false; // 992361324510567
+            return true;
+        }
+        if(randy==4) { // 907301153857415
+            if(!drop(98,0,5))return false; // 209161515677782
+            return true;
+        }
+        if(randy==5) { // 297048731204213
+            if(!drop(404,0,5))return false; // 873235941059213
+            return true;
+        }
+        if(randy==6) { // 455206419462981
+            if(!drop(452,0,5))return false; // 709366650516422
+            return true;
+        }
+        if(randy==7) { // 553374447718294
+            if(!drop(303,10,5))return false; // 564851184431849
+            if(!drop(355,-10,5))return false; // 543090562288721
+            return true;
+        }
+        if(randy==8) { // 763857312083281
+            if(!drop(175,10,5))return false; // 130497279234748
+            if(!drop(138,-10,5))return false; // 564074101617017
+            if(!drop(138,-10,5))return false; // 708130247788404
+            return true;
+        }
+        if(randy==9) { // 231387349542860
+            if(!drop(174,10,5))return false; // 305470938396954
+            if(!drop(14,-10,5))return false; // 736477688922853
+            if(!drop(14,-10,5))return false; // 300959202046513
+            return true;
+        }
+        if(randy==11) { // 335226253284849
+            if(!drop(89,0,5))return false; // 424839868650498
+            return true;
+        }
+        if(randy==12) { // 448535878520488
+            if(!drop(90,0,5))return false; // 258255796526338
+            return true;
+        }
+        if(randy==13) { // 559072491946875
+            if(!drop(85,0,5))return false; // 793345970247948
+            if(!drop(85,0,-5))return false; // 833298410764024
+            if(!drop(85,0,-5))return false; // 139999240133864
+            return true;
+        }
+        if(randy==14) { // 375938571757071
+            if(!drop(103,0,5))return false; // 909348159268146
+            return true;
+        }
+        if(randy==15) { // 978225039172451
+            if(!drop(113,0,5))return false; // 417706006481712
+            return true;
+        }
+        if(randy==16) { // 143624916816273
+            if(!drop(761,0,5))return false; // 321439349340410
+            if(!drop(36,0,5))return false; // 719187777975704
+            return true;
+        }
+        return false;
+    }
+    default:return false;
+    }
+}
 // Native transaction: never consume a source box or advance its RNG
 // when its branch is not yet supported or cannot fit in ground storage.
 // The actual box is selected by the original Player181 collision mask.
@@ -20,13 +430,16 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
        !world_source::source_player_overlaps_world_sprite(
            *box,actor,box->origin_x,box->origin_y))return false;
     const auto* category=source_box_category(box->source_variable_0);
-    if(!category)return false;
+    const bool nested=box->source_variable_0==51 || box->source_variable_0==52 || box->source_variable_0==53;
+    if(!category && !nested)return false;
     // Keep the large native ground buffer on the heap, not ARM11 stack.
     auto next=std::unique_ptr<GroundLootSystem>(
         new(std::nothrow) GroundLootSystem(ground));
     auto random=std::unique_ptr<std::mt19937>(new(std::nothrow) std::mt19937(rng));
     if(!next || !random)return false;
-    for(std::size_t i=0;i<category->count;++i){
+    if(nested && !source_box_default_nested_drops(box->source_variable_0,
+        *random,*next,box->x,box->y))return false;
+    if(category)for(std::size_t i=0;i<category->count;++i){
         const auto& drop=kSourceBoxDrops[category->first+i];
         const auto pick=drop.choose?source_initial_loot_choice_index(
             (*random)(),drop.count):0;
