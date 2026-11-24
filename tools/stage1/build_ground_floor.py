@@ -231,10 +231,20 @@ for level, object_id in enumerate(SOURCE_GROUND, start=1):
         raise SystemExit(f"Original road artwork missing in ground level {level}")
     with tempfile.TemporaryDirectory(prefix=f"mdz_road_{level}_") as tmp:
         work = Path(tmp)
+        # Keep tile15 at slot0 for existing range painting. Source
+        # road-edge SetTile leaves use 0..12 (except 6); include the
+        # complete contiguous range to preserve exact slot=tile+1.
         stone_tile.save(work / "road.png")
+        names=["road.png"]
+        for edge_id in range(13):
+            ex=edge_id % sheet_columns[object_id] * tile_width
+            ey=edge_id // sheet_columns[object_id] * tile_width
+            name=f"edge_{edge_id:02}.png"
+            source.crop((ex,ey,ex+tile_width,ey+tile_width)).save(work / name)
+            names.append(name)
         (work / "road.t3s").write_text(
-            "--atlas -f rgba -z auto" + chr(10) + "road.png" + chr(10),
-            encoding="utf-8")
+            "--atlas -f rgba -z auto" + chr(10) +
+            chr(10).join(names) + chr(10), encoding="utf-8")
         road_atlas = ROMFS / f"original_map_road_lvl{level}.t3x"
         subprocess.run(["tex3ds", "-i", str(work / "road.t3s"),
                         "-o", str(road_atlas)], cwd=work, check=True)

@@ -2874,7 +2874,7 @@ public:
             // WorldGrid codes 12/13/14 are the original procedural road
             // network. They must be drawn before buildings and trees, or
             // even a correctly loaded ground sheet shows an empty wilderness.
-            if (!renderer.draw_source_road_grid(world_.grid(),world_.bounds(),
+            if (!renderer.draw_source_road_grid(world_,
                     camera_x,camera_y,view_w,view_h,world_.generation_level())) {
                 renderer.draw_text("ORIGINAL ROAD TILES FAILED TO LOAD",
                                    camera_x+12.0f,camera_y+26.0f,0.30f);

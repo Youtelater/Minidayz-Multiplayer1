@@ -285,6 +285,52 @@ def trace_edge_actions(nodes,anc=(),path=()):
 assert len(edge_uids)==36
 trace_edge_actions(dict(project[6])["Game_events"])
 
+# Cross-check the actual native mask table against all 36 original
+# occurrences, not just one representative road category.
+import re
+edge_header=(ROOT/"include/minidayz/source_road_edge_paint.hpp").read_text()
+mask_table=[tuple(map(int,m)) for m in re.findall(
+    r"\{(\d+),(\d+),(\d+)\},",
+    edge_header.split("kSourceRoadEdgeRules[] = {",1)[1].split("};",1)[0])]
+assert len(mask_table)==12
+def offset(p,name):
+    expr=p[1]
+    if expr==[23,name]:return 0
+    assert expr[0] in (4,5) and expr[1]==[23,name] and expr[2]==[0,1]
+    return 1 if expr[0]==4 else -1
+actual_masks={12:[],13:[],14:[]}
+branch_codes={3785908327653467:12,5407406943689734:13,1239724375006415:14}
+def verify_masks(nodes,parents=()):
+    for e in nodes if isinstance(nodes,list) else ():
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+        for a in e[6]:
+            if not isinstance(a,list) or len(a)<6 or a[3] not in edge_uids:continue
+            assert a[:2]==[1066,192] and a[5][:2]==[[0,[23,"x"]],[0,[23,"y"]]]
+            assert a[5][3]==[3,0] and not e[2]
+            code=next(branch_codes[p[4]] for p in parents if p[4] in branch_codes)
+            assert any(c[:2]==[-1,123] and c[9]==[[0,[0,289]]]
+                       for p in parents for c in p[5])
+            assert any(c[:2]==[1066,201] and c[9]==[[0,[21,514,False,None,6]]]
+                       for p in parents for c in p[5])
+            assert any(c[:2]==[1066,205] and
+                       c[9]==[[0,[23,"x"]],[0,[23,"y"]],[8,1],[0,[0,15]]]
+                       for p in parents for c in p[5])
+            equal=unequal=0
+            for c in e[5]:
+                assert c[:2]==[1066,205] and c[9][3]==[0,[0,15]]
+                x,y=offset(c[9][0],"x"),offset(c[9][1],"y")
+                bit=1<<((y+1)*3+x+1)
+                if c[9][2]==[8,0]:equal|=bit
+                else:
+                    assert c[9][2]==[8,1]
+                    unequal|=bit
+            actual_masks[code].append((a[5][2][1][1],equal,unequal))
+        if len(e)>7 and isinstance(e[7],list):
+            verify_masks(e[7],parents+(e,))
+verify_masks(dict(project[6])["Game_events"])
+assert all(masks==mask_table for masks in actual_masks.values()),actual_masks
+print("PASS all 36 source road edge leaves, center guard, 289-cell scan and UID pick")
+
 for row in road_branch_report:
     print("SOURCE_ROAD_BRANCH",json.dumps(row,separators=(",",":"))[:6500])
 

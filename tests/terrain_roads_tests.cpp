@@ -1,5 +1,6 @@
 #include "minidayz/terrain_roads.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
+#include "minidayz/source_road_edge_paint.hpp"
 #include <cassert>
 int main() {
     using namespace minidayz::terrain;
@@ -185,5 +186,22 @@ int main() {
     assert(!source_road_neighbor_permits_arm(13,2,7));
     assert(!source_road_neighbor_permits_arm(14,4,9));
 
+    // A source local straight road paints tile15 at y8..9; the
+    // source neighbor comparison adds tile11 above and tile1 below.
+    grid={};grid.code[1][1]=12;
+    const auto painted=source_grid_road_paint_patch(grid,1,1);
+    assert(painted.at(8,8)==15 && painted.at(8,9)==15);
+    assert(painted.at(8,7)==11 && painted.at(8,10)==1);
+    assert(painted.at(8,6)==kUnpaintedRoadTile);
+    assert(painted.at(-1,8)==kUnpaintedRoadTile);
+    // All 12 source rule outputs are reachable, including concave
+    // and convex corners. No new output is allowed for center tile15.
+    for(const auto& rule:kSourceRoadEdgeRules){
+        assert((rule.equal&rule.unequal)==0);
+        assert(source_road_edge_frame(15,rule.equal)==kUnpaintedRoadTile);
+        assert(source_road_edge_frame(6,rule.equal)==rule.tile);
+    }
+    assert(source_road_edge_frame(6,0)==kUnpaintedRoadTile);
+    assert(source_road_edge_frame(6,511)==kUnpaintedRoadTile);
     return 0;
 }

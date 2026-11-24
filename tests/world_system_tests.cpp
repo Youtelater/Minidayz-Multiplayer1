@@ -1997,11 +1997,27 @@ void test_source_scatter_reproduction_and_layout_replacement() {
                    rhs[p].tiles[k].original_frame);
         }
     }
+    const auto& road_a=a.source_road_edge_patches();
+    const auto& road_b=b.source_road_edge_patches();
+    assert(!road_a.empty() && road_a.size()==road_b.size());
+    for(std::size_t p=0;p<road_a.size();++p){
+        assert(road_a[p].marker_index==road_b[p].marker_index);
+        const auto* marker=a.map_marker(road_a[p].marker_index);
+        assert(marker && marker->marker_type>=12 && marker->marker_type<=14);
+        assert(road_a[p].tiles.size()==road_b[p].tiles.size());
+        for(std::size_t i=0;i<road_a[p].tiles.size();++i){
+            const auto& cell=road_a[p].tiles[i];
+            assert(cell.local_index<289 && cell.original_frame<=12 && cell.original_frame!=6);
+            assert(cell.local_index==road_b[p].tiles[i].local_index &&
+                   cell.original_frame==road_b[p].tiles[i].original_frame);
+        }
+    }
     assert(a.load_source_layout("Map"));
     // A second authored layout must not inherit a previous generated
     // forest, loot markers or a misleading completed-generation phase.
     assert(!a.generation_complete());
     assert(a.source_scatter_patches().empty());
+    assert(a.source_road_edge_patches().empty());
     assert(a.map_marker_count()==0);
     assert(a.source_location_spawn_count()==0);
 }

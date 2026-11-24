@@ -1,5 +1,6 @@
 #include "minidayz/world.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
+#include "minidayz/source_road_edge_paint.hpp"
 #include "minidayz/generated/original_initial_building_loot.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
@@ -508,6 +509,8 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     seed_ = seed;
     grid_.clear();
     map_markers_.clear();
+    source_scatter_patches_.clear();
+    source_road_edge_patches_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();
@@ -590,6 +593,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     if (!initialized_) return false;
     map_markers_.clear();
     source_scatter_patches_.clear();
+    source_road_edge_patches_.clear();
     WorldGenerationProfile profile{};
     if (!source_world_profile(level, profile) ||
         !grid_.resize(profile.map_size_x, profile.grid_height)) return false;
@@ -638,6 +642,7 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
     if (!initialized_ || grid_.width() == 0 || grid_.height() == 0) return false;
     map_markers_.clear();
     source_scatter_patches_.clear();
+    source_road_edge_patches_.clear();
     map_markers_.reserve(static_cast<std::size_t>(grid_.width()) * grid_.height());
     (void)seed; // The source uses one global random stream across generation stages.
     WorldGenerationProfile profile{};
@@ -794,6 +799,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     grid_.clear();
     map_markers_.clear();
     source_scatter_patches_.clear();
+    source_road_edge_patches_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();
@@ -916,6 +922,7 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
     if (map_markers_.size() !=
         static_cast<std::size_t>(grid_.width()) * grid_.height()) return false;
     source_scatter_patches_.clear();
+    source_road_edge_patches_.clear();
     source_scatter_patches_.reserve(map_markers_.size());
     std::size_t added = 0;
     for (int y = 0; y < grid_.height(); ++y) {
@@ -983,6 +990,21 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
             }
             const std::size_t marker_index=
                 static_cast<std::size_t>(y)*grid_.width()+x;
+            // Root code12/13/14 edge SetTile leaves are independent of
+            // camera visibility. Other final marker types (e.g. gas
+            // station/cafe/shop) own separate source paint branches.
+            if(code>=12&&code<=14 && grid_.at(x,y)==code){
+                const auto painted=world_source::source_grid_road_paint_patch(grid_,x,y);
+                WorldScatterPatch edges{};
+                edges.marker_index=marker_index;
+                for(std::size_t i=0;i<painted.cells.size();++i){
+                    const auto frame=painted.cells[i];
+                    if(frame!=15 && frame!=world_source::kUnpaintedRoadTile)
+                        edges.tiles.push_back({static_cast<std::uint16_t>(i),frame});
+                }
+                if(!edges.tiles.empty())
+                    source_road_edge_patches_.push_back(std::move(edges));
+            }
             if(!build_source_scatter_patch(marker_index))return false;
         }
     }
@@ -1542,6 +1564,7 @@ void WorldSystem::reset() noexcept {
     grid_.clear();
     map_markers_.clear();
     source_scatter_patches_.clear();
+    source_road_edge_patches_.clear();
     features_.clear();
     placements_.clear();
     original_sprite_states_.clear();

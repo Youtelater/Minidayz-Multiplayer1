@@ -51,7 +51,7 @@ public:
  // Render source-derived SetTile scatter events for each generated Map cell.
  bool draw_source_procedural_environment(const class WorldSystem& world,
      float camera_x,float camera_y,float view_width,float view_height) noexcept;
- bool draw_source_road_grid(const WorldGrid& grid, const WorldBounds& bounds,
+ bool draw_source_road_grid(const class WorldSystem& world,
                             float camera_x,float camera_y,float view_width,float view_height,
                             std::uint8_t source_level=0) noexcept;
   bool draw_source_sprite_fitted(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float width,float height,float depth=0.4f) noexcept;

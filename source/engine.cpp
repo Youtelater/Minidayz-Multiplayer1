@@ -6,6 +6,7 @@
 #include "minidayz/terrain_level.hpp"
 #include "minidayz/terrain_roads.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
+#include "minidayz/source_road_edge_paint.hpp"
 #include "minidayz/source_road_uv_crop.hpp"
 #include "minidayz/terrain_source_tile_flags.hpp"
 #include "minidayz/menu_bitmap_font.hpp"
@@ -659,11 +660,12 @@ bool Renderer::draw_original_environment_tilemaps(
  }
  return true;
 }
-bool Renderer::draw_source_road_grid(const WorldGrid& grid,
-                                    const WorldBounds& bounds,
+bool Renderer::draw_source_road_grid(const WorldSystem& world,
                                     float camera_x,float camera_y,
                                     float view_width,float view_height,
                                     std::uint8_t source_level) noexcept {
+ const auto& grid=world.grid();
+ const auto& bounds=world.bounds();
  // Roads use independent original road atlases. A damaged/missing ground
  // layout must NOT suppress an otherwise valid generated road network.
  // The scene already draws a visible floor-load diagnostic independently.
@@ -680,7 +682,7 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
   std::snprintf(name,sizeof(name),"romfs:/gfx/original_map_road_lvl%u.t3x",
                 static_cast<unsigned>(theme+1));
   auto sheet=C2D_SpriteSheetLoad(name);
-  if(!sheet || C2D_SpriteSheetCount(sheet)==0){
+  if(!sheet || C2D_SpriteSheetCount(sheet)<14){
    if(sheet)C2D_SpriteSheetFree(sheet);
    missing_theme[theme]=true;
    return false;
@@ -794,6 +796,33 @@ bool Renderer::draw_source_road_grid(const WorldGrid& grid,
             road_depth,nullptr,crop.scale_x,crop.scale_y))return false;
     }
   }
+ }
+
+ // Source SetTile leaves paint the original road-edge frames around the
+ // tile15 ranges. The world generation phase already evaluated the 12
+ // source rules. Do not run new RNG or paint over a tile15 submission.
+ const float tile=stage1::kOriginalFloorTileSize;
+ for(const auto& patch:world.source_road_edge_patches()){
+   const auto* marker=world.map_marker(patch.marker_index);
+   if(!marker)continue;
+   const auto center=world_source::mapgen_hotspot(marker->cell_x,marker->cell_y);
+   const float ox=center.x-8.5f*tile,oy=center.y-8.5f*tile;
+   if(ox>=camera_x+view_width || oy>=camera_y+view_height ||
+      ox+17.0f*tile<=camera_x || oy+17.0f*tile<=camera_y)continue;
+   for(const auto& cell:patch.tiles){
+     const float x=ox+(cell.local_index%17)*tile;
+     const float y=oy+(cell.local_index/17)*tile;
+     if(x>=camera_x+view_width||y>=camera_y+view_height||
+        x+tile<=camera_x||y+tile<=camera_y)continue;
+     const auto theme=terrain::ground_texture_at(
+         source_level,x+0.5f*tile,second_half_x);
+     if(cell.original_frame>12 || !ensure_road_sheet(theme)){
+       roads_drawn=false;continue;
+     }
+     // Atlas slot0 retains original tile15. Slots1..13 map tiles0..12.
+     if(!draw_original_tile(road_sheets_[theme],cell.original_frame+1u,
+                            x,y,tile,road_depth))return false;
+   }
  }
  return roads_drawn;
 }
