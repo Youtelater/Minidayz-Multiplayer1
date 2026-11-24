@@ -7,16 +7,13 @@
 
 namespace minidayz::terrain {
 
-// Root Construct Game_events: twelve Tilemap208 SetTile coastline branches.
-// The renderer already painted these source frames in EMPTY cells beside
-// the original authored water-frame4 neighbors. The original port had a
-// split-brain bug: the renderer displayed a shoreline while the collision
-// and footstep code used only the EMPTY pre-paint RLE cell.
-//
-// This function is the read-only effective tile for BOTH systems. It
-// retains the exact source rule order, predicates and literal tile IDs;
-// zero-neighbor branches are not applied without their missing original
-// procedural water-creation event.
+// Root Construct Game_events: twelve original Tilemap208 SetTile
+// coastline branches. Their predicates query the TARGET tile as well as
+// its neighbors. The previously invented EMPTY-only filter skipped the
+// original frame4 water tiles, so neither the renderer nor collision ever
+// applied those authored branches. Evaluate them against the same map
+// cells, in original source action order, for BOTH rendering and Solid.
+// The missing procedural source SetTile passes remain a separate gate.
 inline std::uint32_t source_water_shore_effective_tile(
     const std::vector<std::uint32_t>& cells,
     std::uint32_t columns,std::uint32_t rows,
@@ -30,14 +27,18 @@ inline std::uint32_t source_water_shore_effective_tile(
     const auto index=static_cast<std::size_t>(row)*columns+
                      static_cast<std::size_t>(column);
     const auto authored=cells[index];
-    if(authored!=kTileEmpty)return authored;
+    // Preserve authored terrain unless this is source water frame4,
+    // or an empty target whose exact original checks allow new paint.
+    // A shoreline SetTile frame replaces the previous orientation;
+    // do not reuse the original tile's flip flags without a source action.
+    if(authored!=kTileEmpty && source_tile_frame(authored)!=4u)
+        return authored;
 
     for(const auto& rule:stage1::kWaterShoreRules) {
-        bool has_original_water=false;
-        for(std::uint16_t i=0;i<rule.count;++i)
-            if(stage1::kWaterShoreChecks[rule.first+i].requires_water)
-                has_original_water=true;
-        if(!has_original_water)continue;
+        // The exact Tilemap208 CompareTile guards below determine
+        // whether the source paints this tile. Do not require a
+        // neighboring positive match while ignoring a center check.
+        // Some rules explicitly check the target itself.
         bool match=true;
         for(std::uint16_t i=0;i<rule.count;++i) {
             const auto& check=stage1::kWaterShoreChecks[rule.first+i];
