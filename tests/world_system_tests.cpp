@@ -15,6 +15,7 @@
 #include "minidayz/generated/source_car_wreck_trunks.hpp"
 #include "minidayz/generated/source_building_frame_geometry.hpp"
 #include "minidayz/generated/world_source_data.hpp"
+#include "minidayz/generated/location_event_source.hpp"
 #include "minidayz/generated/terrain_scatter_source.hpp"
 #include "minidayz/source_tree_fall_rules.hpp"
 #include "minidayz/terrain_visible_index.hpp"
@@ -2055,6 +2056,33 @@ void test_new_game_generates_visible_original_world() {
     }
     assert(changed_cells > 0);
     for (const auto* world : {&first, &second}) {
+        // A source Create/SpawnAnotherObject action must retain its exact
+        // Construct ACTION UID on every unique runtime world placement.
+        // The old native location adapter discarded these IDs (source_uid=0),
+        // so original art/event guards could not trace generated locations.
+        std::vector<std::uint64_t> source_create_actions{};
+        for(const auto& action:minidayz::stage1::kLocationEventActionSource)
+            if((action.object_index==-1 && action.command_id==94) ||
+               (action.object_index==514 && action.command_id==73))
+                source_create_actions.push_back(action.action_uid);
+        assert(!source_create_actions.empty());
+        std::sort(source_create_actions.begin(),source_create_actions.end());
+        source_create_actions.erase(
+            std::unique(source_create_actions.begin(),source_create_actions.end()),
+            source_create_actions.end());
+        std::size_t source_location_actions_preserved=0;
+        for(std::size_t i=0;i<world->placement_count();++i){
+            const auto* generated=world->placement(i);
+            assert(generated);
+            if((generated->runtime_uid & (std::uint64_t{1}<<63)) &&
+               std::binary_search(source_create_actions.begin(),
+                   source_create_actions.end(),generated->source_uid))
+                ++source_location_actions_preserved;
+        }
+        assert(world->source_location_spawn_count()>0);
+        assert(source_location_actions_preserved==
+               world->source_location_spawn_count() &&
+               "Generated locations lost root source Spawn action identity");
         // Original empty POI cells still become wilderness/forest/small
         // location markers. Every marker must select an actual extracted
         // generate_location branch; an empty-cell skip leaves barren maps.
