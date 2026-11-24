@@ -121,6 +121,7 @@ for name,nodes in p[6]:
     # A companion belongs to the exact original source event and the
     # specific base Sprite. Repeated event UIDs can serve multiple bases.
     created.append({"parent":sp[0],"child":sp[1],"layer":sp[2],
+                     "action_uid":a[3],
                     "point":sp[3],"frame":0,"animation":0,
                     "width_delta":None,"height_delta":None,
                     "angle_degrees":99999.0,"opacity":1.0,
@@ -198,7 +199,8 @@ for name,nodes in p[6]:
                  point if isinstance(point,int) else 0,
                  item["animation"],item["frame"],
                  item["width_delta"],item["height_delta"],
-                 item["angle_degrees"],item["opacity"],item["variables"]))
+                 item["angle_degrees"],item["opacity"],item["variables"],
+                  item["action_uid"]))
 if not rules:raise SystemExit("No original source house Spawn events recovered")
 # Root category 7 contains 51 primary events, all single literal variant
 # guards. Fail closed if the original changes: runtime does not consult the
@@ -293,7 +295,7 @@ lines+=["};",
 "inline constexpr std::size_t kSourceHousePrimarySpawnCount=sizeof(kSourceHousePrimarySpawns)/sizeof(kSourceHousePrimarySpawns[0]);",
 "// Root Construct create_map_element nested Sprite command 73, in action order.",
 "struct SourceHouseCompanionSpawn {",
-" std::uint64_t event_uid;std::uint16_t base_object;",
+" std::uint64_t event_uid,action_uid;std::uint16_t base_object;",
 " std::uint8_t variant;",
 " std::uint16_t sequence,parent_object,object;",
 " const char* layer;const char* point_name;std::uint8_t point_index;",
@@ -303,8 +305,8 @@ lines+=["};",
 " const char* height_hi;const char* height_lo;",
 " float angle_degrees,opacity;};",
 "inline constexpr SourceHouseCompanionSpawn kSourceHouseCompanionSpawns[]={"]
-for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd,ang,opacity,vars in rules:
- lines.append(" {"+",".join([str(uid)+"ULL",str(base),str(variant),str(seq),
+for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd,ang,opacity,vars,action_uid in rules:
+ lines.append(" {"+",".join([str(uid)+"ULL",str(action_uid)+"ULL",str(base),str(variant),str(seq),
                               str(parent),str(obj),quote(layer),
                               quote(name),str(index),str(anim),str(frame),
                               str(wd[0]) if wd else "65535",
@@ -325,7 +327,7 @@ lines += ["};",
 "inline constexpr SourceHouseCompanionVariable kSourceHouseCompanionVariables[]={",
 ]
 variable_rows=[]
-for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd,ang,opacity,vars in rules:
+for uid,base,variant,seq,parent,obj,layer,name,index,anim,frame,wd,hd,ang,opacity,vars,action_uid in rules:
  for slot,(kind,value,uid_object) in sorted(vars.items()):
   variable_rows.append((uid,base,variant,seq,obj,slot,kind,value,uid_object))
 for uid,base,variant,seq,obj,slot,kind,value,uid_object in variable_rows:
