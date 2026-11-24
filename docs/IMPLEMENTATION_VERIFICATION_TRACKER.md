@@ -1203,3 +1203,9 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - [x] Root OR conditions 4022421404306508, 1500516857956351, 4636543226443086, 1716838093260716, 1095195508750329, 170745275051737 and 9169782288583728/3168512109561106/6951772919838151/5343463397271491 now apply the original Sprite246/430/433 overlap target sets during deferred location creation. Include exact root frame[10] polygons; reject both the tree and its linked obstacle, reset rejection on unload, and only consider already-created instances (not future resident slots or same-location crash art). Stable slots retained rather than physically destroyed. Added predicate/mask regression. CI pending.
 - [ ] Remaining source quest/secret/NPC branches and full RNG parity still open; previous user emulator pass refers to the earlier revision.
+
+### Step 2 — world objects and rendering: original Solid masks
+
+- [x] Baseline `0301a039`: all four CI workflows passed; prior user-reported emulator smoke test preserved. Step 2 started by request; remaining Step 1 quest/NPC/RNG parity items are still tracked, not silently closed.
+- [x] Compare root data.deobfuscated.js Sprite345 Solid behavior and frame[10] masks: frame10 triangle (15x17), frame12 fence strip (30x30), frame27 inset polygon. Apply original collision polygons to every Solid sprite regardless of layer in the actual movement path, instead of only Buildings. Do not treat non-Solid Obstacle_enviroment effects 579/580 as walls. Paired trees use the linked source collider rather than a duplicate rectangular canopy fallback; unpaired fallback reconstructs original 345/348 frame mask. Tent398 uses its authored polygon instead of the hard-coded approximation. Broadphase preserves hotspot offsets. Added exact source polygon movement-helper regressions.
+- [ ] New native and 3DS CI, runtime draw order and missing asset checks, final in-game verification remain open.

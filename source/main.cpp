@@ -4518,10 +4518,14 @@ private:
         for(std::size_t i=0;i<scene->tents_.tent_count();++i){
             const auto* tent=scene->tents_.tent(i);
             if(!tent)continue;
-            const float dx=x-tent->x,dy=y-tent->y;
-            if(dx < -25.0f || dx > 9.0f || dy < -18.0f || dy > 28.0f)
-                continue;
-            if(dy<=-12.0f || dx<=-21.0f || dx>=5.0f)return true;
+            const auto* frame=minidayz::stage1::source_building_frame_geometry(398,0,0);
+            if(!frame)continue;
+            minidayz::WorldPlacement solid{};
+            solid.object=398;solid.x=tent->x;solid.y=tent->y;
+            solid.width=frame->width;solid.height=frame->height;
+            solid.origin_x=frame->origin_x;solid.origin_y=frame->origin_y;
+            solid.scale_x=1.0f;
+            if(minidayz::terrain::source_world_solid_mask_contains(solid,x,y))return true;
         }
         for (const auto i : scene->collision_index_.candidates(x,y)) {
             const auto* placement = scene->world_.placement(i);
@@ -4542,9 +4546,9 @@ private:
                 layer->name,placement->object);
             // Construct sprite collision is behavior-based. Visible
             // building floors/decor must not become opaque solid walls.
-            if(building && placement->object!=349 &&
-               !minidayz::stage1::source_object_has_solid_behavior(
-                   placement->object))continue;
+            // A Solid may live on any source layer. The tree fallback
+            // below is the only canopy exception; paired trees use their
+            // actual source companion, including its changed stump frame.
             // Opening a source door removes the linked Solid object
             // from collision/picking and drawing. A parked native sprite
             // with opacity 0 preserves its stable original UID linkage.
@@ -4584,39 +4588,17 @@ private:
                 (minidayz::world_source::source_tree_impact_point(
                     placement->object)!=nullptr ||
                  placement->object==210)) {
-                if(minidayz::terrain::source_standing_tree_trunk_contains(
+                if(placement->linked_runtime_uid==0 &&
+                   (minidayz::terrain::source_standing_tree_trunk_contains(
                         *placement,x,y) ||
                    minidayz::terrain::source_tree_block_solid_contains(
-                        *placement,x,y))return true;
+                        *placement,x,y)))return true;
                 continue;
             }
-            const bool barrier = std::strcmp(layer->name, "Obstacles") == 0 ||
-                                 std::strcmp(layer->name, "Obstacle_enviroment") == 0 ||
-                                 std::strcmp(layer->name, "Water") == 0 ||
-                                 minidayz::terrain::source_linked_tree_collision_hitbox(
-                                     placement->object,placement->linked_runtime_uid,
-                                     layer->name);
-            if (!building && !barrier) continue;
-            // A source Solid building with a custom Construct polygon
-            // can have door-shaped gaps, slanted walls, and furniture
-            // outlines. Never replace its authored collision with a
-            // solid rectangle covering the entire visible PNG.
-            if(building){
-                bool has_custom_polygon=false;
-                const bool hits=
-                    minidayz::world_source::source_building_polygon_contains(
-                        *placement,{x,y},has_custom_polygon);
-                if(hits)return true;
-                if(has_custom_polygon)continue;
-            }
-            // Match rotated original house and barrier sprite bounds;
-            // a static axis-aligned box blocks empty corners and doorways.
-            if (minidayz::terrain::source_solid_sprite_contains(
-                    placement->x,placement->y,
-                    placement->width,placement->height,
-                    placement->origin_x,placement->origin_y,
-                    placement->angle,x,y,placement->scale_x))
-                return true;
+            if(!minidayz::stage1::source_object_has_solid_behavior(
+                   placement->object))continue;
+            if(minidayz::terrain::source_world_solid_mask_contains(
+                   *placement,x,y))return true;
         }
         return false;
     }

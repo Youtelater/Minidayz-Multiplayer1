@@ -34,12 +34,16 @@ inline bool source_standing_tree_trunk_contains(
     const WorldPlacement& tree,float x,float y) noexcept {
     float bx{},by{};
     if(!source_standing_tree_trunk_position(tree,bx,by))return false;
-    return source_solid_sprite_contains(
-        bx,by,world_source::kOriginalTreeHitboxWidth,
-        world_source::kOriginalTreeHitboxHeight,
-        world_source::kOriginalTreeHitboxOriginX,
-        world_source::kOriginalTreeHitboxOriginY,
-        tree.angle,x,y,tree.scale_x);
+    WorldPlacement solid{};
+    solid.object=world_source::kOriginalTreeHitboxObject;
+    solid.source_frame=world_source::kOriginalTreeStandingHitboxFrame;
+    solid.x=bx;solid.y=by;
+    solid.width=world_source::kOriginalTreeHitboxWidth;
+    solid.height=world_source::kOriginalTreeHitboxHeight;
+    solid.origin_x=world_source::kOriginalTreeHitboxOriginX;
+    solid.origin_y=world_source::kOriginalTreeHitboxOriginY;
+    solid.angle=tree.angle;solid.scale_x=tree.scale_x;
+    return source_world_solid_mask_contains(solid,x,y);
 }
 
 // Source Sprite210 tree_block has its own 348 Solid for each standing
@@ -59,10 +63,13 @@ inline bool source_tree_block_solid_contains(
     const float dy=(variant->point_y-variant->origin_y)*height;
     const float bx=tree.x+dx*std::cos(angle)-dy*std::sin(angle);
     const float by=tree.y+dx*std::sin(angle)+dy*std::cos(angle);
-    return source_solid_sprite_contains(
-        bx,by,variant->solid_width,variant->solid_height,
-        variant->solid_origin_x,variant->solid_origin_y,
-        tree.angle,x,y,tree.scale_x);
+    WorldPlacement solid{};
+    solid.object=348;solid.source_frame=variant->solid_frame;
+    solid.x=bx;solid.y=by;solid.width=variant->solid_width;
+    solid.height=variant->solid_height;
+    solid.origin_x=variant->solid_origin_x;solid.origin_y=variant->solid_origin_y;
+    solid.angle=tree.angle;solid.scale_x=tree.scale_x;
+    return source_world_solid_mask_contains(solid,x,y);
 }
 
 // 3DS-only visibility adaptation. The original root tree event tree has no

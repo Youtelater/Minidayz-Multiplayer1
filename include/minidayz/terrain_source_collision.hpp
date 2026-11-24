@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include "minidayz/generated/source_family_members.hpp"
+#include "minidayz/source_building_polygon_collision.hpp"
 
 namespace minidayz::terrain {
 
@@ -80,5 +81,16 @@ inline bool source_solid_sprite_contains(
     const float px=local_x+width*origin_x;
     const float py=local_y+height*origin_y;
     return px>=0.0f&&py>=0.0f&&px<=width&&py<=height;
+}
+
+// Every source Solid sprite uses its active frame mask, regardless of
+// layer. Empty custom polygons have Construct default rectangular bounds.
+inline bool source_world_solid_mask_contains(const WorldPlacement& p,
+                                             float x,float y) noexcept {
+    bool known=false;
+    const bool hit=world_source::source_building_polygon_contains(p,{x,y},known);
+    if(known)return hit;
+    return source_solid_sprite_contains(p.x,p.y,p.width,p.height,
+        p.origin_x,p.origin_y,p.angle,x,y,p.scale_x);
 }
 }

@@ -48,17 +48,12 @@ public:
                   p->source_frame==0) ||
                  (p->object==210 && world_source::source_tree_block_frame(
                      p->source_frame)!=nullptr));
-            const bool barrier=standalone_tree ||
-                               std::strcmp(layer->name,"Obstacles")==0 ||
-                               std::strcmp(layer->name,"Obstacle_enviroment")==0 ||
-                               std::strcmp(layer->name,"Water")==0 ||
-                               source_linked_tree_collision_hitbox(
-                                   p->object,p->linked_runtime_uid,layer->name);
-            if(!building&&!barrier)continue;
-            // The Buildings layer includes decorative floors and roofs.
-            // Only original Construct Solid sprites (or door 349 with
-            // its separate Solid-348 companion) enter collision broadphase.
-            if(building && p->object!=349 &&
+            // Construct Solid is an object behavior, not a layer property.
+            // In particular, category4/5/6 generates Sprite345 on zed_resp
+            // and source foundations can be created on non-Buildings layers.
+            // Non-Solid Bullet/Fade sprites579/580 on Obstacle_enviroment
+            // must never become walls just because of the layer name.
+            if(!standalone_tree && !(building && p->object==349) &&
                !stage1::source_object_has_solid_behavior(p->object))continue;
             // Conservative circumscribed AABB covers every rotation and
             // hotspot, without producing false negatives at the border.
@@ -71,7 +66,12 @@ public:
             // frame 15. Index the entire possible companion footprint;
             // otherwise a movement query can miss it even though polygon
             // collision below uses the correct source frame.
-            float radius=std::hypot(p->width,p->height)+
+            // Authored origins can be outside [0,1]. Bound every
+            // hotspot-relative corner, not only width/height.
+            float radius=std::hypot(
+                p->width*std::max(std::fabs(p->origin_x),std::fabs(1.0f-p->origin_x)),
+                p->height*std::max(std::fabs(p->origin_y),std::fabs(1.0f-p->origin_y)))+
+                std::hypot(p->width,p->height)+
                 (p->object==349
                     ? std::hypot(world_source::door_solid348::kWidth,
                                  world_source::door_solid348::kHeight)

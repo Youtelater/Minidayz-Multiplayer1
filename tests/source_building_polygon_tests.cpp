@@ -127,6 +127,33 @@ int main(){
     assert(!source_picked_house_foundation_overlaps_wall(picked,touched));
     picked.object=302; touched.object=347;touched.x=500.0f;touched.y=500.0f;
     assert(!source_picked_house_foundation_overlaps_wall(picked,touched));
+    // Root Sprite345 frame12 fence has only a narrow lower collision
+    // strip, while frame10 trunk is a triangle. Empty PNG space is not
+    // solid. Check the same helper used by actual gameplay movement.
+    WorldPlacement fence{};
+    fence.object=345;fence.source_frame=12;fence.x=100;fence.y=200;
+    fence.width=fence.height=30;fence.origin_x=fence.origin_y=0.5f;
+    fence.scale_x=1;
+    assert(stage1::source_object_has_solid_behavior(345));
+    assert(!terrain::source_world_solid_mask_contains(fence,100,200));
+    assert(terrain::source_world_solid_mask_contains(fence,100,209));
+    fence.angle=90;fence.scale_x=-1;
+    assert(terrain::source_world_solid_mask_contains(fence,91,200));
+    assert(!terrain::source_world_solid_mask_contains(fence,100,200));
+    WorldPlacement trunk{};
+    trunk.object=345;trunk.source_frame=10;
+    trunk.x=100;trunk.y=200;trunk.width=15;trunk.height=17;
+    trunk.origin_x=7.0f/15;trunk.origin_y=11.0f/17;trunk.scale_x=1;
+    assert(terrain::source_world_solid_mask_contains(trunk,100,200));
+    assert(!terrain::source_world_solid_mask_contains(trunk,94,191));
+    WorldPlacement tent{};
+    tent.object=398;tent.width=49;tent.height=65;
+    tent.origin_x=25.0f/49;tent.origin_y=33.0f/65;tent.scale_x=1;
+    assert(terrain::source_world_solid_mask_contains(tent,-23,0));
+    assert(!terrain::source_world_solid_mask_contains(tent,0,0));
+    assert(!terrain::source_world_solid_mask_contains(tent,0,28));
+    assert(!stage1::source_object_has_solid_behavior(579));
+    assert(!stage1::source_object_has_solid_behavior(580));
     WorldPlacement missing{};
     missing.object=9999;
     missing.width=missing.height=20.0f;
