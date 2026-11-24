@@ -38,6 +38,16 @@ inline float source_outdoor_night_opacity(unsigned hour,unsigned minute,
     return std::clamp((percent-night_light_addition)*0.01f,0.0f,1.0f);
 }
 
+// Bunker_generate / FinalStand_generate (305470436850518,
+// 113177369442063) set inBunker=1 and inRaid=1. Their children
+// 453618219439986 / 830000454019733 set Day_mode=1, hide night,
+// and disable night_force_texture. Do not use the outdoor hour
+// to make the bunker dark. This helper takes the actual scene state,
+// not the island index or proximity to an entrance.
+inline bool source_night_layer_visible(unsigned hour,bool in_bunker) noexcept {
+    return !in_bunker && (hour<=5 || (hour>=19 && hour<=24));
+}
+
 // Original Game_events 316761403775120 (18:30, frame 0) and
 // 347882179964897 (05:30, frame 1) create GUI Color_effect Sprite971.
 // Its authored Fade behaviour is [1,65,0,25,1]: 65s in, no hold,
@@ -95,6 +105,9 @@ public:
         return true;
     }
     void reset() noexcept { state_={}; }
+    // Call on the original bunker/FinalStand entry event, not on
+    // approach to the entrance. The clock continues to tick underground.
+    void enter_bunker() noexcept { state_.day_mode=true; }
     unsigned hour() const noexcept { return state_.timer_all/60u; }
     unsigned minute() const noexcept { return state_.timer_all%60u; }
     bool day_mode() const noexcept { return state_.day_mode; }
