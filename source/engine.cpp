@@ -63,6 +63,8 @@ bool Renderer::initialize() noexcept {
  C2D_Prepare();
  top_=C2D_CreateScreenTarget(GFX_TOP,GFX_LEFT);
  bottom_=C2D_CreateScreenTarget(GFX_BOTTOM,GFX_LEFT);
+ // C2D and C3D are live even if both target allocations failed.
+ initialized_=true;
  if(!top_||!bottom_){ shutdown(); return false; }
  // Original source SetTile patches are generated with the world.
  debug_font_=C2D_FontLoadSystem(CFG_REGION_USA);
@@ -988,6 +990,12 @@ void Engine::run() noexcept {
   const u64 now=osGetTime();
   const float dt=static_cast<float>(now-previous_time_)/1000.0f;
   previous_time_=now; update(dt); render(); ++frame_number_;
+  if(frame_number_==1){
+   if(auto* file=std::fopen("sdmc:/3ds/Minidayz/boot.log","a")){
+    std::fputs("first menu frame submitted\n",file);
+    std::fclose(file);
+   }
+  }
  }
 }
 void Engine::shutdown() noexcept {
