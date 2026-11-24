@@ -229,6 +229,23 @@ def main():
                              for n in ancestors[-3:]]
             },separators=(",",":")))
     assert pond_written, "Original procedural pond branch missing"
+    # Trace the original bridge and startup lifecycle entrypoints and
+    # their transitions before replacing the native direct-next-map shortcut.
+    for (sheet,path),(event,ancestors) in event_lookup.items():
+        if sheet!="Game_events":continue
+        def relevant_bridge(a):
+            if len(a)<6:return False
+            return (a[:2]==[189,69] and a[5][0][1] in (
+                [2,"Load_bridge_level"],[2,"Reload_locations_start"],
+                [2,"Reload_locations_aftersave"],[2,"mapgen_toelements"])) or (
+                a[:2]==[-1,41] and a[5][0] in ([11,"onBridge"],[11,"inRaid"]))
+        if event[4] in (1131020651387518,482054460208135,793361912924261) or any(
+                relevant_bridge(a) for a in event[6]):
+            print("STEP1_BRIDGE_LIFECYCLE",json.dumps({
+                "path":path,"event":event[:7],
+                "parents":[{"uid":n[4],"guards":n[5],"actions":n[6]}
+                           for n in ancestors[-3:]]
+            },separators=(",",":")))
     other_ids={895209268453600,458228549101251,506106248958134,2084078328497493}
     for record in records:
         if record["action_uid"] not in other_ids:continue
