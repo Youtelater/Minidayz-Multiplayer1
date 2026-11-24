@@ -77,6 +77,7 @@
 #include <sys/stat.h>
 
 namespace {
+void boot_checkpoint(const char* stage, bool reset=false) noexcept;
 // Original Start events initialize rains_level=2 for the normal source map.
 // Rain event 609331584746158 chooses blizzard.wav specifically for value 2.
 constexpr std::uint8_t kSourceDefaultRainsLevel=2;
@@ -312,18 +313,24 @@ public:
         // behavior. Load the exact Map RLE occupancy once from the RomFS
         // so the player collides with visible tiles, not huge empty tilemap
         // bounding boxes. Failure leaves basic sprite collision enabled.
+        boot_checkpoint("loading terrain collision");
         (void)terrain_collision_.load(
             "romfs:/gfx/original_map_details_layout.bin");
+        boot_checkpoint("terrain collision loaded");
         // Audio is optional. RomFS is already mounted by Engine::initialize;
         // DSP failure must never prevent inventory or crafting gameplay.
+        boot_checkpoint("initializing audio");
         (void)stage2_audio_.initialize();
+        boot_checkpoint("audio initialization returned");
         // Original Menu_Events starts ambient on entering the main menu.
         // Playback uses the same day-loop channel as gameplay, at -10 dB.
         stage2_audio_.start_menu_ambience();
+        boot_checkpoint("menu ambience returned");
         std::mt19937 menu_rng(world_seed_);
         (void)minidayz::world_source::build_special_terrain(
             minidayz::world_source::SourceSpecialTerrainEvent::MenuStart,
             menu_rng,menu_source_terrain_);
+        boot_checkpoint("menu terrain ready");
     }
 
     void on_exit() noexcept override {
@@ -4813,7 +4820,7 @@ private:
 
 namespace {
 // Native startup diagnostics only; do not change original game events or saves.
-void boot_checkpoint(const char* stage, bool reset=false) noexcept {
+void boot_checkpoint(const char* stage, bool reset) noexcept {
     (void)mkdir("sdmc:/3ds",0777);
     (void)mkdir("sdmc:/3ds/Minidayz",0777);
     if(auto* file=std::fopen("sdmc:/3ds/Minidayz/boot.log",reset?"w":"a")){
