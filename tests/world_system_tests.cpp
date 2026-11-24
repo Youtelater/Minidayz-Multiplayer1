@@ -3386,7 +3386,46 @@ static void test_original_category3_elements(){
     }
 }
 
+static void test_original_category5_elements(){
+    minidayz::WorldSystem world;
+    assert(world.begin_source_generation(123456u,"Map",0,0,false,false,false,false,true,true,true));
+    const auto rng=world.source_random();
+    for(std::uint8_t v=0;v<=15;++v){
+        const auto first=world.placement_count();
+        assert(world.expand_map_element(5,v,0,{1000,2000},0)==1);
+        const auto* base=world.placement(first);
+        const auto* solid=world.placement(first+1);
+        assert(base && base->object==439 && base->source_frame==std::min<unsigned>(v,12));
+        assert(solid && solid->object==345 && solid->source_frame==(v<12?23u:27u));
+        assert(solid->width==(v<12?5.0f:30.0f));
+        assert(solid->x==base->x && solid->y==base->y);
+        assert(solid->source_variable_0==base->runtime_uid);
+        assert(solid->linked_runtime_uid==base->runtime_uid && base->linked_runtime_uid==solid->runtime_uid);
+        assert(world.placement_count()==first+(v>=12&&v<=14?3u:2u));
+        if(v>=12&&v<=14){
+            const auto* light=world.placement(first+2);
+            assert(light->object==663 && light->source_frame==(v==13?0u:1u));
+            assert(light->parent_runtime_uid==base->runtime_uid);
+            assert(light->source_variable_0==base->runtime_uid);
+            assert(light->scale_x==(v==14?-1.0f:1.0f));
+            assert(minidayz::world_source::source_world_high_layer_gameplay_art(
+                light->object,"night",light->source_uid));
+            const float x[]={986.0f,999.0f,1011.0f};
+            const float y[]={1862.0f,1864.0f,1862.0f};
+            assert(std::fabs(light->x-x[v-12])<0.01f);
+            assert(std::fabs(light->y-y[v-12])<0.01f);
+        }
+    }
+    assert(world.source_random()==rng);
+    minidayz::WorldSystem legacy;
+    assert(legacy.begin_source_generation(123456u,"Map",0));
+    const auto n=legacy.placement_count();
+    assert(legacy.expand_map_element(5,12,0,{1000,2000},0)==1);
+    assert(legacy.placement_count()==n+1);
+}
+
 int main() {
+    test_original_category5_elements();
     test_original_category3_elements();
     test_original_location_reload_selection();
     test_source_start_event_order();

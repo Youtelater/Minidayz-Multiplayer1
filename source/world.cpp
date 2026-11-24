@@ -539,6 +539,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     legacy_site_generation_ = false;
     source_start_events_ = false;
     source_category3_events_ = false;
+    source_category5_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -555,7 +556,8 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           bool legacy_split_roads,
                                           bool legacy_crash_coordinates,
                                           bool legacy_site_generation,
-                                          bool source_start_events, bool source_category3_events) {
+                                          bool source_start_events, bool source_category3_events,
+                                          bool source_category5_events) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
@@ -566,6 +568,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
     legacy_site_generation_ = legacy_crash_coordinates_ || legacy_site_generation;
     source_start_events_ = source_start_events && !legacy_site_generation_ && name == "Map";
     source_category3_events_ = source_category3_events && name == "Map";
+    source_category5_events_ = source_category5_events && name == "Map";
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -1788,6 +1791,7 @@ void WorldSystem::reset() noexcept {
     legacy_site_generation_ = false;
     source_start_events_ = false;
     source_category3_events_ = false;
+    source_category5_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -1951,6 +1955,76 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                     loot.source_variable_0=stones?29u:37u;
                     loot.source_loot_category=stones?29u:37u;
                     loot.source_initial_loot_trigger=true;
+                }
+            }
+        }
+
+        // Original category5 group 3897109388014934, Sprite439.
+        // Branches below 12 choose their actual frame, >=12 use frame12
+        // and a different obstacle; variants 12/13/14 spawn light663.
+        // No random draws: all choices are exact Mapgen508.var2 values.
+        if(source_category5_events_ && var1==5 && rule.object==439){
+            const unsigned frame=std::min<unsigned>(var2,12);
+            struct Frame {float w,h,ox,oy;};
+            static constexpr Frame frames[]={
+                {73,143,.3835616409778595f,.9720279574394226f},
+                {40,72,.2249999940395355f,.9722222089767456f},
+                {40,72,.2249999940395355f,.9722222089767456f},
+                {1,1,0,1},{1,1,0,1},{1,1,0,1},{1,1,0,1},{1,1,0,1},
+                {42,85,.0476190485060215f,.9058823585510254f},
+                {1,1,0,1},{1,1,0,1},{1,1,0,1},
+                {93,179,.2473118305206299f,.9720670580863953f}
+            };
+            auto& base=placements_[primary_index];
+            const auto& g=frames[frame];
+            base.source_frame=frame;
+            base.width=g.w;base.height=g.h;base.origin_x=g.ox;base.origin_y=g.oy;
+            const auto parent=base;
+            static constexpr std::uint64_t obstacle_actions[]={
+                6050888076990166ULL,9992093912913937ULL,
+                7389302102398237ULL,9052307172457579ULL,4199885202842253ULL};
+            const auto dest=find_layer_index_by_name(layout_index,"zed_resp");
+            if(dest!=0xffff){
+                const bool small=var2<12;
+                const unsigned branch=small?0u:static_cast<unsigned>(var2)-11u;
+                placements_.push_back({dest,345,obstacle_actions[branch],
+                    parent.x,parent.y,0.0f,small?5.0f:30.0f,small?5.0f:14.0f,
+                    0.0f,1.0f,1.0f,small?.4000000059604645f:.2666666805744171f,
+                    small?.6000000238418579f:.4285714328289032f,0,small?23u:27u});
+                auto& obstacle=placements_.back();
+                obstacle.instance_id=placements_.size();
+                obstacle.runtime_uid=(std::uint64_t{1}<<63)|obstacle.instance_id;
+                obstacle.parent_runtime_uid=parent.runtime_uid;
+                obstacle.linked_runtime_uid=parent.runtime_uid;
+                obstacle.source_variable_0=parent.runtime_uid;
+                placements_[primary_index].linked_runtime_uid=obstacle.runtime_uid;
+            }
+            if(var2>=12 && var2<=14){
+                // Source frame12 has l1/l2/l3 named points. Variant14
+                // executes 663.SetMirrored(0) after choosing frame1.
+                static constexpr float light_points[][2]={
+                    {.09677419066429138f,.2011173218488693f},
+                    {.2365591377019882f,.212290495634079f},
+                    {.3655914068222046f,.2011173218488693f}};
+                static constexpr std::uint64_t light_actions[]={
+                    341262524995903ULL,5644133325728841ULL,5580795606807771ULL};
+                const unsigned n=var2-12;
+                const bool tall=var2==13;
+                const auto light_layer=find_layer_index_by_name(layout_index,"night");
+                if(light_layer!=0xffff){
+                    placements_.push_back({light_layer,663,light_actions[n],
+                        parent.x+(light_points[n][0]-g.ox)*g.w,
+                        parent.y+(light_points[n][1]-g.oy)*g.h,
+                        0.0f,125.0f,tall?199.0f:119.0f,0.0f,1.0f,
+                        var2==14?-1.0f:1.0f,
+                        tall?.4639999866485596f:.9279999732971191f,
+                        tall?.02010050229728222f:.03361344709992409f,
+                        static_cast<std::uint8_t>(n+3),tall?0u:1u});
+                    auto& light=placements_.back();
+                    light.instance_id=placements_.size();
+                    light.runtime_uid=(std::uint64_t{1}<<63)|light.instance_id;
+                    light.parent_runtime_uid=parent.runtime_uid;
+                    light.source_variable_0=parent.runtime_uid;
                 }
             }
         }
@@ -2666,12 +2740,13 @@ const WorldPlacement* WorldSystem::placement_by_instance_id(
 }
 
 bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level,
-                        std::uint8_t perk_dao, bool source_start_events, bool source_category3_events) noexcept {
+                        std::uint8_t perk_dao, bool source_start_events, bool source_category3_events,
+                        bool source_category5_events) noexcept {
     cancel();
     try {
         auto candidate = std::make_unique<WorldSystem>();
         if (!candidate->begin_source_generation(seed, "Map", level, perk_dao,
-                                               false, false, false, false, source_start_events, source_category3_events)) return false;
+                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events)) return false;
         destination_ = std::move(candidate);
         return true;
     } catch (const std::bad_alloc&) {

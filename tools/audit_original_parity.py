@@ -94,6 +94,27 @@ if parsed.is_file() and original.is_file():
                         for a in event[6]) and any(a[:2]==[218,88] and a[5]==[[10,0],[7,[0,category]]]
                         for a in event[6]) and any(a[:2]==[189,69] and a[5][0]==[1,[2,"Trigger_spawn"]]
                         for a in event[6]),"Original category3 loot action "+str(category))
+        # Category5 source creation chains, frame actions and links.
+        for uid,variant,obstacle,light in (
+            (767151885662534,11,6050888076990166,0),
+            (3978431721379936,12,9992093912913937,341262524995903),
+            (1475362018701672,13,7389302102398237,5644133325728841),
+            (3429345725247912,14,9052307172457579,5580795606807771),
+            (1736343353967656,15,4199885202842253,0)):
+            actions=by_id[uid][6]
+            require(any(a[:2]==[439,73] and a[3]==obstacle and
+                        a[5]==[[4,345],[5,[2,"zed_resp"]],[7,[0,0]]]
+                        for a in actions) and any(a[:2]==[345,72] and
+                        a[5]==[[0,[0,23 if variant<12 else 27]]] for a in actions),
+                    "Original category5 obstacle branch "+str(variant))
+            if light:
+                require(any(a[:2]==[439,73] and a[3]==light and
+                        a[5]==[[4,663],[5,[2,"night"]],[7,[2,"l"+str(variant-11)]]]
+                        for a in actions) and any(a[:2]==[663,72] and
+                        a[5]==[[0,[0,0 if variant==13 else 1]]] for a in actions),
+                    "Original category5 light branch "+str(variant))
+        require(any(a[:2]==[663,159] and a[5]==[[3,0]]
+                    for a in by_id[3429345725247912][6]),"Original third lamp mirror")
         timer=by_id[583575774431491][5]
         require(any(c[:2]==[-1,77] and c[9]==[[0,[0,1]]] for c in timer)
                 and any(c[:2]==[-1,51] and c[9][1:]==[[8,4],[7,[0,400]]]
@@ -119,7 +140,7 @@ floor = text("tools/stage1/build_ground_floor.py")
 ui_builder = text("tools/stage2/build_inventory_ui_art.py")
 makefile = text("Makefile")
 require("start_new_game()" in game and
-        'begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_)' in game and
+        'begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_, !legacy_category5_events_)' in game and
         'world_level_ = 0;' in game and
         "advance_source_generation()" in game and
         "generation_complete()" in game,

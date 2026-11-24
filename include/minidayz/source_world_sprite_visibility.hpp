@@ -48,6 +48,11 @@ inline bool source_world_high_layer_gameplay_art(
     if ((object==241 && std::strcmp(source_layer_name,"Sunset_Dawn")==0) ||
         (object==1126 && std::strcmp(source_layer_name,"Rain")==0))
         return true;
+    // Exact category5 Sprite439 -> Sprite663 night light creation actions.
+    if(object==663 && std::strcmp(source_layer_name,"night")==0 &&
+       (source_creation_event_uid==341262524995903ULL ||
+        source_creation_event_uid==5644133325728841ULL ||
+        source_creation_event_uid==5580795606807771ULL))return true;
 
     // The original create_map_element source also creates world sprites
     // on high event layers, e.g. object1417/1419 on "night" and 1420 on

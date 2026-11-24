@@ -108,6 +108,7 @@ public:
           legacy_site_generation_(restored && restored->version < 26u),
           legacy_start_order_(restored && restored->version < 27u),
           legacy_category3_events_(restored && restored->version < 28u),
+          legacy_category5_events_(restored && restored->version < 29u),
           world_level_(restored ? restored->world_level : 0),
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
@@ -201,6 +202,7 @@ public:
         legacy_site_generation_=restored->version < 26u;
         legacy_start_order_=restored->version < 27u;
         legacy_category3_events_=restored->version < 28u;
+        legacy_category5_events_=restored->version < 29u;
         player_=minidayz::PlayerSystem(restored->player);
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
@@ -267,7 +269,8 @@ public:
                               bool legacy_crash_coordinates = false,
                               bool legacy_site_generation = false,
                               bool legacy_start_order = false,
-                              bool legacy_category3_events = false) noexcept {
+                              bool legacy_category3_events = false,
+                              bool legacy_category5_events = false) noexcept {
         minidayz::persistence::PendingCraftSnapshot craft{};
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount &&
             pending_craft_seconds_ > 0.0f) {
@@ -276,12 +279,12 @@ public:
         }
         return write_saved_game(seed, survivor, inventory_, equipment_, loot,
             tents, &item_use_runtime_, &perks_, stashes, &day_night_,
-            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events);
+            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events);
     }
 
     bool write_scene_save() noexcept {
         if (!write_survivor_save(world_seed_, world_level_, player_.state(),
-                                 ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, legacy_start_order_, legacy_category3_events_)) return false;
+                                 ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, legacy_start_order_, legacy_category3_events_, legacy_category5_events_)) return false;
         // Persist changed original object frames separately, with the same
         // seed/level and a checksum. Do not report Save success unless
         // world state is recorded too.
@@ -379,6 +382,7 @@ public:
                     legacy_site_generation_ = false;
                     legacy_start_order_ = false;
                     legacy_category3_events_ = false;
+                    legacy_category5_events_ = false;
                     world_ = std::move(generating);
                     travel_.cancel();
                     ground_loot_=std::move(*generated_initial_loot);
@@ -4227,7 +4231,7 @@ private:
 
         // Keep the active world and its save state usable until the
         // destination has generated and accepted the survivor's spawn.
-        if (!travel_.begin(destination_seed, destination_level, 0, true, true)) {
+        if (!travel_.begin(destination_seed, destination_level, 0, true, true, true)) {
             travel_failed_ = true;
             return;
         }
@@ -4263,6 +4267,7 @@ private:
         legacy_site_generation_ = false;
         legacy_start_order_ = false;
         legacy_category3_events_ = false;
+        legacy_category5_events_ = false;
         player_ = minidayz::PlayerSystem(make_initial_state());
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
@@ -4377,7 +4382,7 @@ private:
         source_player_outline_=false;
         source_roof_elapsed_=0.0f;
         source_roof_background_layer_=0xffff;
-        loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_);
+        loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_, !legacy_category5_events_);
         if (!loading_world_) fail_world_generation();
     }
 
@@ -4633,6 +4638,7 @@ private:
     bool legacy_site_generation_{};
     bool legacy_start_order_{};
     bool legacy_category3_events_{};
+    bool legacy_category5_events_{};
     std::uint8_t world_level_{};
     minidayz::WorldTravel travel_;
     bool travel_failed_{};

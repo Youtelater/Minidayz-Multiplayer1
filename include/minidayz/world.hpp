@@ -220,7 +220,8 @@ public:
                                  bool legacy_crash_coordinates = false,
                                  bool legacy_site_generation = false,
                                  bool source_start_events = false,
-                                 bool source_category3_events = false);
+                                 bool source_category3_events = false,
+                                 bool source_category5_events = false);
     bool advance_source_generation();
     std::uint8_t generation_phase() const noexcept { return generation_phase_; }
     bool generation_complete() const noexcept { return generation_phase_ == 6; }
@@ -365,6 +366,7 @@ private:
     bool legacy_site_generation_{};
     bool source_start_events_{};
     bool source_category3_events_{};
+    bool source_category5_events_{};
     bool source_start_ready_{};
     WorldPoint source_start_position_{};
     // Root Array518 is at most 16x33; retain dormant native geometry and
@@ -404,7 +406,8 @@ class WorldTravel {
 public:
     bool begin(std::uint32_t seed, std::uint8_t level,
                std::uint8_t perk_dao = 0, bool source_start_events = false,
-               bool source_category3_events = false) noexcept;
+               bool source_category3_events = false,
+               bool source_category5_events = false) noexcept;
     bool advance() noexcept;
     WorldSystem* destination() const noexcept { return destination_.get(); }
     void cancel() noexcept { destination_.reset(); }
