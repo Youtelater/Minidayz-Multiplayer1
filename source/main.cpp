@@ -4811,32 +4811,80 @@ private:
 
 } // namespace
 
+namespace {
+// Native startup diagnostics only; do not change original game events or saves.
+void boot_checkpoint(const char* stage, bool reset=false) noexcept {
+    (void)mkdir("sdmc:/3ds",0777);
+    (void)mkdir("sdmc:/3ds/Minidayz",0777);
+    if(auto* file=std::fopen("sdmc:/3ds/Minidayz/boot.log",reset?"w":"a")){
+        std::fprintf(file,"%s\n",stage);
+        std::fclose(file);
+    }
+}
+void show_boot_failure(const char* stage) noexcept {
+    gfxInitDefault();
+    consoleInit(GFX_BOTTOM,nullptr);
+    std::printf("Mini DAYZ 3DS startup failed\n%s\nPress START to exit.\n",stage);
+    while(aptMainLoop()){
+        hidScanInput();
+        if(hidKeysDown()&KEY_START)break;
+        gspWaitForVBlank();
+    }
+    gfxExit();
+}
+}
+
 int main(int argc, char* argv[]) {
     (void)argc;
     (void)argv;
 
-    minidayz::Engine engine;
+    boot_checkpoint("main entered",true);
+    // The expanded 128-page cache made Engine roughly 13 KiB larger.
+    // Keep the renderer and its cache metadata off the limited main stack.
+    static minidayz::Engine engine;
     if (!engine.initialize()) {
-        std::printf("Mini DAYZ+: engine initialization failed.\\n");
+        boot_checkpoint("engine initialization failed");
+        show_boot_failure("Engine / RomFS / GPU initialization");
         return 1;
     }
+    boot_checkpoint("engine initialized");
+    {
+        auto& renderer=engine.renderer();
+        renderer.begin_frame();
+        renderer.begin_screen(GFX_TOP);
+        renderer.draw_text("MINI DAYZ - STARTING",40.0f,100.0f,0.6f);
+        renderer.begin_screen(GFX_BOTTOM);
+        renderer.draw_text("LOADING MENU",20.0f,100.0f,0.45f);
+        renderer.end_frame();
+    }
 
-    // The v21 original loot snapshot and full world scene are larger than
-    // the earlier 64-item build. Avoid constructing both on the main stack.
     std::unique_ptr<SavedGame> restored(new(std::nothrow) SavedGame{});
     if(!restored){
+        boot_checkpoint("save buffer allocation failed");
         engine.shutdown();
+        show_boot_failure("Save buffer allocation");
         return 1;
     }
+    boot_checkpoint("reading save");
     const bool has_saved_game = load_saved_game(*restored);
+    boot_checkpoint(has_saved_game?"save validated":"no valid save");
     std::unique_ptr<WorldPreviewScene> scene(new(std::nothrow)
         WorldPreviewScene(has_saved_game ? restored.get() : nullptr));
-    if (!scene || !engine.set_scene(scene.get())) {
-        std::printf("Mini DAYZ+: startup scene attachment failed.\\n");
+    if (!scene) {
+        boot_checkpoint("scene allocation failed");
         engine.shutdown();
+        show_boot_failure("Scene allocation");
         return 1;
     }
-
+    restored.reset();
+    boot_checkpoint("attaching scene");
+    if (!engine.set_scene(scene.get())) {
+        boot_checkpoint("scene attachment failed");
+        engine.shutdown();
+        show_boot_failure("Scene attachment");
+        return 1;
+    }
+    boot_checkpoint("entering main loop");
     engine.run();
     engine.shutdown();
     return 0;
