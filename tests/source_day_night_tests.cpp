@@ -38,6 +38,31 @@ int main() {
     assert(source_night_tiled_index(8,0,512)==64);
     assert(source_night_tiled_index(0,8,512)==4096);
     SourceDayNightClock clock;
+    SourceTwilightFade twilight;
+    // A fresh 06:01 game did not cross the original 05:30 creation event.
+    assert(near(twilight.opacity(),0.0f));
+    auto advance_twilight=[&](float dt){
+        const auto before=clock.snapshot();
+        assert(clock.update(dt));
+        twilight.advance(before,clock.snapshot(),dt);
+    };
+    assert(clock.restore({1109,1.0f,true}));
+    advance_twilight(0.5f);
+    assert(twilight.frame()==0 && near(twilight.opacity(),0.0f));
+    advance_twilight(32.5f);
+    assert(near(twilight.opacity(),0.5f));
+    advance_twilight(32.5f);
+    assert(near(twilight.opacity(),1.0f));
+    advance_twilight(12.5f);
+    assert(near(twilight.opacity(),0.5f));
+    advance_twilight(12.5f);
+    assert(near(twilight.opacity(),0.0f));
+    assert(clock.restore({329,1.0f,false}));
+    advance_twilight(1.0f);
+    assert(twilight.frame()==1 && near(twilight.opacity(),0.5f/65.0f));
+    twilight.reset();
+    assert(near(twilight.opacity(),0.0f));
+    clock.reset();
     assert(clock.snapshot().timer_all==361);
     assert(clock.hour()==6 && clock.minute()==1 && clock.day_mode());
     assert(clock.update(1.49f));
