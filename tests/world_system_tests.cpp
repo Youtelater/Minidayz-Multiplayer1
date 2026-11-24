@@ -1,3 +1,4 @@
+#include <memory>
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
@@ -2997,7 +2998,28 @@ void test_original_box_drop_catalog() {
     assert(kSourceBoxDrops[mixed->first].choose);
     assert(kSourceBoxDrops[mixed->first].count==6);
     assert(!source_box_category(0));
-    assert(!source_box_category(51)); // nested RNG requires further port
+    assert(!source_box_category(51)); // nested cases have their own dispatch
+    // Exercise every first-choice bucket with the same source RNG mapping;
+    // all reachable normal branches must generate real source items.
+    auto ground=std::make_unique<GroundLootSystem>();
+    for(const unsigned category:{51u,52u,53u}){
+        for(std::uint32_t seed=0;seed<512;++seed){
+            ground->clear();
+            std::mt19937 random(seed);
+            assert(source_box_default_nested_drops(category,random,*ground,1000,1000));
+            assert(ground->count()>0 && ground->count()<=8);
+            for(std::size_t i=0;i<ground->count();++i){
+                const auto* entry=ground->entry(i);
+                assert(entry && source_item_exists(entry->item.item_id));
+                assert(std::abs(entry->x-1000.0f)<=10.0f);
+                assert(std::abs(entry->y-1000.0f)<=10.0f);
+            }
+        }
+    }
+    ground->clear();
+    std::mt19937 random(7);
+    assert(!source_box_default_nested_drops(0,random,*ground,0,0));
+    assert(ground->count()==0);
 }
 
 void test_original_bunker_container_open_save_replay() {
