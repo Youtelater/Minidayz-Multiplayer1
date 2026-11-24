@@ -120,7 +120,7 @@ if parsed.is_file() and original.is_file():
         # Original erase_map_element destroys transient actors and stores
         # only the searched car state into row5 on erase_map_location.
         for uid,obj in ((7260729040565349,184),(3769234513304437,207),
-                        (8773721931942066,209),(3939261448234603,349),
+                        (8773721931942066,209),(3939261448232603,349),
                         (8526304863794774,1048),(8522529320050883,1049),
                         (4222259968877768,296),(4481536163489103,442)):
             require(any(a[:2]==[obj,53] for a in by_id[uid][6]),'Root erased object '+str(obj))
