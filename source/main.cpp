@@ -1579,8 +1579,8 @@ public:
             renderer.draw_text("GENERATING WORLD", 45.0f, 52.0f, 0.52f);
             static constexpr const char* steps[] = {
                 "GENERATING GRID AND ROADS", "BUILDING MAP MARKERS",
-                "PLACING SOURCE LOCATIONS", "ADDING BUNKERS",
-                "ADDING BRIDGES", "FINALIZING WORLD"
+                "GENERATING LOCATION PROPOSALS", "CRASHES AND BUNKERS",
+                "VEHICLES AND LOCATION LOADING", "FINALIZING WORLD"
             };
             const auto* destination = travel_.destination();
             const auto phase = destination ? destination->generation_phase()

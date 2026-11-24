@@ -2508,6 +2508,23 @@ void test_every_source_level_quota() {
 // Test the complete five-phase New Game pipeline on EVERY source world.
 // Previous quota-only tests could pass while location/event generation on
 // later maps failed and returned the user to the boot menu.
+void test_source_startup_proposals_precede_materialization() {
+    minidayz::WorldSystem world;
+    assert(world.begin_source_generation(0x4d444159u,"Map",3));
+    assert(world.advance_source_generation()); // Array locations and roads
+    assert(world.advance_source_generation()); // Array -> Mapgen514
+    assert(world.advance_source_generation()); // generate_mapgen_toelements
+    assert(world.generation_phase()==4);
+    assert(world.source_ground_patches().empty());
+    assert(world.source_scatter_patches().empty());
+    assert(world.advance_source_generation()); // crash, bunker, radiation
+    assert(world.generation_phase()==5);
+    assert(world.source_ground_patches().empty());
+    assert(world.advance_source_generation()); // vehicles, then location load
+    assert(world.generation_complete());
+    assert(world.source_ground_patches().size()==world.map_marker_count());
+}
+
 void test_full_generation_all_source_maps() {
     for(std::uint8_t level=0;level<6;++level) {
         minidayz::WorldSystem world;
@@ -3110,6 +3127,7 @@ void test_reported_world_seed_original_frame_integrity() {
 } // namespace
 
 int main() {
+    test_source_startup_proposals_precede_materialization();
     test_original_special_terrain_contexts();
     test_original_high_layer_spawn_visibility();
     test_building_attachment_name_case();

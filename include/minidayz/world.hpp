@@ -327,7 +327,18 @@ private:
     std::uint8_t generation_level_{};
     std::uint8_t generation_perk_dao_{};
     bool generation_is_map_{};
-    bool generate_source_locations(std::uint8_t level);
+    // Source generate_mapgen_toelements stores proposals before crash,
+    // bunker, radiation and road-vehicle functions consume randomness.
+    // Reload_locations_start creates the actual location elements later.
+    struct SourceLocationProposal {
+        std::size_t marker_index{};
+        std::uint8_t type{},variant{},extra{};
+        WorldPoint position{};
+        double state{};
+    };
+    std::vector<SourceLocationProposal> source_location_proposals_{};
+    bool generate_source_location_proposals(std::uint8_t level);
+    bool materialize_source_locations();
     bool build_source_location_terrain(std::size_t marker_index);
     bool generate_source_crash_sites();
     bool generate_source_road_vehicles();

@@ -517,6 +517,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     map_markers_.clear();
     source_scatter_patches_.clear();
     source_ground_patches_.clear();
+    source_location_proposals_.clear();
     source_pond_patches_.clear();
     features_.clear();
     placements_.clear();
@@ -553,12 +554,13 @@ bool WorldSystem::advance_source_generation() {
     switch (generation_phase_) {
     case 1: ok = generate_procedural_grid(generation_level_, seed_); break;
     case 2: ok = build_map_markers(generation_level_, seed_); break;
-    case 3: ok = !generation_is_map_ || generate_source_locations(generation_level_); break;
+    case 3: ok = !generation_is_map_ || generate_source_location_proposals(generation_level_); break;
     case 4: ok = !generation_is_map_ ||
         (generate_source_crash_sites() && load_source_bunker_spawns(false)
             && generate_source_radiation_sites()); break;
     case 5: ok = !generation_is_map_ ||
-        (load_source_bridge_elements() && generate_source_road_vehicles()); break;
+        (generate_source_road_vehicles() && load_source_bridge_elements()
+            && materialize_source_locations()); break;
     default: return false;
     }
     if (!ok) {
@@ -601,6 +603,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     map_markers_.clear();
     source_scatter_patches_.clear();
     source_ground_patches_.clear();
+    source_location_proposals_.clear();
     source_pond_patches_.clear();
     WorldGenerationProfile profile{};
     if (!source_world_profile(level, profile) ||
@@ -657,6 +660,7 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
     map_markers_.clear();
     source_scatter_patches_.clear();
     source_ground_patches_.clear();
+    source_location_proposals_.clear();
     source_pond_patches_.clear();
     map_markers_.reserve(static_cast<std::size_t>(grid_.width()) * grid_.height());
     (void)seed; // The source uses one global random stream across generation stages.
@@ -817,6 +821,7 @@ bool WorldSystem::load_source_layout(std::string_view name) {
     map_markers_.clear();
     source_scatter_patches_.clear();
     source_ground_patches_.clear();
+    source_location_proposals_.clear();
     source_pond_patches_.clear();
     features_.clear();
     placements_.clear();
@@ -940,7 +945,7 @@ int WorldSystem::source_ground_frame_at(float x,float y) const noexcept {
     return patch.cells[static_cast<std::size_t>(ty)*17+tx];
 }
 
-bool WorldSystem::generate_source_locations(std::uint8_t level) {
+bool WorldSystem::generate_source_location_proposals(std::uint8_t level) {
     if (!initialized_ || grid_.width() == 0 || grid_.height() == 0) return false;
     const auto* layout = stage1::find_layout("Map");
     if (!layout) return false;
@@ -972,6 +977,7 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
         static_cast<std::size_t>(grid_.width()) * grid_.height()) return false;
     source_scatter_patches_.clear();
     source_ground_patches_.clear();
+    source_location_proposals_.clear();
     source_pond_patches_.clear();
     source_scatter_patches_.reserve(map_markers_.size());
     source_ground_patches_.reserve(map_markers_.size());
@@ -1032,16 +1038,18 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
                 if (raw_type<1.0 || raw_variant<1.0) continue;
                 if (raw_type>255.0 || raw_variant>255.0 ||
                     raw_extra<0.0 || raw_extra>255.0) continue;
-                (void)expand_map_element(
+                source_location_proposals_.push_back({
+                    static_cast<std::size_t>(y)*grid_.width()+x,
                     static_cast<std::uint8_t>(raw_type),
                     static_cast<std::uint8_t>(raw_variant),
                     static_cast<std::uint8_t>(raw_extra),
                     WorldPoint{static_cast<float>(raw_x),
-                               static_cast<float>(raw_y)}, element_state);
+                               static_cast<float>(raw_y)}, element_state});
             }
-            const std::size_t marker_index=
-                static_cast<std::size_t>(y)*grid_.width()+x;
-            if(!build_source_location_terrain(marker_index))return false;
+            // Do not execute create_map_element / terrain random draws
+            // while generate_mapgen_toelements is still proposing locations.
+            // Root startup calls the crash, bunker, radiation and car
+            // functions before Reload_locations_start.
         }
     }
 
@@ -1122,6 +1130,27 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
         ++added;
     }
     source_location_spawn_count_ = added;
+    return true;
+}
+
+bool WorldSystem::materialize_source_locations() {
+    if(!initialized_ || !generation_is_map_ || map_markers_.empty())
+        return false;
+    // The native world is currently resident, rather than browser
+    // distance-streamed. Preserve the source startup function order
+    // nevertheless: all proposal and site-selection RNG has run before
+    // the first location is materialized.
+    std::size_t next=0;
+    for(std::size_t marker=0;marker<map_markers_.size();++marker){
+        while(next<source_location_proposals_.size() &&
+              source_location_proposals_[next].marker_index==marker){
+            const auto& p=source_location_proposals_[next++];
+            (void)expand_map_element(p.type,p.variant,p.extra,p.position,p.state);
+        }
+        if(!build_source_location_terrain(marker))return false;
+    }
+    if(next!=source_location_proposals_.size())return false;
+    source_location_proposals_.clear();
     return true;
 }
 
@@ -1603,6 +1632,7 @@ void WorldSystem::reset() noexcept {
     map_markers_.clear();
     source_scatter_patches_.clear();
     source_ground_patches_.clear();
+    source_location_proposals_.clear();
     source_pond_patches_.clear();
     features_.clear();
     placements_.clear();
