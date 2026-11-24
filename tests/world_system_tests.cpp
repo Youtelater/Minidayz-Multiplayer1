@@ -3607,7 +3607,69 @@ static void test_original_location_transient_recreation(){
     assert(world.placement(body)->source_frame==1);
 }
 
+static void test_source_crash_rejection_order(){
+    using namespace minidayz;
+    std::mt19937 rng(1u),reference=rng;
+    std::vector<bool> used{true,false,true,false};
+    const std::vector<std::size_t> candidates{0,1,2,3};
+    for(unsigned n=0;n<2;++n){
+        std::size_t expected;
+        do{expected=static_cast<std::size_t>(
+            (static_cast<double>(reference())/4294967296.0)*4.0);}
+        while(used[expected]);
+        assert(world_source::source_pick_unused_crash_marker(candidates,used,rng)==expected);
+        assert(used[expected] && rng==reference);
+    }
+    assert(world_source::source_pick_unused_crash_marker(candidates,used,rng)==used.size());
+    assert(rng==reference);
+    // Actual generation phase: crash selections precede bunker, radiation
+    // and vehicles; use original quota and all marker candidates including
+    // previous successful picks, and compare the resulting anchor owners.
+    for(std::uint8_t level=0;level<6;++level){
+        WorldSystem world;
+        assert(world.begin_source_generation(123456u,"Map",level,0,false,false,false,false,true,true,true,true,true,true));
+        for(unsigned i=0;i<3;++i)assert(world.advance_source_generation());
+        auto expected_rng=world.source_random();
+        std::vector<bool> selected(world.map_marker_count(),false);
+        std::vector<std::size_t> heli,hammer;
+        for(int half=0;half<(level>=4?2:1);++half){
+            std::vector<std::size_t> h,v;
+            for(std::size_t i=0;i<world.map_marker_count();++i){
+                const auto* m=world.map_marker(i);
+                if(half==0?m->cell_y>15:m->cell_y<17)continue;
+                if(m->marker_type==1 || m->marker_type==2 || m->marker_type==8 ||
+                   m->marker_type==10 || m->marker_type==52)h.push_back(i);
+                if(m->marker_type==5 || m->marker_type==13 || m->marker_type==15)v.push_back(i);
+            }
+            const auto run=[&](const auto& candidates,unsigned quota,auto& result){
+                for(unsigned n=0;n<quota;++n){
+                    bool available=false;
+                    for(auto i:candidates)if(!selected[i])available=true;
+                    if(!available)break;
+                    std::size_t picked;
+                    do{picked=candidates[static_cast<std::size_t>(
+                        (static_cast<double>(expected_rng())/4294967296.0)*candidates.size())];}
+                    while(selected[picked]);
+                    selected[picked]=true;result.push_back(picked+1);
+                }
+            };
+            run(h,world_source::source_helicrash_quota(level),heli);
+            run(v,world_source::source_hammercrash_quota(level),hammer);
+        }
+        const auto start=world.placement_count();
+        assert(world.advance_source_generation());
+        std::vector<std::size_t> actual_heli,actual_hammer;
+        for(std::size_t i=start;i<world.placement_count();++i){
+            const auto* p=world.placement(i);
+            if(p->object==344)actual_heli.push_back(p->source_variable_1);
+            if(p->object==434)actual_hammer.push_back(p->house_base_runtime_uid);
+        }
+        assert(actual_heli==heli && actual_hammer==hammer);
+    }
+}
+
 int main() {
+    test_source_crash_rejection_order();
     test_original_location_transient_recreation();
     test_original_category7_event_chains();
     test_original_category46_event_chains();

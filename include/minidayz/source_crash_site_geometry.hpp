@@ -1,5 +1,8 @@
 #pragma once
 #include <cstdint>
+#include <cstddef>
+#include <random>
+#include <vector>
 
 namespace minidayz::world_source {
 // Root data.deobfuscated.js Sprite frames, source Game_events:
@@ -56,6 +59,28 @@ inline constexpr CrashImagePoint kHammerFallenWallPoints[2] = {
     {2,0.67605633f,0.91954023f}
 };
 
+// Root PickRandom 116073859892425 / 311546240563344 happens BEFORE
+// the Sprite514.var9==0 guard in the same event. While repeats after
+// a rejected pick, consuming another random draw from the full set.
+// Stop defensively if a malformed native map has no unused candidate;
+// the browser's while event would otherwise never terminate.
+inline std::size_t source_pick_unused_crash_marker(
+    const std::vector<std::size_t>& candidates,
+    std::vector<bool>& used,std::mt19937& rng) noexcept {
+    bool available=false;
+    for(const auto i:candidates)
+        if(i<used.size() && !used[i]){available=true;break;}
+    if(!available)return used.size();
+    for(;;){
+        const auto index=static_cast<std::size_t>(
+            (static_cast<std::uint64_t>(rng())*candidates.size())>>32);
+        const auto picked=candidates[index];
+        if(picked<used.size() && !used[picked]){
+            used[picked]=true;
+            return picked;
+        }
+    }
+}
 constexpr std::uint8_t source_helicrash_quota(std::uint8_t level) noexcept {
     return level==0?0:level==1?2:level==2?3:level==3?4:5;
 }

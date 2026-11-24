@@ -228,7 +228,8 @@ public:
                                  bool source_category3_events = false,
                                  bool source_category5_events = false,
                                  bool source_category46_events = false,
-                                 bool source_category7_events = false);
+                                 bool source_category7_events = false,
+                                 bool source_exact_crash_selection = false);
     bool advance_source_generation();
     std::uint8_t generation_phase() const noexcept { return generation_phase_; }
     bool generation_complete() const noexcept { return generation_phase_ == 6; }
@@ -376,6 +377,7 @@ private:
     bool source_category5_events_{};
     bool source_category46_events_{};
     bool source_category7_events_{};
+    bool source_exact_crash_selection_{};
     bool source_start_ready_{};
     WorldPoint source_start_position_{};
     // Root Array518 is at most 16x33; retain dormant native geometry and
@@ -420,7 +422,8 @@ public:
                bool source_category3_events = false,
                bool source_category5_events = false,
                bool source_category46_events = false,
-               bool source_category7_events = false) noexcept;
+               bool source_category7_events = false,
+               bool source_exact_crash_selection = false) noexcept;
     bool advance() noexcept;
     WorldSystem* destination() const noexcept { return destination_.get(); }
     void cancel() noexcept { destination_.reset(); }

@@ -126,6 +126,11 @@ if parsed.is_file() and original.is_file():
             require(any(a[:2]==[obj,53] for a in by_id[uid][6]),'Root erased object '+str(obj))
         require(any(a[:2]==[508,88] and a[5]==[[10,3],[7,[0,1]]]
                     for a in by_id[7367536008994206][6]),'Root searched car erase state')
+        for uid in (116073859892425,311546240563344):
+            cond=by_id[uid][5]
+            require(cond[0][:2]==[-1,124] and cond[0][9]==[[4,514]] and
+                    cond[1][:2]==[514,71] and cond[1][9]==[[10,9],[8,0],[7,[0,0]]],
+                    'Root crash PickRandom before unused guard '+str(uid))
         timer=by_id[583575774431491][5]
         require(any(c[:2]==[-1,77] and c[9]==[[0,[0,1]]] for c in timer)
                 and any(c[:2]==[-1,51] and c[9][1:]==[[8,4],[7,[0,400]]]
@@ -151,7 +156,7 @@ floor = text("tools/stage1/build_ground_floor.py")
 ui_builder = text("tools/stage2/build_inventory_ui_art.py")
 makefile = text("Makefile")
 require("start_new_game()" in game and
-        'begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_, !legacy_category5_events_, !legacy_category46_events_, !legacy_category7_events_)' in game and
+        'begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_, !legacy_category5_events_, !legacy_category46_events_, !legacy_category7_events_, !legacy_exact_crash_selection_)' in game and
         'world_level_ = 0;' in game and
         "advance_source_generation()" in game and
         "generation_complete()" in game,

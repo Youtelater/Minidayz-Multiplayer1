@@ -543,6 +543,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     source_category5_events_ = false;
     source_category46_events_ = false;
     source_category7_events_ = false;
+    source_exact_crash_selection_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -561,7 +562,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           bool legacy_site_generation,
                                           bool source_start_events, bool source_category3_events,
                                           bool source_category5_events, bool source_category46_events,
-                                          bool source_category7_events) {
+                                          bool source_category7_events, bool source_exact_crash_selection) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
@@ -575,6 +576,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
     source_category5_events_ = source_category5_events && name == "Map";
     source_category46_events_ = source_category46_events && name == "Map";
     source_category7_events_ = source_category7_events && name == "Map";
+    source_exact_crash_selection_ = source_exact_crash_selection && name == "Map";
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -1288,12 +1290,14 @@ bool WorldSystem::generate_source_crash_sites() {
         std::vector<std::size_t> eligible;
         for(std::size_t i=0;i<map_markers_.size();++i){
             const auto& m=map_markers_[i];
-            if(m.cell_y<first||m.cell_y>last||chosen[i])continue;
+            if(m.cell_y<first||m.cell_y>last||(!source_exact_crash_selection_ && chosen[i]))continue;
             if(std::find(types.begin(),types.end(),m.marker_type)==
                types.end())continue;
             eligible.push_back(i);
         }
         if(eligible.empty())return map_markers_.size();
+        if(source_exact_crash_selection_)
+            return world_source::source_pick_unused_crash_marker(eligible,chosen,rng_);
         const auto picked=eligible[source_floor_random_bounded(
             rng_,static_cast<std::uint32_t>(eligible.size()))];
         chosen[picked]=true; // Original Sprite514.var9 = 1
@@ -1803,6 +1807,7 @@ void WorldSystem::reset() noexcept {
     source_category5_events_ = false;
     source_category46_events_ = false;
     source_category7_events_ = false;
+    source_exact_crash_selection_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -2826,12 +2831,12 @@ const WorldPlacement* WorldSystem::placement_by_instance_id(
 bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level,
                         std::uint8_t perk_dao, bool source_start_events, bool source_category3_events,
                         bool source_category5_events, bool source_category46_events,
-                        bool source_category7_events) noexcept {
+                        bool source_category7_events, bool source_exact_crash_selection) noexcept {
     cancel();
     try {
         auto candidate = std::make_unique<WorldSystem>();
         if (!candidate->begin_source_generation(seed, "Map", level, perk_dao,
-                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events, source_category46_events, source_category7_events)) return false;
+                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events, source_category46_events, source_category7_events, source_exact_crash_selection)) return false;
         destination_ = std::move(candidate);
         return true;
     } catch (const std::bad_alloc&) {
