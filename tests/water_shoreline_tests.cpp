@@ -46,14 +46,19 @@ int main() {
             positive|=check.requires_water;
             uses_center|=(check.dx==0 && check.dy==0);
         }
-        if(positive && !uses_center){chosen=&rule;break;}
+        // Each original rule may guard the CENTER water cell itself.
+        // Rejecting all center-guarded rules previously made this
+        // regression unable to construct a single valid source case.
+        if(positive){chosen=&rule;break;}
     }
     assert(chosen);
     for(std::uint16_t i=0;i<chosen->count;++i){
         const auto& check=kWaterShoreChecks[chosen->first+i];
-        if(check.requires_water)
-            water[static_cast<std::size_t>(1+check.dy)*3+
-                  static_cast<std::size_t>(1+check.dx)]=4u;
+        const auto at=static_cast<std::size_t>(1+check.dy)*3+
+                      static_cast<std::size_t>(1+check.dx);
+        // Include center cell too when the source says it must be
+        // water-frame4; use the original predicate, not a guessed shore.
+        water[at]=check.requires_water ? 4u : kTileEmpty;
     }
     const auto rendered=source_water_shore_effective_tile(water,3,3,1,1);
     assert(rendered!=kTileEmpty && rendered<15u);
