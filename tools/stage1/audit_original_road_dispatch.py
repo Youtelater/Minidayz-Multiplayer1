@@ -24,8 +24,17 @@ for name,uid in uids.items():
  codes=sorted({g[2][3][1][1] for g in guards
    if len(g[2])>=4 and g[2][3][:1]==[7] and
    isinstance(g[2][3][1],list) and len(g[2][3][1])>1 and g[2][3][1][0]==0})
- print("ROAD_ROOT_ANCHORS",name,codes)
- assert codes==[6,9,11,15,103],(name,codes)
+ # Include seven-field source leaf conditions. They contain additional
+ # Array518==0 checks for EMPTY CELLS being painted as roads, NOT new
+ # nonzero road anchor types. The old 8-field-only walker missed them.
+ print("ROAD_ROOT_ARRAY_COMPARE_CODES",name,codes)
+ anchors=[code for code in codes if code!=0]
+ print("ROAD_ROOT_ANCHORS",name,anchors)
+ assert anchors==[6,9,11,15,103],(name,codes)
+ # Native array road generation must keep zero as paintable ground, never
+ # treat it as an anchor that would connect every empty map location.
+ assert "return code == 9 || code == 6 || code == 103 || code == 11 || code == 15;" in (ROOT/"source/world.cpp").read_text()
+ if 0 in codes:print("ROAD_ROOT_EMPTY_CELL_PAINT_GUARD",name,0)
  top=e[7]
  repeats=[n for n in top if isinstance(n,list) and len(n)>5 and n[0]==0 and
   any(isinstance(c,list) and c[:2]==[-1,123] for c in n[5])]
