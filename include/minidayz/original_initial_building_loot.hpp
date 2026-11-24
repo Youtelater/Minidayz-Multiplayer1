@@ -82,7 +82,7 @@ inline InitialBuildingLootResult source_spawn_initial_loot_for_marker(
     }
     if(!first)return InitialBuildingLootResult::not_applicable;
     const SourceInitialBuildingLootRule* choice=first;
-    if(first->gate_kind==1 || first->gate_kind==2) {
+    if(first->gate_kind==1 || first->gate_kind==2 || first->gate_kind==4) {
         if(!source_initial_loot_chance(*first,source_random())) {
             if(!second || second->gate_kind!=3)
                 return InitialBuildingLootResult::no_drop;

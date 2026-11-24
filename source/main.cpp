@@ -3059,6 +3059,10 @@ public:
                 // survivor rendering below, not a permanent source Map image.
                 if (placement->layer == 32 || placement->opacity <= 0.0f)
                     continue;
+                // The original variant112 shadow has an intentional zero
+                // height (SetHeight(s2.Y-s1.Y)). Do not stretch a zero-area
+                // source object back to its full atlas frame in rendering.
+                if (placement->object==347 && placement->height==0.0f)continue;
                 // Use the original Construct instance position and frame
                 // coordinates. Width and height may be scaled differently:
                 // a single scale_x for both axes distorted buildings,

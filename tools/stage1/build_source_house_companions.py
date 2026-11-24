@@ -253,7 +253,10 @@ for r in loot_markers:r[4]=map_layers[r[4].lower()]
 # Car Sprite241 is spawned as a child of authored wreck scenery, not a
 # SpawnAnotherObject parent. Root trunk Spawn_drop explicitly targets
 # 241.ImagePointX/Y(3); it must be in the exact image-point catalog.
-parents={row[4] for row in rules} | {row[3] for row in loot_markers} | {241}
+parents={row[4] for row in rules} | {row[3] for row in loot_markers} | {241,702}
+# Secret-house direct Spawn_drop uses three named points of 702, in a
+# nested event that creates no Sprite218 marker.
+assert {pt[0] for pt in objects[702][7][0][7][0][9]} >= {'spawn1','spawn2','spawn3'}
 
 # Object frame image points are relative to each source animation frame's
 # own hotspot; multiple image points may live in ONE PNG atlas rectangle.

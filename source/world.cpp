@@ -1120,7 +1120,10 @@ bool WorldSystem::generate_source_location_proposals(std::uint8_t level) {
                     !std::isfinite(element_state)||!std::isfinite(raw_extra)) return false;
                 // The source Array includes unused rows. Only populated
                 // entries select one of the original element categories.
-                if (raw_type<1.0 || raw_variant<1.0) continue;
+                // Category5's root <12 condition includes variant zero.
+                // Blank Array525 rows have type zero, not category5.
+                if (raw_type<1.0 || raw_variant<0.0 ||
+                    (raw_variant==0.0 && !(source_category7_events_ && raw_type==5.0)))continue;
                 if (raw_type>255.0 || raw_variant>255.0 ||
                     raw_extra<0.0 || raw_extra>255.0) continue;
                 source_location_proposals_.push_back({
