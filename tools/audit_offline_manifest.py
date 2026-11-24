@@ -52,10 +52,34 @@ def verify(root=ROOT):
     images={r["canonical_source"] for r in rows if r["kind"]=="image"}
     canonical={p.relative_to(root).as_posix() for p in (root/"assets/gfx").rglob("*")
                if p.is_file() and p.suffix.lower()==".png"}
+    # offline.js is not the whole canonical asset set: audit every extra PNG
+    # with the same ROMFS naming rule as build_original_image_catalog.py.
+    # Keep these separate so the original manifest count remains unchanged.
+    additional=[]
+    for name in sorted(canonical-images):
+        relative=PurePosixPath(name).relative_to("assets/gfx")
+        converted="romfs/gfx/"+str(relative.with_name(
+            relative.stem.replace("-","_").replace(".","_")+".t3x"))
+        original_present=(root/name).stat().st_size>0
+        converted_present=(root/converted).is_file() and (root/converted).stat().st_size>0
+        additional.append(dict(canonical_source=name,source_present=original_present,
+                               native_asset=converted,native_asset_present=converted_present))
+        if not original_present:
+            missing.append(name)
+        if not converted_present:
+            missing.append(converted)
+    # Reject aliases across the entire canonical set, not just offline.js.
+    owners={}
+    for row in [r for r in rows if r["kind"]=="image"]+additional:
+        target=row["native_asset"]
+        source=row["canonical_source"]
+        if target in owners and owners[target]!=source:
+            missing.append("texture alias: "+owners[target]+" and "+source+" -> "+target)
+        owners[target]=source
     report=dict(version=manifest["version"],manifest_entries=len(rows),
                 counts=dict(counts),distinct_native_wav_count=len(audio),
                 canonical_png_count=len(canonical),additional_canonical_png_count=len(canonical-images),
-                missing=sorted(set(missing)),entries=rows,
+                missing=sorted(set(missing)),entries=rows,additional_canonical_entries=additional,
                 note="Resource presence is not proof of event execution. Non-media resources require separate native source-parity checks.")
     return report
 
@@ -67,5 +91,5 @@ if __name__=="__main__":
           result["distinct_native_wav_count"],"distinct WAV mappings;",
           result["additional_canonical_png_count"],"additional canonical PNGs")
     if result["missing"]:
-        raise SystemExit("Missing offline source/native resources: "+", ".join(result["missing"][:40]))
-    print("PASS offline.js original resource coverage (not gameplay-event parity)")
+        raise SystemExit("Missing original source/native resources: "+", ".join(result["missing"][:40]))
+    print("PASS offline.js and all canonical PNG resource coverage (not gameplay-event parity)")
