@@ -104,8 +104,13 @@ inline MapRect source_cell_rect(int array_x,int array_y,
     const float sx=viewport.width/bounds.width;
     const float sy=viewport.height/bounds.height;
     const float cell=world_source::kMapgenStride;
-    return {viewport.x+(origin.x-0.5f*cell)*sx,
-            viewport.y+(origin.y-0.5f*cell)*sy,
+    // Root startup moves Sprite514 by (+500,+500) before the
+    // create_map_location tilemap uses (X-500,Y-500). Thus the
+    // pre-shift hotspot is the actual top-left of the 1020px cell.
+    // Using it as the center shifts every map road, icon and tap by
+    // half a section relative to the live terrain and player marker.
+    return {viewport.x+origin.x*sx,
+            viewport.y+origin.y*sy,
             cell*sx,cell*sy};
 }
 

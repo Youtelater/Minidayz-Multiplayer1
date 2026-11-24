@@ -83,3 +83,37 @@ assert 'object==1126 && std::strcmp(source_layer_name,"Rain")==0' in source_role
 assert 'object==241 && std::strcmp(source_layer_name,"Sunset_Dawn")==0' in source_roles
 print("PASS root wuranqu source placement: 70 military overlays; "
       "2 level-three and 3/6-per-half level-four/five radiation zones")
+
+# The preceding original startup function generates real surface bunker
+# entrances, not merely the bunker interior JSON feature positions.
+bunker=next(e for e in nodes if e[4]==659670773379791)
+assert any(c[:2]==[-1,46] and c[9]==[[11,"CurrentLevel"],[8,5],[7,[0,1]]]
+           for c in bunker[5])
+first=next(e for e in walk([bunker]) if e[4]==367378369903919)
+second=next(e for e in walk([bunker]) if e[4]==598204089712663)
+assert any(c[:2]==[-1,46] and c[9]==[[11,"CurrentLevel"],[8,5],[7,[0,4]]]
+           for c in second[5])
+for branch,rowop,rowlimit in ((first,3,15),(second,5,17)):
+    assert any(c[:2]==[514,71] and c[9]==[[10,1],[8,rowop],[7,[0,rowlimit]]]
+               for c in branch[5])
+    assert any(c[:2]==[514,71] and c[9]==[[10,9],[8,0],[7,[0,0]]]
+               for c in branch[5])
+    types=branch[7][0]
+    assert types[2] is True
+    assert {c[9][2][1][1] for c in types[5] if c[:2]==[514,71]}=={1,2,8,10}
+    spawn=next(e for e in walk([branch]) if e[4]==6030101748402167)
+    assert any(c[:2]==[-1,124] and c[9]==[[4,514]] for c in spawn[5])
+    assert any(a[:2]==[514,73] and a[3]==644090747484030 and
+        a[5]==[[4,785],[5,[2,"items_on_ground"]],[7,[0,0]]] for a in spawn[6])
+    offset=[[0,[4,[20,785,65,False,None],[0,500]]],
+            [0,[4,[20,785,66,False,None],[0,500]]]]
+    assert any(a[:2]==[785,47] and a[3]==741102546443797 and
+               a[5]==offset for a in spawn[6])
+    if branch is second:
+        assert any(a[:2]==[785,88] and a[5]==[[10,2],[7,[0,1]]] for a in spawn[6])
+        assert any(a[:2]==[785,72] and a[5]==[[0,[0,2]]] for a in spawn[6])
+for frame_index in (0,2):
+    frame=p[3][785][7][0][7][frame_index]
+    assert frame[4:6]==[150,94] and frame[7:9]==[0.5,0.5]
+assert "generate_source_bunker_entrances()" in src
+print("PASS original surface bunker entrance guards, selection, offsets and frames")

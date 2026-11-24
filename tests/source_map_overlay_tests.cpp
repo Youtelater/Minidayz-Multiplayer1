@@ -128,8 +128,13 @@ int main(){
     assert(along_array_x.y>zero.y);
     assert(along_array_y.x>zero.x);
     assert(std::fabs(along_array_y.y-zero.y)<0.001f);
-    assert(std::fabs((c.x+c.width*0.5f)-at_hotspot.x)<0.001f);
-    assert(std::fabs((c.y+c.height*0.5f)-at_hotspot.y)<0.001f);
+    assert(std::fabs(c.x-at_hotspot.x)<0.001f);
+    assert(std::fabs(c.y-at_hotspot.y)<0.001f);
+    const auto cell_center=player_point(marker.x+510.0f,marker.y+510.0f,bounds,viewport);
+    assert(std::fabs(c.x+c.width*0.5f-cell_center.x)<0.001f);
+    assert(std::fabs(c.y+c.height*0.5f-cell_center.y)<0.001f);
+    const auto next=source_cell_rect(3,8,bounds,viewport);
+    assert(std::fabs(c.x+c.width-next.x)<0.001f);
     const auto origin=player_point(0.0f,0.0f,bounds,viewport);
     assert(origin.x==12.0f && origin.y==32.0f);
     const auto center=player_point(18425.0f,10000.0f,bounds,viewport);
