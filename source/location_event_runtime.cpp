@@ -10,7 +10,8 @@ namespace minidayz::construct {
 
 bool SourceLocationEventRuntime::initialize(std::uint8_t level,
                                             const Array& map_array,
-                                            std::mt19937& rng) {
+                                            std::mt19937& rng, bool legacy_world_generation) {
+    legacy_world_generation_ = legacy_world_generation;
     level_ = level;
     rng_ = &rng;
     system_state_ = {&rng, 0};
@@ -58,6 +59,10 @@ void SourceLocationEventRuntime::set_mapgen(std::uint16_t tile_code,
     set_variable("hotspotY", Value::from_number(world_y));
     set_variable("TilemapspotX", Value::from_number(grid_x));
     set_variable("TilemapspotY", Value::from_number(grid_y));
+    if (!legacy_world_generation_) {
+        set_variable("post_points", Value::from_number(0));
+        set_variable("random_checkpoint", Value::from_number(0));
+    }
     set_variable("loopzounter", Value::from_number(0));
     set_variable("PlantX", Value::from_number(0));
     set_variable("PlantY", Value::from_number(0));
@@ -266,15 +271,19 @@ bool SourceLocationEventRuntime::execute_action(
                                      action.parameter_count, i, p[i])) return false;
 
     if (action.object_index == -1 && (action.command_id == 41 ||
-                                      action.command_id == 122)) {
+                                      action.command_id == 122 ||
+                                      action.command_id == 215)) {
         if (action.parameter_count != 2 || p[0].kind != Value::Kind::String) return false;
-        self.set_variable(p[0].as_string(), p[1]);
-        return true;
-    }
-    if (action.object_index == -1 && action.command_id == 215) {
-        if (action.parameter_count != 2 || p[0].kind != Value::Kind::String) return false;
-        self.set_variable(p[0].as_string(),
-            Value::from_number(self.variable(p[0].as_string()).as_number() + p[1].as_number()));
+        const auto name = p[0].as_string();
+        const double previous = self.variable(name).as_number();
+        const double operand = p[1].as_number();
+        // Construct System actions GC, jz and YC assign, add and subtract.
+        if (action.command_id == 41 || (action.command_id == 122 && self.legacy_world_generation_))
+            self.set_variable(name, p[1]);
+        else if (action.command_id == 122 || self.legacy_world_generation_)
+            self.set_variable(name, Value::from_number(previous + operand));
+        else
+            self.set_variable(name, Value::from_number(previous - operand));
         return true;
     }
     if (action.object_index == 525 &&

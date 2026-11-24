@@ -149,7 +149,36 @@ void test_root_original_settlement_array_rows() {
 
 } // namespace
 
+static void test_four_way_checkpoint_count() {
+    construct::Array grid;
+    assert(grid.set_size(3, 3, 1));
+    for (int i = 0; i < 3; ++i) {
+        assert(grid.set_at_xy(1, i, construct::Value::from_number(12)));
+        assert(grid.set_at_xy(i, 1, construct::Value::from_number(13)));
+    }
+    std::mt19937 rng(17), legacy_rng(17);
+    construct::SourceLocationEventRuntime current, legacy;
+    assert(current.initialize(0, grid, rng));
+    assert(legacy.initialize(0, grid, legacy_rng, true));
+    const auto generate = [](auto& rt) {
+        assert(rt.reset_location_array());
+        rt.set_mapgen(14, 1, 1, 1720, 1340, 60, 60);
+        bool matched = false;
+        assert(rt.execute_branch(5748879959570351ULL, matched) && matched);
+    };
+    generate(current);
+    generate(legacy);
+    assert(rng != legacy_rng); // Four qualifying neighbours enable the checkpoint choice.
+    auto replay_rng = rng;
+    construct::SourceLocationEventRuntime replay;
+    assert(replay.initialize(0, grid, replay_rng));
+    generate(current);
+    generate(replay);
+    assert(rng == replay_rng); // Counts reset at the next intersection.
+}
+
 int main() {
+    test_four_way_checkpoint_count();
     test_original_location_spawns_preserved_across_cells();
     test_root_original_settlement_array_rows();
     test_all_original_location_branches();

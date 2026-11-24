@@ -697,7 +697,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.quick_pistol=old.quick_pistol;
             candidate.source_energy_seconds=0.0f;
         }
-    } else if (header_ok && candidate.version == kSaveVersion) {
+    } else if (header_ok && (candidate.version == 22u || candidate.version == kSaveVersion)) {
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
     }
@@ -782,11 +782,12 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       const minidayz::items::SourceLootTimer* source_loot,
                       const PendingCraftSnapshot* pending_craft,
                       std::uint8_t world_level,
-                      const stage1::SourceEnergyDrinkBoost* source_energy) noexcept {
+                      const stage1::SourceEnergyDrinkBoost* source_energy, bool legacy_world_generation) noexcept {
     if (!target_path || !temporary_path || !target_path[0] || !temporary_path[0] ||
         std::strcmp(target_path, temporary_path) == 0 || seed == 0 ||
         world_level > 5u) return false;
     SavedGame save{};
+    save.version = legacy_world_generation ? 22u : kSaveVersion;
     save.seed = seed;
     save.world_level = world_level;
     save.source_energy_seconds=source_energy?source_energy->remaining():0.0f;
@@ -881,13 +882,13 @@ bool write_saved_game(std::uint32_t seed,
                       const items::SourceLootTimer* source_loot,
                       const PendingCraftSnapshot* pending_craft,
                       std::uint8_t world_level,
-                      const stage1::SourceEnergyDrinkBoost* source_energy) noexcept {
+                      const stage1::SourceEnergyDrinkBoost* source_energy, bool legacy_world_generation) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     return write_saved_game_to_paths(seed, player, inventory, equipment,
                                     ground_loot, tents, kSavePath, kSaveTempPath,
                                     item_use, perks, stashes, source_time, source_rain, source_loot,
-                                    pending_craft, world_level,source_energy);
+                                    pending_craft, world_level,source_energy, legacy_world_generation);
 }
 
 } // namespace minidayz::persistence

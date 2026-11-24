@@ -33,7 +33,7 @@ struct SourceLocationSpawn {
 class SourceLocationEventRuntime {
 public:
     bool initialize(std::uint8_t level, const Array& map_array,
-                    std::mt19937& rng);
+                    std::mt19937& rng, bool legacy_world_generation = false);
     void set_mapgen(std::uint16_t tile_code, std::uint8_t grid_x,
                     std::uint8_t grid_y, double world_x, double world_y,
                     double cell_width, double cell_height);
@@ -86,6 +86,7 @@ private:
     std::size_t last_spawn_index_{static_cast<std::size_t>(-1)};
     std::size_t spawn_start_index_{};
     int zed_frame_{};
+    bool legacy_world_generation_{};
     bool initialized_{};
 };
 

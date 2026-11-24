@@ -1103,3 +1103,9 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - [x] The bridge shortcut saves the destination before moving the live survivor or clearing storage. A failed write returns to the departure map for retry. Implementation `ce333e4f`. Save failure regression `a1c71859`.
 - [ ] Verify the crossing and retry in the 3DS executable. Bridge entry, exit and resuming a save mid-crossing remain open alongside the reported world rendering and collision issues.
+
+### World generation after emulator feedback
+
+- Fixed System AddTo and SubtractFrom in location events. Four eligible junction neighbours now reach the checkpoint branch, and each intersection starts its own counter. The regression exercises two successive four-way junctions against a fresh event runtime.
+- Corrected the order of shop and fire station placement on both map halves. New maps use the corrected generator. Continue retains the previous generation rules for saves through v22 so existing positions and loot remain on the same map.
+- The gameplay comparison on the corrected executable is pending.

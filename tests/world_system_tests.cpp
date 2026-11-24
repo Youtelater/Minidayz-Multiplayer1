@@ -3143,7 +3143,27 @@ void test_reported_world_seed_original_frame_integrity() {
 
 } // namespace
 
+static void test_poi_order_save_compatibility() {
+    for (unsigned level : {0u, 1u, 4u, 5u}) {
+        minidayz::WorldSystem current, legacy;
+        assert(current.begin_source_generation(123456u, "Map", level));
+        assert(legacy.begin_source_generation(123456u, "Map", level, 0, true));
+        assert(current.advance_source_generation() && legacy.advance_source_generation());
+        unsigned changed = 0;
+        for (int y = 0; y < current.grid().height(); ++y) {
+            for (int x = 0; x < current.grid().width(); ++x) {
+                const auto a = current.grid().at(x, y), b = legacy.grid().at(x, y);
+                if (a == b) continue;
+                assert((a == 103 && b == 15) || (a == 15 && b == 103));
+                ++changed;
+            }
+        }
+        assert((changed > 0) == (level != 0));
+    }
+}
+
 int main() {
+    test_poi_order_save_compatibility();
     test_source_startup_proposals_precede_materialization();
     test_original_special_terrain_contexts();
     test_original_high_layer_spawn_visibility();

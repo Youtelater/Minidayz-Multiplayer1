@@ -527,6 +527,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     source_location_spawn_count_ = 0;
     generation_phase_ = 0;
     generation_level_ = 0;
+    legacy_world_generation_ = false;
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     initialized_ = true;
@@ -536,11 +537,12 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
 bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           std::string_view name,
                                           std::uint8_t level,
-                                          std::uint8_t perk_dao) {
+                                          std::uint8_t perk_dao, bool legacy_world_generation) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
     }
+    legacy_world_generation_ = legacy_world_generation;
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -628,13 +630,20 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
     // gas/cafe/shop locations later by picking road markers in
     // generate_array_tomap; writing their fake 99/100/101 footprints here
     // removed original roads and altered every later random choice.
+    const auto place_shops_and_firestations = [&](std::uint8_t shops, std::uint8_t stations,
+                                                 int min_y, int max_y) {
+        if (legacy_world_generation_)
+            return place_poi_count(grid_, stations, 15, rng_, min_y, max_y) &&
+                   place_poi_count(grid_, shops, 103, rng_, min_y, max_y);
+        return place_poi_count(grid_, shops, 103, rng_, min_y, max_y) &&
+               place_poi_count(grid_, stations, 15, rng_, min_y, max_y);
+    };
     bool placed =
         place_poi_count(grid_, profile.villages, 9, rng_, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.militaries, 5, rng_, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.cities, 6, rng_, first_min_y, first_max_y) &&
         place_poi_count(grid_, profile.hospitals, 11, rng_, first_min_y, first_max_y) &&
-        place_poi_count(grid_, profile.firestations, 15, rng_, first_min_y, first_max_y) &&
-        place_poi_count(grid_, profile.chaoshi, 103, rng_, first_min_y, first_max_y);
+        place_shops_and_firestations(profile.chaoshi, profile.firestations, first_min_y, first_max_y);
     if (!placed) return false;
 
     if (profile.second_half_start_y != 0) {
@@ -647,8 +656,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
             place_poi_count(grid_, profile.second_half_militaries, 5, rng_, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_cities, 6, rng_, second_min_y, second_max_y) &&
             place_poi_count(grid_, profile.second_half_hospitals, 11, rng_, second_min_y, second_max_y) &&
-            place_poi_count(grid_, profile.second_half_firestations, 15, rng_, second_min_y, second_max_y) &&
-            place_poi_count(grid_, profile.second_half_chaoshi, 103, rng_, second_min_y, second_max_y);
+            place_shops_and_firestations(profile.second_half_chaoshi, profile.second_half_firestations, second_min_y, second_max_y);
         if (!placed) return false;
     }
 
@@ -981,7 +989,7 @@ bool WorldSystem::generate_source_location_proposals(std::uint8_t level) {
     }
 
     construct::SourceLocationEventRuntime runtime;
-    if (!runtime.initialize(level, map_array, rng_)) return false;
+    if (!runtime.initialize(level, map_array, rng_, legacy_world_generation_)) return false;
 
     const double cell_width = bounds_.width / static_cast<double>(grid_.width());
     const double cell_height = bounds_.height / static_cast<double>(grid_.height());
@@ -1658,6 +1666,7 @@ void WorldSystem::reset() noexcept {
     source_location_spawn_count_ = 0;
     generation_phase_ = 0;
     generation_level_ = 0;
+    legacy_world_generation_ = false;
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     seed_ = 0;

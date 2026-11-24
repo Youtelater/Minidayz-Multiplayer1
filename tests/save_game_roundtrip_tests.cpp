@@ -402,6 +402,12 @@ int main() {
         nullptr, &craft, 5));
     assert(load_saved_game_from_path(restored, kFile));
     assert(restored.world_level == 5);
+    assert(write_saved_game_to_paths(43, player, inventory, equipment, ground,
+        tents, kFile, kTemp, nullptr, nullptr, nullptr, nullptr, nullptr,
+        nullptr, &craft, 5, nullptr, true));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.version == 22u && restored.world_level == 5);
+
     assert(!write_saved_game_to_paths(43, player, inventory, equipment, ground,
         tents, kFile, kTemp, nullptr, nullptr, nullptr, nullptr, nullptr,
         nullptr, &craft, 6));
