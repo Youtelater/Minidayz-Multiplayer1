@@ -932,16 +932,24 @@ bool WorldSystem::build_source_location_terrain(std::size_t marker_index) {
     WorldGroundPatch ground{};
     ground.marker_index=marker_index;
     ground.source_object=static_cast<std::uint16_t>(p.ground_object);
-    ground.offset_x=static_cast<std::int16_t>(p.ground_x);
-    ground.offset_y=static_cast<std::int16_t>(p.ground_y);
+    // Root startup action 8480552636662138 moves every Sprite514 by
+    // (+500,+500) AFTER generate_mapgen_toelements and site selection,
+    // BEFORE Reload_locations_start calls create_map_location. Proposals
+    // keep the pre-shift hotspot; terrain Create uses the shifted one.
+    // Store offsets relative to the pre-shift mapgen_hotspot used by
+    // rendering, collision and audio. A source Create at X-500/Y-500
+    // thus starts at the original marker, not 500px toward the beach.
+    constexpr int reload_marker_shift=500;
+    ground.offset_x=static_cast<std::int16_t>(p.ground_x+reload_marker_shift);
+    ground.offset_y=static_cast<std::int16_t>(p.ground_y+reload_marker_shift);
     ground.cells=p.ground;
     source_ground_patches_.push_back(std::move(ground));
     const auto append=[&](const auto& cells,bool created,int ox,int oy,auto& patches){
         if(!created)return;
         WorldScatterPatch patch{};
         patch.marker_index=marker_index;
-        patch.offset_x=static_cast<std::int16_t>(ox);
-        patch.offset_y=static_cast<std::int16_t>(oy);
+        patch.offset_x=static_cast<std::int16_t>(ox+reload_marker_shift);
+        patch.offset_y=static_cast<std::int16_t>(oy+reload_marker_shift);
         for(std::size_t i=0;i<cells.size();++i)
             if(cells[i]>=0)
                 patch.tiles.push_back({static_cast<std::uint16_t>(i),
@@ -955,9 +963,11 @@ bool WorldSystem::build_source_location_terrain(std::size_t marker_index) {
 
 int WorldSystem::source_ground_frame_at(float x,float y) const noexcept {
     if(!std::isfinite(x)||!std::isfinite(y))return -1;
-    // Original Create positions: Mapgen514.X/Y minus 500, not minus 510.
-    const int col=static_cast<int>(std::floor((y-world_source::kMapgenStartY+500.0f)/world_source::kMapgenStride));
-    const int row=static_cast<int>(std::floor((x-world_source::kMapgenStartX+500.0f)/world_source::kMapgenStride));
+    // The original reload shifts the marker by 500 before creating the
+    // ground at marker minus 500. Its tilemap origin is consequently
+    // the PRE-shift marker, not a tilemap centered on that marker.
+    const int col=static_cast<int>(std::floor((y-world_source::kMapgenStartY)/world_source::kMapgenStride));
+    const int row=static_cast<int>(std::floor((x-world_source::kMapgenStartX)/world_source::kMapgenStride));
     if(col<0||row<0||col>=grid_.width()||row>=grid_.height())return -1;
     const auto index=static_cast<std::size_t>(row)*grid_.width()+col;
     if(index>=source_ground_patches_.size())return -1;
