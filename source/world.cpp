@@ -1022,7 +1022,7 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
         const auto runtime_id = (std::uint64_t{1} << 63) |
             (static_cast<std::uint64_t>(placements_.size()) + 1);
         placements_.push_back({
-            layer, spawn.object, 0, position.x, position.y, 0.0f,
+            layer, spawn.object, spawn.source_action_uid, position.x, position.y, 0.0f,
             object_width, object_height,
             static_cast<float>(spawn.angle),
             static_cast<float>(spawn.opacity), 1.0f,
@@ -1056,7 +1056,7 @@ bool WorldSystem::generate_source_locations(std::uint8_t level) {
         if (const auto* source_layer = stage1::find_layer(layout_index, layer);
             source_layer && classify_source_layer(source_layer->name, kind)) {
             features_.push_back({
-                kind, position, 0, spawn.object, layer, spawn.object,
+                kind, position, spawn.source_action_uid, spawn.object, layer, spawn.object,
                 object_width, object_height,
                 static_cast<float>(spawn.angle), 0
             });
