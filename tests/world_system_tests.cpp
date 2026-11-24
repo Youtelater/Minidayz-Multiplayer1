@@ -3432,6 +3432,7 @@ static void test_original_category46_event_chains(){
     const auto rng=world.source_random();
     const WorldPoint position{1000,2000};
     for(const auto& c:world_source::kCategory46Cases){
+        if(c.category==7)continue;
         const auto first=world.placement_count();
         const auto roots=world.expand_map_element(c.category,c.variant,c.subtype,position,c.state);
         assert(world.placement_count()==first+c.count);
@@ -3480,7 +3481,76 @@ static void test_original_category46_event_chains(){
     assert(world.source_random()==rng);
 }
 
+static void test_original_category7_event_chains(){
+    using namespace minidayz;
+    WorldSystem world;
+    assert(world.begin_source_generation(123456u,"Map",0,0,false,false,false,false,true,true,true,true,true));
+    const auto rng=world.source_random();
+    const WorldPoint pos{1000,2000};
+    unsigned fresh=0,used=0;
+    for(const auto& c:world_source::kCategory46Cases){
+        if(c.category!=7)continue;
+        const auto first=world.placement_count();
+        const auto roots=world.expand_map_element(7,c.variant,0,pos,c.state);
+        assert(world.placement_count()==first+c.count);
+        unsigned expected=0;
+        for(unsigned j=0;j<c.count;++j){
+            const auto& r=world_source::kCategory46Placements[c.first+j];
+            const auto* p=world.placement(first+j);
+            assert(p && p->object==r.object && p->source_frame==r.frame &&
+                   p->source_animation==r.animation);
+            assert(std::fabs(p->x-pos.x-r.x)<0.001f && std::fabs(p->y-pos.y-r.y)<0.001f);
+            assert(p->width==r.w && p->height==r.h && p->origin_x==r.ox && p->origin_y==r.oy);
+            if(r.parent<0)++expected;
+            else assert(p->parent_runtime_uid==world.placement(first+r.parent)->runtime_uid);
+            const auto value=[&](int v)->std::uint64_t{
+                return v<0?world.placement(first+static_cast<unsigned>(-v-1))->runtime_uid:
+                    static_cast<std::uint64_t>(v);
+            };
+            assert(p->source_variable_0==value(r.var0) && p->source_variable_1==value(r.var1));
+            assert(p->source_variable_2==value(r.var2) && p->source_variable_3==value(r.var3));
+            assert(p->source_variable_5==value(r.var5));
+            assert(p->source_initial_loot_trigger==r.loot);
+        }
+        assert(roots==expected);
+        if(c.state==0)fresh+=c.count;
+        if(c.state==1)used+=c.count;
+    }
+    assert(fresh==407 && used==254);
+    auto n=world.placement_count();
+    assert(world.expand_map_element(7,1,0,pos,0)==1);
+    assert(world.placement(n+2)->object==218 && world.placement(n+2)->x==1045.5f);
+    assert(world.placement(n+2)->y==2000.0f);
+    n=world.placement_count();
+    assert(world.expand_map_element(7,1,0,pos,1)==1);
+    assert(world.placement_count()==n+2);
+    n=world.placement_count();
+    assert(world.expand_map_element(7,2,0,pos,0)==1);
+    assert(world.placement(n)->source_variable_2==world.placement(n+1)->runtime_uid);
+    assert(world.placement(n)->source_variable_5==world.placement(n+2)->runtime_uid);
+    assert(world.placement(n+1)->source_variable_3==world.placement(n)->runtime_uid);
+    assert(world.source_random()==rng);
+    // Secret house pools are selected only once, even if two variant35
+    // locations were generated in this world. Test separately from ordinary
+    // source loot so earlier markers do not obscure the three direct drops.
+    WorldSystem secret;
+    assert(secret.begin_source_generation(123456u,"Map",0,0,false,false,false,false,true,true,true,true,true));
+    assert(secret.expand_map_element(7,35,0,pos,0)==1);
+    assert(secret.expand_map_element(7,35,0,{4000,5000},0)==1);
+    minidayz::items::GroundLootSystem loot;
+    std::mt19937 random(123456u);
+    auto summary=minidayz::items::source_spawn_initial_building_loot(secret,loot,random);
+    assert(summary.complete() && summary.spawned==3 && loot.count()==3);
+    for(unsigned i=0;i<3;++i){
+        const auto& pool=world_source::kSecretHouseDrops[i];
+        const auto* item=loot.entry(i);
+        assert(std::find(pool.items,pool.items+pool.count,item->item.item_id)!=pool.items+pool.count);
+        assert(item->x<1100 && item->y<2100);
+    }
+}
+
 int main() {
+    test_original_category7_event_chains();
     test_original_category46_event_chains();
     test_original_category5_elements();
     test_original_category3_elements();

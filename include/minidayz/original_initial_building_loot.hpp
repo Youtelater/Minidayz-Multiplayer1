@@ -3,6 +3,8 @@
 #include "minidayz/world.hpp"
 #include "minidayz/ground_loot.hpp"
 #include "minidayz/generated/original_initial_building_loot.hpp"
+#include "minidayz/generated/category46_source.hpp"
+#include "minidayz/generated/source_house_companions.hpp"
 #include <cmath>
 #include <cstdint>
 #include <random>
@@ -109,8 +111,27 @@ inline InitialBuildingLootSummary source_spawn_initial_building_loot(
     std::mt19937& source_random) noexcept {
     InitialBuildingLootSummary result{};
     if(!world.initialized())return result;
+    // Source 823979540040328: one-time secret house direct drops.
+    // Ordinary marker loot and these drops share the world RNG stream.
+    bool secret_spawned=false;
     for(std::size_t i=0;i<world.placement_count();++i) {
         const auto* marker=world.placement(i);
+        if(marker && marker->source_secret_house_drop && !secret_spawned){
+            secret_spawned=true;
+            for(const auto& pool:world_source::kSecretHouseDrops){
+                ++result.attempted;
+                const auto* point=world_source::source_house_image_point(
+                    marker->object,marker->source_animation,marker->source_frame,pool.point,0);
+                if(!point){++result.skipped;continue;}
+                const auto item=source_initial_item_after_default_unlocks(pool.items[
+                    source_initial_loot_choice_index(source_random(),pool.count)]);
+                const float x=marker->x+(point->x-point->origin_x)*marker->width;
+                const float y=marker->y+(point->y-point->origin_y)*marker->height;
+                if(!item || !source_item_exists(item)){++result.no_drop;continue;}
+                if(ground.add({item,1,kUseSourceItemCondition},x,y))++result.spawned;
+                else ++result.capacity_failure;
+            }
+        }
         if(!marker || !marker->source_initial_loot_trigger ||
            marker->object!=218 ||
            !world.bounds().contains({marker->x,marker->y}))continue;

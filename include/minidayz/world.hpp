@@ -146,6 +146,9 @@ struct WorldPlacement {
     // One-based owner of an element created by create_map_location;
     // zero means persistent/authored or otherwise not a streamed element.
     std::size_t source_reload_marker{};
+    // Root house creation also sets wall var3 and foundation var5.
+    std::uint64_t source_variable_3{}, source_variable_5{};
+    bool source_secret_house_drop{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
@@ -222,7 +225,8 @@ public:
                                  bool source_start_events = false,
                                  bool source_category3_events = false,
                                  bool source_category5_events = false,
-                                 bool source_category46_events = false);
+                                 bool source_category46_events = false,
+                                 bool source_category7_events = false);
     bool advance_source_generation();
     std::uint8_t generation_phase() const noexcept { return generation_phase_; }
     bool generation_complete() const noexcept { return generation_phase_ == 6; }
@@ -369,6 +373,7 @@ private:
     bool source_category3_events_{};
     bool source_category5_events_{};
     bool source_category46_events_{};
+    bool source_category7_events_{};
     bool source_start_ready_{};
     WorldPoint source_start_position_{};
     // Root Array518 is at most 16x33; retain dormant native geometry and
@@ -410,7 +415,8 @@ public:
                std::uint8_t perk_dao = 0, bool source_start_events = false,
                bool source_category3_events = false,
                bool source_category5_events = false,
-               bool source_category46_events = false) noexcept;
+               bool source_category46_events = false,
+               bool source_category7_events = false) noexcept;
     bool advance() noexcept;
     WorldSystem* destination() const noexcept { return destination_.get(); }
     void cancel() noexcept { destination_.reset(); }

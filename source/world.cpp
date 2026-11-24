@@ -542,6 +542,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     source_category3_events_ = false;
     source_category5_events_ = false;
     source_category46_events_ = false;
+    source_category7_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -559,7 +560,8 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           bool legacy_crash_coordinates,
                                           bool legacy_site_generation,
                                           bool source_start_events, bool source_category3_events,
-                                          bool source_category5_events, bool source_category46_events) {
+                                          bool source_category5_events, bool source_category46_events,
+                                          bool source_category7_events) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
@@ -572,6 +574,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
     source_category3_events_ = source_category3_events && name == "Map";
     source_category5_events_ = source_category5_events && name == "Map";
     source_category46_events_ = source_category46_events && name == "Map";
+    source_category7_events_ = source_category7_events && name == "Map";
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -1796,6 +1799,7 @@ void WorldSystem::reset() noexcept {
     source_category3_events_ = false;
     source_category5_events_ = false;
     source_category46_events_ = false;
+    source_category7_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -1824,12 +1828,14 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
     // tables. Their compiled records preserve original conditional frames,
     // signed sizing, named/numeric imagepoints, UID links and loot dispatch.
     // The legacy path below remains only for older saved world identities.
-    if(source_category46_events_ && (var1==4 || var1==6)){
+    if((source_category46_events_ && (var1==4 || var1==6)) ||
+       (source_category7_events_ && var1==7)){
         const unsigned state=var3==0.0?0u:var3==1.0?1u:2u;
-        const unsigned subtype=std::min<unsigned>(var6,7u);
+        const unsigned subtype=var1==7?0u:std::min<unsigned>(var6,7u);
         const unsigned count=var1==4?48u:17u;
-        if(var2==0 || var2>count)return 0;
-        const unsigned index=(var1==6?48u*24u:0u)+(var2-1u)*24u+subtype*3u+state;
+        if(var1!=7 && (var2==0 || var2>count))return 0;
+        const unsigned index=var1==7?(48u+17u)*24u+var2*3u+state:
+            (var1==6?48u*24u:0u)+(var2-1u)*24u+subtype*3u+state;
         const auto& rule=world_source::kCategory46Cases[index];
         if(rule.category!=var1 || rule.variant!=var2 ||
            rule.subtype!=subtype || rule.state!=state)return 0;
@@ -1854,12 +1860,16 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             const auto source_uid=(r.parent<0 || r.object==241)?r.event_uid:r.action_uid;
             placements_.push_back({layer,r.object,source_uid,
                 position.x+r.x,position.y+r.y,0.0f,r.w,r.h,0.0f,1.0f,
-                r.sx,r.ox,r.oy,0,r.frame});
+                r.sx,r.ox,r.oy,0,r.frame,r.animation});
             auto& created=placements_.back();
             created.instance_id=placements_.size();
             created.runtime_uid=uid(j);
             created.source_variable_0=value(r.var0);
             created.source_variable_1=value(r.var1);
+            created.source_variable_2=value(r.var2);
+            created.source_variable_3=value(r.var3);
+            created.source_variable_5=value(r.var5);
+            created.source_secret_house_drop=var1==7 && var2==35 && r.object==702;
             if(r.object==218){
                 created.source_loot_category=static_cast<std::uint16_t>(created.source_variable_0);
                 created.source_initial_loot_trigger=r.loot;
@@ -1870,7 +1880,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                 created.parent_runtime_uid=parent.runtime_uid;
                 created.house_base_runtime_uid=parent.house_base_runtime_uid?
                     parent.house_base_runtime_uid:parent.runtime_uid;
-                created.linked_runtime_uid=parent.runtime_uid;
+                if(r.object!=349)created.linked_runtime_uid=parent.runtime_uid;
                 if(r.object==345 || r.object==348)
                     parent.linked_runtime_uid=created.runtime_uid;
             }else{
@@ -2811,12 +2821,13 @@ const WorldPlacement* WorldSystem::placement_by_instance_id(
 
 bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level,
                         std::uint8_t perk_dao, bool source_start_events, bool source_category3_events,
-                        bool source_category5_events, bool source_category46_events) noexcept {
+                        bool source_category5_events, bool source_category46_events,
+                        bool source_category7_events) noexcept {
     cancel();
     try {
         auto candidate = std::make_unique<WorldSystem>();
         if (!candidate->begin_source_generation(seed, "Map", level, perk_dao,
-                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events, source_category46_events)) return false;
+                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events, source_category46_events, source_category7_events)) return false;
         destination_ = std::move(candidate);
         return true;
     } catch (const std::bad_alloc&) {
