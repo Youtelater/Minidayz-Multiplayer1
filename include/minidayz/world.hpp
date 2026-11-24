@@ -139,6 +139,10 @@ struct WorldPlacement {
     // Source Trigger_spawn was called immediately after setting this marker.
     bool source_initial_loot_trigger{};
     bool source_constructed_bed{};
+    // Sprite785 var2 identifies the second-half bunker. Marker index is
+    // native provenance, one-based; it is not a Construct instance variable.
+    std::uint64_t source_variable_2{};
+    std::size_t source_map_marker_index{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
@@ -210,7 +214,8 @@ public:
                                  std::uint8_t level = 0, std::uint8_t perk_dao = 0,
                                  bool legacy_world_generation = false,
                                  bool legacy_split_roads = false,
-                                 bool legacy_crash_coordinates = false);
+                                 bool legacy_crash_coordinates = false,
+                                 bool legacy_site_generation = false);
     bool advance_source_generation();
     std::uint8_t generation_phase() const noexcept { return generation_phase_; }
     bool generation_complete() const noexcept { return generation_phase_ == 6; }
@@ -338,6 +343,7 @@ private:
     bool legacy_world_generation_{};
     bool legacy_split_roads_{};
     bool legacy_crash_coordinates_{};
+    bool legacy_site_generation_{};
     std::uint8_t generation_level_{};
     std::uint8_t generation_perk_dao_{};
     bool generation_is_map_{};
@@ -355,6 +361,7 @@ private:
     bool materialize_source_locations();
     bool build_source_location_terrain(std::size_t marker_index);
     bool generate_source_crash_sites();
+    bool generate_source_bunker_entrances();
     bool generate_source_road_vehicles();
     bool generate_source_radiation_sites();
     bool initialized_{};

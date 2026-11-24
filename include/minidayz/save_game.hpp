@@ -17,7 +17,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 25u; // v25 restores original crash anchor coordinates.
+inline constexpr std::uint32_t kSaveVersion = 26u; // v26 restores bunker entrance and radiation generation.
 // Preserve the original Construct wait when a craft is interrupted by autosave.
 struct PendingCraftSnapshot {
     std::uint16_t recipe_index{0xffffu};
@@ -83,7 +83,8 @@ bool write_saved_game(std::uint32_t seed,
                       const stage1::SourceEnergyDrinkBoost* source_energy = nullptr,
                       bool legacy_world_generation = false,
                       bool legacy_split_roads = false,
-                      bool legacy_crash_coordinates = false) noexcept;
+                      bool legacy_crash_coordinates = false,
+                      bool legacy_site_generation = false) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
@@ -104,5 +105,6 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       const stage1::SourceEnergyDrinkBoost* source_energy = nullptr,
                       bool legacy_world_generation = false,
                       bool legacy_split_roads = false,
-                      bool legacy_crash_coordinates = false) noexcept;
+                      bool legacy_crash_coordinates = false,
+                      bool legacy_site_generation = false) noexcept;
 } // namespace minidayz::persistence

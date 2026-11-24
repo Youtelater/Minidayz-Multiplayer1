@@ -536,6 +536,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     legacy_world_generation_ = false;
     legacy_split_roads_ = false;
     legacy_crash_coordinates_ = false;
+    legacy_site_generation_ = false;
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     initialized_ = true;
@@ -547,7 +548,8 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           std::uint8_t level,
                                           std::uint8_t perk_dao, bool legacy_world_generation,
                                           bool legacy_split_roads,
-                                          bool legacy_crash_coordinates) {
+                                          bool legacy_crash_coordinates,
+                                          bool legacy_site_generation) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
@@ -555,6 +557,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
     legacy_world_generation_ = legacy_world_generation;
     legacy_split_roads_ = legacy_world_generation || legacy_split_roads;
     legacy_crash_coordinates_ = legacy_split_roads_ || legacy_crash_coordinates;
+    legacy_site_generation_ = legacy_crash_coordinates_ || legacy_site_generation;
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -571,7 +574,8 @@ bool WorldSystem::advance_source_generation() {
     case 2: ok = build_map_markers(generation_level_, seed_); break;
     case 3: ok = !generation_is_map_ || generate_source_location_proposals(generation_level_); break;
     case 4: ok = !generation_is_map_ ||
-        (generate_source_crash_sites() && load_source_bunker_spawns(false)
+        (generate_source_crash_sites() && generate_source_bunker_entrances()
+            && load_source_bunker_spawns(false)
             && generate_source_radiation_sites()); break;
     case 5: ok = !generation_is_map_ ||
         (generate_source_road_vehicles() && load_source_bridge_elements()
@@ -1390,6 +1394,59 @@ bool WorldSystem::generate_source_crash_sites() {
     return true;
 }
 
+// Root function generate_bunker_entrance (659670773379791).
+// The bunker interior JSON is separate; it cannot replace this surface
+// marker selection. Exclude Mapgen.var9 already set by crash selection.
+bool WorldSystem::generate_source_bunker_entrances() {
+    if (legacy_site_generation_ || generation_level_==0) return true;
+    if (!initialized_ || !generation_is_map_ || map_markers_.empty()) return false;
+    const auto* layout=stage1::find_layout("Map");
+    if(!layout)return false;
+    const auto layer=find_layer_index_by_name(
+        static_cast<std::uint16_t>(layout-stage1::kLayoutTable),"items_on_ground");
+    if(layer==0xffff)return false;
+    std::vector<bool> crash_used(map_markers_.size(),false);
+    for(const auto& p:placements_){
+        std::uint64_t marker=0;
+        if(p.object==344 && p.source_uid==667245097137285ULL)
+            marker=p.source_variable_1;
+        if(p.object==434 && (p.source_uid==770992642019829ULL ||
+                             p.source_uid==515255034690416ULL))
+            marker=p.house_base_runtime_uid;
+        if(marker>0 && marker<=crash_used.size())crash_used[marker-1]=true;
+    }
+    const auto spawn=[&](int lo,int hi,bool second){
+        std::vector<std::size_t> eligible;
+        for(std::size_t i=0;i<map_markers_.size();++i){
+            const auto& m=map_markers_[i];
+            if(crash_used[i] || m.cell_y<lo || m.cell_y>hi)continue;
+            if(m.marker_type==1 || m.marker_type==10 ||
+               m.marker_type==2 || m.marker_type==8)
+                eligible.push_back(i);
+        }
+        if(eligible.empty())return; // Construct PickRandom has no selected instance.
+        const auto i=eligible[source_floor_random_bounded(
+            rng_,static_cast<std::uint32_t>(eligible.size()))];
+        const auto& m=map_markers_[i];
+        const auto h=world_source::mapgen_hotspot(m.cell_x,m.cell_y);
+        // Source frame0/frame2: 150x94, centered hotspot; action
+        // 741102546443797 moves Sprite785 +500,+500.
+        placements_.push_back({layer,785,644090747484030ULL,
+            h.x+500.0f,h.y+500.0f,0.0f,150.0f,94.0f,
+            0.0f,1.0f,1.0f,0.5f,0.5f,0,
+            second?2u:0u});
+        auto& p=placements_.back();
+        p.instance_id=placements_.size();
+        p.runtime_uid=(std::uint64_t{1}<<63)|p.instance_id;
+        p.source_variable_1=1; // original Map layout Sprite785 defaults
+        p.source_variable_2=second?1:0; // action 189279164815981
+        p.source_map_marker_index=i+1;
+    };
+    spawn(0,14,false);
+    if(generation_level_>=4)spawn(17,32,true);
+    return true;
+}
+
 // Root function "wuranqu" (UID316200290612230) follows
 // generate_helicrashes and generate_bunker_entrance, BEFORE road vehicles.
 // It spawns original Sprite1126 "duqu" zones on visible Rain layer44.
@@ -1417,8 +1474,8 @@ bool WorldSystem::generate_source_radiation_sites(){
         // Never silently discard edge zones by bounds.contains(hotspot).
         placements_.push_back({rain,world_source::kOriginalRadioactiveSprite,
             action_uid,
-            point.x+world_source::kOriginalRadioactiveOffsetX,
-            point.y+world_source::kOriginalRadioactiveOffsetY,0.0f,
+            point.x+(legacy_site_generation_?-1.0f:1.0f)*world_source::kOriginalRadioactiveOffsetX,
+            point.y+(legacy_site_generation_?-1.0f:1.0f)*world_source::kOriginalRadioactiveOffsetY,0.0f,
             world_source::kOriginalRadioactiveWidth,
             world_source::kOriginalRadioactiveHeight,
             0.0f,1.0f,1.0f,
@@ -1439,10 +1496,8 @@ bool WorldSystem::generate_source_radiation_sites(){
         if(map_markers_[i].marker_type==70)
             spawn(i,world_source::kOriginalRadioactiveMilitarySpawnAction);
 
-    const int count=world_source::original_radioactive_site_quota(
-        generation_level_);
     std::vector<bool> consumed(map_markers_.size(),false);
-    const auto add_source_zone=[&](int min_row,int max_row) {
+    const auto add_source_zone=[&](int min_row,int max_row,int count) {
         for(int repeat=0;repeat<count;++repeat){
             std::vector<std::size_t> eligible;
             for(std::size_t i=0;i<map_markers_.size();++i){
@@ -1463,13 +1518,17 @@ bool WorldSystem::generate_source_radiation_sites(){
         }
     };
     if(generation_level_==3)
-        add_source_zone(0,14); // Source Repeat(2), Sprite514.var1<15.
-    else if(generation_level_>=4){
-        // Source default perk_dao != 7: Repeat(3) in EACH half. The
-        // separate perk_dao==7 Repeat(6) branch must be wired when
-        // character perk state is passed through world creation.
-        add_source_zone(0,14);
-        add_source_zone(17,32);
+        add_source_zone(0,14,2); // Source Repeat(2), Sprite514.var1<15.
+    if(generation_level_>=4 && (legacy_site_generation_ || generation_perk_dao_!=7)){
+        add_source_zone(0,14,3);
+        add_source_zone(17,32,3);
+    }
+    // Both source perk_dao==7 branches independently repeat six,
+    // without a CurrentLevel condition. Keep earlier picked markers
+    // excluded until the original temporary types are restored.
+    if(!legacy_site_generation_ && generation_perk_dao_==7){
+        add_source_zone(0,14,6);
+        add_source_zone(17,32,6);
     }
     return true;
 }
@@ -1697,6 +1756,7 @@ void WorldSystem::reset() noexcept {
     legacy_world_generation_ = false;
     legacy_split_roads_ = false;
     legacy_crash_coordinates_ = false;
+    legacy_site_generation_ = false;
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     seed_ = 0;

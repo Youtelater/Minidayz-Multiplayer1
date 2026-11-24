@@ -5,7 +5,7 @@ namespace minidayz::world_source {
 
 // Root Game_events function "wuranqu" UID316200290612230,
 // Sprite514.SpawnAnotherObject(1126) on original Map layer44 "Rain",
-// followed by Sprite1126.SetPosition(X-500,Y-500). Frame 0 of original
+// followed by Sprite1126.SetPosition(X+500,Y+500). Frame 0 of original
 // "duqu-sheet0.png" is 2000x2000 at centered hotspot (0.5,0.5).
 inline constexpr std::uint64_t kOriginalRadioactiveFunctionUid=
     316200290612230ULL;
@@ -15,8 +15,8 @@ inline constexpr float kOriginalRadioactiveWidth=2000.0f;
 inline constexpr float kOriginalRadioactiveHeight=2000.0f;
 inline constexpr float kOriginalRadioactiveOriginX=0.5f;
 inline constexpr float kOriginalRadioactiveOriginY=0.5f;
-inline constexpr float kOriginalRadioactiveOffsetX=-500.0f;
-inline constexpr float kOriginalRadioactiveOffsetY=-500.0f;
+inline constexpr float kOriginalRadioactiveOffsetX=500.0f;
+inline constexpr float kOriginalRadioactiveOffsetY=500.0f;
 // First branch: all Mapgen514 type70 source military sites.
 inline constexpr std::uint64_t kOriginalRadioactiveMilitarySpawnAction=
     513805253688873ULL;

@@ -932,7 +932,7 @@ void test_original_radiation_site_world_generation(){
             assert(marker);
             const auto p=minidayz::world_source::mapgen_hotspot(
                 marker->cell_x,marker->cell_y);
-            assert(zone->x==p.x-500.0f&&zone->y==p.y-500.0f);
+            assert(zone->x==p.x+500.0f&&zone->y==p.y+500.0f);
             std::vector<std::uint32_t> nearby;
             visible.query(zone->x,zone->y,400.0f,240.0f,nearby);
             assert(std::find(nearby.begin(),nearby.end(),
@@ -953,7 +953,7 @@ void test_original_radiation_site_world_generation(){
                 ++military_markers;
         assert(military==military_markers);
         const auto per_half=minidayz::world_source::
-            original_radioactive_site_quota(level);
+            original_radioactive_site_quota(level,world.generation_perk_dao()==7);
         const auto half_count=level>=4?2u:1u;
         assert(picked<=static_cast<std::size_t>(per_half)*half_count);
         assert(picked==(level<=2?0u:
@@ -962,6 +962,57 @@ void test_original_radiation_site_world_generation(){
             "SOURCE RADIOACTIVE ZONES level=%u military=%zu picked=%zu\\n",
             level,military,picked);
     }
+}
+
+void test_original_bunker_entrance_generation() {
+    for(std::uint8_t level=0;level<6;++level){
+        minidayz::WorldSystem world;
+        assert(world.begin_source_generation(0x7bca12u+level,"Map",level));
+        for(int phase=0;phase<4;++phase)assert(world.advance_source_generation());
+        std::vector<std::size_t> used_crash_markers;
+        std::vector<const minidayz::WorldPlacement*> entrances;
+        for(std::size_t i=0;i<world.placement_count();++i){
+            const auto* p=world.placement(i);
+            if(p->object==344 && p->source_uid==667245097137285ULL)
+                used_crash_markers.push_back(p->source_variable_1);
+            if(p->object==434 && (p->source_uid==770992642019829ULL ||
+                p->source_uid==515255034690416ULL))
+                used_crash_markers.push_back(p->house_base_runtime_uid);
+            if(p->object==785 && p->source_uid==644090747484030ULL)
+                entrances.push_back(p);
+        }
+        assert(entrances.size()==(level==0?0u:level<4?1u:2u));
+        for(const auto* p:entrances){
+            assert(std::find(used_crash_markers.begin(),used_crash_markers.end(),
+                p->source_map_marker_index)==used_crash_markers.end());
+            assert(p->source_map_marker_index>0);
+            const auto* m=world.map_marker(p->source_map_marker_index-1);
+            assert(m && (m->marker_type==1 || m->marker_type==10 ||
+                         m->marker_type==2 || m->marker_type==8));
+            const auto h=minidayz::world_source::mapgen_hotspot(m->cell_x,m->cell_y);
+            assert(p->x==h.x+500.0f && p->y==h.y+500.0f);
+            assert(p->width==150.0f && p->height==94.0f);
+            const bool second=m->cell_y>=17;
+            assert(second || m->cell_y<15);
+            assert(p->source_frame==(second?2u:0u));
+            assert(p->source_variable_2==(second?1u:0u));
+        }
+    }
+    // Explicitly exercise the original 6-per-half radiation variant
+    // without relying on the seeded level-five theme choice.
+    minidayz::WorldSystem toxic;
+    assert(toxic.begin_source_generation(0x10203579u,"Map",5,7));
+    for(int phase=0;phase<4;++phase)assert(toxic.advance_source_generation());
+    unsigned counts[2]={0,0};
+    for(std::size_t i=0;i<toxic.placement_count();++i){
+        const auto* p=toxic.placement(i);
+        if(p->object!=1126 || p->source_uid!=
+            minidayz::world_source::kOriginalRadioactivePickedSpawnAction)continue;
+        const auto* m=toxic.map_marker(p->source_variable_0-1);
+        assert(m);
+        ++counts[m->cell_y>=17?1:0];
+    }
+    assert(counts[0]==6 && counts[1]==6);
 }
 
 void test_original_source_road_vehicle_placement() {
@@ -3228,6 +3279,7 @@ int main() {
     test_source_visual_state_snapshot_roundtrip();
     test_original_car_trunk_one_time_search();
     test_original_radiation_site_world_generation();
+    test_original_bunker_entrance_generation();
     test_original_source_road_vehicle_placement();
     test_original_crash_site_world_generation();
     test_original_source_settlement_building_groups();

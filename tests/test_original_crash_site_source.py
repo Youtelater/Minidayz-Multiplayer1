@@ -74,10 +74,17 @@ assert has_action(heli_spawners,344,88)
 
 hammer_spawners=actions(311546240563344)
 # The two child events select original 434 for source marker types
-# 13 or 5/15 and place it at Mapgen -500, -600.
+# 13 or 5/15 and place it at Mapgen +500, +600.
 assert len(find(311546240563344))==2
 assert has_action(actions(468895175988554),514,73,434)
 assert has_action(actions(935196605060123),514,73,434)
+for event,oid,uid,dy in ((116073859892425,344,629217245088326,500),
+                         (468895175988554,434,525441183319823,600),
+                         (935196605060123,434,207285229110160,600)):
+    expected=[[0,[4,[20,oid,65,False,None],[0,500]]],
+              [0,[4,[20,oid,66,False,None],[0,dy]]]]
+    assert any(a[:2]==[oid,47] and a[3]==uid and a[5]==expected
+               for a in actions(event))
 
 for uid in (427158362727888,147519896698226,897613305483386):
     acts=actions(uid)

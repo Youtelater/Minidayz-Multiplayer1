@@ -105,6 +105,7 @@ public:
           legacy_world_generation_(restored && restored->version < 23u),
           legacy_split_roads_(restored && restored->version < 24u),
           legacy_crash_coordinates_(restored && restored->version < 25u),
+          legacy_site_generation_(restored && restored->version < 26u),
           world_level_(restored ? restored->world_level : 0),
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
@@ -195,6 +196,7 @@ public:
         legacy_world_generation_=restored->version < 23u;
         legacy_split_roads_=restored->version < 24u;
         legacy_crash_coordinates_=restored->version < 25u;
+        legacy_site_generation_=restored->version < 26u;
         player_=minidayz::PlayerSystem(restored->player);
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
@@ -258,7 +260,8 @@ public:
                              const minidayz::items::TentStorageSystem& tents,
                              const minidayz::items::StashStorageSystem* stashes, bool legacy_world_generation,
                               bool legacy_split_roads = false,
-                              bool legacy_crash_coordinates = false) noexcept {
+                              bool legacy_crash_coordinates = false,
+                              bool legacy_site_generation = false) noexcept {
         minidayz::persistence::PendingCraftSnapshot craft{};
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount &&
             pending_craft_seconds_ > 0.0f) {
@@ -267,12 +270,12 @@ public:
         }
         return write_saved_game(seed, survivor, inventory_, equipment_, loot,
             tents, &item_use_runtime_, &perks_, stashes, &day_night_,
-            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates);
+            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation);
     }
 
     bool write_scene_save() noexcept {
         if (!write_survivor_save(world_seed_, world_level_, player_.state(),
-                                 ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_)) return false;
+                                 ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_)) return false;
         // Persist changed original object frames separately, with the same
         // seed/level and a checksum. Do not report Save success unless
         // world state is recorded too.
@@ -367,6 +370,7 @@ public:
                     legacy_world_generation_ = false;
                     legacy_split_roads_ = false;
                     legacy_crash_coordinates_ = false;
+                    legacy_site_generation_ = false;
                     world_ = std::move(generating);
                     travel_.cancel();
                     ground_loot_=std::move(*generated_initial_loot);
@@ -4239,6 +4243,7 @@ private:
         legacy_world_generation_ = false;
         legacy_split_roads_ = false;
         legacy_crash_coordinates_ = false;
+        legacy_site_generation_ = false;
         player_ = minidayz::PlayerSystem(make_initial_state());
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
@@ -4351,7 +4356,7 @@ private:
         source_player_outline_=false;
         source_roof_elapsed_=0.0f;
         source_roof_background_layer_=0xffff;
-        loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_);
+        loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_);
         if (!loading_world_) fail_world_generation();
     }
 
@@ -4604,6 +4609,7 @@ private:
     bool legacy_world_generation_{};
     bool legacy_split_roads_{};
     bool legacy_crash_coordinates_{};
+    bool legacy_site_generation_{};
     std::uint8_t world_level_{};
     minidayz::WorldTravel travel_;
     bool travel_failed_{};

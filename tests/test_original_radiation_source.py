@@ -30,6 +30,14 @@ assert len(picked)==5
 assert all(any(a[:2]==[514,73] and a[3]==680790671133170
                    and a[5][0]==[4,1126] for a in e[6])
            for e in picked)
+# Check the actual positive-offset expressions, not just the spawn IDs.
+def assert_offset(events, uid):
+    expr=[[0,[4,[20,1126,65,False,None],[0,500]]],
+          [0,[4,[20,1126,66,False,None],[0,500]]]]
+    assert all(any(a[:2]==[1126,47] and a[3]==uid and a[5]==expr
+                   for a in e[6]) for e in events)
+assert_offset(military,704202770294192)
+assert_offset(picked,481838527458372)
 filters=[e for e in walk([root]) if e[4]==174342964709830]
 assert len(filters)==5
 expected={5,22,102,15,103,11,6,9,104,106,32}
@@ -61,7 +69,7 @@ src=(ROOT/"source/world.cpp").read_text()
 vis=(ROOT/"include/minidayz/terrain_visible_index.hpp").read_text()
 for s in ("kOriginalRadioactiveSprite=1126",
           "kOriginalRadioactiveWidth=2000.0f",
-          "kOriginalRadioactiveOffsetX=-500.0f",
+          "kOriginalRadioactiveOffsetX=500.0f",
           "kOriginalRadioactivePickedSpawnAction"):
     assert s in h,s
 assert "generate_source_radiation_sites()" in src
@@ -74,4 +82,4 @@ source_roles=(ROOT/"include/minidayz/source_world_sprite_visibility.hpp").read_t
 assert 'object==1126 && std::strcmp(source_layer_name,"Rain")==0' in source_roles
 assert 'object==241 && std::strcmp(source_layer_name,"Sunset_Dawn")==0' in source_roles
 print("PASS root wuranqu source placement: 70 military overlays; "
-      "2 level-three and 3-per-half level-four/five radiation zones")
+      "2 level-three and 3/6-per-half level-four/five radiation zones")
