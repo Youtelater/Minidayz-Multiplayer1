@@ -13,6 +13,7 @@ on:
       - 'tests/world_system_tests.cpp'
       - 'tests/construct_expression_tests.cpp'
       - 'tests/test_original_world_poi_bounds.py'
+      - 'tools/stage1/build_category46_source.py'
       - 'tools/stage1/extract_location_templates.py'
       - 'tools/stage1/build_procedural_environment.py'
       - 'tools/stage1/extract_npc_spawn_calls.py'
@@ -78,6 +79,7 @@ jobs:
           python3 tools/stage1/build_source_tree_impact_points.py
           python3 tools/stage1/build_source_family_members.py
           python3 tools/stage1/build_source_house_companions.py
+          python3 tools/stage1/build_category46_source.py
           python3 tools/stage1/build_source_car_wreck_trunks.py
           python3 tools/stage1/build_source_building_polygons.py
           python3 tools/stage1/build_water_shoreline.py
@@ -104,3 +106,4 @@ jobs:
             include/minidayz/generated/location_array_operation_source.hpp
             include/minidayz/generated/location_spawn_source.hpp
             include/minidayz/generated/terrain_scatter_source.hpp
+            include/minidayz/generated/category46_source.hpp
