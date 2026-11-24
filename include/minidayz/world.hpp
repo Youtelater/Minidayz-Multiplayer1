@@ -208,7 +208,8 @@ public:
                               std::uint8_t level = 0, std::uint8_t perk_dao = 0);
     bool begin_source_generation(std::uint32_t seed, std::string_view layout_name = "Map",
                                  std::uint8_t level = 0, std::uint8_t perk_dao = 0,
-                                 bool legacy_world_generation = false);
+                                 bool legacy_world_generation = false,
+                                 bool legacy_split_roads = false);
     bool advance_source_generation();
     std::uint8_t generation_phase() const noexcept { return generation_phase_; }
     bool generation_complete() const noexcept { return generation_phase_ == 6; }
@@ -334,6 +335,7 @@ private:
     std::size_t source_location_spawn_count_{};
     std::uint8_t generation_phase_{};
     bool legacy_world_generation_{};
+    bool legacy_split_roads_{};
     std::uint8_t generation_level_{};
     std::uint8_t generation_perk_dao_{};
     bool generation_is_map_{};

@@ -17,7 +17,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 23u; // v23 uses the corrected POI placement order.
+inline constexpr std::uint32_t kSaveVersion = 24u; // v24 restores the original late-map horizontal road pass.
 // Preserve the original Construct wait when a craft is interrupted by autosave.
 struct PendingCraftSnapshot {
     std::uint16_t recipe_index{0xffffu};
@@ -81,7 +81,8 @@ bool write_saved_game(std::uint32_t seed,
                       const PendingCraftSnapshot* pending_craft = nullptr,
                       std::uint8_t world_level = 0,
                       const stage1::SourceEnergyDrinkBoost* source_energy = nullptr,
-                      bool legacy_world_generation = false) noexcept;
+                      bool legacy_world_generation = false,
+                      bool legacy_split_roads = false) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
@@ -100,5 +101,6 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       const PendingCraftSnapshot* pending_craft = nullptr,
                       std::uint8_t world_level = 0,
                       const stage1::SourceEnergyDrinkBoost* source_energy = nullptr,
-                      bool legacy_world_generation = false) noexcept;
+                      bool legacy_world_generation = false,
+                      bool legacy_split_roads = false) noexcept;
 } // namespace minidayz::persistence

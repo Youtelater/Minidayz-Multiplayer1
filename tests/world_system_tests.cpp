@@ -2400,9 +2400,9 @@ void check_generated_road_connections(const minidayz::WorldGrid& grid,
         return std::pair<int, int>{-1, -1};
     };
     for (int y = 0; y < grid.height(); ++y) {
-        // Original generate_array_roads_1 only repeats Map_size_X rows;
-        // the 33-row late maps do not get a second horizontal pass.
-        const auto horizontal = y < grid.width() ?
+        // UID 218522443826106 extends the horizontal pass to all 33
+        // rows on split maps. Empty separator rows remain unchanged.
+        const auto horizontal = (y < grid.width() || profile.second_half_start_y) ?
             find_pair(grid.width(), [&](int x) { return grid.at(x, y); }) :
             std::pair<int,int>{-1,-1};
         const int offset = profile.second_half_start_y && y >= profile.second_half_start_y - 1
@@ -3161,7 +3161,7 @@ void test_reported_world_seed_original_frame_integrity() {
 static void test_poi_order_save_compatibility() {
     for (unsigned level : {0u, 1u, 4u, 5u}) {
         minidayz::WorldSystem current, legacy;
-        assert(current.begin_source_generation(123456u, "Map", level));
+        assert(current.begin_source_generation(123456u, "Map", level, 0, false, true));
         assert(legacy.begin_source_generation(123456u, "Map", level, 0, true));
         assert(current.advance_source_generation() && legacy.advance_source_generation());
         unsigned changed = 0;
@@ -3177,7 +3177,30 @@ static void test_poi_order_save_compatibility() {
     }
 }
 
+static void test_original_split_road_save_compatibility() {
+    unsigned late_changes = 0;
+    for (unsigned level : {0u, 1u, 2u, 3u, 4u, 5u}) {
+        for (std::uint32_t seed : {1u, 17u, 123456u, 0x1234u}) {
+            minidayz::WorldSystem current, old;
+            assert(current.begin_source_generation(seed, "Map", level));
+            assert(old.begin_source_generation(seed, "Map", level, 0, false, true));
+            assert(current.advance_source_generation() && old.advance_source_generation());
+            for (int y = 0; y < current.grid().height(); ++y) {
+                for (int x = 0; x < current.grid().width(); ++x) {
+                    const auto a = current.grid().at(x, y), b = old.grid().at(x, y);
+                    if (a == b) continue;
+                    assert(level >= 4 && y >= 17);
+                    assert((a == 13 && b == 0) || (a == 14 && b == 12));
+                    ++late_changes;
+                }
+            }
+        }
+    }
+    assert(late_changes > 0);
+}
+
 int main() {
+    test_original_split_road_save_compatibility();
     test_poi_order_save_compatibility();
     test_source_startup_proposals_precede_materialization();
     test_original_special_terrain_contexts();

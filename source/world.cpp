@@ -174,15 +174,17 @@ bool is_road_anchor(std::uint16_t code) noexcept {
     return code == 9 || code == 6 || code == 103 || code == 11 || code == 15;
 }
 
-void generate_source_roads(WorldGrid& grid, std::uint8_t level, std::uint8_t active_y_count) {
-    // Root function generate_array_roads_1 (UID 921061167763666)
-    // repeats Map_size_X (=16) rows, even on the 16x33 split-map worlds.
-    // Only generate_array_roads_2 makes an additional pass at Y+17.
-    // The previous grid.height() loop invented second-half horizontal roads.
-    for (int row = 0; row < grid.width() && row < grid.height(); ++row) {
+void generate_source_roads(WorldGrid& grid, std::uint8_t level, std::uint8_t active_y_count,
+                           bool legacy_split_roads) {
+    // Root generate_array_roads_1 UID 921061167763666: Map_size_X
+    // repeats on both axes. Separate UID 218522443826106 additionally
+    // repeats 33 on both axes when CurrentLevel >= 4. Out-of-bounds
+    // Array.At reads return zero, which cannot be a road anchor.
+    const auto add_horizontal_roads = [&grid](int count) {
+    for (int row = 0; row < count && row < grid.height(); ++row) {
         int first = -1;
         int second = -1;
-        for (int x = 0; x < grid.width(); ++x) {
+        for (int x = 0; x < count && x < grid.width(); ++x) {
             if (!is_road_anchor(grid.at(x, row))) continue;
             if (first == -1) first = x;
             else if (second == -1) second = x;
@@ -194,6 +196,10 @@ void generate_source_roads(WorldGrid& grid, std::uint8_t level, std::uint8_t act
             }
         }
     }
+
+    };
+    add_horizontal_roads(grid.width());
+    if (level >= 4 && !legacy_split_roads) add_horizontal_roads(33);
 
     const auto add_vertical_roads = [&grid, active_y_count](int y_offset) {
         // generate_array_roads_2 loops Map_size_Y on both axes. Array reads
@@ -528,6 +534,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     generation_phase_ = 0;
     generation_level_ = 0;
     legacy_world_generation_ = false;
+    legacy_split_roads_ = false;
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     initialized_ = true;
@@ -537,12 +544,14 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
 bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           std::string_view name,
                                           std::uint8_t level,
-                                          std::uint8_t perk_dao, bool legacy_world_generation) {
+                                          std::uint8_t perk_dao, bool legacy_world_generation,
+                                          bool legacy_split_roads) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
     }
     legacy_world_generation_ = legacy_world_generation;
+    legacy_split_roads_ = legacy_world_generation || legacy_split_roads;
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -660,7 +669,7 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
         if (!placed) return false;
     }
 
-    generate_source_roads(grid_, level, profile.map_size_y);
+    generate_source_roads(grid_, level, profile.map_size_y, legacy_split_roads_);
     return true;
 }
 
@@ -1677,6 +1686,7 @@ void WorldSystem::reset() noexcept {
     generation_phase_ = 0;
     generation_level_ = 0;
     legacy_world_generation_ = false;
+    legacy_split_roads_ = false;
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     seed_ = 0;
