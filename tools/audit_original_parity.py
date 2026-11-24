@@ -75,6 +75,25 @@ if parsed.is_file() and original.is_file():
                 and radius_guard(312510647899376,4,[23,"respawn_radius2"])
                 and radius_guard(597693887903437,3,[23,"respawn_radius2"]),
                 "Root startup, erase and create reload radius expressions")
+        # Root category3 animation order and Choose(0,1) source guards.
+        for uid,animation,child in ((1552113303134576,"red",524169683856062),
+                                   (8229034889000114,"blue",8505178315734373),
+                                   (7218119429510971,"yellow",1444661926066303),
+                                   (471157003773759,"black",826979891303012)):
+            require(any(a[:2]==[296,160] and a[5]==[[1,[2,animation]],[3,1]]
+                        for a in by_id[uid][6]),"Berry animation "+animation)
+            event=by_id[child]
+            require(any(c[:2]==[508,71] and c[9]==[[10,3],[8,0],[7,[0,0]]]
+                        for c in event[5]) and any(a[:2]==[296,72] and
+                        a[5]==[[0,[19,82,[[0,0],[0,1]]]]] for a in event[6]),
+                    "Original guarded berry frame choice "+animation)
+        for uid,category,action in ((296267016054731,29,762479183284581),
+                                     (188361261127918,37,262746706364034)):
+            event=by_id[uid]
+            require(any(a[1]==73 and a[3]==action and a[5]==[[4,218],[5,[2,"zed_resp"]],[7,[0,1]]]
+                        for a in event[6]) and any(a[:2]==[218,88] and a[5]==[[10,0],[7,[0,category]]]
+                        for a in event[6]) and any(a[:2]==[189,69] and a[5][0]==[1,[2,"Trigger_spawn"]]
+                        for a in event[6]),"Original category3 loot action "+str(category))
         timer=by_id[583575774431491][5]
         require(any(c[:2]==[-1,77] and c[9]==[[0,[0,1]]] for c in timer)
                 and any(c[:2]==[-1,51] and c[9][1:]==[[8,4],[7,[0,400]]]
@@ -100,7 +119,7 @@ floor = text("tools/stage1/build_ground_floor.py")
 ui_builder = text("tools/stage2/build_inventory_ui_art.py")
 makefile = text("Makefile")
 require("start_new_game()" in game and
-        'begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_)' in game and
+        'begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_)' in game and
         'world_level_ = 0;' in game and
         "advance_source_generation()" in game and
         "generation_complete()" in game,

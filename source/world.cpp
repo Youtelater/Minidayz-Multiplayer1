@@ -538,6 +538,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     legacy_crash_coordinates_ = false;
     legacy_site_generation_ = false;
     source_start_events_ = false;
+    source_category3_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -554,7 +555,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           bool legacy_split_roads,
                                           bool legacy_crash_coordinates,
                                           bool legacy_site_generation,
-                                          bool source_start_events) {
+                                          bool source_start_events, bool source_category3_events) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
@@ -564,6 +565,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
     legacy_crash_coordinates_ = legacy_split_roads_ || legacy_crash_coordinates;
     legacy_site_generation_ = legacy_crash_coordinates_ || legacy_site_generation;
     source_start_events_ = source_start_events && !legacy_site_generation_ && name == "Map";
+    source_category3_events_ = source_category3_events && name == "Map";
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -1785,6 +1787,7 @@ void WorldSystem::reset() noexcept {
     legacy_crash_coordinates_ = false;
     legacy_site_generation_ = false;
     source_start_events_ = false;
+    source_category3_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -1889,6 +1892,68 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
            var1==3 && var2==2 && var3==0.0)
             placements_.back().source_variable_0=
                 100u + 100u * source_random_bounded(rng_, 2u);
+
+        // Root category3 create_map_element: the berry-bush animation
+        // and guarded Choose(0,1) actions were absent from the spawn-only
+        // descriptor table. Other category3 scenery likewise uses the
+        // exact original frame geometry rather than a zero-sized object.
+        if(source_category3_events_ && var1==3){
+            auto& base=placements_[primary_index];
+            struct Geometry {std::uint16_t object; float w,h,ox,oy;};
+            static constexpr Geometry geometry[]={
+                {442,20,28,0.3499999940395355f,0.75f},
+                {1249,126,77,0.5f,0.5f},
+                {1258,310,350,0.5135135054588318f,0.52380955219268f},
+                {1324,121,63,0.5f,0.5f},{1325,121,63,0.5f,0.5f},
+                {1326,121,63,0.5f,0.5f},{1327,121,73,0.5f,0.5f},
+                {1328,370,130,0.5f,0.5f},{1330,146,153,0.5f,0.5f},
+                {1392,64,47,0.5f,0.5f},{1416,29,28,0.5f,0.5f},
+                {1417,29,28,0.5f,0.5f},{1418,24,28,0.5f,0.5f},
+                {1419,24,28,0.5f,0.5f},{1420,200,125,0.5f,0.5f}
+            };
+            for(const auto& g:geometry)if(g.object==base.object){
+                base.width=g.w;base.height=g.h;base.origin_x=g.ox;base.origin_y=g.oy;
+                break;
+            }
+            if(base.object==296){
+                // Source variants 1/3/4/5 SetAnimation red/blue/yellow/black.
+                // Preserve frame dimensions and origin per selected source
+                // animation, including its original animation index.
+                static constexpr Geometry bush[]={
+                    {296,32,23,0.5f,0.3913043439388275f},
+                    {296,28,18,0.5f,0.5f},
+                    {296,32,29,0.5f,0.4137931168079376f},
+                    {296,30,21,0.5333333611488342f,0.5714285969734192f}
+                };
+                const auto anim=var2==3?2u:var2==4?1u:var2==5?3u:0u;
+                const auto& g=bush[anim];
+                base.source_animation=static_cast<std::uint16_t>(anim);
+                base.source_frame=var3==0.0?source_random_bounded(rng_,2u):0u;
+                base.width=g.w;base.height=g.h;base.origin_x=g.ox;base.origin_y=g.oy;
+            }
+            // Root 296267016054731 / 188361261127918: only state 0
+            // creates a Sprite218 at imagepoint 1 and calls Trigger_spawn.
+            // The original parent frames have no named imagepoints, so
+            // Construct's out-of-range imagepoint resolves to the hotspot.
+            const bool stones=base.object==1249 && var2==6;
+            const bool fields=base.object>=1324 && base.object<=1327 && var2>=8 && var2<=11;
+            if(var3==0.0 && (stones||fields)){
+                const auto dest=find_layer_index_by_name(layout_index,"zed_resp");
+                if(dest!=0xffff){
+                    const auto parent=base;
+                    placements_.push_back({dest,218,
+                        stones?762479183284581ULL:262746706364034ULL,
+                        parent.x,parent.y,0.0f,1.0f,1.0f,0.0f,1.0f,1.0f,0.0f,1.0f,1});
+                    auto& loot=placements_.back();
+                    loot.runtime_uid=(std::uint64_t{1}<<63)|placements_.size();
+                    loot.instance_id=placements_.size();
+                    loot.parent_runtime_uid=parent.runtime_uid;
+                    loot.source_variable_0=stones?29u:37u;
+                    loot.source_loot_category=stones?29u:37u;
+                    loot.source_initial_loot_trigger=true;
+                }
+            }
+        }
 
         // A root Construct map-element "house" is a SEQUENCE of Sprite
         // Spawn-another-object actions, not one Building-base texture.
@@ -2601,12 +2666,12 @@ const WorldPlacement* WorldSystem::placement_by_instance_id(
 }
 
 bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level,
-                        std::uint8_t perk_dao, bool source_start_events) noexcept {
+                        std::uint8_t perk_dao, bool source_start_events, bool source_category3_events) noexcept {
     cancel();
     try {
         auto candidate = std::make_unique<WorldSystem>();
         if (!candidate->begin_source_generation(seed, "Map", level, perk_dao,
-                                               false, false, false, false, source_start_events)) return false;
+                                               false, false, false, false, source_start_events, source_category3_events)) return false;
         destination_ = std::move(candidate);
         return true;
     } catch (const std::bad_alloc&) {

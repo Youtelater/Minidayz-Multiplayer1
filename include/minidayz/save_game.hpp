@@ -17,7 +17,7 @@
 namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
-inline constexpr std::uint32_t kSaveVersion = 27u; // v27 restores original startup spawn draw order.
+inline constexpr std::uint32_t kSaveVersion = 28u; // v28 restores category3 world element events.
 // Preserve the original Construct wait when a craft is interrupted by autosave.
 struct PendingCraftSnapshot {
     std::uint16_t recipe_index{0xffffu};
@@ -85,7 +85,8 @@ bool write_saved_game(std::uint32_t seed,
                       bool legacy_split_roads = false,
                       bool legacy_crash_coordinates = false,
                       bool legacy_site_generation = false,
-                      bool legacy_start_order = false) noexcept;
+                      bool legacy_start_order = false,
+                      bool legacy_category3_events = false) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
@@ -108,5 +109,6 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       bool legacy_split_roads = false,
                       bool legacy_crash_coordinates = false,
                       bool legacy_site_generation = false,
-                      bool legacy_start_order = false) noexcept;
+                      bool legacy_start_order = false,
+                      bool legacy_category3_events = false) noexcept;
 } // namespace minidayz::persistence

@@ -3351,7 +3351,43 @@ static void test_original_location_reload_selection() {
     assert(world.source_location_active(0));
 }
 
+static void test_original_category3_elements(){
+    minidayz::WorldSystem world;
+    constexpr std::uint32_t seed=123456u;
+    assert(world.begin_source_generation(seed,"Map",0,0,false,false,false,false,true,true));
+    auto rng=world.source_random();
+    const auto first=world.placement_count();
+    const std::uint8_t variants[]={1,3,4,5};
+    const std::uint16_t animations[]={0,2,1,3};
+    const float widths[]={32,32,28,30},heights[]={23,29,18,21};
+    for(unsigned i=0;i<4;++i){
+        assert(world.expand_map_element(3,variants[i],0,{1000,2000},0)==1);
+        const auto* b=world.placement(first+i);
+        assert(b && b->object==296 && b->source_animation==animations[i]);
+        assert(b->source_frame==static_cast<unsigned>((static_cast<double>(rng())/4294967296.0)*2.0));
+        assert(b->width==widths[i]&&b->height==heights[i]);
+    }
+    assert(world.source_random()==rng);
+    assert(world.expand_map_element(3,3,0,{1000,2000},1)==1);
+    assert(world.source_random()==rng);
+    for(std::uint8_t variant:{6,8,9,10,11}){
+        const auto n=world.placement_count();
+        assert(world.expand_map_element(3,variant,0,{1000,2000},0)==1);
+        assert(world.placement_count()==n+2);
+        const auto* base=world.placement(n);
+        const auto* loot=world.placement(n+1);
+        assert(base && base->width>0 && base->height>0);
+        assert(loot && loot->object==218 && loot->source_initial_loot_trigger);
+        assert(loot->source_loot_category==(variant==6?29:37));
+        assert(loot->parent_runtime_uid==base->runtime_uid);
+        assert(loot->x==base->x && loot->y==base->y);
+        assert(world.expand_map_element(3,variant,0,{1000,2000},1)==1);
+        assert(world.placement_count()==n+3);
+    }
+}
+
 int main() {
+    test_original_category3_elements();
     test_original_location_reload_selection();
     test_source_start_event_order();
     test_original_split_road_save_compatibility();
