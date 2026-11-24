@@ -3264,7 +3264,50 @@ static void test_original_split_road_save_compatibility() {
     assert(late_changes > 0);
 }
 
+static void test_source_start_event_order() {
+    constexpr std::uint32_t seed=123456u;
+    for (std::uint8_t level=0;level<=5;++level) {
+        std::mt19937 rng(seed);
+        const auto unit=[&](){return static_cast<double>(rng())/4294967296.0;};
+        minidayz::WorldSystem world;
+        assert(world.begin_source_generation(seed,"Map",level,0,false,false,false,false,true));
+        const float beach_y=static_cast<float>(1500.0+unit()*(world.bounds().height-5000.0));
+        const std::uint8_t themes[]={4,5,7};
+        const auto theme=level>4?themes[static_cast<unsigned>(unit()*3)]:0;
+        const float expected_x=level>4?static_cast<float>(1000.0+unit()*15500.0):600.0f;
+        minidayz::WorldPoint point{};
+        assert(!world.source_start_position(point));
+        assert(world.advance_source_generation());
+        assert(world.generation_perk_dao()==theme);
+        assert(world.source_start_position(point));
+        assert(point.x==expected_x && point.y==(level>4?373.0f:beach_y));
+        auto after_grid=world.source_random();
+        minidayz::WorldPoint repeat{};
+        assert(world.source_start_position(repeat));
+        assert(repeat.x==point.x && repeat.y==point.y);
+        assert(world.source_random()==after_grid);
+        minidayz::WorldSystem replay;
+        assert(replay.begin_source_generation(seed,"Map",level,0,false,false,false,false,true));
+        assert(replay.advance_source_generation());
+        for(int y=0;y<world.grid().height();++y)
+            for(int x=0;x<world.grid().width();++x)
+                assert(replay.grid().at(x,y)==world.grid().at(x,y));
+        assert(replay.source_random()==world.source_random());
+        minidayz::WorldSystem legacy;
+        assert(legacy.begin_source_generation(seed,"Map",level));
+        assert(legacy.advance_source_generation());
+        assert(!legacy.source_start_position(point));
+    }
+    minidayz::WorldTravel travel;
+    assert(travel.begin(seed,5,0,true));
+    assert(travel.advance());
+    minidayz::WorldPoint destination{};
+    assert(travel.destination()->source_start_position(destination));
+    assert(destination.y==373.0f);
+}
+
 int main() {
+    test_source_start_event_order();
     test_original_split_road_save_compatibility();
     test_poi_order_save_compatibility();
     test_source_startup_proposals_precede_materialization();

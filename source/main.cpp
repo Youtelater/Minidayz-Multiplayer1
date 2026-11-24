@@ -106,6 +106,7 @@ public:
           legacy_split_roads_(restored && restored->version < 24u),
           legacy_crash_coordinates_(restored && restored->version < 25u),
           legacy_site_generation_(restored && restored->version < 26u),
+          legacy_start_order_(restored && restored->version < 27u),
           world_level_(restored ? restored->world_level : 0),
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
@@ -197,6 +198,7 @@ public:
         legacy_split_roads_=restored->version < 24u;
         legacy_crash_coordinates_=restored->version < 25u;
         legacy_site_generation_=restored->version < 26u;
+        legacy_start_order_=restored->version < 27u;
         player_=minidayz::PlayerSystem(restored->player);
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
@@ -261,7 +263,8 @@ public:
                              const minidayz::items::StashStorageSystem* stashes, bool legacy_world_generation,
                               bool legacy_split_roads = false,
                               bool legacy_crash_coordinates = false,
-                              bool legacy_site_generation = false) noexcept {
+                              bool legacy_site_generation = false,
+                              bool legacy_start_order = false) noexcept {
         minidayz::persistence::PendingCraftSnapshot craft{};
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount &&
             pending_craft_seconds_ > 0.0f) {
@@ -270,12 +273,12 @@ public:
         }
         return write_saved_game(seed, survivor, inventory_, equipment_, loot,
             tents, &item_use_runtime_, &perks_, stashes, &day_night_,
-            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation);
+            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order);
     }
 
     bool write_scene_save() noexcept {
         if (!write_survivor_save(world_seed_, world_level_, player_.state(),
-                                 ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_)) return false;
+                                 ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, legacy_start_order_)) return false;
         // Persist changed original object frames separately, with the same
         // seed/level and a checksum. Do not report Save success unless
         // world state is recorded too.
@@ -371,6 +374,7 @@ public:
                     legacy_split_roads_ = false;
                     legacy_crash_coordinates_ = false;
                     legacy_site_generation_ = false;
+                    legacy_start_order_ = false;
                     world_ = std::move(generating);
                     travel_.cancel();
                     ground_loot_=std::move(*generated_initial_loot);
@@ -4210,7 +4214,7 @@ private:
 
         // Keep the active world and its save state usable until the
         // destination has generated and accepted the survivor's spawn.
-        if (!travel_.begin(destination_seed, destination_level)) {
+        if (!travel_.begin(destination_seed, destination_level, 0, true)) {
             travel_failed_ = true;
             return;
         }
@@ -4244,6 +4248,7 @@ private:
         legacy_split_roads_ = false;
         legacy_crash_coordinates_ = false;
         legacy_site_generation_ = false;
+        legacy_start_order_ = false;
         player_ = minidayz::PlayerSystem(make_initial_state());
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
@@ -4304,7 +4309,7 @@ private:
     // Original Construct Game_events "Start events":
     // PlayerBase SetPosition UID 9846853259707545: (600,
     // 1500 + random(LayoutHeight-5000)) on Map.
-    // CurrentLevel==4 overrides with UID 641409757696071:
+    // CurrentLevel>4 overrides with UID 641409757696071:
     // (random(1000,16500),373).
     // Never retry, snap to a road, or shift the position on collision:
     // those extra rules changed the original starting position.
@@ -4312,16 +4317,18 @@ private:
                                            minidayz::PlayerState& state) noexcept {
         const auto& bounds=destination.bounds();
         if(!(bounds.width>0.0f && bounds.height>0.0f))return false;
-        // Original Construct Start events (PlayerBase193.SetPosition) use
-        // the SAME global Math.random stream as map creation and loot.
-        // The old XOR-reseeded private std::uniform_real_distribution
-        // made each new survivor's position independent from the actual
-        // generated world and relied on non-Construct distribution rules.
-        // Continue never re-rolls this source spawn; it restores save XY.
+        minidayz::WorldPoint start{};
+        if (destination.source_start_position(start)) {
+            if (!bounds.contains(start)) return false;
+            state.x=start.x;
+            state.y=start.y;
+            return true; // no additional random draw after loot generation
+        }
+        // Compatibility for a caller using the pre-v27 native pipeline.
+        // Continue restores its saved XY and never calls this fallback.
         auto& source_rng=destination.source_random();
         const double unit=static_cast<double>(source_rng())/4294967296.0;
-        const bool snow=destination.generation_level()==
-            minidayz::stage1::kSnowPlayerStartLevel;
+        const bool snow=destination.generation_level()==4u; // legacy native rule
         const double range=std::max(0.0,
             static_cast<double>(bounds.height)-
             minidayz::stage1::kNormalPlayerStartLayoutMargin);
@@ -4356,7 +4363,7 @@ private:
         source_player_outline_=false;
         source_roof_elapsed_=0.0f;
         source_roof_background_layer_=0xffff;
-        loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_);
+        loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_);
         if (!loading_world_) fail_world_generation();
     }
 
@@ -4610,6 +4617,7 @@ private:
     bool legacy_split_roads_{};
     bool legacy_crash_coordinates_{};
     bool legacy_site_generation_{};
+    bool legacy_start_order_{};
     std::uint8_t world_level_{};
     minidayz::WorldTravel travel_;
     bool travel_failed_{};

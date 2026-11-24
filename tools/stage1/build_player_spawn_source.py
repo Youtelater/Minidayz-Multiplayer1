@@ -4,7 +4,7 @@
 The original PlayerBase object is 193 (player_base-sheet0.png), not a
 random generated settlement node. The first Start events' unsaved-game branch
 uses Set Position with X=600 and Y=1500+random(LayoutHeight-5000) on Map;
-CurrentLevel 4 overrides with X=random(1000,16500), Y=373.
+CurrentLevel > 4 overrides with X=random(1000,16500), Y=373.
 Verify every expression and its parent conditions before generating C++.
 """
 import json
@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
-INPUT=ROOT/"data/stage1/construct_project_parsed.json"
+INPUT=ROOT/"data.deobfuscated.js"
 OUTPUT=ROOT/"include/minidayz/generated/player_spawn_source.hpp"
 
 def nodes(items, groups=()):
@@ -63,10 +63,12 @@ def main():
     assert y==expected,("Normal original spawn Y expression changed",y)
     uid,conditions,params=found[641409757696071]
     assert uid==980530989134876
-    assert any(c[0]==-1 and c[1]==46 and
-               [11,"CurrentLevel"] in c[-1] and [7,[0,4]] in c[-1]
-               for c in conditions), "Level 4 source spawn override changed"
+    assert any(c[:2]==[-1,46] and
+               c[-1]==[[11,"CurrentLevel"],[8,4],[7,[0,4]]]
+               for c in conditions), "Strict CurrentLevel > 4 source spawn guard changed"
     assert params==[[0,[19,95,[[0,1000],[0,16500]]]],[0,[0,373]]],params
+    world=(ROOT/"source/world.cpp").read_text(encoding="utf-8")
+    assert world.index("source_start_position_={600.0f") < world.index("if(level>=5 && generation_perk_dao_==0)") < world.index("if (level>4u) source_start_position_=") < world.index("const int first_min_y = 1;")
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
     OUTPUT.write_text("""#pragma once
 // Exact original Construct Start events: 9183183159438441 and 980530989134876.
@@ -75,7 +77,9 @@ inline constexpr float kNormalPlayerStartX=600.0f;
 inline constexpr float kNormalPlayerStartYBase=1500.0f;
 inline constexpr float kNormalPlayerStartLayoutMargin=5000.0f;
 inline constexpr float kOtherLayoutStartYOffset=-500.0f;
-inline constexpr unsigned kSnowPlayerStartLevel=4u;
+inline constexpr unsigned kSnowPlayerStartMinExclusive=4u;
+// Retain old name only for consumers of the previous generated interface.
+inline constexpr unsigned kSnowPlayerStartLevel=5u;
 inline constexpr float kSnowPlayerStartXMin=1000.0f;
 inline constexpr float kSnowPlayerStartXMax=16500.0f;
 inline constexpr float kSnowPlayerStartY=373.0f;

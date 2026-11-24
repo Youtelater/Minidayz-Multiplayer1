@@ -215,7 +215,8 @@ public:
                                  bool legacy_world_generation = false,
                                  bool legacy_split_roads = false,
                                  bool legacy_crash_coordinates = false,
-                                 bool legacy_site_generation = false);
+                                 bool legacy_site_generation = false,
+                                 bool source_start_events = false);
     bool advance_source_generation();
     std::uint8_t generation_phase() const noexcept { return generation_phase_; }
     bool generation_complete() const noexcept { return generation_phase_ == 6; }
@@ -311,6 +312,11 @@ public:
     bool source_pond_contains(float x,float y,bool solid_only) const noexcept;
     std::uint8_t generation_level() const noexcept { return generation_level_; }
     std::uint8_t generation_perk_dao() const noexcept { return generation_perk_dao_; }
+    bool source_start_position(WorldPoint& point) const noexcept {
+        if (!source_start_ready_) return false;
+        point=source_start_position_;
+        return true;
+    }
 
     const WorldBounds& bounds() const noexcept { return bounds_; }
     std::uint32_t seed() const noexcept { return seed_; }
@@ -344,6 +350,9 @@ private:
     bool legacy_split_roads_{};
     bool legacy_crash_coordinates_{};
     bool legacy_site_generation_{};
+    bool source_start_events_{};
+    bool source_start_ready_{};
+    WorldPoint source_start_position_{};
     std::uint8_t generation_level_{};
     std::uint8_t generation_perk_dao_{};
     bool generation_is_map_{};
@@ -372,7 +381,7 @@ private:
 class WorldTravel {
 public:
     bool begin(std::uint32_t seed, std::uint8_t level,
-               std::uint8_t perk_dao = 0) noexcept;
+               std::uint8_t perk_dao = 0, bool source_start_events = false) noexcept;
     bool advance() noexcept;
     WorldSystem* destination() const noexcept { return destination_.get(); }
     void cancel() noexcept { destination_.reset(); }

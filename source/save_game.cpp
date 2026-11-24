@@ -697,7 +697,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
             candidate.quick_pistol=old.quick_pistol;
             candidate.source_energy_seconds=0.0f;
         }
-    } else if (header_ok && (candidate.version == 22u || candidate.version == 23u || candidate.version == 24u || candidate.version == 25u || candidate.version == kSaveVersion)) {
+    } else if (header_ok && (candidate.version == 22u || candidate.version == 23u || candidate.version == 24u || candidate.version == 25u || candidate.version == 26u || candidate.version == kSaveVersion)) {
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
     }
@@ -785,12 +785,13 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       const stage1::SourceEnergyDrinkBoost* source_energy, bool legacy_world_generation,
                       bool legacy_split_roads,
                       bool legacy_crash_coordinates,
-                      bool legacy_site_generation) noexcept {
+                      bool legacy_site_generation,
+                      bool legacy_start_order) noexcept {
     if (!target_path || !temporary_path || !target_path[0] || !temporary_path[0] ||
         std::strcmp(target_path, temporary_path) == 0 || seed == 0 ||
         world_level > 5u) return false;
     SavedGame save{};
-    save.version = legacy_world_generation ? 22u : (legacy_split_roads ? 23u : (legacy_crash_coordinates ? 24u : (legacy_site_generation ? 25u : kSaveVersion)));
+    save.version = legacy_world_generation ? 22u : (legacy_split_roads ? 23u : (legacy_crash_coordinates ? 24u : (legacy_site_generation ? 25u : (legacy_start_order ? 26u : kSaveVersion))));
     save.seed = seed;
     save.world_level = world_level;
     save.source_energy_seconds=source_energy?source_energy->remaining():0.0f;
@@ -888,13 +889,14 @@ bool write_saved_game(std::uint32_t seed,
                       const stage1::SourceEnergyDrinkBoost* source_energy, bool legacy_world_generation,
                       bool legacy_split_roads,
                       bool legacy_crash_coordinates,
-                      bool legacy_site_generation) noexcept {
+                      bool legacy_site_generation,
+                      bool legacy_start_order) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     return write_saved_game_to_paths(seed, player, inventory, equipment,
                                     ground_loot, tents, kSavePath, kSaveTempPath,
                                     item_use, perks, stashes, source_time, source_rain, source_loot,
-                                    pending_craft, world_level,source_energy, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation);
+                                    pending_craft, world_level,source_energy, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order);
 }
 
 } // namespace minidayz::persistence

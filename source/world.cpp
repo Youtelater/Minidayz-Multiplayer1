@@ -537,6 +537,9 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     legacy_split_roads_ = false;
     legacy_crash_coordinates_ = false;
     legacy_site_generation_ = false;
+    source_start_events_ = false;
+    source_start_ready_ = false;
+    source_start_position_ = {};
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     initialized_ = true;
@@ -549,7 +552,8 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           std::uint8_t perk_dao, bool legacy_world_generation,
                                           bool legacy_split_roads,
                                           bool legacy_crash_coordinates,
-                                          bool legacy_site_generation) {
+                                          bool legacy_site_generation,
+                                          bool source_start_events) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
@@ -558,6 +562,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
     legacy_split_roads_ = legacy_world_generation || legacy_split_roads;
     legacy_crash_coordinates_ = legacy_split_roads_ || legacy_crash_coordinates;
     legacy_site_generation_ = legacy_crash_coordinates_ || legacy_site_generation;
+    source_start_events_ = source_start_events && !legacy_site_generation_ && name == "Map";
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -630,11 +635,26 @@ bool WorldSystem::generate_procedural_grid(std::uint8_t level, std::uint32_t see
 
     seed_ = seed;
     rng_.seed(seed);
+    source_start_ready_=false;
+    if (source_start_events_) {
+        // Root Game_events / Start events 9183183159438441: this draw
+        // happens on layout start, BEFORE generate_array_locations.
+        // Preserve the draw even when the later snow branch overwrites XY.
+        source_start_position_={600.0f,static_cast<float>(1500.0+
+            source_random_unit(rng_)*(static_cast<double>(bounds_.height)-5000.0))};
+    }
     // Original start-of-layout event 3298356887887951 selects
     // choose(4,5,7) for CurrentLevel>=5 and default map_dao=0.
     if(level>=5 && generation_perk_dao_==0){
         constexpr std::uint16_t variants[]={4,5,7};
         generation_perk_dao_=static_cast<std::uint8_t>(choose_marker(variants,rng_));
+    }
+    if (source_start_events_) {
+        // Root 980530989134876 uses comparison opcode 4 (strict >),
+        // not equality or >=. CurrentLevel 4 keeps the beach spawn.
+        if (level>4u) source_start_position_={static_cast<float>(1000.0+
+            source_random_unit(rng_)*(16500.0-1000.0)),373.0f};
+        source_start_ready_=true;
     }
     const int first_min_y = 1;
     // Floor(random(1,Map_size_Y)) has an exclusive end; for 16 rows it
@@ -1757,6 +1777,9 @@ void WorldSystem::reset() noexcept {
     legacy_split_roads_ = false;
     legacy_crash_coordinates_ = false;
     legacy_site_generation_ = false;
+    source_start_events_ = false;
+    source_start_ready_ = false;
+    source_start_position_ = {};
     generation_perk_dao_ = 0;
     generation_is_map_ = false;
     seed_ = 0;
@@ -2570,11 +2593,12 @@ const WorldPlacement* WorldSystem::placement_by_instance_id(
 }
 
 bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level,
-                        std::uint8_t perk_dao) noexcept {
+                        std::uint8_t perk_dao, bool source_start_events) noexcept {
     cancel();
     try {
         auto candidate = std::make_unique<WorldSystem>();
-        if (!candidate->begin_source_generation(seed, "Map", level, perk_dao)) return false;
+        if (!candidate->begin_source_generation(seed, "Map", level, perk_dao,
+                                               false, false, false, false, source_start_events)) return false;
         destination_ = std::move(candidate);
         return true;
     } catch (const std::bad_alloc&) {
