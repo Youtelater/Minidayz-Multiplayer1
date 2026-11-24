@@ -830,7 +830,7 @@ bool Renderer::draw_source_night_mask(const WorldSystem& world,
   world_source::source_night_apply_light(night_mask_pixels_.data(),sw,sh,
       frame.alpha,frame.w,frame.h,p->x-camera_x,p->y-camera_y,
       p->width,p->height,p->origin_x,p->origin_y,
-      p->angle*0.01745329251994329577f,p->scale_x<0,p->opacity);
+      p->angle*0.01745329251994329577f,p->scale_x<0,p->opacity,true);
  }
  // RGBA8 texture memory is A,B,G,R; little-endian word RRGGBBAA.
  // Update only once per synchronized frame. Never free a queued texture.
