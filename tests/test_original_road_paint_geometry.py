@@ -261,6 +261,30 @@ def trace_extra(nodes,anc=()):
 trace_extra(dict(project[6])["Game_events"])
 assert seen_extra==additional_leg_ids
 
+# Capture every ancestor of the original single-cell road repaint
+# actions, including loop dimensions, coordinate setters and tile reads.
+# These must be implemented from source, not guessed from image names.
+edge_uids={a["uid"] for r in road_branch_report for a in r["paint_actions"] if a["op"]==192}
+def trace_edge_actions(nodes,anc=(),path=()):
+    for i,e in enumerate(nodes if isinstance(nodes,list) else ()):
+        if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
+        here=path+(i,)
+        for a in e[6]:
+            if isinstance(a,list) and len(a)>5 and a[3] in edge_uids:
+                print("SOURCE_ROAD_EDGE",json.dumps({
+                    "uid":a[3],"event":e[4],"path":here,
+                    "guards":e[5],"or":e[2],"params":a[5],
+                    "ancestors":[{"uid":p[4],"or":p[2],"conditions":p[5],
+                                  "actions":p[6]} for p in anc
+                                  if p[4] in {3785908327653467,5407406943689734,1239724375006415}
+                                  or any(q[4] in {3785908327653467,5407406943689734,1239724375006415}
+                                         for q in anc[:anc.index(p)])]
+                },separators=(",",":")))
+        if len(e)>7 and isinstance(e[7],list):
+            trace_edge_actions(e[7],anc+(e,),here)
+assert len(edge_uids)==36
+trace_edge_actions(dict(project[6])["Game_events"])
+
 for row in road_branch_report:
     print("SOURCE_ROAD_BRANCH",json.dumps(row,separators=(",",":"))[:6500])
 
