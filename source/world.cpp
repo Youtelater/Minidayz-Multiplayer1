@@ -1986,6 +1986,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // exact original frame geometry rather than a zero-sized object.
         if(source_category3_events_ && var1==3){
             auto& base=placements_[primary_index];
+            base.source_reload_randomize=var3==0.0 && (base.object==296 || base.object==442);
             struct Geometry {std::uint16_t object; float w,h,ox,oy;};
             static constexpr Geometry geometry[]={
                 {442,20,28,0.3499999940395355f,0.75f},
@@ -2859,6 +2860,7 @@ bool WorldTravel::advance() noexcept {
 // and reallocating the cached objects or pretending to replay all events.
 void WorldSystem::clear_source_location_reload() noexcept {
     source_active_locations_.fill(0);
+    source_previously_loaded_locations_.fill(0);
     source_reload_anchor_={};
     source_reload_elapsed_=0;
     source_reload_started_=false;
@@ -2880,6 +2882,7 @@ bool WorldSystem::start_source_location_reload(WorldPoint player) noexcept {
        map_markers_.size()>source_active_locations_.size() ||
        !std::isfinite(player.x)||!std::isfinite(player.y))return false;
     select_source_active_locations(player,2800.0f);
+    source_previously_loaded_locations_=source_active_locations_;
     source_reload_anchor_=player;
     source_reload_started_=true;
     return true;
@@ -2897,8 +2900,74 @@ bool WorldSystem::update_source_location_reload(WorldPoint actor,float seconds) 
     // Source Reload_locations destroys previous anchor517 and spawns a
     // fresh one at 225 before erasing and creating selected locations.
     source_reload_anchor_=actor;
+    const auto previous=source_active_locations_;
     select_source_active_locations(actor,1800.0f);
+    // New-generation maps apply the source's transient instance lifetime
+    // to the stable native cache. Earlier saves retain their prior behavior.
+    if(source_category7_events_)replay_source_location_transitions(previous);
     return true;
+}
+
+void WorldSystem::replay_source_location_transitions(
+    const std::array<std::uint8_t,16*33>& previous) noexcept {
+    // Root erase_map_element 185349761267888 destroys each selected tree,
+    // house roof/foundation, wall, door and their linked solids. These
+    // instances have no persisted frame/opacity state in Array525 row5.
+    // Car bodies are different: event 7367536008994206 explicitly stores
+    // searched frame1 into element var3. Preserve cars and one-shot loot.
+    // Stable native slots are retained to keep save IDs and indexes valid.
+    const auto count=std::min(placements_.size(),original_sprite_states_.size());
+    for(std::size_t i=0;i<count;++i){
+        auto& p=placements_[i];
+        if(!p.source_reload_marker || p.source_reload_marker>previous.size())continue;
+        const auto owner=p.source_reload_marker-1;
+        if(!previous[owner] || source_active_locations_[owner])continue;
+        const auto linked_index=[&](std::uint64_t uid)->const WorldPlacement*{
+            if(!(uid&(std::uint64_t{1}<<63)))return nullptr;
+            const auto slot=uid&~(std::uint64_t{1}<<63);
+            return slot>0 && slot<=placements_.size()?&placements_[slot-1]:nullptr;
+        };
+        const auto tree=[](std::uint16_t obj){return obj==210 || world_source::source_tree_impact_point(obj)!=nullptr;};
+        const auto* link=linked_index(p.linked_runtime_uid);
+        const bool reset_tree=tree(p.object) || ((p.object==345 || p.object==348) && link && tree(link->object));
+        const bool reset_door=p.object==349 || (p.object==348 && link && link->object==349);
+        const bool reset_house=stage1::source_family_contains(1048,p.object) ||
+            stage1::source_family_contains(1049,p.object) || p.object==346 || p.object==347;
+        if(!reset_tree && !reset_door && !reset_house)continue;
+        const auto& baseline=original_sprite_states_[i];
+        apply_source_building_frame_geometry(p,baseline.animation,baseline.frame);
+        p.source_animation=baseline.animation;
+        p.source_frame=baseline.frame;
+        p.opacity=baseline.opacity;
+        p.layer=baseline.layer;
+        p.source_variable_0=baseline.source_variable_0;
+    }
+    // Reset door collider transform as well as visibility after its
+    // original frame0 is recreated. The collider belongs to this owner.
+    for(auto& p:placements_){
+        if(p.object!=349 || !p.source_reload_marker || p.source_reload_marker>previous.size())continue;
+        const auto owner=p.source_reload_marker-1;
+        if(!previous[owner] || source_active_locations_[owner])continue;
+        const auto slot=p.linked_runtime_uid&~(std::uint64_t{1}<<63);
+        if((p.linked_runtime_uid&(std::uint64_t{1}<<63)) && slot>0 && slot<=placements_.size()){
+            auto& solid=placements_[slot-1];
+            if(solid.object==348 && solid.linked_runtime_uid==p.runtime_uid)
+                (void)sync_source_door_solid_placement(p,solid);
+        }
+    }
+    // Root create_map_element berry events 524169683856062 / etc. and
+    // pump 3903561981802149 re-run Choose on each creation when var3=0.
+    // First activation still uses the existing eager startup materialization;
+    // only previously loaded and erased locations consume fresh draws here.
+    for(auto& p:placements_){
+        if(!p.source_reload_randomize || !p.source_reload_marker || p.source_reload_marker>previous.size())continue;
+        const auto owner=p.source_reload_marker-1;
+        if(previous[owner] || !source_active_locations_[owner] || !source_previously_loaded_locations_[owner])continue;
+        if(p.object==296)p.source_frame=source_random_bounded(rng_,2u);
+        else if(p.object==442)p.source_variable_0=100u+100u*source_random_bounded(rng_,2u);
+    }
+    for(std::size_t i=0;i<source_active_locations_.size();++i)
+        if(source_active_locations_[i])source_previously_loaded_locations_[i]=1;
 }
 bool WorldSystem::source_pond_contains(float x,float y,bool solid_only) const noexcept {
     if(!std::isfinite(x)||!std::isfinite(y))return false;

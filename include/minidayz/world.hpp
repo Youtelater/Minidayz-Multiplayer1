@@ -149,6 +149,8 @@ struct WorldPlacement {
     // Root house creation also sets wall var3 and foundation var5.
     std::uint64_t source_variable_3{}, source_variable_5{};
     bool source_secret_house_drop{};
+    // Original Array525 element var3==0 berry/pump recreation guards.
+    bool source_reload_randomize{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
@@ -379,11 +381,13 @@ private:
     // Root Array518 is at most 16x33; retain dormant native geometry and
     // stable save IDs while applying the exact source active-location set.
     std::array<std::uint8_t,16*33> source_active_locations_{};
+    std::array<std::uint8_t,16*33> source_previously_loaded_locations_{};
     WorldPoint source_reload_anchor_{};
     float source_reload_elapsed_{};
     bool source_reload_started_{};
     void clear_source_location_reload() noexcept;
     void select_source_active_locations(WorldPoint actor,float radius) noexcept;
+    void replay_source_location_transitions(const std::array<std::uint8_t,16*33>& previous) noexcept;
     std::uint8_t generation_level_{};
     std::uint8_t generation_perk_dao_{};
     bool generation_is_map_{};

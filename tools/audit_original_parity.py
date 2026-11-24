@@ -117,6 +117,15 @@ if parsed.is_file() and original.is_file():
                     for a in by_id[3429345725247912][6]),"Original third lamp mirror")
         require('source_category46_events_ && (var1==4 || var1==6)' in (ROOT/'source/world.cpp').read_text(encoding='utf-8'),
                 'Live world uses compiled original category4/6 event chains')
+        # Original erase_map_element destroys transient actors and stores
+        # only the searched car state into row5 on erase_map_location.
+        for uid,obj in ((7260729040565349,184),(3769234513304437,207),
+                        (8773721931942066,209),(3939261448234603,349),
+                        (8526304863794774,1048),(8522529320050883,1049),
+                        (4222259968877768,296),(4481536163489103,442)):
+            require(any(a[:2]==[obj,53] for a in by_id[uid][6]),'Root erased object '+str(obj))
+        require(any(a[:2]==[508,88] and a[5]==[[10,3],[7,[0,1]]]
+                    for a in by_id[7367536008994206][6]),'Root searched car erase state')
         timer=by_id[583575774431491][5]
         require(any(c[:2]==[-1,77] and c[9]==[[0,[0,1]]] for c in timer)
                 and any(c[:2]==[-1,51] and c[9][1:]==[[8,4],[7,[0,400]]]

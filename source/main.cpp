@@ -3452,7 +3452,7 @@ private:
             source_interior_elapsed_=std::fmod(source_interior_elapsed_,0.5f);
             for(const auto i:source_house_interior_indices_){
                 const auto* p=world_.placement(i);
-                if(!p || !source_player_overlaps_world_sprite(
+                if(!p || !world_.source_placement_active(*p) || !source_player_overlaps_world_sprite(
                         *p,player_pos,p->origin_x,p->origin_y))continue;
                 const auto layer=player_pos.y>p->y?
                     source_roof_background_layer_:source_roof_buildings_layer_;
@@ -3471,7 +3471,7 @@ private:
         source_overlapping_wall_indices_.clear();
         for(const auto i:source_house_wall_indices_){
             const auto* wall=world_.placement(i);
-            if(wall && source_player_base_overlaps_wall(*wall,player_pos)){
+            if(wall && world_.source_placement_active(*wall) && source_player_base_overlaps_wall(*wall,player_pos)){
                 source_overlapping_wall_indices_.push_back(i);
             }
         }
@@ -3479,7 +3479,7 @@ private:
         bool any_roof_overlap=false;
         for(const auto index:source_roof_indices_){
             const auto* roof=world_.placement(index);
-            if(!roof)continue;
+            if(!roof || !world_.source_placement_active(*roof))continue;
             const auto* frame=source_roof_member_point(
                 roof->object,roof->source_animation,roof->source_frame);
             if(!frame)continue;
@@ -3495,7 +3495,7 @@ private:
             float best=std::numeric_limits<float>::max();
             for(const auto i:source_house_foundation_indices_){
                 const auto* p=world_.placement(i);
-                if(!p)continue;
+                if(!p || !world_.source_placement_active(*p))continue;
                 const float dx=p->x-roof->x,dy=p->y-roof->y;
                 const float d=dx*dx+dy*dy;
                 if(d<best){best=d;base_index=i;}
@@ -3556,7 +3556,7 @@ private:
                 std::size_t picked=world_.placement_count();
                 for(const auto i:source_roof_indices_){
                     const auto* candidate=world_.placement(i);
-                    if(!candidate)continue;
+                    if(!candidate || !world_.source_placement_active(*candidate))continue;
                     const float dx=candidate->x-base->x,dy=candidate->y-base->y;
                     const float d=dx*dx+dy*dy;
                     if(d<nearest){nearest=d;picked=i;}
@@ -3586,7 +3586,7 @@ private:
             if(overlap && (!player_in_wall || touching_wall)){
                 for(const auto i:source_door_indices_){
                     const auto* door=world_.placement(i);
-                    if(!door)continue;
+                    if(!door || !world_.source_placement_active(*door))continue;
                     bool picked=!player_in_wall &&
                         source_house_sprites_overlap(*door,*roof);
                     if(touching_wall && base){
@@ -3648,7 +3648,7 @@ private:
         std::size_t nearest=world_.placement_count();
         for(std::size_t i=0;i<world_.placement_count();++i){
             const auto* p=world_.placement(i);
-            if(!p || p->object!=241 || !p->runtime_uid ||
+            if(!p || !world_.source_placement_active(*p) || p->object!=241 || !p->runtime_uid ||
                p->source_variable_0!=0 || p->opacity<=0.0f)continue;
             const float d=std::hypot(p->x-x,p->y-y);
             if(d<=distance){distance=d;nearest=i;}
@@ -3687,7 +3687,7 @@ private:
         float best=std::numeric_limits<float>::max();
         for(auto idx:source_furniture_indices_){
             const auto* p=world_.placement(idx);
-            if(!p || !source_furniture_active(*p))continue;
+            if(!p || !world_.source_placement_active(*p) || !source_furniture_active(*p))continue;
             if(!source_player_overlaps_world_sprite(*p,actor,
                     p->origin_x,p->origin_y))continue;
             const float d=std::hypot(p->x-actor.x,p->y-actor.y);
@@ -3719,7 +3719,7 @@ private:
                 // That perk is not yet represented, so do not invent it.
                 for(const auto i:source_house_wall_indices_){
                     const auto* wall=world_.placement(i);
-                    if(wall && source_player_overlaps_world_sprite(
+                    if(wall && world_.source_placement_active(*wall) && source_player_overlaps_world_sprite(
                         *wall,player_pos,wall->origin_x,wall->origin_y)){
                         sheltered=true;break;
                     }
@@ -3789,7 +3789,7 @@ private:
         const auto waiting=source_pump_pending_;
         source_pump_pending_={};
         const auto* p=world_.placement(waiting.index);
-        if(!p || p->runtime_uid!=waiting.runtime_uid ||
+        if(!p || !world_.source_placement_active(*p) || p->runtime_uid!=waiting.runtime_uid ||
            !minidayz::world_source::source_furniture_active(*p) ||
            p->object!=minidayz::world_source::kFurniturePump)return;
         const auto use=minidayz::world_source::source_pump_draw(
@@ -3816,7 +3816,7 @@ private:
         source_bed_selected_uid_=0;
         for(auto idx:source_furniture_indices_){
             const auto* p=world_.placement(idx);
-            if(!p || p->object!=minidayz::world_source::kFurnitureBed)
+            if(!p || !world_.source_placement_active(*p) || p->object!=minidayz::world_source::kFurnitureBed)
                 continue;
             const bool overlap=
                 minidayz::world_source::source_furniture_active(*p) &&
@@ -3854,7 +3854,7 @@ private:
         // would turn the original ghost preview into an O(world) stall.
         for(const auto i:source_house_wall_indices_){
             const auto* wall=world_.placement(i);
-            if(wall && source_house_sprites_overlap(ghost,*wall))
+            if(wall && world_.source_placement_active(*wall) && source_house_sprites_overlap(ghost,*wall))
                 return true;
         }
         return false;
@@ -3935,7 +3935,7 @@ private:
         float distance=std::numeric_limits<float>::max();
         for(auto idx:source_furniture_indices_){
             const auto* bed=world_.placement(idx);
-            if(!bed || bed->object!=minidayz::world_source::kFurnitureBed ||
+            if(!bed || !world_.source_placement_active(*bed) || bed->object!=minidayz::world_source::kFurnitureBed ||
                !minidayz::world_source::source_furniture_active(*bed) ||
                bed->source_variable_0>1 ||
                !minidayz::world_source::source_player_overlaps_world_sprite(
@@ -4005,7 +4005,7 @@ private:
         bool bed_valid=false;
         for(const auto index:source_furniture_indices_){
             const auto* bed=world_.placement(index);
-            if(bed && bed->runtime_uid==pending.runtime_uid &&
+            if(bed && world_.source_placement_active(*bed) && bed->runtime_uid==pending.runtime_uid &&
                minidayz::world_source::source_furniture_active(*bed)){
                 bed_valid=true;break;
             }
@@ -4065,7 +4065,7 @@ private:
             player_.state().x,player_.state().y};
         for(const auto idx:source_interior_container_indices_){
             const auto* box=world_.placement(idx);
-            if(!box || !minidayz::world_source::source_bunker_lootbox_closed(*box))
+            if(!box || !world_.source_placement_active(*box) || !minidayz::world_source::source_bunker_lootbox_closed(*box))
                 continue;
             // Root 181.OnCollision(796): use the original active-frame
             // collider and hotspot, not a guessed radius or touch button.
@@ -4129,7 +4129,7 @@ private:
                source_door_changed_this_tick_[slot] ||
                source_door_waits_[slot].effect!=AutomaticDoorEffect::none)continue;
             const auto* p=world_.placement(source_door_indices_[slot]);
-            if(!p || p->source_frame>1 || !p->runtime_uid)continue;
+            if(!p || !world_.source_placement_active(*p) || p->source_frame>1 || !p->runtime_uid)continue;
             const auto* frame=source_door_point(p->source_animation,p->source_frame);
             if(!frame || !source_door_overlaps_player(*p,*frame,actor))continue;
             const float d=std::hypot(p->x-actor.x,p->y-actor.y);
@@ -4165,6 +4165,8 @@ private:
             pending={};
             if(slot>=source_door_indices_.size())continue;
             const auto index=source_door_indices_[slot];
+            const auto* active_door=world_.placement(index);
+            if(!active_door || !world_.source_placement_active(*active_door))continue;
             // A door's pending event always belongs to THAT generated
             // instance, even after loading a saved world or moving away.
             using minidayz::world_source::AutomaticDoorEffect;
@@ -4204,7 +4206,7 @@ private:
                 continue;
             const auto index=source_door_indices_[slot];
             const auto* p=world_.placement(index);
-            if(!p)continue;
+            if(!p || !world_.source_placement_active(*p))continue;
             // Check the real source door dimensions and hotspot, not a
             // guessed 96px range that can suppress large doors and their
             // original wood/metal open/close sound events.
@@ -4416,7 +4418,7 @@ private:
         bool indoors=false, wood=false, concrete=false;
         for(const auto index:source_house_wall_indices_){
             const auto* zone=world_.placement(index);
-            if(!zone || !minidayz::world_source::source_player_base_overlaps_wall(*zone,{x,y}))
+            if(!zone || !world_.source_placement_active(*zone) || !minidayz::world_source::source_player_base_overlaps_wall(*zone,{x,y}))
                 continue;
             indoors=true;
             wood |= zone->source_variable_1==1;

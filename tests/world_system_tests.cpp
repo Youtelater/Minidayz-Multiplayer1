@@ -3553,7 +3553,62 @@ static void test_original_category7_event_chains(){
     }
 }
 
+static void test_original_location_transient_recreation(){
+    using namespace minidayz;
+    WorldSystem world;
+    assert(world.begin_source_generation(123456u,"Map",0,0,false,false,false,false,true,true,true,true,true));
+    while(!world.generation_complete())assert(world.advance_source_generation());
+    // Use actual generated locations, not manually added scenery.
+    std::size_t tree=world.placement_count(),door=tree,car=tree;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* p=world.placement(i);
+        if(!p || !p->source_reload_marker || !p->linked_runtime_uid)continue;
+        if(p->object==184 && p->source_frame==0)tree=i;
+        if(p->object==349 && p->source_frame==0)door=i;
+        if(p->object==241)car=i;
+    }
+    assert(tree<world.placement_count() && door<world.placement_count() && car<world.placement_count());
+    const auto center=[&](std::size_t i){
+        const auto* m=world.map_marker(world.placement(i)->source_reload_marker-1);
+        const auto h=world_source::mapgen_hotspot(m->cell_x,m->cell_y);
+        return WorldPoint{h.x+500,h.y+500};
+    };
+    const auto away=[&](WorldPoint a){
+        return WorldPoint{a.x<world.bounds().width/2?world.bounds().width-600.0f:600.0f,a.y};
+    };
+    const auto slot=[](std::uint64_t uid){return static_cast<std::size_t>((uid&~(std::uint64_t{1}<<63))-1);};
+    const auto t=*world.placement(tree);
+    const auto tcenter=center(tree);
+    assert(world.start_source_location_reload(tcenter));
+    assert(world.set_placement_sprite_state(tree,0,1,t.opacity));
+    assert(world.set_placement_sprite_state(slot(t.linked_runtime_uid),0,10,0));
+    assert(world.update_source_location_reload(away(tcenter),1.0f));
+    assert(!world.source_placement_active(*world.placement(tree)));
+    assert(world.placement(tree)->source_frame==0);
+    assert(world.placement(slot(t.linked_runtime_uid))->opacity>0);
+    assert(world.update_source_location_reload(tcenter,1.0f));
+    assert(world.source_placement_active(*world.placement(tree)));
+    const auto d=*world.placement(door);
+    const auto dcenter=center(door);
+    assert(world.start_source_location_reload(dcenter));
+    assert(world.set_placement_sprite_state(door,d.source_animation,1,d.opacity));
+    assert(world.placement(slot(d.linked_runtime_uid))->opacity==0);
+    assert(world.update_source_location_reload(away(dcenter),1.0f));
+    assert(world.placement(door)->source_frame==0);
+    assert(world.placement(slot(d.linked_runtime_uid))->opacity>0);
+    assert(world.update_source_location_reload(dcenter,1.0f));
+    const auto ccenter=center(car);
+    assert(world.start_source_location_reload(ccenter));
+    assert(world.mark_source_car_trunk_searched(car));
+    const auto body=slot(world.placement(car)->parent_runtime_uid);
+    assert(world.update_source_location_reload(away(ccenter),1.0f));
+    assert(world.update_source_location_reload(ccenter,1.0f));
+    assert(world.placement(car)->opacity==0 && world.placement(car)->source_variable_0==1);
+    assert(world.placement(body)->source_frame==1);
+}
+
 int main() {
+    test_original_location_transient_recreation();
     test_original_category7_event_chains();
     test_original_category46_event_chains();
     test_original_category5_elements();
