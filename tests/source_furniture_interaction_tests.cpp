@@ -13,6 +13,19 @@ int main() {
     assert(source_pump_draw(50.0f,70).consumed==25);
     assert(source_pump_draw(98.0f,70).consumed==2);
     assert(source_pump_draw(15.0f,3).consumed==3);
+    // Root 401776724287473 and 5981791044814398 have different
+    // deduction timing and rounding; the gain is NOT the debit.
+    const auto high=source_pump_draw(98.4f,70);
+    assert(high.can_use && high.consume_before_wait && high.consumed==2);
+    assert(high.thirst_gain==25.0f);
+    assert(source_pump_draw(99.9f,70).can_use);
+    assert(source_pump_draw(99.9f,70).consumed==0);
+    const auto low=source_pump_draw(99.0f,25);
+    assert(low.can_use && !low.consume_before_wait && low.consumed==25);
+    assert(low.thirst_gain==25.0f);
+    assert(source_pump_draw(98.0f,3).consumed==3);
+    assert(source_pump_draw(198.0f,70,200.0f).consumed==2);
+    assert(!source_pump_draw(200.0f,70,200.0f).can_use);
     assert(!source_pump_draw(100.0f,70).can_use);
     assert(!source_pump_draw(50.0f,0).can_use);
     bed.opacity=1.0f;
