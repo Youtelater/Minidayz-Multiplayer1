@@ -2908,6 +2908,14 @@ public:
                 renderer.draw_text("PROCEDURAL TERRAIN TILES FAILED",
                                    camera_x+12.0f,camera_y+54.0f,0.30f);
             }
+            const auto& special_terrain=world_.source_special_terrain();
+            if(!special_terrain.empty() && !renderer.draw_source_special_terrain(
+                    special_terrain,camera_x,camera_y,view_w,view_h,
+                    minidayz::world_source::source_world_layer_depth(
+                        special_terrain.layer,0,0))){
+                renderer.draw_text("ORIGINAL SPECIAL TERRAIN FAILED",
+                                   camera_x+12.0f,camera_y+82.0f,0.30f);
+            }
             // Render the actual source Map layout in world coordinates.
             // Cull placements outside the camera rectangle to keep 3DS draw
             // cost bounded instead of drawing the entire 36k x 20k layout.
