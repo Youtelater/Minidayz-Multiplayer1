@@ -285,7 +285,9 @@ def main():
     # exact trigger/position guards, including inherited conditions.
     for (sheet,path),(event,ancestors) in event_lookup.items():
         if sheet!="Game_events":continue
-        if any((a[:2]==[630,88] and len(a)>5 and a[5]==[[10,0],[7,[0,v]]])
+        if any(a[:2]==[189,69] and len(a)>5 and
+                   a[5]==[[1,[2,"Level_menu"]],[13,[7,[0,15]]]]
+                   for a in event[6]) or any((a[:2]==[630,88] and len(a)>5 and a[5]==[[10,0],[7,[0,v]]])
                 for a in event[6] for v in (216,217,218)) or any(
                 c[0]==978 or any(isinstance(p,list) and p==[4,978]
                     for p in c[9]) for c in event[5] if len(c)>9):
