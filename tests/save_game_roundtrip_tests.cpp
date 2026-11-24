@@ -391,6 +391,12 @@ int main() {
     // World progression must survive Continue without resetting the
     // survivor to level-one terrain. Level zero remains the old default.
     assert(restored.world_level == 0);
+    // The saved file is a regular file, so this temporary path cannot open.
+    assert(!write_saved_game_to_paths(44, player, inventory, equipment, ground,
+        tents, kFile, "stage2_roundtrip_test.sav/travel.tmp", nullptr, nullptr,
+        nullptr, nullptr, nullptr, nullptr, &craft, 1));
+    assert(load_saved_game_from_path(restored, kFile));
+    assert(restored.seed == 43 && restored.world_level == 0);
     assert(write_saved_game_to_paths(43, player, inventory, equipment, ground,
         tents, kFile, kTemp, nullptr, nullptr, nullptr, nullptr, nullptr,
         nullptr, &craft, 5));
