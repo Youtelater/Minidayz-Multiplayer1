@@ -23,6 +23,13 @@ int main() {
     assert(source_night_destination_out(255,255,0.5f)==127);
     assert(source_night_destination_out(200,0,1.0f)==200);
     assert(source_night_destination_out(200,255,1.0f)==0);
+    // Overlay shader multiplies sampled alpha by the isolated layer alpha
+    // before the original blend8 operation discards its RGB.
+    assert(source_night_overlay_destination_out(255,255,0.5f)==127);
+    assert(source_night_overlay_destination_out(128,255,0.5f)==96);
+    assert(source_night_overlay_destination_out(128,255,1.0f)==64);
+    assert(source_night_overlay_destination_out(0,255,1.0f)==0);
+    assert(source_night_overlay_destination_out(128,0,1.0f)==128);
     std::array<std::uint8_t,16> mask{};
     const std::uint8_t alpha[]{255,0,128,255};
     mask.fill(200);
@@ -31,6 +38,11 @@ int main() {
     mask.fill(200);
     source_night_apply_light(mask.data(),4,4,alpha,2,2,3,1,2,2,0,0,0,true,1);
     assert(mask[5]==200 && mask[6]==0 && mask[9]==0 && mask[10]==100);
+    mask.fill(128);
+    source_night_apply_light(mask.data(),4,4,alpha,2,2,1,1,2,2,0,0,0,false,0.5f,true);
+    assert(mask[5]==96 && mask[6]==128 && mask[9]==112 && mask[10]==96);
+    source_night_apply_light(mask.data(),4,4,alpha,2,2,1,1,2,2,0,0,0,false,0.5f,true);
+    assert(mask[5]==78 && mask[6]==128 && mask[10]==78);
     assert(source_night_tiled_index(0,0,512)==0);
     assert(source_night_tiled_index(1,0,512)==1);
     assert(source_night_tiled_index(0,1,512)==2);
