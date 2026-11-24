@@ -261,8 +261,8 @@ def main():
     # data (including tiled backgrounds, not just Sprite frames).
     for (sheet,path),(event,ancestors) in event_lookup.items():
         if sheet!="Game_events":continue
-        if (path[:2]==[476,1] and (len(path)<=3 or path[:3]!=[476,1,3])) or (
-                path[:3]==[488,4,10] and len(path)<=4):
+        if (path[:2]==(476,1) and (len(path)<=3 or path[:3]!=(476,1,3))) or (
+                path[:3]==(488,4,10) and len(path)<=4):
             print("STEP1_BRIDGE_TRANSITION",json.dumps({"path":path,
                 "uid":event[4],"guards":event[5],"actions":event[6]},
                 separators=(",",":")))
