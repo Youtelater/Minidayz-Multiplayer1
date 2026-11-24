@@ -229,6 +229,21 @@ def main():
                              for n in ancestors[-3:]]
             },separators=(",",":")))
     assert pond_written, "Original procedural pond branch missing"
+    other_ids={895209268453600,458228549101251,506106248958134,2084078328497493}
+    for record in records:
+        if record["action_uid"] not in other_ids:continue
+        event,ancestors=event_lookup[(record["sheet"],tuple(record["event_path"]))]
+        print("STEP1_OTHER_TERRAIN",json.dumps({"record":record,
+            "chain":[{"uid":n[4],"guards":n[5],"actions":n[6],"or":n[2]} for n in (*ancestors,event)]
+        },separators=(",",":")))
+    for layout in data[5]:
+        for layer in layout[6]:
+            for inst in layer[14] if len(layer)>14 and isinstance(layer[14],list) else []:
+                if isinstance(inst,list) and len(inst)>=6 and inst[1]==230:
+                    print("STEP1_SCATTER_INSTANCE",json.dumps({"layout":layout[0],
+                        "layer":layer[0],"uid":inst[2],"transform":inst[0][:13],
+                        "size":inst[0][13][:2],"properties":inst[5]},separators=(",",":")))
+
     # Small source trace with all single writes OTHER than repeating
     # edge predicates, plus ground-instance creation and selection.
     for record in records:
