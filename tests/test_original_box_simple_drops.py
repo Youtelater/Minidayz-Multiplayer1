@@ -51,3 +51,46 @@ assert cats==values("kSourceBoxCategories")
 assert choices==list(map(int,header.split("kSourceBoxChoices[]={",1)[1].split("};",1)[0].split(",")))
 assert len(cats)==30 and len(rows)==69
 print("Original lootbox simple branches:",len(cats),"drops:",len(rows))
+
+# The normal-map nested cases must retain branch order, weighted choices,
+# source offsets and exact action UIDs. Locked branches use source default 0.
+native=(ROOT/"include/minidayz/source_box_simple_drops.hpp").read_text()
+nested=native.split("inline bool source_box_default_nested_drops",1)[1].split("inline bool source_open_simple_box",1)[0]
+for child in ev[7]:
+    if len(child[5])!=1:
+        continue
+    cat=child[5][0][9][2][1][1] if child[5][0][:2]==[796,71] else 0
+    if cat not in (51,52,53):
+        continue
+    block=nested.split(f"case {cat}: {{",1)[1].split("        return false;\n    }",1)[0]
+    pool=child[6][0][5][1][1]
+    assert pool[:2]==[19,82]
+    assert "constexpr int pool[]={"+",".join(str(x[1]) for x in pool[2])+"};" in block
+    expected=[]; retries=[]
+    for b in child[7]:
+        if not b[5]:
+            assert cat==53 and b[6][0][5][0]==[1,[2,"Save_run_progress"]]
+            continue
+        r=b[5][0][9][2][1][1]
+        acts=b[6]
+        if len(b)>7 and b[7]:
+            if cat==51:
+                assert r==23 and b[7][1][5][0][1]==70
+                acts=b[7][1][6]
+            else:
+                assert cat==52 and len(b[7])==1
+                c=b[7][0]
+                retry=c[6][0][5][1][1]
+                assert c[5][0][9][2]==[7,[0,0]]
+                retries.append((r,",".join(str(x[1]) for x in retry[2])))
+                continue
+        for a in acts:
+            assert a[:2]==[189,69] and a[5][0]==[1,[2,"Spawn_drop"]]
+            args=[x[1] for x in a[5][1][1:]]
+            assert len(args)==3 or args[3:]==[[0,-1]]*3
+            expected.append((args[0][1],offset(args[1],65),offset(args[2],66),a[3]))
+    actual=[tuple(map(int,m)) for m in re.findall(r"if\(!drop\((\d+),(-?\d+),(-?\d+)\)\)return false; // (\d+)",block)]
+    assert actual==expected,(cat,actual,expected)
+    for r,retry in retries:
+        assert re.search(rf"if\(randy=={r}\) \{{[^\n]*\n\s*constexpr int retry\[\]=\{{{retry}\}};",block)
+    print("Original normal bunker box",cat,"drop leaves:",len(expected))
