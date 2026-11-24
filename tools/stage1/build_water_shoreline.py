@@ -9,7 +9,7 @@ next to source water, without rewriting original RLE artwork.
 import json
 import re
 from pathlib import Path
-from PIL import Image
+import struct
 
 ROOT=Path(__file__).resolve().parents[2]
 PROJECT=ROOT/"data/stage1/construct_project_parsed.json"
@@ -60,8 +60,18 @@ def main():
     if len(rules)!=12:
         raise SystemExit(f"Expected twelve original shoreline SetTile branches; found {len(rules)}")
     original=ROOT/"assets/gfx/tilemap_water.png"
-    with Image.open(original) as art:
-        count=(art.width//60)*(art.height//60)
+    # The native Step 1 CI runs before the 3DS graphics toolchain installs
+    # Pillow. Read the original PNG's IHDR width/height without guessing its
+    # tile count or adding an external graphics dependency.
+    with original.open("rb") as src:
+        header=src.read(24)
+    if (len(header)!=24 or header[:8]!=b"\x89PNG\r\n\x1a\n"
+            or header[12:16]!=b"IHDR"):
+        raise SystemExit("Invalid original water PNG IHDR")
+    width,height=struct.unpack(">II",header[16:24])
+    if width==0 or height==0 or width%60 or height%60>1:
+        raise SystemExit("Unexpected original water PNG dimensions")
+    count=(width//60)*(height//60)
     if any(frame<0 or frame>=count for frame,_,_ in rules):
         raise SystemExit("Original shoreline frame not in source PNG")
     checks_flat=[]
