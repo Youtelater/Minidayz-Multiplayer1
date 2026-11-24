@@ -87,10 +87,13 @@ require("start_new_game()" in game and
 require("generation_phase_ = 1" in world and
         "generate_procedural_grid(generation_level_, seed_)" in world and
         "build_map_markers(generation_level_, seed_)" in world and
-        "generate_source_locations(generation_level_)" in world and
+        "generate_source_location_proposals(generation_level_)" in world and
         "load_source_bunker_spawns(false)" in world and
-        "load_source_bridge_elements()" in world,
-        "All five implemented world-generation stages are wired")
+        "generate_source_road_vehicles() && load_source_bridge_elements()" in world and
+        "&& materialize_source_locations()" in world and
+        world.index("case 3: ok") < world.index("case 4: ok") <
+        world.index("case 5: ok"),
+        "All five implemented world-generation stages are wired in source proposal/load order")
 require("menu_active_ = false" in game and "npc_ready_ = npcs_.initialize(world_)" in game,
         "Successful generation enables gameplay and initializes NPCs")
 require("draw_original_ground_floor(" in game and
