@@ -65,7 +65,7 @@ def main():
     hits=[]
     def traverse(events,sheet,anc=(),path=(),parent_nodes=()):
         for i,e in enumerate(events):
-            if not isinstance(e,list) or len(e)<8 or e[0]!=0:continue
+            if not isinstance(e,list) or len(e)<7 or e[0]!=0:continue
             uid=e[4];this=path+(i,)
             if uid in WORLD_UIDS:
                 actions=e[6] if isinstance(e[6],list) else []
@@ -79,8 +79,9 @@ def main():
                              "parent_events":[{"uid":p[4],"conditions":p[5],"actions":p[6]} for p in parent_nodes],
                              "conditions":e[5],"actions":actions,
                              "sounds":sounds,"drop_actions":drops,"visual_changes":changes,
-                             "child_event_uids":[x[4] for x in e[7] if isinstance(x,list) and len(x)>4 and x[0]==0]})
-            traverse(e[7],sheet,anc+(uid,),this,parent_nodes+(e,))
+                             "child_event_uids":[x[4] for x in (e[7] if len(e)>7 and isinstance(e[7],list) else []) if isinstance(x,list) and len(x)>4 and x[0]==0]})
+            if len(e)>7 and isinstance(e[7],list):
+                traverse(e[7],sheet,anc+(uid,),this,parent_nodes+(e,))
     for s in p[6]:traverse(s[1],s[0])
     (OUT/"priority_world_original_events.json").write_text(json.dumps(hits,ensure_ascii=False,indent=2)+"\n")
     lines=["# Priority original world event chains","",
