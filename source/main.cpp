@@ -3741,6 +3741,13 @@ private:
             if(d<=distance){distance=d;nearest=i;}
         }
         if(nearest==world_.placement_count())return false;
+        // Original mobile car action 711142196261088 (distance <=100)
+        // also requires its child 1792234758292318: Player181 overlaps
+        // the selected Sprite241. A nearby but unreachable wreck must
+        // not grant loot through walls or outside the marker mask.
+        const auto* marker=world_.placement(nearest);
+        if(!marker || !minidayz::world_source::source_player_overlaps_world_sprite(
+                *marker,{x,y},marker->origin_x,marker->origin_y))return false;
         const auto outcome=minidayz::items::source_search_original_car_trunk(
             world_,nearest,ground_loot_,perks_.source_trunk_bonus(),
             perks_.level(minidayz::items::SourcePerk::trunkster),
