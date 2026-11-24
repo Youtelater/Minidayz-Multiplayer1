@@ -42,12 +42,17 @@ assert any(a[0]==442 and a[1]==88 and
  a[5][1]==[7,[19,82,[[0,100],[0,200]]]]
  for a in index[3903561981802149][6])
 for name in ("extract_location_templates.py","trace_source_map_grid_parity.py",
-             "audit_original_mapgen_dispatch.py","trace_original_mapgen_coordinates.py"):
+             "audit_original_mapgen_dispatch.py","trace_original_mapgen_coordinates.py",
+             "audit_original_road_dispatch.py"):
  code=(ROOT/"tools/stage1"/name).read_text()
  assert "len(node) < 8" not in code
  assert "len(e)<8" not in code
  assert "len(n)>=8" not in code
  assert "len(child)>=8" not in code
+# POI bounds source testing must also walk seven-field source action leaves.
+bounds_code=(ROOT/"tests/test_original_world_poi_bounds.py").read_text()
+assert "len(e)<8" not in bounds_code
+assert "len(e)<7" in bounds_code
 # Original Map generation UID3669795404796534 creates Mapgen514 in
 # row-major Array518 order with physical transposed axes.
 creator=index[3669795404796534]
