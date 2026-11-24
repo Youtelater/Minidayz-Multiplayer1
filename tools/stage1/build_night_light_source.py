@@ -42,6 +42,22 @@ for uid,minute in ((316761403775120,1110),(347882179964897,330)):
     assert event is not None and event[5][0][9]==[[11,"Timer_ALL"],[8,0],[7,[0,minute]]]
     assert any(a[0]==-1 and a[1]==94 and a[5][0]==[4,971]
                and a[5][1]==[5,[2,"Color_effect"]] for a in event[6])
+# The root bunker and FinalStand transitions deliberately disable the
+# outdoor night effect, rather than applying a guessed dark overlay.
+for entry_uid, hide_uid in ((305470436850518,453618219439986),
+                            (113177369442063,830000454019733)):
+    entry=find_event(events,entry_uid)
+    hide=find_event(events,hide_uid)
+    assert entry is not None and hide is not None
+    for name in ("inRaid","inBunker"):
+        assert any(a[0]==-1 and a[1]==41 and a[5]==[[11,name],[7,[0,1]]]
+                   for a in entry[6]), (entry_uid,name)
+    assert any(a[0]==-1 and a[1]==41 and a[5]==[[11,"Day_mode"],[7,[0,1]]]
+               for a in hide[6]), hide_uid
+    assert any(a[0]==-1 and a[1]==162 and a[5]==[[5,[2,"night"]],[3,0]]
+               for a in hide[6]), hide_uid
+    assert any(a[0]==-1 and a[1]==74 and a[5]==[[1,[2,"night_force_texture"]],[3,0]]
+               for a in hide[6]), hide_uid
 def frame_image(frame):
     x,y,w,h=map(int,frame[2:6])
     path=ROOT/"assets/gfx"/Path(frame[0]).name
