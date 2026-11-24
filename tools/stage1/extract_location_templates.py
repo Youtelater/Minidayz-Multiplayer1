@@ -253,7 +253,7 @@ def main():
                     if isinstance(parameter, list) and len(parameter) > 1:
                         parameter_rows.append((int(parameter[0]),
                                                json.dumps(parameter[1], separators=(",", ":"))))
-                action_rows.append((branch_uid, node[4], int(action[0]), int(action[1]),
+                action_rows.append((branch_uid, node[4], int(action[3]), int(action[0]), int(action[1]),
                                     first_parameter, len(parameter_rows) - first_parameter,
                                     json.dumps(action, separators=(",", ":"))))
             event_rows.append((branch_uid, node[4], parent_index, depth,
@@ -287,13 +287,13 @@ def main():
             f"    {{{branch_uid}ULL, {event_uid}ULL, {object_index}, {command_id}, {first_parameter}u, {parameter_count}, {cpp_string(raw_call)}}},")
     event_lines += [
         "};",
-        "struct LocationEventActionSource { std::uint64_t branch_uid, event_uid; std::int16_t object_index; std::uint16_t command_id; std::uint32_t first_parameter; std::uint16_t parameter_count; const char* raw_call; };",
+        "struct LocationEventActionSource { std::uint64_t branch_uid, event_uid, action_uid; std::int16_t object_index; std::uint16_t command_id; std::uint32_t first_parameter; std::uint16_t parameter_count; const char* raw_call; };",
         f"inline constexpr std::size_t kLocationEventActionSourceCount = {len(action_rows)};",
         "inline constexpr LocationEventActionSource kLocationEventActionSource[] = {"
     ]
-    for branch_uid, event_uid, object_index, command_id, first_parameter, parameter_count, raw_call in action_rows:
+    for branch_uid, event_uid, action_uid, object_index, command_id, first_parameter, parameter_count, raw_call in action_rows:
         event_lines.append(
-            f"    {{{branch_uid}ULL, {event_uid}ULL, {object_index}, {command_id}, {first_parameter}u, {parameter_count}, {cpp_string(raw_call)}}},")
+            f"    {{{branch_uid}ULL, {event_uid}ULL, {action_uid}ULL, {object_index}, {command_id}, {first_parameter}u, {parameter_count}, {cpp_string(raw_call)}}},")
     event_lines += [
         "};",
         "struct LocationEventParameterSource { std::uint16_t type; const char* raw_value; };",
@@ -352,7 +352,7 @@ def main():
     if len(per_branch)!=6 or any(count<2 for count in per_branch.values()):
         raise SystemExit(f"Unexpected original settlement descriptor counts {per_branch}")
     slot_rows=[]
-    for (branch_uid,event_uid,object_index,action_id,first_parameter,
+    for (branch_uid,event_uid,action_uid,object_index,action_id,first_parameter,
          param_count,raw_call) in action_rows:
         raw=json.loads(raw_call)
         if len(raw)<4:
