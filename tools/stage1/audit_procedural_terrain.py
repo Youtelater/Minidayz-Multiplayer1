@@ -257,6 +257,30 @@ def main():
             print("STEP1_LIFECYCLE_NODE",json.dumps({"name":name,
                   "path":path+subpath[1:],"uid":child[4],"or":child[2],
                   "guards":child[5],"actions":child[6]},separators=(",",":")))
+    # Bridge UI, direct entry/exit conditions and original initial object
+    # data (including tiled backgrounds, not just Sprite frames).
+    for (sheet,path),(event,ancestors) in event_lookup.items():
+        if sheet!="Game_events":continue
+        if (path[:2]==[476,1] and (len(path)<=3 or path[:3]!=[476,1,3])) or (
+                path[:3]==[488,4,10] and len(path)<=4):
+            print("STEP1_BRIDGE_TRANSITION",json.dumps({"path":path,
+                "uid":event[4],"guards":event[5],"actions":event[6]},
+                separators=(",",":")))
+    bridge_objects={974,976,977,978,979,348,975,796,318,862,698,484,213,212,
+                    487,214,238,239,237,190,260,272,859,860,861,250,574,891}
+    for obj in sorted(bridge_objects):
+        print("STEP1_BRIDGE_OBJECT",json.dumps({"object":obj,
+             "definition":data[3][obj][:8]},separators=(",",":")))
+    seen_bridge=set()
+    for layout in data[5]:
+        for layer in layout[6]:
+            for inst in layer[14] if len(layer)>14 and isinstance(layer[14],list) else []:
+                if isinstance(inst,list) and len(inst)>=6 and inst[1] in bridge_objects and inst[1] not in seen_bridge:
+                    seen_bridge.add(inst[1])
+                    print("STEP1_BRIDGE_DEFAULT",json.dumps({"layout":layout[0],
+                        "layer":layer[0],"object":inst[1],"uid":inst[2],
+                        "transform":inst[0][:13],"properties":inst[5]},
+                        separators=(",",":")))
     other_ids={895209268453600,458228549101251,506106248958134,2084078328497493}
     for record in records:
         if record["action_uid"] not in other_ids:continue
