@@ -281,6 +281,18 @@ def main():
                         "layer":layer[0],"object":inst[1],"uid":inst[2],
                         "transform":inst[0][:13],"properties":inst[5]},
                         separators=(",",":")))
+    # Source menu creation for bridge options 216/217/218 and the
+    # exact trigger/position guards, including inherited conditions.
+    for (sheet,path),(event,ancestors) in event_lookup.items():
+        if sheet!="Game_events":continue
+        if any((a[:2]==[630,88] and len(a)>5 and a[5]==[[10,0],[7,[0,v]]])
+                for a in event[6] for v in (216,217,218)) or any(
+                c[0]==978 or any(isinstance(p,list) and p==[4,978]
+                    for p in c[9]) for c in event[5] if len(c)>9):
+            print("STEP1_BRIDGE_TRIGGER",json.dumps({"path":path,"uid":event[4],
+                "guards":event[5],"actions":event[6],
+                "parents":[{"uid":n[4],"guards":n[5],"actions":n[6]}
+                            for n in ancestors[-3:]]},separators=(",",":")))
     other_ids={895209268453600,458228549101251,506106248958134,2084078328497493}
     for record in records:
         if record["action_uid"] not in other_ids:continue
