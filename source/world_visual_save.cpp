@@ -8,7 +8,8 @@
 namespace minidayz::persistence {
 namespace {
 constexpr std::uint32_t kMagic=0x5357444du; // "MDWS" little-endian
-constexpr std::uint32_t kVersion=4u; // source-constructed Sprite951 bed journal
+constexpr std::uint32_t kVersion=5u; // source loot consumption tombstones
+constexpr std::uint32_t kBedVersion=4u; // source-constructed Sprite951 bed journal
 constexpr std::uint32_t kPreviousVersion=3u; // source variable0 reserve
 constexpr std::uint32_t kLayerVersion=2u; // source layer
 constexpr std::uint32_t kLegacyVersion=1u;
@@ -62,7 +63,8 @@ std::array<unsigned char,32> encode(const WorldSpriteState& item) noexcept {
     std::uint32_t bits{};
     std::memcpy(&bits,&item.opacity,4);
     pack32(b.data()+16,bits);
-    pack32(b.data()+20,item.layer);
+    pack32(b.data()+20,static_cast<std::uint32_t>(item.layer) |
+        (item.source_initial_loot_consumed?0x10000u:0u));
     pack64(b.data()+24,item.source_variable_0);
     return b;
 }
@@ -78,6 +80,7 @@ WorldSpriteState decode(const std::array<unsigned char,32>& b,
     std::memcpy(&item.opacity,&bits,4);
     item.layer=version==kLegacyVersion?0xffff:
         static_cast<std::uint16_t>(unpack32(b.data()+20));
+    item.source_initial_loot_consumed=version>=kVersion && (unpack32(b.data()+20)&0x10000u)!=0;
     item.source_variable_0=version>=kPreviousVersion?
         unpack64(b.data()+24):~std::uint64_t{0};
     return item;
@@ -151,9 +154,9 @@ bool read_world_visual_state(WorldSystem& world,std::uint8_t level,
     std::uint32_t magic{},version{},seed{},saved_level{},count{},bed_count{};
     bool ok=read32(file,magic)&&read32(file,version)&&
         read32(file,seed)&&read32(file,saved_level)&&read32(file,count);
-    if(ok && version==kVersion)ok=read32(file,bed_count);
+    if(ok && (version==kVersion || version==kBedVersion))ok=read32(file,bed_count);
     if(!ok || magic!=kMagic ||
-       (version!=kVersion && version!=kPreviousVersion &&
+       (version!=kVersion && version!=kBedVersion && version!=kPreviousVersion &&
         version!=kLayerVersion && version!=kLegacyVersion) ||
        seed!=world.seed() || saved_level!=level ||
        count>kMaxChanges || count>world.placement_count() ||
@@ -171,6 +174,7 @@ bool read_world_visual_state(WorldSystem& world,std::uint8_t level,
         if(std::fread(row.data(),1,bytes,file)!=bytes) {
             ok=false;break;
         }
+        if(version==kVersion && (unpack32(row.data()+20)&~0x1ffffu)!=0){ok=false;break;}
         hash=extend_hash(hash,row.data(),bytes);
         changes.push_back(decode(row,version));
     }

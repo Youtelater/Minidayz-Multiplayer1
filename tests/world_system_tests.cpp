@@ -3668,7 +3668,63 @@ static void test_source_crash_rejection_order(){
     }
 }
 
+static void test_source_first_visit_creation(){
+    using namespace minidayz;
+    auto world=std::make_unique<WorldSystem>();
+    assert(world->begin_source_generation(123456u,"Map",1,0,false,false,false,false,true,true,true,true,true,true,true));
+    while(!world->generation_complete())assert(world->advance_source_generation());
+    for(const auto& p:world->source_ground_patches())assert(p.source_object==0);
+    assert(world->source_scatter_patches().empty());
+    WorldPoint start{};
+    assert(world->source_start_position(start));
+    assert(world->start_source_location_reload(start));
+    auto ground=std::make_unique<items::GroundLootSystem>();
+    assert(world->execute_source_location_creation(*ground));
+    const auto before=world->source_random();
+    const auto count=ground->count();
+    for(std::size_t i=0;i<world->map_marker_count();++i){
+        const auto& patch=world->source_ground_patches()[i];
+        assert((patch.source_object!=0)==world->source_location_active(i));
+    }
+    std::size_t far=world->placement_count();
+    for(std::size_t i=0;i<world->placement_count();++i){
+        const auto* p=world->placement(i);
+        if(p->source_reload_marker && p->source_initial_loot_trigger &&
+           world->bounds().contains({p->x,p->y})){
+            assert(p->source_initial_loot_consumed==world->source_placement_active(*p));
+            if(!world->source_placement_active(*p))far=i;
+        }
+    }
+    assert(far<world->placement_count());
+    assert(world->execute_source_location_creation(*ground));
+    assert(ground->count()==count && world->source_random()==before);
+    const auto* m=world->map_marker(world->placement(far)->source_reload_marker-1);
+    const auto h=world_source::mapgen_hotspot(m->cell_x,m->cell_y);
+    const WorldPoint next{h.x+500,h.y+500};
+    assert(world->update_source_location_reload(next,1.0f));
+    assert(world->execute_source_location_creation(*ground));
+    assert(world->placement(far)->source_initial_loot_consumed);
+    constexpr const char* file="/tmp/mdz_first_visit_world_visual.sav";
+    constexpr const char* tmp="/tmp/mdz_first_visit_world_visual.tmp";
+    assert(persistence::write_world_visual_state(*world,1,file,tmp));
+    auto restored=std::make_unique<WorldSystem>();
+    assert(restored->begin_source_generation(123456u,"Map",1,0,false,false,false,false,true,true,true,true,true,true,true));
+    while(!restored->generation_complete())assert(restored->advance_source_generation());
+    assert(persistence::read_world_visual_state(*restored,1,file));
+    assert(restored->placement(far)->source_initial_loot_consumed);
+    for(std::size_t i=0;i<world->placement_count();++i)
+        assert(restored->placement(i)->source_initial_loot_consumed==world->placement(i)->source_initial_loot_consumed);
+    auto existing=std::make_unique<items::GroundLootSystem>();
+    assert(existing->restore(ground->snapshot()));
+    assert(restored->start_source_location_reload(next));
+    assert(restored->execute_source_location_creation(*existing));
+    assert(restored->placement(far)->source_initial_loot_consumed);
+    std::remove(file);
+    std::remove(tmp);
+}
+
 int main() {
+    test_source_first_visit_creation();
     test_source_crash_rejection_order();
     test_original_location_transient_recreation();
     test_original_category7_event_chains();

@@ -10,6 +10,7 @@
 #include "minidayz/generated/location_template_source.hpp"
 
 namespace minidayz {
+namespace items { class GroundLootSystem; }
 
 enum class WorldFeatureKind : std::uint8_t {
     Terrain, Road, Building, Bunker, Bridge, SpawnPoint, Obstacle, Water
@@ -57,6 +58,7 @@ struct WorldSpriteState {
     std::uint16_t layer{0xffff};
     // Original source variable0 for fixtures; old v1/v2 save sentinel.
     std::uint64_t source_variable_0{~std::uint64_t{0}};
+    bool source_initial_loot_consumed{};
 };
 
 // Exact Construct 573.SpawnAnotherObject(951,items_on_ground,0) record.
@@ -151,6 +153,8 @@ struct WorldPlacement {
     bool source_secret_house_drop{};
     // Original Array525 element var3==0 berry/pump recreation guards.
     bool source_reload_randomize{};
+    // Tombstone of an original normal-mode Trigger_spawn marker.
+    bool source_initial_loot_consumed{};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
@@ -229,7 +233,8 @@ public:
                                  bool source_category5_events = false,
                                  bool source_category46_events = false,
                                  bool source_category7_events = false,
-                                 bool source_exact_crash_selection = false);
+                                 bool source_exact_crash_selection = false,
+                                 bool source_active_location_events = false);
     bool advance_source_generation();
     std::uint8_t generation_phase() const noexcept { return generation_phase_; }
     bool generation_complete() const noexcept { return generation_phase_ == 6; }
@@ -325,6 +330,8 @@ public:
     bool source_pond_contains(float x,float y,bool solid_only) const noexcept;
     bool start_source_location_reload(WorldPoint player) noexcept;
     bool update_source_location_reload(WorldPoint actor,float seconds) noexcept;
+    bool execute_source_location_creation(items::GroundLootSystem& ground) noexcept;
+    bool source_active_location_events() const noexcept {return source_active_location_events_;}
     bool source_location_active(std::size_t marker_index) const noexcept {
         return !source_reload_started_ || (marker_index<map_markers_.size() &&
             marker_index<source_active_locations_.size() && source_active_locations_[marker_index]!=0);
@@ -378,12 +385,14 @@ private:
     bool source_category46_events_{};
     bool source_category7_events_{};
     bool source_exact_crash_selection_{};
+    bool source_active_location_events_{};
     bool source_start_ready_{};
     WorldPoint source_start_position_{};
     // Root Array518 is at most 16x33; retain dormant native geometry and
     // stable save IDs while applying the exact source active-location set.
     std::array<std::uint8_t,16*33> source_active_locations_{};
     std::array<std::uint8_t,16*33> source_previously_loaded_locations_{};
+    std::array<std::uint8_t,16*33> source_pending_location_creation_{};
     WorldPoint source_reload_anchor_{};
     float source_reload_elapsed_{};
     bool source_reload_started_{};
@@ -423,7 +432,8 @@ public:
                bool source_category5_events = false,
                bool source_category46_events = false,
                bool source_category7_events = false,
-               bool source_exact_crash_selection = false) noexcept;
+               bool source_exact_crash_selection = false,
+               bool source_active_location_events = false) noexcept;
     bool advance() noexcept;
     WorldSystem* destination() const noexcept { return destination_.get(); }
     void cancel() noexcept { destination_.reset(); }

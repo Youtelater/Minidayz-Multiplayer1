@@ -112,6 +112,7 @@ public:
           legacy_category46_events_(restored && restored->version < 30u),
           legacy_category7_events_(restored && restored->version < 31u),
           legacy_exact_crash_selection_(restored && restored->version < 32u),
+          legacy_active_location_events_(restored && restored->version < 33u),
           world_level_(restored ? restored->world_level : 0),
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
@@ -209,6 +210,7 @@ public:
         legacy_category46_events_=restored->version < 30u;
         legacy_category7_events_=restored->version < 31u;
         legacy_exact_crash_selection_=restored->version < 32u;
+        legacy_active_location_events_=restored->version < 33u;
         player_=minidayz::PlayerSystem(restored->player);
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
@@ -279,7 +281,8 @@ public:
                               bool legacy_category5_events = false,
                               bool legacy_category46_events = false,
                               bool legacy_category7_events = false,
-                              bool legacy_exact_crash_selection = false) noexcept {
+                              bool legacy_exact_crash_selection = false,
+                              bool legacy_active_location_events = false) noexcept {
         minidayz::persistence::PendingCraftSnapshot craft{};
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount &&
             pending_craft_seconds_ > 0.0f) {
@@ -288,12 +291,12 @@ public:
         }
         return write_saved_game(seed, survivor, inventory_, equipment_, loot,
             tents, &item_use_runtime_, &perks_, stashes, &day_night_,
-            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection);
+            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events);
     }
 
     bool write_scene_save() noexcept {
         if (!write_survivor_save(world_seed_, world_level_, player_.state(),
-                                 ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, legacy_start_order_, legacy_category3_events_, legacy_category5_events_, legacy_category46_events_, legacy_category7_events_, legacy_exact_crash_selection_)) return false;
+                                 ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, legacy_start_order_, legacy_category3_events_, legacy_category5_events_, legacy_category46_events_, legacy_category7_events_, legacy_exact_crash_selection_, legacy_active_location_events_)) return false;
         // Persist changed original object frames separately, with the same
         // seed/level and a checksum. Do not report Save success unless
         // world state is recorded too.
@@ -354,18 +357,24 @@ public:
                         fail_world_generation(traveling);
                         return;
                     }
-                    const auto result=
-                        minidayz::items::source_spawn_initial_building_loot(
-                            generating,*generated_initial_loot,
-                            generating.source_random());
-                    if(!result.complete()){
-                        fail_world_generation(traveling);
-                        return; // Never silently omit source loot at capacity.
+                    if(!generating.source_active_location_events()){
+                        const auto result=minidayz::items::source_spawn_initial_building_loot(
+                            generating,*generated_initial_loot,generating.source_random());
+                        if(!result.complete()){
+                            fail_world_generation(traveling);
+                            return;
+                        }
                     }
                 }
                 if (new_game_generation_ || traveling) {
                     auto survivor = traveling ? player_.state() : make_initial_state();
                     if (!place_new_player_on_generated_map(generating, survivor)) {
+                        fail_world_generation(traveling);
+                        return;
+                    }
+                    if(generating.source_active_location_events() &&
+                       (!generating.start_source_location_reload({survivor.x,survivor.y}) ||
+                        !generating.execute_source_location_creation(*generated_initial_loot))){
                         fail_world_generation(traveling);
                         return;
                     }
@@ -395,6 +404,7 @@ public:
                     legacy_category46_events_ = false;
                     legacy_category7_events_ = false;
                     legacy_exact_crash_selection_ = false;
+                    legacy_active_location_events_ = false;
                     world_ = std::move(generating);
                     travel_.cancel();
                     ground_loot_=std::move(*generated_initial_loot);
@@ -418,13 +428,23 @@ public:
                 if (continue_world_visual_state_) {
                     // Legacy saves may have no sidecar. A missing/stale file
                     // never bypasses original generation or alters the seed.
-                    (void)minidayz::persistence::read_world_visual_state(
+                    const bool visual_ok=minidayz::persistence::read_world_visual_state(
                         world_,world_level_,
                         "sdmc:/3ds/Minidayz/world_visual.sav");
                     continue_world_visual_state_=false;
+                    if(!visual_ok && world_.source_active_location_events()){
+                        fail_world_generation(false);
+                        return;
+                    }
                 }
-                (void)world_.start_source_location_reload(
-                    {player_.state().x,player_.state().y});
+                source_location_creation_retry_=false;
+                if(!(new_game_generation_ || traveling) || !world_.source_active_location_events()){
+                    (void)world_.start_source_location_reload({player_.state().x,player_.state().y});
+                    if(world_.source_active_location_events()){
+                        source_location_creation_retry_=!world_.execute_source_location_creation(ground_loot_);
+                        source_location_creation_retry_count_=ground_loot_.count();
+                    }
+                }
                 collision_index_.rebuild(world_);
                 visibility_index_.rebuild(world_);
                 rebuild_source_automatic_doors();
@@ -439,7 +459,7 @@ public:
                 if (rain_timer_.active()) stage2_audio_.start_rain_loop(world_level_==4);
                 else stage2_audio_.stop_rain_loop();
                 // Only overwrite the existing save after a new world succeeds.
-                if (!traveling && write_scene_save()) has_saved_game_ = true;
+                if (write_scene_save()) has_saved_game_ = true;
             }
             return;
         }
@@ -1324,6 +1344,8 @@ public:
             for (std::size_t i = 0; i < world_.placement_count(); ++i) {
                 const auto* placement = world_.placement(i);
                 if (!placement || placement->object != 218 ||
+                    (world_.source_active_location_events() &&
+                     (placement->source_initial_loot_consumed || !world_.source_placement_active(*placement))) ||
                     !world_.bounds().contains({placement->x, placement->y}))
                     continue;
                 std::uint16_t category = 0;
@@ -1428,8 +1450,14 @@ public:
         preview_rules_.run_speed=source_speed;
         player_.update_movement(movement, dt, preview_rules_,
                                 &WorldPreviewScene::blocked, this);
-        (void)world_.update_source_location_reload(
+        const bool locations_changed=world_.update_source_location_reload(
             {player_.state().x,player_.state().y},dt);
+        if(world_.source_active_location_events() &&
+           (locations_changed || (source_location_creation_retry_ &&
+             ground_loot_.count()<source_location_creation_retry_count_))){
+            source_location_creation_retry_=!world_.execute_source_location_creation(ground_loot_);
+            source_location_creation_retry_count_=ground_loot_.count();
+        }
         // Re-evaluate after movement for source-frame-1 closing transitions
         // and newly reached door triggers. The frame guard prevents double
         // sounds when both checks observe the same state.
@@ -4249,7 +4277,7 @@ private:
 
         // Keep the active world and its save state usable until the
         // destination has generated and accepted the survivor's spawn.
-        if (!travel_.begin(destination_seed, destination_level, 0, true, true, true, true, true, true)) {
+        if (!travel_.begin(destination_seed, destination_level, 0, true, true, true, true, true, true, true)) {
             travel_failed_ = true;
             return;
         }
@@ -4289,6 +4317,7 @@ private:
         legacy_category46_events_ = false;
         legacy_category7_events_ = false;
         legacy_exact_crash_selection_ = false;
+        legacy_active_location_events_ = false;
         player_ = minidayz::PlayerSystem(make_initial_state());
         player_.set_source_skin(
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
@@ -4403,7 +4432,7 @@ private:
         source_player_outline_=false;
         source_roof_elapsed_=0.0f;
         source_roof_background_layer_=0xffff;
-        loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_, !legacy_category5_events_, !legacy_category46_events_, !legacy_category7_events_, !legacy_exact_crash_selection_);
+        loading_world_ = world_.begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_, !legacy_category5_events_, !legacy_category46_events_, !legacy_category7_events_, !legacy_exact_crash_selection_, !legacy_active_location_events_);
         if (!loading_world_) fail_world_generation();
     }
 
@@ -4663,6 +4692,9 @@ private:
     bool legacy_category46_events_{};
     bool legacy_category7_events_{};
     bool legacy_exact_crash_selection_{};
+    bool legacy_active_location_events_{};
+    bool source_location_creation_retry_{};
+    std::size_t source_location_creation_retry_count_{};
     std::uint8_t world_level_{};
     minidayz::WorldTravel travel_;
     bool travel_failed_{};

@@ -156,7 +156,7 @@ floor = text("tools/stage1/build_ground_floor.py")
 ui_builder = text("tools/stage2/build_inventory_ui_art.py")
 makefile = text("Makefile")
 require("start_new_game()" in game and
-        'begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_, !legacy_category5_events_, !legacy_category46_events_, !legacy_category7_events_, !legacy_exact_crash_selection_)' in game and
+        'begin_source_generation(world_seed_, "Map", world_level_, 0, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, !legacy_start_order_, !legacy_category3_events_, !legacy_category5_events_, !legacy_category46_events_, !legacy_category7_events_, !legacy_exact_crash_selection_, !legacy_active_location_events_)' in game and
         'world_level_ = 0;' in game and
         "advance_source_generation()" in game and
         "generation_complete()" in game,

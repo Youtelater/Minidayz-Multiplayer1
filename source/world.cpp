@@ -4,7 +4,7 @@
 #include "minidayz/source_special_terrain.hpp"
 #include "minidayz/source_pond_paint.hpp"
 #include "minidayz/source_tilemap_solid_collision.hpp"
-#include "minidayz/generated/original_initial_building_loot.hpp"
+#include "minidayz/original_initial_building_loot.hpp"
 #include "minidayz/stage1_data_access.hpp"
 #include "minidayz/generated/world_source_data.hpp"
 #include "minidayz/generated/terrain_scatter_source.hpp"
@@ -544,6 +544,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     source_category46_events_ = false;
     source_category7_events_ = false;
     source_exact_crash_selection_ = false;
+    source_active_location_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -562,7 +563,8 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           bool legacy_site_generation,
                                           bool source_start_events, bool source_category3_events,
                                           bool source_category5_events, bool source_category46_events,
-                                          bool source_category7_events, bool source_exact_crash_selection) {
+                                          bool source_category7_events, bool source_exact_crash_selection,
+                                          bool source_active_location_events) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
@@ -577,6 +579,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
     source_category46_events_ = source_category46_events && name == "Map";
     source_category7_events_ = source_category7_events && name == "Map";
     source_exact_crash_selection_ = source_exact_crash_selection && name == "Map";
+    source_active_location_events_ = source_active_location_events && name == "Map";
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -622,7 +625,7 @@ bool WorldSystem::advance_source_generation() {
         for (const auto& p : placements_)
             original_sprite_states_.push_back({
                 p.runtime_uid,p.object,p.source_animation,
-                p.source_frame,p.opacity,p.layer,p.source_variable_0});
+                p.source_frame,p.opacity,p.layer,p.source_variable_0,p.source_initial_loot_consumed});
     }
     return true;
 }
@@ -995,7 +998,10 @@ bool WorldSystem::build_source_location_terrain(std::size_t marker_index) {
     ground.offset_x=static_cast<std::int16_t>(p.ground_x+reload_marker_shift);
     ground.offset_y=static_cast<std::int16_t>(p.ground_y+reload_marker_shift);
     ground.cells=p.ground;
-    source_ground_patches_.push_back(std::move(ground));
+    if(source_active_location_events_){
+        if(source_ground_patches_.size()!=map_markers_.size())return false;
+        source_ground_patches_[marker_index]=std::move(ground);
+    }else source_ground_patches_.push_back(std::move(ground));
     const auto append=[&](const auto& cells,bool created,int ox,int oy,auto& patches){
         if(!created)return;
         WorldScatterPatch patch{};
@@ -1231,6 +1237,7 @@ bool WorldSystem::materialize_source_locations() {
     // nevertheless: all proposal and site-selection RNG has run before
     // the first location is materialized.
     std::size_t next=0;
+    if(source_active_location_events_)source_ground_patches_.resize(map_markers_.size());
     for(std::size_t marker=0;marker<map_markers_.size();++marker){
         while(next<source_location_proposals_.size() &&
               source_location_proposals_[next].marker_index==marker){
@@ -1240,7 +1247,7 @@ bool WorldSystem::materialize_source_locations() {
             for(std::size_t i=first;i<placements_.size();++i)
                 placements_[i].source_reload_marker=marker+1;
         }
-        if(!build_source_location_terrain(marker))return false;
+        if(!source_active_location_events_ && !build_source_location_terrain(marker))return false;
     }
     if(next!=source_location_proposals_.size())return false;
     source_location_proposals_.clear();
@@ -1378,6 +1385,9 @@ bool WorldSystem::generate_source_crash_sites() {
                 features_.push_back({WorldFeatureKind::SpawnPoint,
                     {x+100.0f,y},567620764434094ULL,216,zed,216,
                     placements_[npc].width,placements_[npc].height,0.0f,0});
+            if(source_active_location_events_)
+                for(std::size_t j=model_idx;j<placements_.size();++j)
+                    placements_[j].source_reload_marker=i+1;
         }
         for(int n=0;n<hammer_quota;++n){
             const auto i=choose_site(first,last,{5,15,13});
@@ -1433,6 +1443,9 @@ bool WorldSystem::generate_source_crash_sites() {
             obstacle.linked_runtime_uid=model.runtime_uid;
             obstacle.source_variable_0=model.runtime_uid;
             placements_[model_idx].linked_runtime_uid=obstacle.runtime_uid;
+            if(source_active_location_events_)
+                for(std::size_t j=model_idx;j<placements_.size();++j)
+                    placements_[j].source_reload_marker=i+1;
         }
     }
     return true;
@@ -1808,6 +1821,7 @@ void WorldSystem::reset() noexcept {
     source_category46_events_ = false;
     source_category7_events_ = false;
     source_exact_crash_selection_ = false;
+    source_active_location_events_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -1981,7 +1995,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         // Root event 8279941300293499 / child 3903561981802149:
         // when Mapgen508.var3=0, Sprite442.var0=choose(100,200).
         if(rule.object==world_source::kFurniturePump &&
-           var1==3 && var2==2 && var3==0.0)
+           var1==3 && var2==2 && var3==0.0 && !source_active_location_events_)
             placements_.back().source_variable_0=
                 100u + 100u * source_random_bounded(rng_, 2u);
 
@@ -2021,7 +2035,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
                 const auto anim=var2==3?2u:var2==4?1u:var2==5?3u:0u;
                 const auto& g=bush[anim];
                 base.source_animation=static_cast<std::uint16_t>(anim);
-                base.source_frame=var3==0.0?source_random_bounded(rng_,2u):0u;
+                base.source_frame=var3==0.0 && !source_active_location_events_?source_random_bounded(rng_,2u):0u;
                 base.width=g.w;base.height=g.h;base.origin_x=g.ox;base.origin_y=g.oy;
             }
             // Root 296267016054731 / 188361261127918: only state 0
@@ -2716,9 +2730,10 @@ std::vector<WorldSpriteState> WorldSystem::capture_sprite_states() const {
         if (p.source_animation==base.animation &&
             p.source_frame==base.frame && p.opacity==base.opacity &&
             p.layer==base.layer &&
-            p.source_variable_0==base.source_variable_0) continue;
+            p.source_variable_0==base.source_variable_0 &&
+            p.source_initial_loot_consumed==base.source_initial_loot_consumed) continue;
         result.push_back({p.runtime_uid,p.object,p.source_animation,
-                          p.source_frame,p.opacity,p.layer,p.source_variable_0});
+                          p.source_frame,p.opacity,p.layer,p.source_variable_0,p.source_initial_loot_consumed});
     }
     return result;
 }
@@ -2749,6 +2764,7 @@ bool WorldSystem::restore_sprite_states(
         const auto it=std::find_if(placements_.begin(),placements_.end(),
             [&](const WorldPlacement& p){return p.runtime_uid==state.runtime_uid;});
         if (it==placements_.end() || it->object!=state.object) return false;
+        if(state.source_initial_loot_consumed && !it->source_initial_loot_trigger && !it->source_secret_house_drop)return false;
         const auto frames=stage1::animations_for_object(state.object);
         if (!frames.data || state.animation>=frames.size ||
             state.frame>=frames.data[state.animation].frames) return false;
@@ -2773,6 +2789,7 @@ bool WorldSystem::restore_sprite_states(
         placed.opacity=baseline.opacity;
         placed.layer=baseline.layer;
         placed.source_variable_0=baseline.source_variable_0;
+        placed.source_initial_loot_consumed=baseline.source_initial_loot_consumed;
         if(placed.object==world_source::kSourceBunkerLootbox)
             placed.source_variable_1=
                 placed.source_frame==world_source::kSourceBunkerLootboxOpenedFrame?1u:0u;
@@ -2784,6 +2801,7 @@ bool WorldSystem::restore_sprite_states(
                 p.source_animation=state.animation;
                 p.source_frame=state.frame;
                 p.opacity=state.opacity;
+                p.source_initial_loot_consumed=state.source_initial_loot_consumed;
                 if(state.layer!=0xffff)p.layer=state.layer;
                 if(state.source_variable_0!=~std::uint64_t{0})
                     p.source_variable_0=state.source_variable_0;
@@ -2831,12 +2849,13 @@ const WorldPlacement* WorldSystem::placement_by_instance_id(
 bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level,
                         std::uint8_t perk_dao, bool source_start_events, bool source_category3_events,
                         bool source_category5_events, bool source_category46_events,
-                        bool source_category7_events, bool source_exact_crash_selection) noexcept {
+                        bool source_category7_events, bool source_exact_crash_selection,
+                        bool source_active_location_events) noexcept {
     cancel();
     try {
         auto candidate = std::make_unique<WorldSystem>();
         if (!candidate->begin_source_generation(seed, "Map", level, perk_dao,
-                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events, source_category46_events, source_category7_events, source_exact_crash_selection)) return false;
+                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events, source_category46_events, source_category7_events, source_exact_crash_selection, source_active_location_events)) return false;
         destination_ = std::move(candidate);
         return true;
     } catch (const std::bad_alloc&) {
@@ -2866,6 +2885,7 @@ bool WorldTravel::advance() noexcept {
 void WorldSystem::clear_source_location_reload() noexcept {
     source_active_locations_.fill(0);
     source_previously_loaded_locations_.fill(0);
+    source_pending_location_creation_.fill(0);
     source_reload_anchor_={};
     source_reload_elapsed_=0;
     source_reload_started_=false;
@@ -2888,6 +2908,7 @@ bool WorldSystem::start_source_location_reload(WorldPoint player) noexcept {
        !std::isfinite(player.x)||!std::isfinite(player.y))return false;
     select_source_active_locations(player,2800.0f);
     source_previously_loaded_locations_=source_active_locations_;
+    if(source_active_location_events_)source_pending_location_creation_=source_active_locations_;
     source_reload_anchor_=player;
     source_reload_started_=true;
     return true;
@@ -2910,6 +2931,18 @@ bool WorldSystem::update_source_location_reload(WorldPoint actor,float seconds) 
     // New-generation maps apply the source's transient instance lifetime
     // to the stable native cache. Earlier saves retain their prior behavior.
     if(source_category7_events_)replay_source_location_transitions(previous);
+    if(source_active_location_events_){
+        for(std::size_t i=0;i<map_markers_.size();++i){
+            if(previous[i] && !source_active_locations_[i]){
+                source_pending_location_creation_[i]=0;
+                if(i<source_ground_patches_.size())source_ground_patches_[i]={};
+            }else if(!previous[i] && source_active_locations_[i])
+                source_pending_location_creation_[i]=1;
+        }
+        const auto inactive=[&](const WorldScatterPatch& patch){return !source_location_active(patch.marker_index);};
+        source_scatter_patches_.erase(std::remove_if(source_scatter_patches_.begin(),source_scatter_patches_.end(),inactive),source_scatter_patches_.end());
+        source_pond_patches_.erase(std::remove_if(source_pond_patches_.begin(),source_pond_patches_.end(),inactive),source_pond_patches_.end());
+    }
     return true;
 }
 
@@ -2938,7 +2971,8 @@ void WorldSystem::replay_source_location_transitions(
         const bool reset_door=p.object==349 || (p.object==348 && link && link->object==349);
         const bool reset_house=stage1::source_family_contains(1048,p.object) ||
             stage1::source_family_contains(1049,p.object) || p.object==346 || p.object==347;
-        if(!reset_tree && !reset_door && !reset_house)continue;
+        if(!reset_tree && !reset_door && !reset_house &&
+           !(source_active_location_events_ && p.source_reload_randomize))continue;
         const auto& baseline=original_sprite_states_[i];
         apply_source_building_frame_geometry(p,baseline.animation,baseline.frame);
         p.source_animation=baseline.animation;
@@ -2964,7 +2998,7 @@ void WorldSystem::replay_source_location_transitions(
     // pump 3903561981802149 re-run Choose on each creation when var3=0.
     // First activation still uses the existing eager startup materialization;
     // only previously loaded and erased locations consume fresh draws here.
-    for(auto& p:placements_){
+    if(!source_active_location_events_)for(auto& p:placements_){
         if(!p.source_reload_randomize || !p.source_reload_marker || p.source_reload_marker>previous.size())continue;
         const auto owner=p.source_reload_marker-1;
         if(previous[owner] || !source_active_locations_[owner] || !source_previously_loaded_locations_[owner])continue;
@@ -2974,6 +3008,75 @@ void WorldSystem::replay_source_location_transitions(
     for(std::size_t i=0;i<source_active_locations_.size();++i)
         if(source_active_locations_[i])source_previously_loaded_locations_[i]=1;
 }
+bool WorldSystem::execute_source_location_creation(items::GroundLootSystem& ground) noexcept {
+    if(!source_active_location_events_)return true;
+    if(!source_reload_started_ || !generation_complete())return false;
+    // Root normal-mode Trigger_spawn 723893136813997 destroys its marker.
+    // Stable native tombstones preserve one-shot behavior across Continue.
+    auto dispatch=[&](WorldPlacement& p)->bool{
+        if(p.source_initial_loot_consumed)return true;
+        if(p.source_secret_house_drop){
+            if(ground.count()+3>items::kMaximumGroundLootItems)return false;
+            for(const auto& pool:world_source::kSecretHouseDrops){
+                const auto* point=world_source::source_house_image_point(
+                    p.object,p.source_animation,p.source_frame,pool.point,0);
+                if(!point)return false;
+                const auto item=items::source_initial_item_after_default_unlocks(
+                    pool.items[items::source_initial_loot_choice_index(rng_(),pool.count)]);
+                if(!item || !items::source_item_exists(item))continue;
+                const float x=p.x+(point->x-point->origin_x)*p.width;
+                const float y=p.y+(point->y-point->origin_y)*p.height;
+                if(!ground.add({item,1,items::kUseSourceItemCondition},x,y))return false;
+            }
+            for(auto& other:placements_)
+                if(other.source_secret_house_drop)other.source_initial_loot_consumed=true;
+            return true;
+        }
+        if(p.object!=218 || !p.source_initial_loot_trigger ||
+           !bounds_.contains({p.x,p.y}))return true;
+        const auto before=rng_;
+        const auto result=items::source_spawn_initial_loot_for_marker(ground,p,rng_);
+        if(result==items::InitialBuildingLootResult::capacity_failure){
+            rng_=before;
+            return false;
+        }
+        p.source_initial_loot_consumed=true;
+        return true;
+    };
+    const auto crash_loot=[](const WorldPlacement& p){
+        return p.object==218 &&
+            (p.source_uid==239697520904115ULL || p.source_uid==873380527087600ULL ||
+             p.source_uid==571157701650261ULL || p.source_uid==629751421654089ULL ||
+             p.source_uid==370030648544993ULL || p.source_uid==200882605382924ULL);
+    };
+    bool complete=true;
+    for(auto& p:placements_)if(!p.source_reload_marker && !dispatch(p))complete=false;
+    // Original create_map_location: Array525 element actions, terrain,
+    // then crash branches, in the order the selected Mapgen514s are picked.
+    for(std::size_t marker=0;marker<map_markers_.size();++marker){
+        if(!source_active_locations_[marker])continue;
+        const bool create=source_pending_location_creation_[marker]!=0;
+        for(auto& p:placements_){
+            if(p.source_reload_marker!=marker+1 || crash_loot(p))continue;
+            if(create && p.source_reload_randomize){
+                if(p.object==296)p.source_frame=source_random_bounded(rng_,2u);
+                else if(p.object==442)p.source_variable_0=100u+100u*source_random_bounded(rng_,2u);
+            }
+            if(!dispatch(p))complete=false;
+        }
+        if(create){
+            try {
+                if(!build_source_location_terrain(marker))return false;
+            }catch(const std::bad_alloc&){return false;}
+            source_pending_location_creation_[marker]=0;
+        }
+        for(auto& p:placements_)
+            if(p.source_reload_marker==marker+1 && crash_loot(p) && !dispatch(p))
+                complete=false;
+    }
+    return complete;
+}
+
 bool WorldSystem::source_pond_contains(float x,float y,bool solid_only) const noexcept {
     if(!std::isfinite(x)||!std::isfinite(y))return false;
     for(const auto& patch:source_pond_patches_){
