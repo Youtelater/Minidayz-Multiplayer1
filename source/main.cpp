@@ -224,6 +224,7 @@ public:
         if(!tents_.restore(restored->tents))return false;
         if(!stashes_.restore(restored->stashes))return false;
         if(!day_night_.restore(restored->source_time))return false;
+        twilight_fade_.reset();
         if(!rain_timer_.restore(restored->source_rain))return false;
         if(!loot_timer_.restore(restored->source_loot))return false;
         if(!item_use_runtime_.restore(restored->pending_item_use))return false;
@@ -1309,7 +1310,9 @@ public:
         }
         // Original Construct Timer_ALL advances once per 1.5 seconds,
         // toggling the day/night source cold branch at its real boundary.
+        const auto before_twilight=day_night_.snapshot();
         (void)day_night_.update(std::max(0.0f, dt));
+        twilight_fade_.advance(before_twilight,day_night_.snapshot(),std::max(0.0f,dt));
         stage2_audio_.set_environment_ambience(
                     !day_night_.day_mode(),world_level_==4);
         // Original Rain_speed=360s is armed in Start events 8520771380755414.
@@ -2970,6 +2973,9 @@ public:
                 minidayz::stage1::kOriginalRainFadeArt.animation,
                 minidayz::stage1::kOriginalRainFadeArt.frame);
         }
+        if(twilight_fade_.opacity()>0.0f)
+            (void)renderer.pin_source_sprite_texture(
+                minidayz::items::SourceTwilightFade::kObject,0,twilight_fade_.frame());
         if (night_layer_visible) {
             (void)renderer.pin_source_sprite_texture(
                 minidayz::stage1::kOriginalNightOverlayArt.object,
@@ -3319,6 +3325,12 @@ public:
                 minidayz::world_source::source_world_layer_depth(46,0,0),night_opacity);
         }
         draw_world_through(0xffff);
+        // Original GUI Color_effect Sprite971 is pinned to the view, above Map/night.
+        // The original 2.5-device-size rectangle covers the entire viewport.
+        if(twilight_fade_.opacity()>0.0f)
+            (void)renderer.draw_source_sprite_fitted(
+                minidayz::items::SourceTwilightFade::kObject,0,twilight_fade_.frame(),
+                camera_x,camera_y,view_w,view_h,0.82f,twilight_fade_.opacity());
         renderer.set_world_sprite_stats(
             visible_world_placements_.size(),world_source_requested,
             world_source_drawn,world_source_bad_frames);
@@ -4359,6 +4371,7 @@ private:
         tents_.clear();
         stashes_.clear();
         day_night_.reset();
+        twilight_fade_.reset();
         rain_timer_.reset();
         loot_timer_.reset();
         item_use_runtime_.clear();
@@ -4743,6 +4756,7 @@ private:
     minidayz::items::TentStorageSystem tents_{};
     minidayz::items::StashStorageSystem stashes_{};
     minidayz::items::SourceDayNightClock day_night_{};
+    minidayz::items::SourceTwilightFade twilight_fade_{};
     minidayz::items::SourceRainTimer rain_timer_{};
     minidayz::items::SourceLootTimer loot_timer_{};
     minidayz::items::ItemUseRuntime item_use_runtime_{};
