@@ -90,6 +90,7 @@ void Renderer::begin_frame() noexcept {
  world_sprite_candidates_=world_sprite_requested_=0;
  world_sprite_rendered_=world_sprite_invalid_=0;
  sprite_cache_drawn_this_frame_.fill(false);
+ source_texture_reservation_=false;
  C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
  C2D_TargetClear(top_,C2D_Color32(12,16,18,255));
  C2D_TargetClear(bottom_,C2D_Color32(18,22,24,255));
@@ -273,6 +274,10 @@ bool Renderer::draw_source_sprite(std::uint16_t object,std::uint16_t animation,s
  if(slot==kMaxSheets && outline)
   slot=acquire_source_sprite_page(selected->sheet);
  if(slot==kMaxSheets)return false;
+ if(source_texture_reservation_){
+  sprite_cache_drawn_this_frame_[slot]=true;
+  return true;
+ }
  // Construct Sprite rotates about original active-frame hotspot (X,Y).
  // Uncentered Citro2D rotates about draw origin; keep pivot and culling
  // consistent using the same hotspot-corrected transform.

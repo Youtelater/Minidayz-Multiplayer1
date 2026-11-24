@@ -24,7 +24,12 @@ for p in rows(sprites,"kSpriteFrames"):
     assert key not in frames,("duplicate source frame",key)
     frames[key]=p[4].strip('"')
 assert len(frames)>=1000,len(frames)
-wanted=bases|companions
+category=(ROOT/"include/minidayz/generated/category46_source.hpp").read_text(encoding="utf-8")
+# All compiled source placements, not only the legacy house companion table.
+# Columns: event UID, action UID, object, layer, frame, animation.
+compiled={(int(p[2]),int(p[5]),int(p[4])) for p in rows(category,"kCategory46Placements")}
+assert len(compiled)>100,len(compiled)
+wanted=bases|companions|compiled
 missing=sorted(wanted-frames.keys())
 assert not missing,("source building frames unavailable",missing[:30])
 missing_textures=sorted({frames[key] for key in wanted

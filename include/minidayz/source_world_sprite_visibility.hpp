@@ -23,7 +23,7 @@ constexpr bool source_world_logic_marker_not_art(
     case 345: case 346: case 348:
     case 344: case 434:
     case 404: case 508: case 514:
-    case 857: case 984:
+    case 857: case 975: case 984:
         return true;
     default:
         return false;

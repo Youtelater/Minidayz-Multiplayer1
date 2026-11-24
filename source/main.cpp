@@ -2746,16 +2746,10 @@ public:
                                camera_x + 12.0f, camera_y + 12.0f, 0.30f);
         }
 
-        // World sprite atlases can consume all 32 GPU cache slots in a
-        // single frame. Submit the original source player/NPC and equipment
-        // first, so their artwork stays pinned when dense towns/forests
-        // introduce more source textures. The GPU depth buffer, NOT draw
-        // submission order, still determines Construct layer visibility:
-        // Buildings_bg(31) < survivor(32..39) < Buildings(41)/Trees(43).
-        // This also lets translucent source roofs blend over the survivor
-        // instead of depth-rejecting them after an earlier roof draw.
-        // Keep original pixel-art proportions. The previous arbitrary 0.55x
-        // shrink made the survivor and zombies tiny in the 3DS viewport.
+        // Reserve the actual selected actor pages before scenery can fill
+        // the 32-page GPU cache. The second call submits the same original
+        // source frames at their actual layer, not before the background.
+        const auto draw_npcs=[&](){
         if (npc_ready_) {
             // Root Map layer29 ("Zeds") is visible; layer49
             // ("zed_resp") is explicitly HIDDEN. Source Spawn_NPC
@@ -2779,6 +2773,8 @@ public:
             }
         }
 
+        };
+        const auto draw_player=[&](bool reserve_only){
         // Match original Construct Map layer 32 (player) and source
         // clothing/weapon layer indices 33..39, not hardcoded 3DS Z.
         const float player_depth=minidayz::stage1::source_player_layer_depth(
@@ -2947,7 +2943,7 @@ public:
             draw_equipped_layer(held_item,true,minidayz::stage1::source_player_layer_depth(
                     minidayz::stage1::kSourcePlayerWeaponLayer));
         }
-        if(p.alive && !sprite_drawn) {
+        if(p.alive && !sprite_drawn && !reserve_only) {
             // Never conceal a missing source atlas behind an invented
             // colored player block. The source default skin is the genuine
             // last-resort artwork; report a load problem explicitly.
@@ -2955,6 +2951,11 @@ public:
                 p.x-60.0f,p.y+16.0f,0.23f);
         }
 
+        };
+        renderer.set_source_texture_reservation(true);
+        draw_player(true);
+        draw_npcs();
+        renderer.set_source_texture_reservation(false);
         // Keep source rain/night atlas pages resident in GPU memory before
         // world trees and houses exhaust the original 32-page draw budget.
         // These calls do not submit pixels or alter the source event state;
@@ -3009,6 +3010,9 @@ public:
                 renderer.draw_text("ORIGINAL SPECIAL TERRAIN FAILED",
                                    camera_x+12.0f,camera_y+82.0f,0.30f);
             }
+        }
+
+        if(!world_ready_)visible_world_placements_.clear();
             // Render the actual source Map layout in world coordinates.
             // Cull placements outside the camera rectangle to keep 3DS draw
             // cost bounded instead of drawing the entire 36k x 20k layout.
@@ -3017,7 +3021,7 @@ public:
                 ? static_cast<std::uint16_t>(
                       source_map - minidayz::stage1::kLayoutTable)
                 : 0;
-            visibility_index_.query(camera_x,camera_y,view_w,view_h,
+            if(world_ready_)visibility_index_.query(camera_x,camera_y,view_w,view_h,
                                     visible_world_placements_);
             visible_world_placements_.erase(std::remove_if(
                 visible_world_placements_.begin(),visible_world_placements_.end(),
@@ -3036,11 +3040,13 @@ public:
                     return placed?placed->layer:std::uint16_t{0xffff};
                 });
             std::size_t layer_begin=0,layer_end=0;
-            for(std::size_t visible_slot=0;
-                visible_slot<visible_world_placements_.size();++visible_slot) {
+            std::size_t visible_slot=0;
+        const auto draw_world_through=[&](std::uint16_t last_layer){
+            for(;visible_slot<visible_world_placements_.size();++visible_slot) {
                 const auto i=visible_world_placements_[visible_slot];
                 const auto* placement=world_.placement(i);
                 if(!placement)continue;
+                if(placement->layer>last_layer)break;
                 if(visible_slot>=layer_end){
                     layer_begin=visible_slot;
                     layer_end=visible_slot+1;
@@ -3084,6 +3090,8 @@ public:
                         placement->object,source_layer->name,
                         placement->source_uid)))continue;
                 if (source_layer && !source_layer->visible) continue;
+                // Root night layer visibility events hide its children during daylight.
+                if(placement->layer==46 && day_night_.day_mode())continue;
                 if (source_layer &&
                     (std::strstr(source_layer->name, "respawn") ||
                      std::strstr(source_layer->name, "_resp") ||
@@ -3160,10 +3168,50 @@ public:
                 }
             }
 
-            renderer.set_world_sprite_stats(
-                visible_world_placements_.size(),world_source_requested,
-                world_source_drawn,world_source_bad_frames);
+        };
 
+        // Original Map order: base17, drops18, NPC29, player32..39,
+        // foreground Buildings41, Trees43, then Rain44 and night46.
+        // Submit back-to-front as well as using depth: alpha blending
+        // otherwise loses background pixels beneath translucent sprites.
+        draw_world_through(17);
+        for (std::size_t i = 0; i < tents_.tent_count(); ++i) {
+            const auto* tent = tents_.tent(i);
+            if (!tent || tent->x < camera_x - 49.0f ||
+                tent->x > camera_x + view_w + 49.0f ||
+                tent->y < camera_y - 65.0f ||
+                tent->y > camera_y + view_h + 65.0f) continue;
+            (void)renderer.draw_source_sprite(398,0,0,tent->x,tent->y,
+                1.0f,1.0f,minidayz::world_source::source_world_layer_depth(17,0,1));
+        }
+        draw_world_through(18);
+        for (std::size_t i = 0; i < stashes_.count(); ++i) {
+            const auto* stash = stashes_.stash(i);
+            if (!stash || stash->x < camera_x - 24.0f ||
+                stash->x > camera_x + view_w + 24.0f ||
+                stash->y < camera_y - 24.0f ||
+                stash->y > camera_y + view_h + 24.0f) continue;
+            (void)renderer.draw_item_icon(
+                minidayz::items::kOriginalSuppliesStashItemId,
+                stash->x, stash->y, 28.0f, 28.0f, minidayz::world_source::source_world_layer_depth(18,0,1));
+        }
+
+        for (std::size_t i = 0; i < ground_loot_.count(); ++i) {
+            const auto* loot = ground_loot_.entry(i);
+            if (!loot || loot->x < camera_x - 24.0f ||
+                loot->x > camera_x + view_w + 24.0f ||
+                loot->y < camera_y - 24.0f ||
+                loot->y > camera_y + view_h + 24.0f) continue;
+            (void)renderer.draw_item_icon(loot->item.item_id,
+                loot->x, loot->y, 18.0f, 18.0f, minidayz::world_source::source_world_layer_depth(18,0,1));
+        }
+
+        draw_world_through(29);
+        draw_npcs();
+        draw_world_through(31);
+        draw_player(false);
+        draw_world_through(41);
+        if(world_ready_){
             // Root event 622329722190205 also emits the original
             // object317 from test_bullet_hit-sheet0.png on Buildings41,
             // before Wait(1) and item50/hide restitution.
@@ -3192,18 +3240,15 @@ public:
                     ghost.x-45.0f,ghost.y-34.0f,0.18f);
             }
 
-            // Source bridge and bunker spawn events create terrain features
-            // that are NOT pre-placed Map instances. Draw their native
-            // Construct sprites at the extracted world coordinates.
+            // Bridge source features are separate from native placement records.
+            // Bunker feature975 is z_spawner metadata, not entrance art.
             for (std::size_t i = 0; i < world_.feature_count(); ++i) {
                 const auto* feature = world_.feature(i);
                 if (!feature) continue;
                 const bool bridge = feature->kind ==
                     minidayz::WorldFeatureKind::Bridge &&
                     (feature->variant & 1u) != 0u;
-                const bool bunker = feature->kind ==
-                    minidayz::WorldFeatureKind::Bunker;
-                if (!bridge && !bunker) continue;
+                if (!bridge || minidayz::world_source::source_world_logic_marker_not_art(feature->source_object)) continue;
                 const auto* object =
                     minidayz::stage1::find_object(feature->source_object);
                 if (!object || object->type != 18) continue;
@@ -3214,10 +3259,9 @@ public:
                     continue;
                 (void)renderer.draw_source_sprite(
                     feature->source_object, 0, 0, x, y,
-                    1.0f, 1.0f, 0.58f);
+                    1.0f, 1.0f, minidayz::world_source::source_world_layer_depth(feature->source_layer,0,1));
             }
         }
-
         for (std::size_t i = 0; i < tents_.tent_count(); ++i) {
             const auto* tent = tents_.tent(i);
             if (!tent || tent->x < camera_x - 49.0f ||
@@ -3241,40 +3285,12 @@ public:
                                actor.x-15.0f<=roof.x+12.0f &&
                                actor.y+15.0f>=roof.y-33.0f &&
                                actor.y-15.0f<=roof.y+32.0f;
-            (void)renderer.draw_source_sprite(398,0,0,tent->x,tent->y,
-                                               1.0f,1.0f,0.54f);
             (void)renderer.draw_source_sprite(397,0,0,tent->x,tent->y,
-                                               1.0f,1.0f,0.66f,0.0f,
+                                               1.0f,1.0f,minidayz::world_source::source_world_layer_depth(41,0,1),0.0f,
                                                overlap?0.25f:1.0f);
         }
 
-        for (std::size_t i = 0; i < stashes_.count(); ++i) {
-            const auto* stash = stashes_.stash(i);
-            if (!stash || stash->x < camera_x - 24.0f ||
-                stash->x > camera_x + view_w + 24.0f ||
-                stash->y < camera_y - 24.0f ||
-                stash->y > camera_y + view_h + 24.0f) continue;
-            (void)renderer.draw_item_icon(
-                minidayz::items::kOriginalSuppliesStashItemId,
-                stash->x, stash->y, 28.0f, 28.0f, 0.54f);
-        }
-
-        for (std::size_t i = 0; i < ground_loot_.count(); ++i) {
-            const auto* loot = ground_loot_.entry(i);
-            if (!loot || loot->x < camera_x - 24.0f ||
-                loot->x > camera_x + view_w + 24.0f ||
-                loot->y < camera_y - 24.0f ||
-                loot->y > camera_y + view_h + 24.0f) continue;
-            (void)renderer.draw_item_icon(loot->item.item_id,
-                loot->x, loot->y, 18.0f, 18.0f, 0.54f);
-        }
-
-        // Original Map Rain44 is below night46 but above terrain, houses,
-        // tree canopy and survivor32..39. The old 0.14/0.16 GPU depths
-        // incorrectly put both screen overlays BEHIND the scene; the
-        // original source PNG alpha must composite over actual world art.
-        // Submit in source layer order (Rain44, then night46), using the
-        // same depth conversion as original Map world placements.
+        draw_world_through(43);
         if (rain_timer_.active()) {
             (void)renderer.draw_source_sprite_fitted(
                 minidayz::stage1::kOriginalRainFadeArt.object,
@@ -3283,6 +3299,7 @@ public:
                 camera_x, camera_y, view_w, view_h,
                 minidayz::world_source::source_world_layer_depth(44,0,0));
         }
+        draw_world_through(45);
         if (!day_night_.day_mode()) {
             (void)renderer.draw_source_sprite_fitted(
                 minidayz::stage1::kOriginalNightOverlayArt.object,
@@ -3290,7 +3307,10 @@ public:
                 minidayz::stage1::kOriginalNightOverlayArt.frame,
                 camera_x, camera_y, view_w, view_h,
                 minidayz::world_source::source_world_layer_depth(46,0,0));
-        }
+        }        draw_world_through(0xffff);
+        renderer.set_world_sprite_stats(
+            visible_world_placements_.size(),world_source_requested,
+            world_source_drawn,world_source_bad_frames);
     }
 
 private:

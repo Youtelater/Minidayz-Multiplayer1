@@ -40,6 +40,9 @@ public:
  void unload_sheet(std::size_t slot) noexcept; void unload_all() noexcept;
  bool draw_sprite(std::size_t slot,std::size_t image,float x,float y,float sx=1.0f,float sy=1.0f,float rotation=0.0f,float depth=0.5f,float opacity=1.0f,float rgb_multiplier=1.0f) noexcept;
  bool draw_source_sprite(std::uint16_t object,std::uint16_t animation,std::uint32_t frame,float x,float y,float scale_x=1.0f,float scale_y=1.0f,float depth=0.5f,float rotation=0.0f,float opacity=1.0f,float rgb_multiplier=1.0f,bool outline=false) noexcept;
+ // Reserve actor textures without drawing them, so the source layer
+ // pass can paint background before translucent actor artwork.
+ void set_source_texture_reservation(bool reserve) noexcept { source_texture_reservation_=reserve; }
  // Reserve exact source overlay textures until their later Map-layer pass.
  bool pin_source_sprite_texture(std::uint16_t object,std::uint16_t animation,
                                 std::uint32_t frame) noexcept;
@@ -88,6 +91,7 @@ private:
  std::size_t world_sprite_candidates_{},world_sprite_requested_{},
              world_sprite_rendered_{},world_sprite_invalid_{};
  std::array<bool,kMaxSheets> sprite_cache_drawn_this_frame_{};
+ bool source_texture_reservation_{};
  std::size_t choose_sprite_cache_slot() noexcept;
  std::size_t acquire_source_sprite_page(const char* sheet) noexcept;
  C2D_Font debug_font_{}; C2D_TextBuf debug_buffer_{}; C2D_Text debug_text_{};
