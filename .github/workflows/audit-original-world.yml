@@ -7,6 +7,7 @@ on:
       - 'tools/stage1/build_world_implementation_matrix.py'
       - 'tools/stage1/compare_original_to_cached.py'
       - 'tools/stage1/audit_original_world_priority.py'
+      - 'tools/stage1/audit_procedural_terrain.py'
       - 'tools/stage1/audit_original_world_catalog.py'
       - 'tools/stage1/trace_source_building_door_companion.py'
       - '.github/workflows/audit-original-world.yml'
@@ -60,6 +61,8 @@ jobs:
         run: python tools/stage1/compare_original_to_cached.py
       - name: Extract exact original tree, door, house and loot event chains
         run: python tools/stage1/audit_original_world_priority.py
+      - name: Extract every original Step 1 procedural tile paint action and guard
+        run: python tools/stage1/audit_procedural_terrain.py
       - name: Trace original door companion 348 and house source conditions
         run: python tools/stage1/trace_source_building_door_companion.py
       - name: Check original provenance and event coverage
@@ -82,6 +85,12 @@ jobs:
           print('WORLD_EVENT_ROWS:',m['world_and_crosscutting_event_rows'])
           print('FUNCTION_CALL_EDGES:',m['function_call_edges'])
           PY
+      - name: Publish complete original terrain-paint source action manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-step1-terrain-paint-event-manifest
+          path: data/stage1/original_terrain_paint_events.json
+          retention-days: 90
       - name: Publish extracted evidence as download
         uses: actions/upload-artifact@v4
         with:
