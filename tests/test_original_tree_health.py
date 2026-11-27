@@ -66,3 +66,19 @@ for obj, uid in hit.items():
         assert args[3] == [7, [4, [4, [20, obj, 66, False, None], [0, 40]], [19, 95, [[0, 10]]]]]
     assert fall[6][-1][5] == [[11, "tutorTreeChopped"], [7, [0, 1]]]
 print("Verified source projectile guards, sound choices, random coordinates and tutorial flag.")
+
+# Spawn_drop item 38 sets its stack from choose(1,2,3,4,5); 37 and 50
+# do not assign additional state. Verify the draw between drop positions.
+spawn = events[5418835019314848]
+for item, obj in {37:377, 38:384, 50:107}.items():
+    branch = next(e for e in walk(spawn[7])
+                  if e[5] and e[5][0][:2] == [189,112]
+                  and e[5][0][9] == [[0,[0,0]],[8,0],[7,[0,item]]])
+    assert branch[6][0][5][0] == [4,obj]
+    if item == 38:
+        assert branch[6][1][3] == 8478952837871408
+        assert branch[6][1][5] == [[10,1],[7,[19,82,[[0,1],[0,2],[0,3],[0,4],[0,5]]]]]
+        assert len(branch[6]) == 2
+    else:
+        assert len(branch[6]) == 1
+print("Verified original tree resource stack initialization.")
