@@ -41,7 +41,7 @@ assert any(a[0]==796 and a[1]==167 and a[2]=="Fade" for a in e[6])
 assert any(a[0]==796 and a[1]==161 and a[5]==[[10,1],[3,1]] for a in e[6])
 main=(ROOT/"source/main.cpp").read_text(encoding="utf-8")
 assert "rebuild_source_interior_containers();" in main
-assert "update_source_interior_containers();" in main
+assert re.search(r"\bupdate_source_interior_containers\(\s*dt\s*\);", main)
 assert "source_player_overlaps_world_sprite" in main
 # A trash container 314 is not source 796 or a searchable house cupboard.
 assert Path(source[3][314][7][0][7][0][0]).name.startswith("obst_trash_container")

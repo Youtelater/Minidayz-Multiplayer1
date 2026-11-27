@@ -1340,3 +1340,7 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - [x] Original root event 844195126534932 creates t94 at box X−10,Y (307135705949094), sets variable 6=100 (845826150488372) and variable 5=−1 (423871371071357). Map UID672 confirms the unbound ground state, full condition and item204 (Fire Axe); no firearm magazine state is involved. Live transactional box dispatch now creates a single full-condition axe, with native inventory/ground regression and root-source assertions. No save layout change. CI and emulator results not observed.
 - [ ] Category23 is t105 NV goggles, not a firearm; its non-default variables 3 and 20 require persistent equipment state. Categories 1020–1022, live combat/tree dispatch, achievements, map_fs branches and Bunker/FinalStand/Bridge orchestration remain open. Do not mark Step 3 complete.
+
+### Step 3 — native regression check for interior containers
+
+- [x] Updated the existing call-site assertion to check that the scene passes `dt` into the interior-container update. At `abb3730c`, the [3DS build](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/46020780757) passed and the [world regression job](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/46020780706/job/140579578516) stopped at the outdated no-argument assertion. The corrected contract, native interior-container test, NPC visual-layer check, and native NPC spawn test passed locally. Stage 3 gameplay and emulator signoff remain open.
