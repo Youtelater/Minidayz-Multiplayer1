@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <memory>
 #include <new>
+#include <random>
+#include <string_view>
 
 namespace minidayz::world_source {
 
@@ -173,6 +175,78 @@ inline TreeHitOutcome apply_verified_tree_hit_at_trunk(
         return outcome;
     }
     return TreeHitOutcome::Rejected;
+}
+
+// Game_events 5202978245239527 / 8407650361789881:
+// the original projectile 1031 must not have type "fire", must collide
+// with 345 and must have boolean instance variable 7 set. Collision
+// selection is supplied by the projectile engine; a nearby tree alone
+// is never a qualifying hit.
+struct SourceTreeProjectileCollision {
+    std::uint16_t object{};
+    std::string_view type{};
+    bool flag7{};
+    bool collided_with_selected_trunk{};
+};
+struct SourceTreeCollisionResult {
+    TreeHitOutcome outcome{TreeHitOutcome::Rejected};
+    const char* chop_sound{};
+    const char* fall_sound{};
+    bool tutor_tree_chopped{};
+};
+inline SourceTreeCollisionResult dispatch_source_tree_projectile_collision(
+    WorldSystem& world,std::size_t trunk_index,
+    const SourceTreeProjectileCollision& projectile,
+    items::GroundLootSystem& ground,std::mt19937& rng) noexcept {
+    if(projectile.object!=1031 || projectile.type=="fire" ||
+       !projectile.flag7 || !projectile.collided_with_selected_trunk)
+        return {};
+    const auto* trunk=world.placement(trunk_index);
+    if(!trunk || trunk->object!=kOriginalTreeHitboxObject ||
+       trunk->source_frame!=kOriginalTreeStandingHitboxFrame ||
+       !world.source_placement_active(*trunk) || !trunk->linked_runtime_uid)
+        return {};
+    const WorldPlacement* tree=nullptr;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* candidate=world.placement(i);
+        if(candidate && candidate->runtime_uid==trunk->linked_runtime_uid){
+            tree=candidate;break;
+        }
+    }
+    if(!tree || tree->linked_runtime_uid!=trunk->runtime_uid ||
+       !world.source_placement_active(*tree) ||
+       tree->source_variable_0==0 || tree->source_variable_0>3)
+        return {};
+    const auto* hit=tree_hit_rule(tree->object);
+    const auto* fall=tree_fall_rule(tree->object);
+    if(!hit || !fall)return {};
+    // Preserve the original evaluation order: choose chop sound for
+    // every hit; only the zero-HP child chooses a fall sound and evaluates
+    // X+random(-30,30), Y+40+random(10) for each ordered Spawn_drop.
+    // A failed native transaction leaves both the RNG and HP untouched.
+    auto next=std::unique_ptr<std::mt19937>(new(std::nothrow) std::mt19937(rng));
+    if(!next)return {};
+    const auto unit=[&]() noexcept {
+        return static_cast<double>((*next)())/4294967296.0;
+    };
+    constexpr const char* chop[]={"chop","chop2","chop3","chop4"};
+    constexpr const char* fall_sounds[]={"treefall_02","treefall_03"};
+    SourceTreeCollisionResult result{};
+    result.chop_sound=chop[static_cast<std::size_t>(unit()*4.0)];
+    std::array<WorldPoint,4> positions{};
+    if(tree->source_variable_0==1){
+        result.fall_sound=fall_sounds[static_cast<std::size_t>(unit()*2.0)];
+        for(std::size_t i=0;i<fall->count;++i){
+            positions[i].x=static_cast<float>(tree->x-30.0+60.0*unit());
+            positions[i].y=static_cast<float>(tree->y+40.0+10.0*unit());
+        }
+    }
+    result.outcome=apply_verified_tree_hit_at_trunk(
+        world,trunk_index,hit->hit_event_uid,positions,ground);
+    if(result.outcome==TreeHitOutcome::Rejected)return {};
+    rng=*next;
+    result.tutor_tree_chopped=result.outcome==TreeHitOutcome::Fallen;
+    return result;
 }
 
 // Original automatic door event UIDs:
