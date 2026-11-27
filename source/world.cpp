@@ -1981,6 +1981,10 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
         });
         placements_.back().runtime_uid = runtime_id;
         placements_.back().instance_id = static_cast<std::uint64_t>(placements_.size());
+        // Construct Spawn uses the original tree template variable 0 (HP=3).
+        // All six tree types have this default in the root Tutorial layout;
+        // create_map_element sets their linked obst_base UID, not their HP.
+        if(tree_frame)placements_.back().source_variable_0=3;
         // The source create_map_element action may directly Spawn Sprite218
         // on a non-house landmark. Only the EXACT source event UID and
         // SetInstanceVariable(0) grant a category and initial Trigger_spawn.
@@ -2359,7 +2363,7 @@ std::size_t WorldSystem::expand_map_element(std::uint8_t var1, std::uint8_t var2
             const auto hitbox_layer=
                 find_layer_index_by_name(layout_index,"zed_resp");
             if(hitbox_layer!=0xffff){
-                const std::size_t tree_index=placements_.size()-1;
+                const std::size_t tree_index=primary_index;
                 const auto tree=placements_[tree_index];
                 const float angle=tree.angle*0.01745329251994329577f;
                 const float dx=(point->point_x-point->origin_x)*tree.width;
