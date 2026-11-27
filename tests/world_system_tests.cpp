@@ -1485,6 +1485,54 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
     assert(apply_verified_tree_hit_at_trunk(second,hitbox_index,8754965976446553ULL,
            drops,empty)==TreeHitOutcome::Rejected);
     assert(empty.count()==3);
+
+    // The source projectile guard and RNG chain must reject fire, absent
+    // flag7 and non-collisions, then draw the chop sound on each hit.
+    assert(second.restore_sprite_states({}));
+    empty.clear();
+    std::mt19937 rng(147u), expected=rng;
+    SourceTreeProjectileCollision collision{1031,"fire",true,true};
+    auto rejected=dispatch_source_tree_projectile_collision(
+        second,hitbox_index,collision,empty,rng);
+    assert(rejected.outcome==TreeHitOutcome::Rejected && rng==expected);
+    collision.type="";
+    collision.flag7=false;
+    assert(dispatch_source_tree_projectile_collision(
+        second,hitbox_index,collision,empty,rng).outcome==TreeHitOutcome::Rejected);
+    collision.flag7=true;
+    collision.collided_with_selected_trunk=false;
+    assert(dispatch_source_tree_projectile_collision(
+        second,hitbox_index,collision,empty,rng).outcome==TreeHitOutcome::Rejected);
+    assert(rng==expected && second.placement(tree)->source_variable_0==3);
+    collision.collided_with_selected_trunk=true;
+    const auto unit=[&](){return static_cast<double>(expected())/4294967296.0;};
+    const char* chop[]={"chop","chop2","chop3","chop4"};
+    const char* fall[]={"treefall_02","treefall_03"};
+    for(int i=0;i<2;++i){
+        const auto* sound=chop[static_cast<std::size_t>(unit()*4.0)];
+        const auto result=dispatch_source_tree_projectile_collision(
+            second,hitbox_index,collision,empty,rng);
+        assert(result.outcome==TreeHitOutcome::Damaged);
+        assert(std::string_view(result.chop_sound)==sound && !result.fall_sound);
+        assert(!result.tutor_tree_chopped && rng==expected && empty.count()==0);
+    }
+    const auto* chop_sound=chop[static_cast<std::size_t>(unit()*4.0)];
+    const auto* fall_sound=fall[static_cast<std::size_t>(unit()*2.0)];
+    std::array<WorldPoint,3> expected_positions{};
+    for(auto& pos:expected_positions){
+        pos.x=static_cast<float>(second.placement(tree)->x-30.0+60.0*unit());
+        pos.y=static_cast<float>(second.placement(tree)->y+40.0+10.0*unit());
+    }
+    const auto result=dispatch_source_tree_projectile_collision(
+        second,hitbox_index,collision,empty,rng);
+    assert(result.outcome==TreeHitOutcome::Fallen && result.tutor_tree_chopped);
+    assert(std::string_view(result.chop_sound)==chop_sound &&
+           std::string_view(result.fall_sound)==fall_sound);
+    assert(rng==expected && empty.count()==3);
+    for(std::size_t i=0;i<expected_positions.size();++i){
+        assert(empty.entry(i)->x==expected_positions[i].x);
+        assert(empty.entry(i)->y==expected_positions[i].y);
+    }
 }
 
 void test_source_world_instance_animation_state() {
