@@ -39,3 +39,30 @@ for obj, uid in trees.items():
     assert damage[:2] == [obj, 87]
     assert damage[5] == [[10, 0], [7, [0, 1]]]
 print("Verified original six tree defaults, procedural creation and hit decrement.")
+
+# Original projectile guard ancestry and ordered sound/drop expressions.
+collision = events[5202978245239527]
+assert collision[5][0][:2] == [1031, 71]
+assert collision[5][0][9] == [[10, 4], [8, 1], [7, [2, "fire"]]]
+assert collision[5][1][:2] == [1031, 178]
+assert collision[5][1][9] == [[4, 345]]
+flag = events[8407650361789881]
+assert flag[5][0][:2] == [1031, 91]
+assert flag[5][0][9] == [[10, 7]]
+fall_counts = {184: 2, 207: 3, 209: 4, 576: 2, 577: 3, 581: 4}
+for obj, uid in hit.items():
+    event = events[uid]
+    assert event[5][0][9] == [[8, 0], [0, [0, 10]]]
+    assert event[5][1][9] == [[4, obj]]
+    assert event[5][2][9] == [[10, 0], [8, 4], [7, [0, 0]]]
+    assert event[6][1][5][1] == [1, [19, 82, [[2, "chop"], [2, "chop2"], [2, "chop3"], [2, "chop4"]]]]
+    fall = event[7][0]
+    assert fall[6][0][5][1] == [1, [19, 82, [[2, "treefall_02"], [2, "treefall_03"]]]]
+    drops = [a for a in fall[6] if a[:2] == [189, 69]]
+    assert len(drops) == fall_counts[obj]
+    for action in drops:
+        args = action[5][1]
+        assert args[2] == [7, [4, [20, obj, 65, False, None], [19, 95, [[0, -30], [0, 30]]]]]
+        assert args[3] == [7, [4, [4, [20, obj, 66, False, None], [0, 40]], [19, 95, [[0, 10]]]]]
+    assert fall[6][-1][5] == [[11, "tutorTreeChopped"], [7, [0, 1]]]
+print("Verified source projectile guards, sound choices, random coordinates and tutorial flag.")
