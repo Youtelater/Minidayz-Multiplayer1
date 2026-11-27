@@ -531,6 +531,79 @@ inline bool source_box_mixed_drops(std::uint64_t category,
     }
     return found;
 }
+// Original normal-map category 456789, event 658726163584589. The category's
+// ordered random outcomes use initial locked achievement state (14/15 Else).
+inline constexpr SourceBoxDirectQuantityDrop kSourceBox456789Drops[]={
+    {12,0,174,1,0,5,398861462079100,0},
+    {12,0,14,1,10,5,146295219355332,0},
+    {12,0,14,1,-10,5,551327128552180,0},
+    {13,0,175,1,0,5,893149045972817,0},
+    {13,0,138,1,10,5,781723955011471,0},
+    {13,0,138,1,-10,5,634066241558841,0},
+    {14,0,158,1,0,5,493282777015798,0},
+    {14,0,11,1,10,5,434356921941153,0},
+    {14,0,11,1,-10,5,813385771015485,0},
+    {15,0,11,1,0,5,913110060944816,0},
+    {15,0,17,1,10,5,732692153195716,0},
+    {15,0,17,1,-10,5,346339047402277,0},
+    {1,0,184,1,0,5,520291183732474,0},
+    {1,0,101,1,10,5,152513790203661,0},
+    {1,0,101,1,-10,5,223432717593331,0},
+    {2,0,108,1,0,10,414499083319707,0},
+    {2,0,106,1,0,10,804522579856284,0},
+    {2,0,106,1,0,10,798743575601141,0},
+    {2,0,106,1,0,10,753678102532954,0},
+    {2,0,106,1,0,10,656388998326189,0},
+    {2,0,106,1,0,10,101178050857824,0},
+    {3,0,107,1,0,10,704235182893082,0},
+    {3,0,105,1,0,10,458842131033601,0},
+    {3,0,105,1,0,10,658326342703154,0},
+    {3,0,105,1,0,10,908147880136668,0},
+    {3,0,105,1,0,10,912783368934764,0},
+    {3,0,105,1,0,10,265303757954145,0},
+    {4,0,452,1,0,0,250351282913920,0},
+    {4,0,263,1,10,5,311111906331102,0},
+    {4,0,303,1,-10,5,395939338594451,0},
+    {5,0,124,1,10,5,455095198248382,0},
+    {5,0,79,1,-10,5,903120829960514,0},
+    {5,0,112,1,0,5,996653947868220,0},
+    {6,0,78,1,10,5,581702899064214,0},
+    {6,0,80,1,-10,5,298851829853127,0},
+    {6,0,111,1,0,5,861589417187615,0},
+    {7,0,404,1,0,5,493737809353893,0},
+    {7,0,251,1,0,5,777618496257578,0},
+    {8,0,405,1,10,5,591242576363294,0},
+    {8,0,355,1,-10,5,610799829931077,0},
+    {9,0,98,1,0,5,925995778238658,0},
+    {9,0,83,1,0,5,962633689041463,0},
+    {9,0,77,1,0,5,949293362425223,0},
+    {10,0,98,1,0,5,374029276040008,0},
+    {10,0,83,1,0,5,605741544645132,0},
+    {10,0,77,1,0,5,482691133701271,0},
+    {11,30,11,30,-10,0,988092626299262,956072888193699},
+    {11,29,12,30,-10,5,799301197623447,324920121112310},
+    {11,31,13,20,-10,5,221374645476034,825086525619096},
+    {11,1102,138,20,-10,5,488989713525269,686496265677812},
+    {11,58,14,30,-10,-10,993135438187392,374038297723459},
+    {11,57,15,30,-10,10,823341456263769,865818765963292},
+    {11,59,16,20,-5,0,582714301834707,916033222620745},
+    {11,28,17,15,5,0,834149179428592,324848320462974},
+    {11,444,58,50,0,5,348937922364929,146058815702915},
+    {11,566,69,30,0,-5,595386032624080,348586693379232},
+};
+inline bool source_box_456789_drops(std::mt19937& random,
+    GroundLootSystem& ground,float x,float y) noexcept {
+    constexpr int pool[]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+    const auto outcome=pool[source_initial_loot_choice_index(random(),sizeof(pool)/sizeof(pool[0]))];
+    bool found=false;
+    for(const auto& row:kSourceBox456789Drops){
+        if(row.category!=outcome)continue;
+        found=true;
+        const auto id=row.object?row.item:source_initial_item_after_default_unlocks(row.item);
+        if(!id || !source_item_exists(id) || !ground.add({id,row.count,kUseSourceItemCondition},x+row.dx,y+row.dy))return false;
+    }
+    return found;
+}
 // Native transaction: never consume a source box or advance its RNG
 // when its branch is not yet supported or cannot fit in ground storage.
 // The actual box is selected by the original Player181 collision mask.
@@ -546,7 +619,8 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
     const bool nested=box->source_variable_0==51 || box->source_variable_0==52 || box->source_variable_0==53 || box->source_variable_0==999;
     const bool direct=box->source_variable_0>=5 && box->source_variable_0<=13;
     const bool mixed=source_box_has_mixed_drops(box->source_variable_0);
-    if(!category && !nested && !direct && !mixed)return false;
+    const bool special=box->source_variable_0==456789;
+    if(!category && !nested && !direct && !mixed && !special)return false;
     // Keep the large native ground buffer on the heap, not ARM11 stack.
     auto next=std::unique_ptr<GroundLootSystem>(
         new(std::nothrow) GroundLootSystem(ground));
@@ -556,6 +630,7 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
         *random,*next,box->x,box->y))return false;
     if(direct && !source_box_direct_quantity_drops(box->source_variable_0,
         *next,box->x,box->y))return false;
+    if(special && !source_box_456789_drops(*random,*next,box->x,box->y))return false;
     if(mixed && !source_box_mixed_drops(box->source_variable_0,*next,box->x,box->y))return false;
     if(category)for(std::size_t i=0;i<category->count;++i){
         const auto& drop=kSourceBoxDrops[category->first+i];
