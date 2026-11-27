@@ -1460,6 +1460,31 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
                                   final_hp,drops,empty)==TreeHitOutcome::Rejected);
     assert(final_hp==1.0f && empty.count()==0);
     assert(second.placement(tree)->source_frame==0);
+    // Original three-hit HP belongs to the actual selected trunk's tree,
+    // and survives the existing changed-sprite save/restore transaction.
+    assert(second.placement(tree)->source_variable_0==3);
+    assert(apply_verified_tree_hit_at_trunk(second,tree,8754965976446553ULL,
+           drops,empty)==TreeHitOutcome::Rejected);
+    drops[0]={second.placement(tree)->x,second.placement(tree)->y+40.0f};
+    assert(apply_verified_tree_hit_at_trunk(second,hitbox_index,8754965976446553ULL,
+           drops,empty)==TreeHitOutcome::Damaged);
+    assert(second.placement(tree)->source_variable_0==2);
+    assert(second.placement(other)->source_variable_0==3);
+    const auto saved_tree_health=second.capture_sprite_states();
+    assert(second.restore_sprite_states({}));
+    assert(second.placement(tree)->source_variable_0==3);
+    assert(second.restore_sprite_states(saved_tree_health));
+    assert(second.placement(tree)->source_variable_0==2);
+    assert(apply_verified_tree_hit_at_trunk(second,hitbox_index,8754965976446553ULL,
+           drops,empty)==TreeHitOutcome::Damaged);
+    assert(second.placement(tree)->source_variable_0==1);
+    assert(apply_verified_tree_hit_at_trunk(second,hitbox_index,8754965976446553ULL,
+           drops,empty)==TreeHitOutcome::Fallen);
+    assert(second.placement(tree)->source_variable_0==0 && empty.count()==3);
+    assert(second.placement(hitbox_index)->source_frame==8);
+    assert(apply_verified_tree_hit_at_trunk(second,hitbox_index,8754965976446553ULL,
+           drops,empty)==TreeHitOutcome::Rejected);
+    assert(empty.count()==3);
 }
 
 void test_source_world_instance_animation_state() {
