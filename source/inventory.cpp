@@ -166,9 +166,41 @@ bool InventorySystem::is_exclusive_satchel_slot(
     return slot_index >= backpack_capacity + satchel.unrestricted;
 }
 
+bool InventorySystem::clothing_slot_enabled(std::size_t index) const noexcept {
+    if (index<3) return clothing_pockets_.jacket;
+    if (index<6) return clothing_pockets_.pants;
+    if (index<9) return clothing_pockets_.vest;
+    return true;
+}
+
+bool InventorySystem::slot_enabled(std::size_t index) const noexcept {
+    return index<capacity_ && clothing_slot_enabled(index);
+}
+
+std::size_t InventorySystem::available_slots() const noexcept {
+    return capacity_ - 3u*(!clothing_pockets_.jacket + !clothing_pockets_.pants +
+                           !clothing_pockets_.vest);
+}
+
+bool InventorySystem::change_clothing_pockets(ClothingPockets pockets) noexcept {
+    if (!clothing_storage_bound_) return true;
+    auto next=*this;
+    next.clothing_pockets_=pockets;
+    for (std::size_t index=0;index<9;++index) {
+        const auto item=slots_[index];
+        if (item.empty() || !clothing_slot_enabled(index) ||
+            next.clothing_slot_enabled(index)) continue;
+        next.slots_[index]={};
+        if (!next.add(item.item_id,item.count,0,item.condition,item.fractional_loss))
+            return false;
+    }
+    *this=next;
+    return true;
+}
+
 bool InventorySystem::slot_accepts(
     std::size_t slot_index, std::uint16_t item_id) const noexcept {
-    if (slot_index >= capacity_) return false;
+    if (!slot_enabled(slot_index)) return false;
     if (item_id == 0) return true;
     return !is_exclusive_satchel_slot(slot_index) ||
         source_satchel_exclusive_accepts(equipped_satchel_, item_id);
@@ -241,7 +273,7 @@ bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
 
         if (outgoing != 0) {
             auto eligible = [&](std::size_t i) noexcept {
-                return i < source_capacity &&
+                return i < source_capacity && clothing_slot_enabled(i) &&
                     (i < new_main + satchel.unrestricted ||
                      source_satchel_exclusive_accepts(equipped_satchel_, outgoing));
             };
@@ -272,10 +304,10 @@ bool InventorySystem::equip_backpack_from_slot(std::size_t index) noexcept {
     }
 
     std::size_t return_slot = index;
-    if (outgoing != 0 && index >= source_capacity) {
+    if (outgoing != 0 && (index >= source_capacity || !clothing_slot_enabled(index))) {
         return_slot = source_capacity;
         for (std::size_t i = 0; i < source_capacity; ++i) {
-            if (i != index && slots_[i].empty()) {
+            if (i != index && clothing_slot_enabled(i) && slots_[i].empty()) {
                 return_slot = i;
                 break;
             }
@@ -314,7 +346,7 @@ bool InventorySystem::unequip_backpack_to_slot(std::size_t index) noexcept {
     // The worn main backpack must return to one genuinely empty base cell.
     // Satchel cells are a separate equipped container: keep their contents
     // when the main backpack is removed instead of treating them as overflow.
-    if (equipped_backpack_ == 0 || index >= kInventorySlotCount ||
+    if (equipped_backpack_ == 0 || index >= kInventorySlotCount || !slot_enabled(index) ||
         !slots_[index].empty()) return false;
     const std::size_t old_main_capacity =
         source_backpack_capacity(equipped_backpack_);
@@ -368,10 +400,10 @@ bool InventorySystem::equip_satchel_from_slot(std::size_t index) noexcept {
     const auto outgoing_id = equipped_satchel_;
     const auto outgoing_condition = equipped_satchel_condition_;
     std::size_t return_slot = index;
-    if (outgoing_id != 0 && index >= source_capacity) {
+    if (outgoing_id != 0 && (index >= source_capacity || !clothing_slot_enabled(index))) {
         return_slot = source_capacity;
         for (std::size_t i = 0; i < source_capacity; ++i) {
-            if (i != index && slots_[i].empty()) {
+            if (i != index && clothing_slot_enabled(i) && slots_[i].empty()) {
                 return_slot = i; break;
             }
         }
@@ -406,7 +438,7 @@ bool InventorySystem::equip_satchel_from_slot(std::size_t index) noexcept {
 bool InventorySystem::unequip_satchel_to_slot(std::size_t index) noexcept {
     const auto remaining = equipped_backpack_ == 0
         ? kInventorySlotCount : source_backpack_capacity(equipped_backpack_);
-    if (!equipped_satchel_ || index >= remaining ||
+    if (!equipped_satchel_ || index >= remaining || !slot_enabled(index) ||
         !slots_[index].empty()) return false;
     for (std::size_t i = remaining; i < capacity_; ++i)
         if (!slots_[i].empty()) return false;

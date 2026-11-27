@@ -150,6 +150,7 @@ public:
                 restored->equipment, restored->equipment_fraction) ||
                 !equipment_.restore_quick_pistol(restored->quick_pistol)))
             equipment_.clear();
+        inventory_.bind_clothing_pockets(equipment_.clothing_pockets());
         if (restored && !ground_loot_.restore(restored->ground_loot))
             ground_loot_.clear();
         if (restored && !tents_.restore(restored->tents))
@@ -239,6 +240,7 @@ public:
         if(!equipment_.restore_with_fraction(
                 restored->equipment,restored->equipment_fraction) ||
            !equipment_.restore_quick_pistol(restored->quick_pistol))return false;
+        inventory_.bind_clothing_pockets(equipment_.clothing_pockets());
         if(!ground_loot_.restore(restored->ground_loot))return false;
         if(!tents_.restore(restored->tents))return false;
         if(!stashes_.restore(restored->stashes))return false;
@@ -369,6 +371,7 @@ public:
     }
 
     void update(const minidayz::InputState& input, float dt) noexcept override {
+        inventory_.bind_clothing_pockets(equipment_.clothing_pockets());
         if (loading_world_) {
             auto* destination = travel_.destination();
             const bool traveling = destination != nullptr;
@@ -2548,6 +2551,8 @@ public:
             const float x=static_cast<float>(cell.x);
             const float y=static_cast<float>(cell.y);
             const float size=static_cast<float>(minidayz::items::ui::kSlotSize);
+            const auto* item=inventory_.slot(static_cast<std::size_t>(index));
+            const bool enabled=inventory_.slot_enabled(static_cast<std::size_t>(index));
             const bool selected=index==selected_inventory_slot_;
             const bool restricted=inventory_.is_exclusive_satchel_slot(
                 static_cast<std::size_t>(index));
@@ -2557,8 +2562,8 @@ public:
             // empty slot caused the sixteen identical cans in Manic Emu.
             // Keep the original panel visible, draw only actual owned items.
             renderer.draw_solid_rect(x,y,size,size,
-                C2D_Color32(67,57,46,255),0.30f);
-            if(selected || drag_target_slot_==index) {
+                enabled ? C2D_Color32(67,57,46,255) : C2D_Color32(51,47,42,255),0.30f);
+            if(selected || (enabled && drag_target_slot_==index)) {
                 const u32 gold=C2D_Color32(229,190,96,255);
                 renderer.draw_solid_rect(x,y,size,2.0f,gold,0.92f);
                 renderer.draw_solid_rect(x,y+size-2.0f,size,2.0f,gold,0.92f);
@@ -2570,7 +2575,6 @@ public:
                 renderer.draw_text(satchel==459||satchel==753?"ARMY":"MED",
                                    x+3.0f,y+2.0f,0.14f);
             }
-            const auto* item=inventory_.slot(static_cast<std::size_t>(index));
             if(!item||item->empty())continue;
             // Item-ID to source Construct object comes from MDZItemTable.
             (void)renderer.draw_item_icon(item->item_id,
@@ -2623,7 +2627,7 @@ public:
                 static_cast<unsigned>(inventory_page_+1),static_cast<unsigned>(page_count));
         else
             std::snprintf(page_label,sizeof(page_label),"%u SLOTS",
-                static_cast<unsigned>(inventory_.capacity()));
+                static_cast<unsigned>(inventory_.available_slots()));
         renderer.draw_solid_rect(10,225,300,13,C2D_Color32(74,66,50,255),0.61f);
         if(inventory_page_>0) renderer.draw_text("< PAGE",14,226,0.25f);
         renderer.draw_text("CRAFT",132,226,0.30f);
@@ -3528,7 +3532,10 @@ private:
 
     int inventory_slot_at(int x, int y, std::size_t page) const noexcept {
         const int slot=minidayz::items::ui::inventory_at(x,y,page);
-        return slot>=0 && static_cast<std::size_t>(slot)<inventory_.capacity() ? slot : -1;
+        if (slot<0) return -1;
+        const auto index=static_cast<std::size_t>(slot);
+        const auto* item=inventory_.slot(index);
+        return inventory_.slot_enabled(index) || (item && !item->empty()) ? slot : -1;
     }
 
     const minidayz::WorldPlacement* near_bunker_entrance() const noexcept {
@@ -4744,6 +4751,7 @@ private:
             minidayz::stage1::kOriginalPlayerSkins[selected_skin_].object);
         inventory_.clear();
         equipment_.clear();
+        inventory_.bind_clothing_pockets(equipment_.clothing_pockets());
         ground_loot_.clear();
         tents_.clear();
         stashes_.clear();

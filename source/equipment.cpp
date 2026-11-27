@@ -226,6 +226,14 @@ float EquipmentSystem::day_cooling(float day_cold) const noexcept {
     return std::isfinite(day_cold) ? day_cold - temperature_offset() : 0.0f;
 }
 
+ClothingPockets EquipmentSystem::clothing_pockets() const noexcept {
+    const auto has_storage=[&](EquipmentSlot slot) {
+        return equipped(slot)!=0 && state_.conditions[static_cast<std::size_t>(slot)]>0;
+    };
+    return {has_storage(EquipmentSlot::outerwear),has_storage(EquipmentSlot::pants),
+            has_storage(EquipmentSlot::vest)};
+}
+
 bool EquipmentSystem::equip_from_inventory(
     InventorySystem& inventory, std::size_t inventory_slot,
     EquipmentSlot equipment_slot) noexcept {
@@ -236,23 +244,19 @@ bool EquipmentSystem::equip_from_inventory(
         !item_fits_slot(incoming->item_id, equipment_slot))
         return false;
 
-    const auto old_inventory = inventory.snapshot();
-    const std::uint16_t incoming_id = incoming->item_id;
-    const std::uint8_t incoming_condition = incoming->condition;
-    const std::uint8_t incoming_fraction = incoming->fractional_loss;
-    const std::uint16_t outgoing_id = state_.item_ids[slot_index];
-    const std::uint8_t outgoing_condition = state_.conditions[slot_index];
-    const std::uint8_t outgoing_fraction = fractions_.fractional_loss[slot_index];
-    if (!inventory.remove(inventory_slot, 1)) return false;
-    if (outgoing_id != 0 &&
-        !inventory.add(outgoing_id, 1, 0, outgoing_condition,
-                       outgoing_fraction)) {
-        (void)inventory.restore(old_inventory);
+    auto next_inventory=inventory;
+    auto next_equipment=*this;
+    next_equipment.state_.item_ids[slot_index]=incoming->item_id;
+    next_equipment.state_.conditions[slot_index]=incoming->condition;
+    next_equipment.fractions_.fractional_loss[slot_index]=incoming->fractional_loss;
+    const auto outgoing_id=state_.item_ids[slot_index];
+    if (!next_inventory.remove(inventory_slot,1) ||
+        !next_inventory.change_clothing_pockets(next_equipment.clothing_pockets()) ||
+        (outgoing_id!=0 && !next_inventory.add(outgoing_id,1,0,
+            state_.conditions[slot_index],fractions_.fractional_loss[slot_index])))
         return false;
-    }
-    state_.item_ids[slot_index] = incoming_id;
-    state_.conditions[slot_index] = incoming_condition;
-    fractions_.fractional_loss[slot_index] = incoming_fraction;
+    inventory=next_inventory;
+    *this=next_equipment;
     return true;
 }
 
@@ -374,11 +378,17 @@ bool EquipmentSystem::unequip_to_inventory(
     const std::uint16_t outgoing_id = state_.item_ids[slot_index];
     const std::uint8_t outgoing_condition = state_.conditions[slot_index];
     const std::uint8_t outgoing_fraction = fractions_.fractional_loss[slot_index];
-    if (!inventory.add_to_slot(inventory_slot, outgoing_id, 1, 0,
-                               outgoing_condition, outgoing_fraction)) return false;
-    state_.item_ids[slot_index] = 0;
-    state_.conditions[slot_index] = 100;
-    fractions_.fractional_loss[slot_index] = 0;
+    auto next_inventory=inventory;
+    auto next_equipment=*this;
+    next_equipment.state_.item_ids[slot_index]=0;
+    next_equipment.state_.conditions[slot_index]=100;
+    next_equipment.fractions_.fractional_loss[slot_index]=0;
+    if (!next_inventory.add_to_slot(inventory_slot,outgoing_id,1,0,
+                                    outgoing_condition,outgoing_fraction) ||
+        !next_inventory.change_clothing_pockets(next_equipment.clothing_pockets()) ||
+        !next_inventory.slot_enabled(inventory_slot)) return false;
+    inventory=next_inventory;
+    *this=next_equipment;
     return true;
 }
 

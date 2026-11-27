@@ -79,6 +79,47 @@ int main() {
     assert(!restored.restore(invalid));
     assert(restored.equipped(EquipmentSlot::head) == 0);
 
+    InventorySystem pockets;
+    EquipmentSystem outfit;
+    pockets.bind_clothing_pockets(outfit.clothing_pockets());
+    assert(pockets.available_slots()==6);
+    assert(!pockets.add_to_slot(0,18,1));
+    assert(pockets.add_to_slot(9,355,1,0,80,7));
+    assert(outfit.equip_from_inventory(pockets,9,EquipmentSlot::outerwear));
+    assert(pockets.available_slots()==9 && pockets.slot_enabled(2));
+    assert(pockets.add_to_slot(0,18,1,0,100,0));
+    assert(pockets.add_to_slot(1,39,1,0,100,0));
+    assert(pockets.add_to_slot(2,35,1,0,100,0));
+    for (std::size_t index=10;index<15;++index)
+        assert(pockets.add_to_slot(index,251,1));
+    assert(!outfit.unequip_to_inventory(pockets,EquipmentSlot::outerwear,9));
+    assert(outfit.equipped(EquipmentSlot::outerwear)==355);
+    assert(pockets.slot(0)->item_id==18 && pockets.available_slots()==9);
+    for (std::size_t index=10;index<13;++index)
+        assert(pockets.remove(index,1));
+    assert(outfit.unequip_to_inventory(pockets,EquipmentSlot::outerwear,9));
+    assert(!pockets.slot_enabled(0) && pockets.available_slots()==6);
+    assert(pockets.count(18)==1 && pockets.count(39)==1 && pockets.count(35)==1);
+    assert(pockets.slot(9)->condition==80 && pockets.slot(9)->fractional_loss==7);
+
+    // A pre-pocket save can contain items in disabled cells. These stay
+    // accessible for recovery after the equipped clothing is restored.
+    InventorySystem old_pockets, loaded_pockets;
+    assert(old_pockets.add_to_slot(1,18,1));
+    assert(loaded_pockets.restore(old_pockets.snapshot()));
+    loaded_pockets.bind_clothing_pockets(outfit.clothing_pockets());
+    assert(loaded_pockets.slot(1)->item_id==18 && !loaded_pockets.slot_enabled(1));
+    assert(!loaded_pockets.add_to_slot(1,18,1));
+    assert(loaded_pockets.move(1,9));
+    assert(loaded_pockets.slot(9)->item_id==18 && loaded_pockets.slot(1)->empty());
+
+    assert(loaded_pockets.add_to_slot(10,303,1));
+    assert(outfit.equip_from_inventory(loaded_pockets,10,EquipmentSlot::pants));
+    assert(loaded_pockets.slot_enabled(3) && !loaded_pockets.slot_enabled(6));
+    assert(loaded_pockets.add_to_slot(10,402,1));
+    assert(outfit.equip_from_inventory(loaded_pockets,10,EquipmentSlot::vest));
+    assert(loaded_pockets.slot_enabled(6) && loaded_pockets.available_slots()==12);
+
     // Original map instance variables supply exact flat armor protection.
     SourceItemProtection protection{};
     assert(source_item_protection(251, protection));

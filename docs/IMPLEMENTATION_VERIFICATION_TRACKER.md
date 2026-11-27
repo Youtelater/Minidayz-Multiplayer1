@@ -1427,3 +1427,9 @@ Original Construct Sprite body objects `600, 206, 582, 583, 586, 587` each defin
 - Carried slots are displayed in jacket, pants, vest and carry groups on the first page. Bag slots are on later pages. Stable slot indices and the existing shared capacity keep previous saves compatible. Clothing-dependent slot availability remains open.
 - Item actions appear when a stack is selected. Split appears for stacks of at least two items. The 3DS layout uses shared drawing and touch coordinates.
 - Native targeted pickup, inventory, touch layout and screen-layer checks passed. Emulator interaction and visual checks remain open.
+
+### Step 4A — clothing pockets
+
+- Root `Items_update` links Outerwear, Pants and Vest to separate groups of three slots. The 3DS inventory now enables those groups based on equipped clothing with positive condition. Six general carry slots and existing bag slots remain available under the port's storage model.
+- Removing or replacing clothing relocates stacks from closing pockets when space permits. If the transfer cannot fit, the entire equipment change is rejected. Older saves and broken clothing can leave occupied slots visible for recovery. Those slots cannot receive new items until their clothing is equipped.
+- The on-disk inventory and equipment records are unchanged. Native tests passed for pocket activation, insufficient-space rollback, successful relocation, legacy item recovery, existing inventory and save round trips. Emulator gameplay verification remains open.

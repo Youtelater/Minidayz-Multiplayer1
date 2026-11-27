@@ -32,7 +32,7 @@ grid=src.split("const int page_start=static_cast<int>(inventory_page_*kInventory
     "const std::size_t page_count",1)[0]
 assert "kOriginalInventoryCardArt" not in grid, (
     "Backpack slots must not be composed from full equipment cards")
-assert "if(selected || drag_target_slot_==index)" in grid
+assert "if(selected || (enabled && drag_target_slot_==index))" in grid
 assert "if(item->count>1)" in grid
 assert "minidayz::items::ui::inventory_cell(local)" in src
 assert "ground_loot_.pickup_at(" in src
@@ -88,7 +88,7 @@ assert "inventory_.equipped_satchel()" in bottom
 assert "drag_target_equipment_slot_==static_cast<int>(i)" in bottom
 assert "renderer.draw_text(equipment_labels[i],x+4,y+2" in bottom
 assert '%.24s' in bottom
-assert 'return slot>=0 && static_cast<std::size_t>(slot)<inventory_.capacity()' in src
+assert 'return inventory_.slot_enabled(index) || (item && !item->empty())' in src
 assert "if (crafting_open_)" in bottom
 assert "if (storage_open_)" in bottom
 assert "if (details_open_)" in bottom

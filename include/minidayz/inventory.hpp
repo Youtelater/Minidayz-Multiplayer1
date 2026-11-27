@@ -66,6 +66,14 @@ std::uint16_t source_construct_object(std::uint16_t item_id) noexcept;
 // Object ID with original sprite frames, resolved from the source sprite catalog.
 std::uint16_t source_sprite_object(std::uint16_t item_id) noexcept;
 
+// Physical slots stay stable in the existing save. Equipment determines
+// which of the three-slot clothing groups accepts new items.
+struct ClothingPockets {
+    bool jacket{true};
+    bool pants{true};
+    bool vest{true};
+};
+
 class InventorySystem {
 public:
     InventorySystem() noexcept = default;
@@ -77,6 +85,15 @@ public:
     bool slot_accepts(std::size_t slot_index,
                       std::uint16_t item_id) const noexcept;
     bool is_exclusive_satchel_slot(std::size_t slot_index) const noexcept;
+    bool slot_enabled(std::size_t slot_index) const noexcept;
+    std::size_t available_slots() const noexcept;
+    void bind_clothing_pockets(ClothingPockets pockets) noexcept {
+        clothing_pockets_=pockets;
+        clothing_storage_bound_=true;
+    }
+    // Changes from manual equipment swaps move contents out of closing
+    // pockets. On failure the inventory and its pocket state stay intact.
+    bool change_clothing_pockets(ClothingPockets pockets) noexcept;
 
     // Backpack equipment is a real equipment slot. Capacity is resolved
     // internally from the original Construct UI catalog; callers cannot guess it.
@@ -155,9 +172,14 @@ public:
         equipped_backpack_condition_ = 100;
         equipped_satchel_ = 0;
         equipped_satchel_condition_ = 100;
+        clothing_pockets_ = {};
+        clothing_storage_bound_ = false;
     }
 
 private:
+    bool clothing_slot_enabled(std::size_t index) const noexcept;
+    ClothingPockets clothing_pockets_{};
+    bool clothing_storage_bound_{};
     std::array<InventorySlot, kMaximumInventorySlotCount> slots_{};
     std::size_t capacity_{kInventorySlotCount};
     std::uint16_t equipped_backpack_{};

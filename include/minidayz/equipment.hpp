@@ -59,6 +59,7 @@ public:
                                      EquipmentSlot& slot) noexcept;
 
     std::uint16_t equipped(EquipmentSlot slot) const noexcept;
+    ClothingPockets clothing_pockets() const noexcept;
     PlayerArmorProtection protection() const noexcept;
     // Apply the original flat armor subtraction to incoming player damage.
     void apply_damage(PlayerSystem& player, float amount) const noexcept;
