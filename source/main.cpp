@@ -4178,8 +4178,22 @@ private:
                   *box,player_pos,box->origin_x,box->origin_y))continue;
             // Do not consume an unopened box before its original contents
             // can be created. Unsupported source categories remain closed.
-            (void)minidayz::items::source_open_simple_box(
-                world_,idx,player_pos,ground_loot_,world_.source_random());
+            const auto category=box->source_variable_0;
+            if(minidayz::items::source_open_simple_box(
+                world_,idx,player_pos,ground_loot_,world_.source_random()) &&
+                minidayz::items::source_box_requests_run_save(category)){
+                // Source Save_run_progress (398740622982942) requires
+                // levelchanging=0, saveandexit=0, sav_checked!=-2.
+                // This normal Map update excludes menu/exit/level transitions
+                // and has no tutorial save slot; use the existing run save.
+                if(write_scene_save()){
+                    has_saved_game_=true;
+                    save_elapsed_=0.0f;
+                }else{
+                    // Keep the opened box and loot; retry through autosave.
+                    save_elapsed_=2.0f;
+                }
+            }
         }
     }
 

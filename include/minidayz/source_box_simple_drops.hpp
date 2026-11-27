@@ -610,6 +610,12 @@ inline bool source_box_456789_drops(std::mt19937& random,
     }
     return found;
 }
+// Original normal category 53 event 483637851273824 has an unconditional
+// final child 432922065105325 -> Save_run_progress action 970390035245631.
+// The scene dispatches this only AFTER the native loot transaction succeeds.
+inline constexpr bool source_box_requests_run_save(std::uint64_t category) noexcept {
+    return category==53;
+}
 // Native transaction: never consume a source box or advance its RNG
 // when its branch is not yet supported or cannot fit in ground storage.
 // The actual box is selected by the original Player181 collision mask.

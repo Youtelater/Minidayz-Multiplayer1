@@ -271,3 +271,13 @@ assert box_fixture[4][1]==[0,0,2,1,1]
 assert [(a[0],a[1],a[3]) for a in ev[6]]==[(796,72,402409664698433),(796,167,283511197237349),(796,161,232138073544863)]
 assert ev[6][1][2]=="Fade"
 print("Original bunker lootbox Fade: wait 2s, fade-out 1s, destroy")
+
+# Normal category 53 dispatches Save_run_progress after all outcome leaves.
+normal53=next(e for e in ev[7] if e[4]==483637851273824)
+last=normal53[7][-1]
+assert last[4]==432922065105325 and not last[5]
+assert last[6]==[[189,69,None,970390035245631,False,[[1,[2,"Save_run_progress"]],[13]]]]
+assert "return category==53;" in native
+save_event=next(e for e in walk(next(s[1] for s in p[6] if s[0]=="Game_events")) if e[4]==398740622982942)
+assert [c[9] for c in save_event[7][0][5]]==[[[11,"levelchanging"],[8,0],[7,[0,0]]],[[11,"saveandexit"],[8,0],[7,[0,0]]],[[11,"sav_checked"],[8,1],[7,[0,-2]]]]
+print("Original category 53 Save_run_progress dispatch and guards verified")
