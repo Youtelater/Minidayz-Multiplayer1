@@ -44,6 +44,10 @@ jobs:
           python3 tools/stage1/build_water_shoreline.py
           python3 tools/stage1/build_source_roof_family_points.py
 
+      - name: Verify original hospital and roadside location generation rules
+        shell: bash
+        run: python3 tests/test_original_world_roadside_dispatch.py
+
       # Reuse generated 3DS textures and sprite atlases across workflow runs.
       # Content hashes invalidate the cache only when source art or its converter changes.
       - name: Restore graphics cache
