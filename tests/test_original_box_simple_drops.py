@@ -149,7 +149,7 @@ print("Original category 999 drop leaves:",len(expected))
 
 # Ordered mixed Spawn_drop and direct Create + variable-1 branches.
 mixed=[]
-mixed_categories={14,15,16,17,18,19,20,37,38,39,40,41,42,111,112,116,1011}
+mixed_categories={14,15,16,17,18,19,20,29,37,38,39,40,41,42,111,112,116,1011}
 for child in ev[7]:
     if len(child[5])!=1 or child[5][0][:2]!=[796,71]:
         continue
@@ -167,6 +167,25 @@ for child in ev[7]:
         else:
             obj=a[5][0][1]
             assert a[:2]==[-1,94] and a[5][1]==[5,[2,"items_on_ground"]]
+            if cat==29:
+                # Map t94 UID672 has var5=-1, var6=100 and item ID 204.
+                condition, binding = next(acts), next(acts)
+                assert obj==94 and objects[obj]==204
+                assert condition[:2]==[94,88] and condition[5]==[[10,6],[7,[0,100]]]
+                assert binding[:2]==[94,88] and binding[5]==[[10,5],[7,[0,-1]]]
+                assert binding[3]==423871371071357
+                def find_template(node):
+                    if not isinstance(node,list): return None
+                    if len(node)>3 and isinstance(node[0],list) and node[1:3]==[94,672]: return node
+                    for part in node:
+                        found=find_template(part)
+                        if found is not None: return found
+                template=find_template(next(l for l in p[5] if l[0]=="Map"))
+                assert template[3][5:7]==[[-1],[100]] and template[3][16]==[204]
+                assert template[5][1]=="on_ground"
+                mixed.append([cat,obj,204,1,offset(a[5][2][1],65),
+                              offset(a[5][3][1],66),a[3],condition[3]])
+                continue
             if cat==16:
                 # The root MDZItemTable maps item 53 to t443. The box
                 # performs only Create; unlike Spawn_drop it sets no amount.
@@ -190,7 +209,7 @@ for child in ev[7]:
                           offset(a[5][2][1],65),offset(a[5][3][1],66),a[3],b[3]])
 s=native.split("kSourceBoxMixedDrops[]={",1)[1].split("};",1)[0]
 assert mixed==[list(map(int,re.findall(r"-?\d+",row))) for row in re.findall(r"\{([^{}]+)\}",s)]
-assert len(mixed)==43 and {row[0] for row in mixed}==mixed_categories
+assert len(mixed)==44 and {row[0] for row in mixed}==mixed_categories
 print("Original mixed/direct box drop actions:",len(mixed))
 
 # Category 456789: original 15 outcomes, default locked achievement branches.
