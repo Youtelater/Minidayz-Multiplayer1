@@ -3,6 +3,7 @@
 #include "minidayz/source_interior_container.hpp"
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/original_initial_building_loot.hpp"
+#include "minidayz/source_special_box_actions.hpp"
 #include <cmath>
 #include <memory>
 #include <new>
@@ -641,6 +642,21 @@ inline bool source_box_456789_drops(std::mt19937& random,
 inline constexpr bool source_box_requests_run_save(std::uint64_t category) noexcept {
     return category==53;
 }
+
+inline bool source_box_equipment_cache_drops(std::mt19937& rng,
+    GroundLootSystem& ground,float x,float y) noexcept {
+    return source_execute_special_box(1022,
+        [&](std::size_t count){return source_initial_loot_choice_index(rng(),count);},
+        [](std::string_view){return false;},
+        [](const SourceSpecialBoxAction&){return false;},
+        [&](int requested,const SourceSpecialBoxPool& pool){
+            const auto item=source_initial_item_after_default_unlocks(
+                static_cast<std::uint16_t>(requested));
+            return item==0 || ground.add(
+                {item,1,static_cast<std::uint8_t>(pool.condition)},x+pool.dx,y+pool.dy);
+        });
+}
+
 // Native transaction: never consume a source box or advance its RNG
 // when its branch is not yet supported or cannot fit in ground storage.
 // The actual box is selected by the original Player181 collision mask.
@@ -657,7 +673,9 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
     const bool direct=box->source_variable_0>=5 && box->source_variable_0<=13;
     const bool mixed=source_box_has_mixed_drops(box->source_variable_0);
     const bool special=box->source_variable_0==456789;
-    if(!category && !nested && !direct && !mixed && !special)return false;
+    const bool equipment_cache=box->source_variable_0==1022;
+    if(!category && !nested && !direct && !mixed && !special && !equipment_cache)
+        return false;
     // Keep the large native ground buffer on the heap, not ARM11 stack.
     auto next=std::unique_ptr<GroundLootSystem>(
         new(std::nothrow) GroundLootSystem(ground));
@@ -668,6 +686,8 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
     if(direct && !source_box_direct_quantity_drops(box->source_variable_0,
         *next,box->x,box->y))return false;
     if(special && !source_box_456789_drops(*random,*next,box->x,box->y))return false;
+    if(equipment_cache && !source_box_equipment_cache_drops(
+        *random,*next,box->x,box->y))return false;
     if(mixed && !source_box_mixed_drops(box->source_variable_0,*next,box->x,box->y))return false;
     if(category)for(std::size_t i=0;i<category->count;++i){
         const auto& drop=kSourceBoxDrops[category->first+i];

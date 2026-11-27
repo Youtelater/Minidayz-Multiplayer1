@@ -13,6 +13,7 @@
 #include "minidayz/source_furniture_interaction.hpp"
 #include "minidayz/source_interior_container.hpp"
 #include "minidayz/source_box_simple_drops.hpp"
+#include "minidayz/source_world_event_effects.hpp"
 #include "minidayz/source_world_layer_depth.hpp"
 #include "minidayz/source_mapgen_geometry.hpp"
 #include "minidayz/generated/ground_floor_source.hpp"
@@ -832,6 +833,7 @@ public:
                 if (crafted) stage2_audio_.play_crafting();
             }
         }
+        const bool inventory_x=(input.pressed & KEY_X) && selected_inventory_slot_>=0;
         if (selected_inventory_slot_ >= 0 && (input.pressed & (KEY_A | KEY_X))) {
             const auto selected_index = static_cast<std::size_t>(selected_inventory_slot_);
             const auto* item = inventory_.slot(selected_index);
@@ -1436,9 +1438,10 @@ public:
             !request_source_manual_door() &&
             !request_source_car_trunk())
             request_source_furniture();
-        if ((input.pressed & KEY_X) && selected_inventory_slot_ < 0 &&
-            !source_bed_build_.active)
-            request_source_bed_dismantle();
+        if ((input.pressed & KEY_X) && !inventory_x && selected_inventory_slot_ < 0 &&
+            !source_bed_build_.active && !request_source_bed_dismantle() &&
+            !source_pump_pending_.runtime_uid)
+            chop_facing_tree();
         update_source_automatic_doors();
         if(source_bed_build_.active || source_pump_pending_.runtime_uid)movement={};
         // Source PlayerBase193 AltMove MaxSpeed UID156884066447061.
@@ -4023,8 +4026,8 @@ private:
         build={};
     }
 
-    void request_source_bed_dismantle() noexcept {
-        if(source_bed_dismantle_.runtime_uid)return;
+    bool request_source_bed_dismantle() noexcept {
+        if(source_bed_dismantle_.runtime_uid)return true;
         const minidayz::WorldPoint actor{player_.state().x,player_.state().y};
         std::size_t chosen=world_.placement_count();
         float distance=std::numeric_limits<float>::max();
@@ -4038,7 +4041,7 @@ private:
             const float d=std::hypot(bed->x-actor.x,bed->y-actor.y);
             if(d<distance){chosen=idx;distance=d;}
         }
-        if(chosen==world_.placement_count())return;
+        if(chosen==world_.placement_count())return false;
         const auto* bed=world_.placement(chosen);
         source_bed_dismantle_={bed->runtime_uid,chosen,
             minidayz::world_source::kSourceBedDismantleDelay};
@@ -4050,6 +4053,56 @@ private:
             static_cast<minidayz::OriginalWorldSound>(noise));
         source_furniture_feedback_="DISMANTLING BED - ORIGINAL 1S";
         source_furniture_feedback_seconds_=3.0f;
+        return true;
+    }
+
+    void chop_facing_tree() noexcept {
+        using minidayz::OriginalWorldSound;
+        using minidayz::PlayerFacing;
+        using minidayz::items::EquipmentSlot;
+        using minidayz::world_source::TreeHitOutcome;
+
+        const auto& actor=player_.state();
+        const float dx=actor.facing==PlayerFacing::left ? -1.0f :
+                       actor.facing==PlayerFacing::right ? 1.0f : 0.0f;
+        const float dy=actor.facing==PlayerFacing::up ? -1.0f :
+                       actor.facing==PlayerFacing::down ? 1.0f : 0.0f;
+        constexpr int kChopReach=30;
+        auto trunk=world_.placement_count();
+        for (int distance=1; distance<=kChopReach; ++distance)
+            if (blocked_at(this,actor.x+dx*distance,actor.y+dy*distance,&trunk))
+                break;
+        if (trunk==world_.placement_count()) return;
+
+        const auto tool=equipment_.equipped(EquipmentSlot::hands);
+        constexpr std::uint16_t kHatchet=202, kFireAxe=204;
+        if (tool!=kHatchet && tool!=kFireAxe) {
+            source_furniture_feedback_="EQUIP AN AXE TO CHOP";
+            source_furniture_feedback_seconds_=3.0f;
+            return;
+        }
+        const auto result=minidayz::world_source::apply_tree_trunk_contact(
+            world_,trunk,ground_loot_,world_.source_random());
+        if (result.outcome==TreeHitOutcome::Rejected) return;
+
+        constexpr const char* chop_names[]{"chop","chop2","chop3","chop4"};
+        constexpr OriginalWorldSound chop_cues[]{
+            OriginalWorldSound::chop1,OriginalWorldSound::chop2,
+            OriginalWorldSound::chop3,OriginalWorldSound::chop4
+        };
+        for (std::size_t i=0; i<4; ++i) {
+            if (std::strcmp(result.chop_sound,chop_names[i])==0) {
+                stage2_audio_.play_original_world_sound(chop_cues[i]);
+                break;
+            }
+        }
+        if (result.outcome==TreeHitOutcome::Fallen) {
+            stage2_audio_.play_original_world_sound(
+                std::strcmp(result.fall_sound,"treefall_02")==0
+                    ? OriginalWorldSound::treefall02 : OriginalWorldSound::treefall03);
+            source_furniture_feedback_="TREE FELLED";
+            source_furniture_feedback_seconds_=3.0f;
+        }
     }
 
     void advance_source_bed_dismantle(float dt) noexcept {
@@ -4571,6 +4624,10 @@ private:
     }
 
     static bool blocked(void* context, float x, float y) noexcept {
+        return blocked_at(context,x,y,nullptr);
+    }
+
+    static bool blocked_at(void* context,float x,float y,std::size_t* trunk) noexcept {
         const auto* scene = static_cast<const WorldPreviewScene*>(context);
         if (!scene || !std::isfinite(x) || !std::isfinite(y) ||
             x < 0.0f || y < 0.0f ||
@@ -4682,7 +4739,13 @@ private:
             if(!minidayz::stage1::source_object_has_solid_behavior(
                    placement->object))continue;
             if(minidayz::terrain::source_world_solid_mask_contains(
-                   *placement,x,y))return true;
+                   *placement,x,y)){
+                if(trunk && placement->object==minidayz::world_source::kOriginalTreeHitboxObject &&
+                   placement->source_frame==minidayz::world_source::kOriginalTreeStandingHitboxFrame &&
+                   placement->linked_runtime_uid)
+                    *trunk=i;
+                return true;
+            }
         }
         return false;
     }

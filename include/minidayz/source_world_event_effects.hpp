@@ -198,13 +198,9 @@ struct SourceTreeCollisionResult {
     const char* fall_sound{};
     bool tutor_tree_chopped{};
 };
-inline SourceTreeCollisionResult dispatch_source_tree_projectile_collision(
+inline SourceTreeCollisionResult apply_tree_trunk_contact(
     WorldSystem& world,std::size_t trunk_index,
-    const SourceTreeProjectileCollision& projectile,
     items::GroundLootSystem& ground,std::mt19937& rng) noexcept {
-    if(projectile.object!=1031 || projectile.type=="fire" ||
-       !projectile.flag7 || !projectile.collided_with_selected_trunk)
-        return {};
     const auto* trunk=world.placement(trunk_index);
     if(!trunk || trunk->object!=kOriginalTreeHitboxObject ||
        trunk->source_frame!=kOriginalTreeStandingHitboxFrame ||
@@ -258,6 +254,16 @@ inline SourceTreeCollisionResult dispatch_source_tree_projectile_collision(
     rng=*next;
     result.tutor_tree_chopped=result.outcome==TreeHitOutcome::Fallen;
     return result;
+}
+
+inline SourceTreeCollisionResult dispatch_source_tree_projectile_collision(
+    WorldSystem& world,std::size_t trunk_index,
+    const SourceTreeProjectileCollision& projectile,
+    items::GroundLootSystem& ground,std::mt19937& rng) noexcept {
+    if(projectile.object!=1031 || projectile.type=="fire" ||
+       !projectile.flag7 || !projectile.collided_with_selected_trunk)
+        return {};
+    return apply_tree_trunk_contact(world,trunk_index,ground,rng);
 }
 
 // Original automatic door event UIDs:

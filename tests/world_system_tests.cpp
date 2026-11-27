@@ -1510,8 +1510,9 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
     const char* fall[]={"treefall_02","treefall_03"};
     for(int i=0;i<2;++i){
         const auto* sound=chop[static_cast<std::size_t>(unit()*4.0)];
-        const auto result=dispatch_source_tree_projectile_collision(
-            second,hitbox_index,collision,empty,rng);
+        const auto result=i==0
+            ? apply_tree_trunk_contact(second,hitbox_index,empty,rng)
+            : dispatch_source_tree_projectile_collision(second,hitbox_index,collision,empty,rng);
         assert(result.outcome==TreeHitOutcome::Damaged);
         assert(std::string_view(result.chop_sound)==sound && !result.fall_sound);
         assert(!result.tutor_tree_chopped && rng==expected && empty.count()==0);
@@ -3161,6 +3162,23 @@ void test_original_box_drop_catalog() {
         assert(index>0 && index==ground->count());
     }
     for(unsigned outcome=1;outcome<=15;++outcome)assert(reached[outcome]);
+    for(std::uint32_t seed=0;seed<512;++seed){
+        ground->clear();
+        std::mt19937 actual(seed), expected(seed);
+        assert(source_box_equipment_cache_drops(actual,*ground,1000,1000));
+        std::size_t index=0;
+        for(const auto& pool:kSourceSpecialBoxPools){
+            const auto draw=source_initial_loot_choice_index(expected(),pool.count);
+            const auto id=source_initial_item_after_default_unlocks(
+                kSourceSpecialBoxChoices[pool.first+draw]);
+            if(id==0)continue;
+            const auto* entry=ground->entry(index++);
+            assert(entry && entry->item.item_id==id && entry->item.count==1);
+            assert(entry->item.condition==100);
+            assert(entry->x==1000.0f+pool.dx && entry->y==1000.0f+pool.dy);
+        }
+        assert(index==ground->count() && actual==expected);
+    }
     ground->clear();
     assert(!source_box_direct_quantity_drops(0,*ground,0,0));
     assert(ground->count()==0);

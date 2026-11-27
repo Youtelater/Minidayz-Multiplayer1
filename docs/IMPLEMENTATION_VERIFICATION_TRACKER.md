@@ -1344,3 +1344,10 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 ### Step 3 — native regression check for interior containers
 
 - [x] Updated the existing call-site assertion to check that the scene passes `dt` into the interior-container update. At `abb3730c`, the [3DS build](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/46020780757) passed and the [world regression job](https://github.com/Youtelater/Minidayz-Multiplayer1/actions/runs/46020780706/job/140579578516) stopped at the outdated no-argument assertion. The corrected contract, native interior-container test, NPC visual-layer check, and native NPC spawn test passed locally. Stage 3 gameplay and emulator signoff remain open.
+
+### Step 3 — native tree chopping and equipment caches
+
+- [x] Added native X-button tree chopping with a Hatchet or Fire Axe in Hands. The check approaches the first solid surface in the direction the player faces and uses the linked standing trunk if reached. The existing tree transaction updates health, fallen frames and ground loot together and the scene plays the existing chop and fall WAVs. The source check confirms tree health, the single-point hit, and drop and sound order. The X-button input and reach are 3DS design choices.
+- [x] Connected category 1022 equipment caches to the existing atomic box-opening path. The source audit confirms six ordered pools, including weighted duplicates and empty choices. Native code uses the current default unlock mappings and stores each equipment drop at full condition.
+- [x] The root tree and box source checks and the native world regression suite passed. The world suite exercises the shared trunk contact and runs the equipment cache through 512 RNG seeds.
+- [ ] Bridge traversal and bunker/FinalStand scene transitions, special categories 23/1020/1021, and emulator gameplay remain open.
