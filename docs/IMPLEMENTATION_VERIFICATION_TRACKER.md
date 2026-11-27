@@ -1314,3 +1314,8 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 - [ ] Special box state and scene transitions, achievements, save event dispatch and combat-tree integration remain open. Do not claim Step 3 complete.
 
 - [x] Normal category 53 unconditional final Save_run_progress child (432922065105325/action 970390035245631) now dispatches existing native run save after successful transactional box opening. Verified original guard values (levelchanging=0, saveandexit=0, sav_checked!=-2); normal Map update excludes these non-run modes. Failed writes retry via existing autosave without duplicating loot. map_fs variant remains open; original web-storage format is adapted to native saves. CI/gameplay still unverified.
+
+### Step 3 — category 16 direct gasoline-can creation
+
+- [x] Live transactional box dispatch now includes both original category 16 Create actions (UIDs 672697935591204 and 810269815363128), at x−10 and x+10, unchanged y. Object t443 maps to item 53 in root mp_itemtable.js. Added source and native regression assertions. No explicit amount is assigned by these two actions.
+- [ ] Original default gasoline amount and independent variable-1 values (18–20), weapon variables (23/29/1020/1021), complete Spawn_drop state (1022), achievement state, Bunker/FinalStand/Bridge layouts and combat-tree events remain unverified/incomplete. The root data.deobfuscated.js content was empty via the connector during this pass; the committed extracted actions and root MP mapping were used, not a new source audit. CI/emulator testing not confirmed. Do not mark Step 3 complete.
