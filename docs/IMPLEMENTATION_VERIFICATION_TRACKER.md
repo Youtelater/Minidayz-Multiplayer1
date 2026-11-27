@@ -1306,3 +1306,9 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - [x] Extracted categories 16, 18–20, 23, 29, 1020 and 1021 (34 ordered branches, 188 Create/Set actions), exact unlock names and retry ranges, and category 1022 (6 weighted Spawn_drop calls, 62 weighted entries including zero) from root event 389950912936355. Added ordered native callback executor (d628009) and source/host regressions to build CI.
 - [ ] Executor not yet connected to live inventory/ground/save path. Variable 1 charge, variables 3/5/6/20 equipment state, Spawn_drop RNG/appearance and achievement state must be represented independently of stack count. No new live gameplay parity or CI pass claimed. Remaining scene transitions, Fade, save and combat-tree dispatch stay open.
+
+
+### Step 3 — original bunker box fade runtime
+
+- [x] Connected Sprite796 Fade.StartFade to the live box update: root Map fixture UID2279 behavior properties [0,0,2,1,1], two-second wait and one-second fade-out, then invisible consumed tombstone for stable native save IDs. Source audit and world regression cover the original event order, opacity, and restored consumed state. A legacy fully opaque opened snapshot restarts the two-second wait; a partially faded snapshot resumes from its opacity. Build and emulator verification not yet confirmed.
+- [ ] Special box state and scene transitions, achievements, save event dispatch and combat-tree integration remain open. Do not claim Step 3 complete.

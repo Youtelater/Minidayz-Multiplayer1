@@ -2553,6 +2553,26 @@ bool WorldSystem::open_source_bunker_lootbox(std::size_t index) noexcept {
              world_source::kSourceBunkerLootboxOpenedFrame,box.opacity))
         return false;
     placements_[index].source_variable_1=1;
+    placements_[index].source_bunker_fade_elapsed=0.0f;
+    placements_[index].source_bunker_fade_initial_opacity=box.opacity;
+    return true;
+}
+
+bool WorldSystem::advance_source_bunker_lootbox_fade(std::size_t index,float dt) noexcept {
+    if(index>=placements_.size() || !std::isfinite(dt) || dt<0.0f)return false;
+    auto& box=placements_[index];
+    if(box.object!=world_source::kSourceBunkerLootbox ||
+       box.source_frame!=world_source::kSourceBunkerLootboxOpenedFrame ||
+       box.source_variable_1!=1)return false;
+    if(box.opacity<=0.0f)return true;
+    const float elapsed=std::min(box.source_bunker_fade_elapsed+dt,
+        world_source::kSourceBunkerBoxFadeWait+world_source::kSourceBunkerBoxFadeOut);
+    const float opacity=world_source::source_bunker_box_fade_opacity(
+        elapsed,box.source_bunker_fade_initial_opacity);
+    if(opacity!=box.opacity && !set_placement_sprite_state(index,box.source_animation,box.source_frame,opacity))return false;
+    box.source_bunker_fade_elapsed=elapsed;
+    // Original Fade.Destroy: retain an invisible, latched native tombstone
+    // so the stable source UID and consumed loot survive Continue.
     return true;
 }
 
@@ -2791,9 +2811,12 @@ bool WorldSystem::restore_sprite_states(
         placed.layer=baseline.layer;
         placed.source_variable_0=baseline.source_variable_0;
         placed.source_initial_loot_consumed=baseline.source_initial_loot_consumed;
-        if(placed.object==world_source::kSourceBunkerLootbox)
+        if(placed.object==world_source::kSourceBunkerLootbox){
             placed.source_variable_1=
                 placed.source_frame==world_source::kSourceBunkerLootboxOpenedFrame?1u:0u;
+            placed.source_bunker_fade_elapsed=0.0f;
+            placed.source_bunker_fade_initial_opacity=1.0f;
+        }
     }
     for(const auto& state:states)
         for(auto& p:placements_)
@@ -2806,9 +2829,15 @@ bool WorldSystem::restore_sprite_states(
                 if(state.layer!=0xffff)p.layer=state.layer;
                 if(state.source_variable_0!=~std::uint64_t{0})
                     p.source_variable_0=state.source_variable_0;
-                if(p.object==world_source::kSourceBunkerLootbox)
+                if(p.object==world_source::kSourceBunkerLootbox){
                     p.source_variable_1=
                         p.source_frame==world_source::kSourceBunkerLootboxOpenedFrame?1u:0u;
+                    p.source_bunker_fade_initial_opacity=1.0f;
+                    // Older visual saves contain opacity but no wait timer.
+                    // Resume a partial fade; a fully opaque opened box restarts its wait.
+                    p.source_bunker_fade_elapsed=p.source_variable_1 && p.opacity<1.0f
+                        ?world_source::kSourceBunkerBoxFadeWait+(1.0f-p.opacity)*world_source::kSourceBunkerBoxFadeOut:0.0f;
+                }
                 break;
             }
     // Companion visibility is derived from its linked source door frame.

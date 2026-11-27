@@ -2,6 +2,7 @@
 #include "minidayz/world.hpp"
 #include <cstdint>
 #include <cmath>
+#include <algorithm>
 
 namespace minidayz::world_source {
 // Root-original Construct event 389950912936355:
@@ -15,6 +16,13 @@ inline constexpr std::uint16_t kSourceBunkerLootbox=796;
 inline constexpr std::uint16_t kSourceInteriorContainerLayer=18; // items_on_ground
 inline constexpr std::uint32_t kSourceBunkerLootboxOpenedFrame=1;
 inline constexpr std::uint64_t kSourceBunkerLootboxOpenEvent=389950912936355ULL;
+// Map UID2279: Fade properties [0,0,2,1,1] = inactive at start,
+// zero fade-in, two-second wait, one-second fade-out, destroy on completion.
+inline constexpr float kSourceBunkerBoxFadeWait=2.0f;
+inline constexpr float kSourceBunkerBoxFadeOut=1.0f;
+inline float source_bunker_box_fade_opacity(float elapsed,float initial) noexcept {
+    return initial*std::clamp(1.0f-(elapsed-kSourceBunkerBoxFadeWait)/kSourceBunkerBoxFadeOut,0.0f,1.0f);
+}
 inline bool source_bunker_lootbox_closed(const WorldPlacement& box) noexcept {
     return box.object==kSourceBunkerLootbox &&
         box.layer==kSourceInteriorContainerLayer &&

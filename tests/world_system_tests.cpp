@@ -3102,6 +3102,12 @@ void test_original_bunker_container_open_save_replay() {
     assert(opened->source_variable_1==1);
     assert(!source_bunker_lootbox_closed(*opened));
     assert(!world.open_source_bunker_lootbox(index)); // original bool1 latch
+    assert(world.advance_source_bunker_lootbox_fade(index,1.0f));
+    assert(world.placement(index)->opacity==1.0f);
+    assert(world.advance_source_bunker_lootbox_fade(index,1.0f));
+    assert(world.placement(index)->opacity==1.0f);
+    assert(world.advance_source_bunker_lootbox_fade(index,0.25f));
+    assert(world.placement(index)->opacity==0.75f);
     const auto saved=world.capture_sprite_states();
     assert(!saved.empty());
     assert(world.restore_sprite_states({})); // restore original hidden fixture
@@ -3111,7 +3117,14 @@ void test_original_bunker_container_open_save_replay() {
     assert(world.restore_sprite_states(saved));
     assert(world.placement(index)->source_frame==1);
     assert(world.placement(index)->source_variable_1==1);
+    assert(world.placement(index)->opacity==0.75f);
+    assert(world.advance_source_bunker_lootbox_fade(index,0.75f));
+    assert(world.placement(index)->opacity==0.0f);
     assert(!world.open_source_bunker_lootbox(index));
+    const auto destroyed=world.capture_sprite_states();
+    assert(world.restore_sprite_states(destroyed));
+    assert(world.placement(index)->opacity==0.0f);
+    assert(world.placement(index)->source_variable_1==1);
 }
 
 void test_original_building_specific_loot_on_generated_world() {

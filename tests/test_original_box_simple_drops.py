@@ -262,3 +262,12 @@ assert special_values("kSourceSpecialBoxPools")==special_pools
 assert json.loads("["+special_header.split("kSourceSpecialBoxChoices[]={",1)[1].split("};",1)[0]+"]")==special_choices
 assert len(special_actions)==188 and len(special_branches)==34 and len(special_pools)==6
 print("Original special box branches:",len(special_branches),"actions:",len(special_actions))
+
+# Original Sprite796 Fade configuration and trigger order.
+assert p[3][796][8][1][:2]==["Fade",31]
+map_layout=next(l for l in p[5] if l[0]=="Map")
+box_fixture=next(i for l in map_layout[6] for i in l[14] if i[1]==796)
+assert box_fixture[4][1]==[0,0,2,1,1]
+assert [(a[0],a[1],a[3]) for a in ev[6]]==[(796,72,402409664698433),(796,167,283511197237349),(796,161,232138073544863)]
+assert ev[6][1][2]=="Fade"
+print("Original bunker lootbox Fade: wait 2s, fade-out 1s, destroy")

@@ -1477,7 +1477,7 @@ public:
         update_source_automatic_doors();
         update_source_house_roofs(dt);
         update_source_furniture_bed_frame();
-        update_source_interior_containers();
+        update_source_interior_containers(dt);
         source_furniture_feedback_seconds_=
             std::max(0.0f,source_furniture_feedback_seconds_-std::max(0.0f,dt));
         // Play the original material-specific WAV only after moving.
@@ -4161,13 +4161,17 @@ private:
         }
     }
 
-    void update_source_interior_containers() noexcept {
+    void update_source_interior_containers(float dt) noexcept {
         const minidayz::WorldPoint player_pos{
             player_.state().x,player_.state().y};
         for(const auto idx:source_interior_container_indices_){
             const auto* box=world_.placement(idx);
-            if(!box || !world_.source_placement_active(*box) || !minidayz::world_source::source_bunker_lootbox_closed(*box))
+            if(!box)continue;
+            if(box->source_variable_1==1 && box->source_frame==minidayz::world_source::kSourceBunkerLootboxOpenedFrame){
+                (void)world_.advance_source_bunker_lootbox_fade(idx,dt);
                 continue;
+            }
+            if(!world_.source_placement_active(*box) || !minidayz::world_source::source_bunker_lootbox_closed(*box))continue;
             // Root 181.OnCollision(796): use the original active-frame
             // collider and hotspot, not a guessed radius or touch button.
             if(!minidayz::world_source::source_player_overlaps_world_sprite(

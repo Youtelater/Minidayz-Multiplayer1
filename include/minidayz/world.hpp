@@ -158,6 +158,9 @@ struct WorldPlacement {
     // Transient equivalent of Destroy(tree) and Destroy(linked solid)
     // during original create_map_element overlap rejection.
     bool source_overlap_rejected{};
+    // Native timer for the original Sprite796 Fade behavior; not a source variable.
+    float source_bunker_fade_elapsed{};
+    float source_bunker_fade_initial_opacity{1.0f};
 };
 
 // The source game uses a zero-based 2D Array for POI placement. Out-of-range
@@ -284,6 +287,7 @@ public:
     // Original collision-on-796 transition: frame1 and instance bool1
     // must change together, exactly once per source box instance.
     bool open_source_bunker_lootbox(std::size_t index) noexcept;
+    bool advance_source_bunker_lootbox_fade(std::size_t index,float dt) noexcept;
     // Original car trunk Sprite241 is destroyed on first search even if
     // its 50% loot roll fails; keep a stable save-state identity.
     bool mark_source_car_trunk_searched(std::size_t index) noexcept;
