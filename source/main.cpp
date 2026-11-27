@@ -4,6 +4,7 @@
 #include "minidayz/menu_preferences.hpp"
 #include "minidayz/generated/menu_source_catalog.hpp"
 #include "minidayz/player.hpp"
+#include "minidayz/bridge_crossing.hpp"
 #include "minidayz/world.hpp"
 #include "minidayz/world_visual_save.hpp"
 #include "minidayz/source_door_auto.hpp"
@@ -246,6 +247,7 @@ public:
         inventory_page_=0;
         selected_inventory_slot_=-1;
         paused_=false;
+        bridge_crossing_.leave();
         return true;
     }
 
@@ -418,6 +420,7 @@ public:
                     legacy_active_location_events_ = false;
                     world_ = std::move(generating);
                     travel_.cancel();
+                    bridge_crossing_.leave();
                     ground_loot_=std::move(*generated_initial_loot);
                     tents_.clear();
                     stashes_.clear();
@@ -730,6 +733,10 @@ public:
             }
             return;
         }
+        if (bridge_crossing_.active()) {
+            update_bridge_crossing(input,dt);
+            return;
+        }
         // START is a physical 3DS pause control. Keep survival, AI,
         // crafting timers and autosave time frozen while the menu is up.
         if (input.pressed & KEY_START) paused_ = !paused_;
@@ -811,12 +818,11 @@ public:
                 map_open_=false;
             return;
         }
-        // The original map has bridge elements which connect its later
-        // procedurally generated worlds. On a 3DS, A near a source bridge
-        // platform initiates travel without interfering with inventory use.
+        // A bridge platform opens a crossing before committing island travel.
         if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0 &&
-            near_source_bridge_exit() && world_level_ < 5) {
-            start_next_source_map();
+            near_bridge_platform()) {
+            bridge_crossing_.enter(player_);
+            travel_failed_=false;
             return;
         }
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount) {
@@ -868,14 +874,7 @@ public:
             ground_loot_.pickup_nearest(
                 inventory_, player_.state().x, player_.state().y, 36.0f))
             stage2_audio_.play_item_pickup();
-        minidayz::PlayerInput movement{};
-        movement.move_x = static_cast<float>(input.circle.dx) / 156.0f;
-        movement.move_y = -static_cast<float>(input.circle.dy) / 156.0f;
-        if (input.held & KEY_DLEFT)  movement.move_x -= 1.0f;
-        if (input.held & KEY_DRIGHT) movement.move_x += 1.0f;
-        if (input.held & KEY_DUP)    movement.move_y -= 1.0f;
-        if (input.held & KEY_DDOWN)  movement.move_y += 1.0f;
-        movement.run = (input.held & KEY_B) != 0;
+        auto movement=read_player_movement(input);
         const bool touch_pressed = input.touching && !touch_down_;
         const bool touch_released = !input.touching && touch_down_;
 
@@ -1702,6 +1701,19 @@ public:
                 266.0f * static_cast<float>(phase) / 6.0f, 10.0f,
                 C2D_Color32(121, 156, 93, 255));
             renderer.draw_text("PLEASE KEEP THE GAME OPEN", 41.0f, 206.0f, 0.28f);
+            return;
+        }
+        if (bridge_crossing_.active()) {
+            renderer.reset_camera();
+            renderer.draw_solid_rect(0,0,320,240,C2D_Color32(22,32,35,255));
+            renderer.draw_text("BRIDGE CROSSING",74,46,0.45f);
+            if (bridge_crossing_.at_exit()) {
+                renderer.draw_text(travel_failed_ ? "A: RETRY TRAVEL" :
+                    "A: TRAVEL TO NEXT ISLAND",48,105,0.34f);
+            } else {
+                renderer.draw_text("WALK TO THE FAR END",59,105,0.34f);
+            }
+            renderer.draw_text("B: RETURN TO THIS ISLAND",51,175,0.31f);
             return;
         }
         if (menu_active_) {
@@ -2652,10 +2664,10 @@ public:
             renderer.draw_text(source_furniture_feedback_,
                                16.0f,144.0f,0.29f);
         }
-        if(near_source_bridge_exit()){
+        if(near_bridge_platform()){
             renderer.draw_solid_rect(18.0f, 104.0f, 284.0f, 21.0f,
                                      C2D_Color32(39, 63, 46, 230));
-            renderer.draw_text(travel_failed_ ? "TRAVEL FAILED. A: RETRY" : "A: TRAVEL TO NEXT MAP",
+            renderer.draw_text("A: ENTER BRIDGE",
                                48.0f, 108.0f, 0.37f);
         }
     }
@@ -2669,6 +2681,10 @@ public:
             if (!renderer.draw_menu_art(0, 42.0f, 50.0f, 316.0f, 80.0f))
                 renderer.draw_text("MINI DAYZ", 76.0f, 72.0f, 1.05f);
             renderer.draw_text("GENERATING NEW SURVIVAL WORLD", 51.0f, 198.0f, 0.37f);
+            return;
+        }
+        if (bridge_crossing_.active()) {
+            render_bridge_crossing(renderer);
             return;
         }
         if (menu_active_) {
@@ -3474,7 +3490,7 @@ private:
         return minidayz::items::ui::inventory_at(x,y,page);
     }
 
-    bool near_source_bridge_exit() const noexcept {
+    bool near_bridge_platform() const noexcept {
         if (!world_ready_ || world_level_ >= 5) return false;
         const auto& player = player_.state();
         for(std::size_t i=0;i<world_.feature_count();++i){
@@ -3488,6 +3504,68 @@ private:
             if(dx*dx+dy*dy<100.0f*100.0f)return true;
         }
         return false;
+    }
+
+    static minidayz::PlayerInput read_player_movement(
+            const minidayz::InputState& input) noexcept {
+        minidayz::PlayerInput movement{};
+        movement.move_x=static_cast<float>(input.circle.dx)/156.0f;
+        movement.move_y=-static_cast<float>(input.circle.dy)/156.0f;
+        if (input.held & KEY_DLEFT) movement.move_x-=1.0f;
+        if (input.held & KEY_DRIGHT) movement.move_x+=1.0f;
+        if (input.held & KEY_DUP) movement.move_y-=1.0f;
+        if (input.held & KEY_DDOWN) movement.move_y+=1.0f;
+        movement.run=(input.held & KEY_B)!=0;
+        return movement;
+    }
+
+    void update_bridge_crossing(const minidayz::InputState& input,float dt) noexcept {
+        touch_down_=input.touching;
+        if (input.pressed & KEY_B) {
+            bridge_crossing_.leave();
+            travel_failed_=false;
+            return;
+        }
+        auto movement=read_player_movement(input);
+        movement.run=false;
+        auto rules=preview_rules_;
+        if (rules.walk_speed<=0.0f)
+            rules.walk_speed=minidayz::stage1::source_player_altmove_max_speed({});
+        bridge_crossing_.move(movement,dt,rules);
+        if ((input.pressed & KEY_A) && bridge_crossing_.at_exit())
+            start_next_source_map();
+    }
+
+    void render_bridge_crossing(minidayz::Renderer& renderer) noexcept {
+        using minidayz::BridgeCrossing;
+        const auto& walker=bridge_crossing_.walker();
+        const auto& position=walker.state();
+        constexpr float view_width=400.0f;
+        const float camera_x=std::floor(std::clamp(position.x-view_width*0.5f,
+            -40.0f,BridgeCrossing::kLength-view_width+40.0f));
+        constexpr float deck_top=BridgeCrossing::kCenterY-BridgeCrossing::kHalfWidth;
+        constexpr float deck_height=2.0f*BridgeCrossing::kHalfWidth;
+        renderer.reset_camera();
+        renderer.draw_solid_rect(0,0,view_width,240,C2D_Color32(35,63,75,255),0.01f);
+        renderer.set_camera(camera_x,0);
+        renderer.draw_solid_rect(0,deck_top,BridgeCrossing::kLength,deck_height,
+            C2D_Color32(63,67,65,255),0.10f);
+        renderer.draw_solid_rect(0,deck_top,BridgeCrossing::kLength,5,
+            C2D_Color32(118,132,125,255),0.15f);
+        renderer.draw_solid_rect(0,deck_top+deck_height-5,BridgeCrossing::kLength,5,
+            C2D_Color32(118,132,125,255),0.15f);
+        constexpr int deck_tile_width=20;
+        for (int x=0;x<BridgeCrossing::kLength;x+=deck_tile_width) {
+            if (x+deck_tile_width<=camera_x || x>=camera_x+view_width) continue;
+            (void)renderer.draw_original_image("bridge_bg.png",static_cast<float>(x),
+                deck_top,deck_tile_width,deck_height,0.16f);
+        }
+        renderer.draw_solid_rect(BridgeCrossing::kExitStart,deck_top+5,
+            BridgeCrossing::kLength-BridgeCrossing::kExitStart,deck_height-10,
+            C2D_Color32(127,165,107,130),0.18f);
+        (void)renderer.draw_source_sprite(walker.source_skin(),walker.source_animation_index(),
+            walker.source_animation_frame(),position.x,position.y,1.0f,1.0f,0.45f);
+        renderer.reset_camera();
     }
 
     void rebuild_source_house_roofs() {
@@ -4437,6 +4515,7 @@ private:
     }
 
     void start_new_game() noexcept {
+        bridge_crossing_.leave();
         continue_world_visual_state_=false;
         world_seed_ = make_new_world_seed();
         stage2_audio_.stop_environment_ambience();
@@ -4828,6 +4907,7 @@ private:
     std::size_t source_location_creation_retry_count_{};
     std::uint8_t world_level_{};
     minidayz::WorldTravel travel_;
+    minidayz::BridgeCrossing bridge_crossing_{};
     bool travel_failed_{};
     bool continue_world_visual_state_{};
     float save_elapsed_{};

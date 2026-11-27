@@ -1351,3 +1351,8 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 - [x] Connected category 1022 equipment caches to the existing atomic box-opening path. The source audit confirms six ordered pools, including weighted duplicates and empty choices. Native code uses the current default unlock mappings and stores each equipment drop at full condition.
 - [x] The root tree and box source checks and the native world regression suite passed. The world suite exercises the shared trunk contact and runs the equipment cache through 512 RNG seeds.
 - [ ] Bridge traversal and bunker/FinalStand scene transitions, special categories 23/1020/1021, and emulator gameplay remain open.
+
+### Step 3 — bridge traversal
+
+- Checked the original Load_bridge_level entry and exit events before implementation. The 3DS platform now opens a playable crossing. At its far end A begins the existing transactional island change. B returns to the island. The native deck uses the existing bridge background tile and player sprite. Its dimensions, controls and return behavior are handheld adaptations. Bridge encounters and mid-crossing save restoration remain open.
+- Player regression tests exercise deck boundaries, exit eligibility, cancellation and re-entry. Bunker and Final Stand transitions, special equipment state and emulator verification remain open.

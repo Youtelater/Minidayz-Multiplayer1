@@ -1,4 +1,5 @@
 #include "minidayz/player.hpp"
+#include "minidayz/bridge_crossing.hpp"
 #include "minidayz/source_player_layers.hpp"
 #include "minidayz/source_player_altmove.hpp"
 #include "minidayz/source_equipment_animation.hpp"
@@ -19,7 +20,33 @@
 
 using namespace minidayz;
 
+static void test_bridge_crossing() {
+    PlayerState island_position{};
+    island_position.x=2450.0f;
+    island_position.y=18476.0f;
+    island_position.health=73.0f;
+    PlayerSystem survivor(island_position);
+    BridgeCrossing bridge;
+    PlayerRules rules{};
+    rules.walk_speed=96.0f;
+
+    bridge.enter(survivor);
+    assert(bridge.active() && !bridge.at_exit());
+    assert(bridge.walker().state().health==73.0f);
+    for (int i=0;i<20;++i) bridge.move({0.0f,-1.0f,false},0.1f,rules);
+    assert(bridge.walker().state().y>=BridgeCrossing::kCenterY-BridgeCrossing::kHalfWidth);
+    for (int i=0;i<90;++i) bridge.move({1.0f,0.0f,false},0.1f,rules);
+    assert(bridge.at_exit());
+    assert(bridge.walker().state().x<=BridgeCrossing::kLength);
+    bridge.leave();
+    assert(!bridge.active() && !bridge.at_exit());
+    assert(survivor.state().x==island_position.x && survivor.state().y==island_position.y);
+    bridge.enter(survivor);
+    assert(!bridge.at_exit() && bridge.walker().state().y==BridgeCrossing::kCenterY);
+}
+
 int main() {
+    test_bridge_crossing();
     // Preserve exact original layer relationships among player/equipment
     // (32..39), building backgrounds (31) and building roofs/walls (41).
     using namespace minidayz::stage1;
