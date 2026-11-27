@@ -216,3 +216,49 @@ s=native.split("kSourceBox456789Drops[]={",1)[1].split("};",1)[0]
 assert special_rows==[list(map(int,re.findall(r"-?\d+",row))) for row in re.findall(r"\{([^{}]+)\}",s)]
 assert len(special_rows)==56 and {row[0] for row in special_rows}==set(range(1,16))
 print("Original normal-map category 456789 drop actions:",len(special_rows))
+
+
+# Special Create/Set actions: preserve original variable indices, not stacks.
+def special_box(cat):
+    return next(e for e in ev[7] if len(e[5])==1 and e[5][0][:2]==[796,71] and e[5][0][9][2][1][1]==cat)
+special_actions=[]; special_branches=[]; special_pools=[]; special_choices=[]
+def add_special(cat,outcome,e,unlock="",retry=0):
+    first=len(special_actions)
+    for a in e[6]:
+        if a[:2]==[-1,94]:
+            assert a[5][1]==[5,[2,"items_on_ground"]]
+            special_actions.append([0,a[5][0][1],0,0,offset(a[5][2][1],65),offset(a[5][3][1],66),a[3]])
+        else:
+            assert a[1]==88 and a[5][1][1][0]==0
+            special_actions.append([1,a[0],a[5][0][1],a[5][1][1][1],0,0,a[3]])
+    special_branches.append([cat,outcome,first,len(special_actions)-first,e[4],unlock,retry])
+for cat in (16,18,19,20,23,29): add_special(cat,0,special_box(cat))
+for cat,n in ((1020,6),(1021,22)):
+    e=special_box(cat)
+    assert e[6][0][5][1][1]==[19,82,[[0,i] for i in range(1,n+1)]]
+    for b in e[7]:
+        outcome=b[5][0][9][2][1][1]
+        if len(b)>7 and b[7]:
+            unlocked,locked=b[7]
+            assert unlocked[5][0][9][2]==[7,[0,1]] and locked[5][0][1]==70
+            retry=locked[6][0][5][1][1]
+            assert retry==[19,82,[[0,i] for i in range(1,len(retry[2])+1)]]
+            add_special(cat,outcome,unlocked,unlocked[5][0][9][0][1],len(retry[2]))
+        else: add_special(cat,outcome,b)
+for a in special_box(1022)[7][0][6]:
+    assert a[:2]==[189,69] and a[5][0]==[1,[2,"Spawn_drop"]]
+    args=[x[1] for x in a[5][1][1:]]
+    assert args[0][:2]==[19,82] and args[3]==[0,100]
+    ids=[x[1] for x in args[0][2]]
+    special_pools.append([len(special_choices),len(ids),offset(args[1],65),offset(args[2],66),100,a[3]])
+    special_choices.extend(ids)
+special_header=(ROOT/"include/minidayz/source_special_box_actions.hpp").read_text()
+def special_values(name):
+    body=special_header.split(name+"[]={",1)[1].split("};",1)[0]
+    return [json.loads("["+s+"]") for s in re.findall(r"\{([^{}]+)\}",body)]
+assert special_values("kSourceSpecialBoxActions")==special_actions
+assert special_values("kSourceSpecialBoxBranches")==special_branches
+assert special_values("kSourceSpecialBoxPools")==special_pools
+assert json.loads("["+special_header.split("kSourceSpecialBoxChoices[]={",1)[1].split("};",1)[0]+"]")==special_choices
+assert len(special_actions)==188 and len(special_branches)==34 and len(special_pools)==6
+print("Original special box branches:",len(special_branches),"actions:",len(special_actions))
