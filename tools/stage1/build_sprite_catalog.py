@@ -90,7 +90,7 @@ def main() -> int:
             if not isinstance(anim, list) or not anim:
                 continue
             frames = anim[7] if len(anim) > 7 and isinstance(anim[7], list) else []
-            animations.append((oi, ai, str(anim[0]), len(frames), float(anim[3]) if len(anim)>3 else 0.0, bool(anim[2]) if len(anim)>2 else False))
+            animations.append((oi, ai, str(anim[0]), len(frames), float(anim[1]) if len(anim)>1 else 0.0, bool(anim[2]) if len(anim)>2 else False))
             for fi, fr in enumerate(frames):
                 if not isinstance(fr, list) or not fr or not isinstance(fr[0], str):
                     continue

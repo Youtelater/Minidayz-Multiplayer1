@@ -76,6 +76,9 @@ struct PlayerInput {
     bool run{};
 };
 
+// The 3DS Circle Pad reports positive Y upward.
+PlayerInput player_input_from_circle_pad(std::int16_t x,std::int16_t y) noexcept;
+
 using PlayerCollisionQuery = bool (*)(void* context, float x, float y) noexcept;
 
 struct PlayerMoveResult {

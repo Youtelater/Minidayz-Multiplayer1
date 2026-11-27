@@ -50,8 +50,9 @@ def main():
         for an in (o[7] if len(o)>7 and isinstance(o[7],list) else []):
             if not isinstance(an,list) or not an: continue
             frames=an[7] if len(an)>7 and isinstance(an[7],list) else []
+            # Construct Sprite reads speed from index 1 and repeat count from index 3.
             animations.append(dict(object=oi,name=an[0],frames=len(frames),
-                speed=an[3] if len(an)>3 else 0,loop=bool(an[2]) if len(an)>2 else False))
+                speed=an[1] if len(an)>1 else 0,loop=bool(an[2]) if len(an)>2 else False))
             for fi,fr in enumerate(frames):
                 if isinstance(fr,list) and fr and isinstance(fr[0],str):
                     image_refs.append(dict(object=oi,animation=an[0],frame=fi,path=fr[0],sheet_id=fr[1] if len(fr)>1 else None,x=fr[2] if len(fr)>2 else None,y=fr[3] if len(fr)>3 else None,width=fr[4] if len(fr)>4 else None,height=fr[5] if len(fr)>5 else None,origin_x=fr[7] if len(fr)>7 else None,origin_y=fr[8] if len(fr)>8 else None,collision=fr[10] if len(fr)>10 else None))

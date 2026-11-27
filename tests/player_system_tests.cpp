@@ -104,13 +104,13 @@ int main() {
         for(const auto& animation:kAnimations)
             if(animation.object==813 &&
                std::strcmp(animation.name,row.animation)==0) {
-                assert(animation.frames==6 && animation.speed==1.0f);
+                assert(animation.frames==6 && animation.speed==10.0f);
                 assert(!animation.loop);
                 found=true;
                 break;
             }
         assert(found && "Missing actual original dead skin animation");
-        assert(source_equipment_animation_frame(813,row.animation,2.1f)==2);
+        assert(source_equipment_animation_frame(813,row.animation,0.21f)==2);
         assert(source_equipment_animation_frame(813,row.animation,20.0f)==5);
     }
 
@@ -272,6 +272,16 @@ int main() {
     assert(std::fabs(one_slow.state().x-20.0f)<0.001f);
     assert(std::fabs(one_slow.state().x-four_fast.state().x)<0.001f);
 
+    const auto centered_pad=player_input_from_circle_pad(7,-7);
+    assert(centered_pad.move_x==0.0f && centered_pad.move_y==0.0f);
+    const auto full_up=player_input_from_circle_pad(0,156);
+    assert(full_up.move_x==0.0f && full_up.move_y==-1.0f);
+    const auto partial_pad=player_input_from_circle_pad(84,0);
+    assert(std::fabs(partial_pad.move_x-0.5f)<0.001f);
+    const auto full_diagonal=player_input_from_circle_pad(156,-156);
+    assert(full_diagonal.move_x>0.0f && full_diagonal.move_y>0.0f);
+    assert(std::fabs(std::hypot(full_diagonal.move_x,full_diagonal.move_y)-1.0f)<0.001f);
+
 
     // The default player skin has idle down/up/right/left (0..3) and
     // run down/up/right/left (4..7); it has no dedicated death animation.
@@ -286,7 +296,7 @@ int main() {
     assert(animated.source_animation_frame() == 0);
     for (int i = 0; i < 20; ++i)
         animated.update_movement(up, 0.05f, movement_rules);
-    assert(animated.source_animation_frame() == 1);
+    assert(animated.source_animation_frame() == 2);
     PlayerInput idle{};
     animated.update_movement(idle, 0.05f, movement_rules);
     assert(animated.source_animation_index() == 1);
@@ -362,6 +372,20 @@ int main() {
     assert(stop.blocked_x);
     assert(tunnel.state().x<23.0f);
     assert(tunnel.state().animation==PlayerAnimation::run);
+
+    PlayerSystem pixel_wall_player(tunnel_state);
+    auto pixel_wall_rules=movement_rules;
+    pixel_wall_rules.collision_half_width=kSourcePlayerBaseHalfWidth;
+    pixel_wall_rules.collision_half_height=kSourcePlayerBaseHalfHeight;
+    pixel_wall_rules.collision_offset_x=kSourcePlayerBaseCollisionOffsetX;
+    pixel_wall_rules.collision_offset_y=kSourcePlayerBaseCollisionOffsetY;
+    const auto pixel_wall=+[](void*,float x,float) noexcept {
+        return x>=23.0f && x<24.0f;
+    };
+    const auto pixel_stop=pixel_wall_player.update_movement(
+        east,0.20f,pixel_wall_rules,pixel_wall,nullptr);
+    assert(pixel_stop.blocked_x && pixel_wall_player.state().x==22.0f);
+
     // Changing direction resets the old run animation frame: a new
     // directional sprite should never inherit a mismatched pose.
     PlayerState turn_state{};
@@ -369,12 +393,25 @@ int main() {
     PlayerSystem turning(turn_state);
     for(int i=0;i<21;++i)
         turning.update_movement(up,0.05f,movement_rules);
-    assert(turning.source_animation_frame()==1);
+    assert(turning.source_animation_frame()==2);
     PlayerInput right{};
     right.move_x=1.0f;
     turning.update_movement(right,0.05f,movement_rules);
     assert(turning.source_animation_index()==6);
     assert(turning.source_animation_frame()==0);
+
+    PlayerSystem continuous_pose(turn_state);
+    for (int tick=0;tick<20;++tick)
+        continuous_pose.update_movement(right,0.25f,movement_rules);
+    assert(continuous_pose.source_animation_frame()==2);
+    assert(continuous_pose.state().animation_elapsed==5.0f);
+    auto same_speed=movement_rules;
+    same_speed.run_speed=same_speed.walk_speed;
+    continuous_pose.update_movement({1.0f,0.0f,true},0.25f,same_speed);
+    assert(continuous_pose.state().animation==PlayerAnimation::run);
+    assert(continuous_pose.source_animation_frame()==0);
+    assert(continuous_pose.state().animation_elapsed==5.25f);
+
     // Switching to another original player skin preserves physical stats
     // while using the newly selected skin's own animation timing.
     turning.set_source_skin(826); // Original player_skin_aika.

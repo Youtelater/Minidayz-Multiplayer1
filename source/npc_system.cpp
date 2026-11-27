@@ -169,8 +169,7 @@ void NpcSystem::update(float delta_seconds, float player_x, float player_y,
         if (std::fabs(step_x) + std::fabs(step_y) > 0.01f) {
             // These walk_* animation indices come from the six original
             // MiniDAYZ NPC body sprites (600,206,582,583,586,587).
-            // All six source sprites have authored 1 FPS walk loops,
-            // NOT 8 FPS. Respect each selected body's own frame metadata,
+            // The original bodies use their own walk animation metadata,
             // including 3-frame up/down versus 4-frame left/right.
             const std::uint8_t wanted=std::fabs(vx)>std::fabs(vy)
                 ? (vx<0.0f?14u:15u) : (vy<0.0f?13u:12u);

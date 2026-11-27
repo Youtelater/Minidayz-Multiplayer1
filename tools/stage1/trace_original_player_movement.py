@@ -42,7 +42,7 @@ for oid in (193,679):
    "effects",str(obj[5])[:500])
  for i,a in enumerate(obj[7] if len(obj)>7 and isinstance(obj[7],list) else []):
   if not isinstance(a,list) or len(a)<8:continue
-  print("PLAYER_ORIGINAL_ANIMATION",oid,i,a[0],"speed",a[2],"loop",a[4],
+  print("PLAYER_ORIGINAL_ANIMATION",oid,i,a[0],"speed",a[1],"loop",a[2],
      "frames",len(a[7]))
 
 print("PLAYER_BASE_OBJECT_193_SOURCE_FIELDS")

@@ -20,12 +20,11 @@ inline std::uint32_t source_animation_frame_at_time(
         animation.speed <= 0.0f)
         return 0;
     const double elapsed=std::max(0.0,static_cast<double>(elapsed_seconds));
-    const double cycle=static_cast<double>(animation.frames) /
-                       static_cast<double>(animation.speed);
-    const double seconds=animation.loop && cycle>0.0 ?
-        std::fmod(elapsed,cycle) : elapsed;
-    const double frames=std::floor(seconds *
-                       static_cast<double>(animation.speed));
+    const double elapsed_frames=std::floor(elapsed *
+                                           static_cast<double>(animation.speed));
+    const double frames=animation.loop
+        ? std::fmod(elapsed_frames,static_cast<double>(animation.frames))
+        : elapsed_frames;
     // Constrain before narrowing: extremely long sessions must not overflow.
     if (frames>=static_cast<double>(animation.frames))
         return animation.frames-1;

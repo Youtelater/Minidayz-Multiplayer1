@@ -2,6 +2,7 @@
 """Validate exact original playable skin frames and 3DS animation atlases."""
 from __future__ import annotations
 import json
+import csv
 import re
 from pathlib import Path
 
@@ -57,6 +58,23 @@ def main():
     # The 21 original player skins must all have a source hand layer.
     assert set(hands)=={skin for skin,_ in entries}
     sprite_text=SPRITES.read_text(encoding="utf-8")
+    animation_rows=sprite_text.split("kSpriteAnimations[] = {",1)[1].split("};",1)[0]
+    exported_sprites={(int(obj),int(index)):(name,int(count),float(speed),loop=="true")
+                      for obj,index,name,count,speed,loop in re.findall(
+        r'\{(\d+),(\d+),"([^"]+)",(\d+),([-\d.eE+]+)f,(true|false)\}',animation_rows)}
+    with (ROOT/"data/stage1/animations.csv").open(newline="",encoding="utf-8") as source:
+        exported_timing={(int(row["object"]),row["name"]):
+                         (int(row["frames"]),float(row["speed"]),row["loop"].lower()=="true")
+                         for row in csv.DictReader(source)}
+    # Construct Sprite stores animation speed at [1] and repeat count at [3].
+    for obj_id in set(hands) | set(hands.values()) | {813}:
+        for index,anim in enumerate(objects[obj_id][7]):
+            name=anim[0]
+            if obj_id!=813 and not name.startswith(("run_","idle_")):
+                continue
+            timing=(len(anim[7]),float(anim[1]),bool(anim[2]))
+            assert exported_sprites[obj_id,index]==(name,*timing),(obj_id,name)
+            assert exported_timing[obj_id,name]==timing,(obj_id,name)
     for obj_id,_ in entries:
         assert re.search(r"^\s*\{"+str(obj_id)+r",\d+,\d+,\d+,",sprite_text,re.M),obj_id
     for hands_obj in set(hands.values()):

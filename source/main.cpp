@@ -723,7 +723,7 @@ public:
         // updates and present a 3DS touch/physical-button death screen.
         // Do not permit dead characters to use, craft or transfer items.
         if (!player_.state().alive) {
-            // Root dead-survivor Sprite813 has six frames at 1 fps,
+            // Root dead-survivor Sprite813 has six frames at 10 fps,
             // nonlooping, on Map/items_on_ground18. Advance the original
             // visual clock while the 3DS death screen is showing.
             source_dead_animation_elapsed_=std::min(6.0f,
@@ -3572,9 +3572,7 @@ private:
 
     static minidayz::PlayerInput read_player_movement(
             const minidayz::InputState& input) noexcept {
-        minidayz::PlayerInput movement{};
-        movement.move_x=static_cast<float>(input.circle.dx)/156.0f;
-        movement.move_y=-static_cast<float>(input.circle.dy)/156.0f;
+        auto movement=minidayz::player_input_from_circle_pad(input.circle.dx,input.circle.dy);
         if (input.held & KEY_DLEFT) movement.move_x-=1.0f;
         if (input.held & KEY_DRIGHT) movement.move_x+=1.0f;
         if (input.held & KEY_DUP) movement.move_y-=1.0f;

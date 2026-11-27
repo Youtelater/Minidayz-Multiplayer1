@@ -73,8 +73,7 @@ int main() {
 
     constexpr std::uint16_t expected_bodies[] = {600, 206, 582, 583, 586, 587};
     // The original source NPC body objects all define walk_down/up/left/
-    // right at speed ONE frame/second. Before this fix the renderer used
-    // a hardcoded 8 FPS multiplier, making movement animate 8x too fast.
+    // right at five frames per second.
     // Check the actual root-generated animation catalog for every skin,
     // rather than only checking a hardcoded list of body object IDs.
     for (const auto body:expected_bodies) {
@@ -84,32 +83,32 @@ int main() {
             if (a.object!=body)continue;
             if(animation_index==12) {
                 assert(std::strcmp(a.name,"walk_down")==0);
-                assert(a.frames==3 && a.speed==1.0f && a.loop);
+                assert(a.frames==3 && a.speed==5.0f && a.loop);
                 saw_down=true;
             }
             if(animation_index==13) {
                 assert(std::strcmp(a.name,"walk_up")==0);
-                assert(a.frames==3 && a.speed==1.0f && a.loop);
+                assert(a.frames==3 && a.speed==5.0f && a.loop);
                 saw_up=true;
             }
             if(animation_index==14) {
                 assert(std::strcmp(a.name,"walk_left")==0);
-                assert(a.frames==4 && a.speed==1.0f && a.loop);
+                assert(a.frames==4 && a.speed==5.0f && a.loop);
                 saw_left=true;
             }
             if(animation_index==15) {
                 assert(std::strcmp(a.name,"walk_right")==0);
-                assert(a.frames==4 && a.speed==1.0f && a.loop);
+                assert(a.frames==4 && a.speed==5.0f && a.loop);
                 saw_right=true;
             }
             ++animation_index;
         }
         assert(saw_down && saw_up && saw_left && saw_right);
-        assert(source_object_animation_frame(body,12,0.25f)==0);
-        assert(source_object_animation_frame(body,12,1.1f)==1);
-        assert(source_object_animation_frame(body,12,3.1f)==0);
-        assert(source_object_animation_frame(body,15,1.1f)==1);
-        assert(source_object_animation_frame(body,15,4.1f)==0);
+        assert(source_object_animation_frame(body,12,0.15f)==0);
+        assert(source_object_animation_frame(body,12,0.25f)==1);
+        assert(source_object_animation_frame(body,12,0.65f)==0);
+        assert(source_object_animation_frame(body,15,0.25f)==1);
+        assert(source_object_animation_frame(body,15,0.85f)==0);
     }
     minidayz::NpcSystem moving_animation;
     assert(moving_animation.spawn_at(0.0f,0.0f,0.0f,1,0xAE01u));
@@ -118,7 +117,7 @@ int main() {
         const auto* animated=moving_animation.actor(0);
         assert(animated && animated->animation_index==15);
         assert(animated->animation_frame==
-            static_cast<std::uint32_t>(tick / 4) % 4u);
+            static_cast<std::uint32_t>(tick * 5 / 4) % 4u);
     }
     minidayz::NpcSystem npcs;
     for (std::uint8_t skin = 1; skin <= 6; ++skin) {
