@@ -7,6 +7,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <new>
 
 namespace minidayz::world_source {
 
@@ -62,7 +64,10 @@ inline bool apply_verified_tree_fall(
     // GroundLootSystem::add is validated by its own original-item catalog.
     // Save its previous state so a failed drop cannot leave a chopped
     // tree with missing resources.
-    const auto ground_before=ground.snapshot();
+    // This transaction is too large for the ARM11 main thread stack.
+    const auto ground_before=std::unique_ptr<items::GroundLootSystem>(
+        new(std::nothrow) items::GroundLootSystem(ground));
+    if(!ground_before)return false;
     if(!world.set_placement_sprite_state(index,rule->fall_animation,
                                           rule->fall_frame,original.opacity))
         return false;
@@ -70,7 +75,7 @@ inline bool apply_verified_tree_fall(
         const auto& where=source_drop_positions[i];
         if(!ground.add({rule->drop_item_ids[i],1,
                         items::kUseSourceItemCondition},where.x,where.y)) {
-            (void)ground.restore(ground_before);
+            ground=*ground_before;
             (void)world.set_placement_sprite_state(
                 index,original.source_animation,
                 original.source_frame,original.opacity);
@@ -81,7 +86,7 @@ inline bool apply_verified_tree_fall(
        !world.set_placement_sprite_state(
            base_index,original_base.source_animation,
            kOriginalTreeFallenHitboxFrame,original_base.opacity)){
-        (void)ground.restore(ground_before);
+        ground=*ground_before;
         (void)world.set_placement_sprite_state(
             index,original.source_animation,
             original.source_frame,original.opacity);
@@ -136,6 +141,38 @@ inline TreeHitOutcome apply_verified_tree_hit(
         return TreeHitOutcome::Rejected;
     original_tree_health_variable_0=next_hp;
     return TreeHitOutcome::Fallen;
+}
+
+// Apply the source tree hit to the tree selected by its actual linked
+// standing obst_base 345. The caller still owns bullet 1031's original
+// not-fire, overlap and flag7 guards and sound/tutorial/achievement actions.
+// Persist the hit in that tree's variable 0 rather than a caller-local HP.
+inline TreeHitOutcome apply_verified_tree_hit_at_trunk(
+    WorldSystem& world,std::size_t trunk_index,
+    std::uint64_t source_hit_event_uid,
+    const std::array<WorldPoint,4>& source_drop_positions,
+    items::GroundLootSystem& ground) noexcept {
+    const auto* trunk=world.placement(trunk_index);
+    if(!trunk || trunk->object!=kOriginalTreeHitboxObject ||
+       trunk->source_frame!=kOriginalTreeStandingHitboxFrame ||
+       !world.source_placement_active(*trunk) ||
+       !trunk->linked_runtime_uid)return TreeHitOutcome::Rejected;
+    const auto uid=trunk->linked_runtime_uid;
+    for(std::size_t i=0;i<world.placement_count();++i){
+        const auto* tree=world.placement(i);
+        if(!tree || tree->runtime_uid!=uid)continue;
+        if(tree->linked_runtime_uid!=trunk->runtime_uid ||
+           !world.source_placement_active(*tree) ||
+           tree->source_variable_0==0 || tree->source_variable_0>3)
+            return TreeHitOutcome::Rejected;
+        float hp=static_cast<float>(tree->source_variable_0);
+        const auto outcome=apply_verified_tree_hit(world,uid,
+            source_hit_event_uid,hp,source_drop_positions,ground);
+        if(outcome!=TreeHitOutcome::Rejected)
+            (void)world.set_source_tree_health(i,static_cast<std::uint64_t>(hp));
+        return outcome;
+    }
+    return TreeHitOutcome::Rejected;
 }
 
 // Original automatic door event UIDs:
