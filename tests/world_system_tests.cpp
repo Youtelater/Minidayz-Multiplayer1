@@ -1335,6 +1335,8 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
     }
     assert(tree<world.placement_count() && other<world.placement_count());
     const auto* p=world.placement(tree);
+    assert(p->source_variable_0==3);
+    assert(world.placement(other)->source_variable_0==3);
     const std::uint64_t id=p->runtime_uid;
     const auto other_id=world.placement(other)->runtime_uid;
     // Every procedural tree creates the original separate frame-10
