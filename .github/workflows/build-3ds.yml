@@ -311,6 +311,7 @@ jobs:
       - name: Verify original simple bunker box drop source
         run: |
           python3 tests/test_original_box_simple_drops.py
+          python3 tests/test_original_tree_health.py
           g++ -std=c++17 -Wall -Wextra -Werror -pedantic -Iinclude tests/source_special_box_actions_tests.cpp -o /tmp/source_special_box_actions_tests
           /tmp/source_special_box_actions_tests
 
