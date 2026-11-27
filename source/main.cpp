@@ -1723,8 +1723,12 @@ public:
             if (area!=minidayz::Passage::bridge) {
                 renderer.draw_text(area==minidayz::Passage::bunker ? "BUNKER" : "FINAL STAND",
                     88,46,0.45f);
-                renderer.draw_text(bridge_crossing_.at_exit() ? passage_exit_prompt() :
+                const auto* cache=near_passage_equipment_cache();
+                renderer.draw_text(cache ? "A: OPEN EQUIPMENT CACHE" :
+                    bridge_crossing_.at_exit() ? passage_exit_prompt() :
                     "FOLLOW THE PASSAGE",40,105,0.30f);
+                if (passage_cache_feedback_)
+                    renderer.draw_text(passage_cache_feedback_,24,136,0.26f);
                 renderer.draw_text("X: STRIKE   B: RETURN",51,175,0.31f);
                 return;
             }
@@ -3559,13 +3563,14 @@ private:
 
     const char* passage_exit_prompt() const noexcept {
         const auto* entrance=near_bunker_entrance();
-        if (!entrance || entrance->source_variable_0) return "A: RETURN TO SURFACE";
+        if (!entrance || (entrance->source_variable_0 & 1u)) return "A: RETURN TO SURFACE";
         return bridge_crossing_.area()==minidayz::Passage::final_stand
             ? "A: ACTIVATE TERMINAL" : "A: TAKE SUPPLIES";
     }
 
     void start_passage_encounters() noexcept {
         passage_npcs_.reset();
+        passage_cache_feedback_=nullptr;
         passage_hit_cooldown_=0.0f;
         passage_strike_cooldown_=0.0f;
         if (!bridge_crossing_.active()) return;
@@ -3606,13 +3611,62 @@ private:
         }
     }
 
+    struct PassageEquipmentCache {
+        minidayz::Passage area;
+        float x,y;
+        int category;
+        std::uint8_t bit;
+    };
+    static constexpr PassageEquipmentCache passage_equipment_caches_[]{
+        {minidayz::Passage::bunker,420,126,23,2},
+        {minidayz::Passage::final_stand,375,124,1020,4},
+        {minidayz::Passage::final_stand,615,112,1021,8}
+    };
+
+    const PassageEquipmentCache* near_passage_equipment_cache() const noexcept {
+        if (bridge_crossing_.area()==minidayz::Passage::bridge) return nullptr;
+        const auto* entrance=near_bunker_entrance();
+        if (!entrance) return nullptr;
+        const auto position=bridge_crossing_.position();
+        for (const auto& cache:passage_equipment_caches_) {
+            if (cache.area==position.area && !(entrance->source_variable_0 & cache.bit) &&
+                std::hypot(position.x-cache.x,position.y-cache.y)<=28)
+                return &cache;
+        }
+        return nullptr;
+    }
+
+    void open_passage_equipment_cache(const PassageEquipmentCache& cache) noexcept {
+        const auto* entrance=near_bunker_entrance();
+        if (!entrance) return;
+        auto drops=std::unique_ptr<minidayz::items::GroundLootSystem>(
+            new(std::nothrow) minidayz::items::GroundLootSystem{});
+        // Reopening the same intact cache after Continue uses the same roll.
+        std::mt19937 random(world_seed_ ^ static_cast<std::uint32_t>(entrance->runtime_uid) ^
+            static_cast<std::uint32_t>(cache.category));
+        if (!drops || !minidayz::items::source_box_special_equipment(
+                cache.category,random,*drops,0,0)) return;
+        auto next=inventory_;
+        for (std::size_t i=0;i<drops->count();++i) {
+            auto item=drops->entry(i)->item;
+            if (!next.pickup(item)) {
+                passage_cache_feedback_="BACKPACK FULL";
+                return;
+            }
+        }
+        if (!world_.mark_passage_cache_claimed(entrance->runtime_uid,cache.bit)) return;
+        inventory_=next;
+        passage_cache_feedback_="EQUIPMENT ADDED TO BACKPACK";
+        stage2_audio_.play_item_pickup();
+    }
+
     void interact_with_passage_exit() noexcept {
         if (bridge_crossing_.area()==minidayz::Passage::bridge) {
             start_next_source_map();
             return;
         }
         const auto* entrance=near_bunker_entrance();
-        if (!entrance || entrance->source_variable_0) {
+        if (!entrance || (entrance->source_variable_0 & 1u)) {
             bridge_crossing_.leave();
             return;
         }
@@ -3637,8 +3691,13 @@ private:
             rules.walk_speed=minidayz::stage1::source_player_altmove_max_speed({});
         bridge_crossing_.move(movement,dt,rules);
         update_passage_encounters((input.pressed & KEY_X)!=0,dt);
-        if ((input.pressed & KEY_A) && bridge_crossing_.at_exit())
-            interact_with_passage_exit();
+        if ((input.pressed & KEY_A) && bridge_crossing_.active()) {
+            passage_cache_feedback_=nullptr;
+            if (const auto* cache=near_passage_equipment_cache())
+                open_passage_equipment_cache(*cache);
+            else if (bridge_crossing_.at_exit())
+                interact_with_passage_exit();
+        }
     }
 
     void render_bridge_crossing(minidayz::Renderer& renderer) noexcept {
@@ -3683,6 +3742,15 @@ private:
             if (actor && actor->alive)
                 (void)renderer.draw_source_sprite(actor->source_object,actor->animation_index,
                     actor->animation_frame,actor->x,actor->y,1,1,0.44f);
+        }
+        if (const auto* entrance=area==minidayz::Passage::bridge ? nullptr : near_bunker_entrance()) {
+            for (const auto& cache:passage_equipment_caches_) {
+                if (cache.area!=area || (entrance->source_variable_0 & cache.bit)) continue;
+                renderer.draw_solid_rect(cache.x-9,cache.y-7,18,14,
+                    C2D_Color32(157,128,81,255),0.4f);
+                renderer.draw_solid_rect(cache.x-9,cache.y-1,18,2,
+                    C2D_Color32(223,191,111,255),0.41f);
+            }
         }
         (void)renderer.draw_source_sprite(walker.source_skin(),walker.source_animation_index(),
             walker.source_animation_frame(),position.x,position.y,1.0f,1.0f,0.45f);
@@ -5013,6 +5081,7 @@ private:
     std::vector<std::uint32_t> visible_world_placements_{};
     minidayz::NpcSystem npcs_{};
     minidayz::NpcSystem passage_npcs_{};
+    const char* passage_cache_feedback_{};
     float passage_hit_cooldown_{},passage_strike_cooldown_{};
     std::uint32_t world_seed_{};
     bool legacy_world_generation_{};

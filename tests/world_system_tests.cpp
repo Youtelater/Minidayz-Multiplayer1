@@ -1011,8 +1011,15 @@ void test_original_bunker_entrance_generation() {
     }
     assert(hatch_uid && cache_world.mark_passage_cache_claimed(hatch_uid));
     assert(!cache_world.mark_passage_cache_claimed(hatch_uid));
+    assert(!cache_world.mark_passage_cache_claimed(hatch_uid,3));
+    assert(cache_world.mark_passage_cache_claimed(hatch_uid,2));
+    assert(cache_world.mark_passage_cache_claimed(hatch_uid,4));
+    assert(cache_world.mark_passage_cache_claimed(hatch_uid,8));
     const auto states=cache_world.capture_sprite_states();
     assert(cache_world.restore_sprite_states(states));
+    assert(!cache_world.mark_passage_cache_claimed(hatch_uid,2));
+    assert(!cache_world.mark_passage_cache_claimed(hatch_uid,4));
+    assert(!cache_world.mark_passage_cache_claimed(hatch_uid,8));
     assert(!cache_world.mark_passage_cache_claimed(hatch_uid));
 
     // Explicitly exercise the original 6-per-half radiation variant

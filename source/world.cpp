@@ -2558,13 +2558,15 @@ bool WorldSystem::set_source_tree_health(
     return true;
 }
 
-bool WorldSystem::mark_passage_cache_claimed(std::uint64_t entrance_uid) noexcept {
-    if (!generation_complete() || !entrance_uid) return false;
+bool WorldSystem::mark_passage_cache_claimed(
+    std::uint64_t entrance_uid, std::uint8_t cache_bit) noexcept {
+    if (!generation_complete() || !entrance_uid ||
+        (cache_bit!=1 && cache_bit!=2 && cache_bit!=4 && cache_bit!=8)) return false;
     for (auto& placement : placements_) {
         if (placement.runtime_uid!=entrance_uid || placement.object!=785 ||
             placement.source_uid!=644090747484030ULL) continue;
-        if (placement.source_variable_0!=0) return false;
-        placement.source_variable_0=1;
+        if (placement.source_variable_0 & cache_bit) return false;
+        placement.source_variable_0|=cache_bit;
         return true;
     }
     return false;

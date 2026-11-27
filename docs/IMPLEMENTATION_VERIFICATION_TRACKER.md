@@ -1377,3 +1377,8 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - Categories 23, 1020 and 1021 now dispatch through the native transactional box-opening path. The equipment IDs come from the Map templates. The existing source executor selects the branch, and native ground stacks retain the combined loose and loaded ammunition counts.
 - The native drops use full-condition equipment and loose ammunition. Loaded magazines, NVG charge and activation, and achievement-dependent alternatives remain parity gaps. The native selector uses the default locked achievement state. Runtime verification of these boxes and the passage encounters remains open.
+
+### Step 3 — emulator access to equipment caches
+
+- The native bunker passage has an accessible category 23 cache. The later Final Stand passage has category 1020 and 1021 caches at two marked points. These are 3DS placements. Press A near a cache to transfer its contents to the backpack. A full backpack leaves the cache available. Cache claims save independently from the existing end-of-passage interaction.
+- Emulator checks should cover reaching all three caches, backpack contents, retry with a full backpack, returning to the surface, and saving and continuing after a claim. For the bridge, check arrival on the next island and a save made partway across. Magazine placement, NVG state and achievement alternatives remain parity gaps.

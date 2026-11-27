@@ -288,7 +288,7 @@ public:
     bool set_source_tree_health(std::size_t index,std::uint64_t health) noexcept;
     // Original collision-on-796 transition: frame1 and instance bool1
     // must change together, exactly once per source box instance.
-    bool mark_passage_cache_claimed(std::uint64_t entrance_uid) noexcept;
+    bool mark_passage_cache_claimed(std::uint64_t entrance_uid, std::uint8_t cache_bit=1) noexcept;
     bool open_source_bunker_lootbox(std::size_t index) noexcept;
     bool advance_source_bunker_lootbox_fade(std::size_t index,float dt) noexcept;
     // Original car trunk Sprite241 is destroyed on first search even if
