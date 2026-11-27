@@ -480,6 +480,12 @@ inline bool source_box_direct_quantity_drops(std::uint64_t category,
 // Ordered mixed Spawn_drop / direct Create + variable 1 source actions.
 // object=0 denotes Spawn_drop; direct Create bypasses Spawn_drop unlock swaps.
 inline constexpr SourceBoxDirectQuantityDrop kSourceBoxMixedDrops[]={
+    {14,370,35,1,-10,0,877299284863997,0},
+    {14,370,35,1,10,0,900546395108623,0},
+    {15,379,36,1,-10,0,327695191837222,0},
+    {15,379,36,1,10,0,995355799123242,0},
+    {17,36,19,1,-10,0,195022771015296,0},
+    {17,36,19,1,10,0,632904144756102,0},
     {18,840,85,100,-10,0,633221652701240,387097127016838},
     {18,840,85,100,10,0,813151583535687,261774263596193},
     {18,840,85,100,10,0,964573832608017,807153139196708},
