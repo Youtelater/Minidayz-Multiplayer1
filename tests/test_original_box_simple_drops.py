@@ -149,7 +149,7 @@ print("Original category 999 drop leaves:",len(expected))
 
 # Ordered mixed Spawn_drop and direct Create + variable-1 branches.
 mixed=[]
-mixed_categories={14,15,17,18,19,20,37,38,39,40,41,42,111,112,116,1011}
+mixed_categories={14,15,16,17,18,19,20,37,38,39,40,41,42,111,112,116,1011}
 for child in ev[7]:
     if len(child[5])!=1 or child[5][0][:2]!=[796,71]:
         continue
@@ -167,6 +167,15 @@ for child in ev[7]:
         else:
             obj=a[5][0][1]
             assert a[:2]==[-1,94] and a[5][1]==[5,[2,"items_on_ground"]]
+            if cat==16:
+                # The root MDZItemTable maps item 53 to t443. The box
+                # performs only Create; unlike Spawn_drop it sets no amount.
+                table=(ROOT/"mp_itemtable.js").read_text(encoding="utf-8-sig")
+                match=re.search(r'\b53\s*:\s*("[^"\n]+")',table)
+                assert match and json.loads(match.group(1))=="t443" and obj==443
+                mixed.append([cat,obj,53,1,offset(a[5][2][1],65),
+                              offset(a[5][3][1],66),a[3],0])
+                continue
             if cat in (14,15,17):
                 matches=[e for e in walk(spawn[7]) if len(e[5])==1
                          and e[5][0][:2]==[189,112] and len(e[6])==1
@@ -181,7 +190,7 @@ for child in ev[7]:
                           offset(a[5][2][1],65),offset(a[5][3][1],66),a[3],b[3]])
 s=native.split("kSourceBoxMixedDrops[]={",1)[1].split("};",1)[0]
 assert mixed==[list(map(int,re.findall(r"-?\d+",row))) for row in re.findall(r"\{([^{}]+)\}",s)]
-assert len(mixed)==41 and {row[0] for row in mixed}==mixed_categories
+assert len(mixed)==43 and {row[0] for row in mixed}==mixed_categories
 print("Original mixed/direct box drop actions:",len(mixed))
 
 # Category 456789: original 15 outcomes, default locked achievement branches.
