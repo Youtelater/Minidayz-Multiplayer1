@@ -3031,7 +3031,7 @@ void test_original_box_drop_catalog() {
         assert(index==ground->count() && index==(category==13?3u:2u));
     }
     // Verify the native ordered dispatch, not just extracted row metadata.
-    for(const unsigned category:{14u,15u,17u,37u,38u,39u,40u,41u,42u,111u,112u,116u,1011u}){
+    for(const unsigned category:{14u,15u,16u,17u,37u,38u,39u,40u,41u,42u,111u,112u,116u,1011u}){
         ground->clear();
         assert(source_box_has_mixed_drops(category));
         assert(source_box_mixed_drops(category,*ground,1000,1000));
