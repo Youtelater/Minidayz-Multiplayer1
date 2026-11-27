@@ -56,6 +56,10 @@ public:
         if (active_) walker_.update_movement(input,dt,rules,&blocked,this);
     }
 
+    static bool npc_blocked(void* context,float x,float y) noexcept {
+        return blocked(context,x,y);
+    }
+
     struct Partition { float x,top,bottom; };
     static constexpr Partition partitions[]{{225,74,125},{455,115,166}};
     static bool has_partition(Passage area,std::size_t i) noexcept {

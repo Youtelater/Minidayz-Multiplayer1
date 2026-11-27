@@ -1001,6 +1001,20 @@ void test_original_bunker_entrance_generation() {
             assert(p->source_variable_2==(second?1u:0u));
         }
     }
+    minidayz::WorldSystem cache_world;
+    assert(cache_world.generate_from_source(0x7bca13u,"Map",1));
+    std::uint64_t hatch_uid=0;
+    for (std::size_t i=0;i<cache_world.placement_count();++i) {
+        const auto* placement=cache_world.placement(i);
+        if (placement->object==785 && placement->source_uid==644090747484030ULL)
+            hatch_uid=placement->runtime_uid;
+    }
+    assert(hatch_uid && cache_world.mark_passage_cache_claimed(hatch_uid));
+    assert(!cache_world.mark_passage_cache_claimed(hatch_uid));
+    const auto states=cache_world.capture_sprite_states();
+    assert(cache_world.restore_sprite_states(states));
+    assert(!cache_world.mark_passage_cache_claimed(hatch_uid));
+
     // Explicitly exercise the original 6-per-half radiation variant
     // without relying on the seeded level-five theme choice.
     minidayz::WorldSystem toxic;

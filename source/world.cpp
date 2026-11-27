@@ -2558,6 +2558,18 @@ bool WorldSystem::set_source_tree_health(
     return true;
 }
 
+bool WorldSystem::mark_passage_cache_claimed(std::uint64_t entrance_uid) noexcept {
+    if (!generation_complete() || !entrance_uid) return false;
+    for (auto& placement : placements_) {
+        if (placement.runtime_uid!=entrance_uid || placement.object!=785 ||
+            placement.source_uid!=644090747484030ULL) continue;
+        if (placement.source_variable_0!=0) return false;
+        placement.source_variable_0=1;
+        return true;
+    }
+    return false;
+}
+
 bool WorldSystem::open_source_bunker_lootbox(std::size_t index) noexcept {
     if(!generation_complete() || index>=placements_.size())return false;
     const auto box=placements_[index];

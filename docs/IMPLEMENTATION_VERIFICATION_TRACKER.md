@@ -1366,3 +1366,9 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - Generated surface hatches now open an underground passage. The second hatch used on later islands opens a route with a second partition. Either passage supports returning to the hatch and Save and Continue. The handheld passages have their own geometry and collision.
 - Native movement and save round-trip tests passed locally. Underground encounters, bunker loot, the Final Stand objective, bridge encounters, special lootbox equipment state and emulator verification remain open.
+
+### Step 3 — passage encounters and objectives
+
+- Bridge, bunker and Final Stand passages now spawn NPC encounters with the existing movement and sprite system. X strikes a nearby enemy and contact damage carries back to the surface survivor.
+- Underground exits now provide a one-time bandage cache or terminal interaction. Both store their completion against the entrance in the world save. The encounter placements, combat tuning, supplies and terminal are native 3DS designs. Encounters restart when re-entering or continuing a passage.
+- Special equipment state for lootbox categories 23, 1020 and 1021 and emulator checks remain open.

@@ -249,6 +249,7 @@ public:
         selected_inventory_slot_=-1;
         paused_=false;
         bridge_crossing_.resume(player_,crossing);
+        start_passage_encounters();
         return true;
     }
 
@@ -825,6 +826,7 @@ public:
             if (const auto* entrance=near_bunker_entrance()) {
                 bridge_crossing_.enter(player_, entrance->source_variable_2==1
                     ? minidayz::Passage::final_stand : minidayz::Passage::bunker);
+                start_passage_encounters();
                 return;
             }
         }
@@ -832,6 +834,7 @@ public:
         if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0 &&
             near_bridge_platform()) {
             bridge_crossing_.enter(player_);
+            start_passage_encounters();
             travel_failed_=false;
             return;
         }
@@ -1720,9 +1723,9 @@ public:
             if (area!=minidayz::Passage::bridge) {
                 renderer.draw_text(area==minidayz::Passage::bunker ? "BUNKER" : "FINAL STAND",
                     88,46,0.45f);
-                renderer.draw_text(bridge_crossing_.at_exit() ? "A: RETURN TO SURFACE" :
-                    "FOLLOW THE PASSAGE",58,105,0.34f);
-                renderer.draw_text("B: RETURN TO ENTRANCE",51,175,0.31f);
+                renderer.draw_text(bridge_crossing_.at_exit() ? passage_exit_prompt() :
+                    "FOLLOW THE PASSAGE",40,105,0.30f);
+                renderer.draw_text("X: STRIKE   B: RETURN",51,175,0.31f);
                 return;
             }
             renderer.draw_text("BRIDGE CROSSING",74,46,0.45f);
@@ -1732,7 +1735,7 @@ public:
             } else {
                 renderer.draw_text("WALK TO THE FAR END",59,105,0.34f);
             }
-            renderer.draw_text("B: RETURN TO THIS ISLAND",51,175,0.31f);
+            renderer.draw_text("X: STRIKE   B: RETURN",51,175,0.31f);
             return;
         }
         if (menu_active_) {
@@ -3554,6 +3557,72 @@ private:
         return movement;
     }
 
+    const char* passage_exit_prompt() const noexcept {
+        const auto* entrance=near_bunker_entrance();
+        if (!entrance || entrance->source_variable_0) return "A: RETURN TO SURFACE";
+        return bridge_crossing_.area()==minidayz::Passage::final_stand
+            ? "A: ACTIVATE TERMINAL" : "A: TAKE SUPPLIES";
+    }
+
+    void start_passage_encounters() noexcept {
+        passage_npcs_.reset();
+        passage_hit_cooldown_=0.0f;
+        passage_strike_cooldown_=0.0f;
+        if (!bridge_crossing_.active()) return;
+        (void)passage_npcs_.spawn_at(340,138,0,2,1);
+        if (bridge_crossing_.area()==minidayz::Passage::final_stand)
+            (void)passage_npcs_.spawn_at(565,100,0,3,2);
+    }
+
+    void update_passage_encounters(bool strike,float dt) noexcept {
+        if (!std::isfinite(dt) || dt<=0) return;
+        const auto position=bridge_crossing_.position();
+        passage_npcs_.update(dt,position.x,position.y,
+            &minidayz::BridgeCrossing::npc_blocked,&bridge_crossing_);
+        passage_hit_cooldown_=std::max(0.0f,passage_hit_cooldown_-dt);
+        passage_strike_cooldown_=std::max(0.0f,passage_strike_cooldown_-dt);
+        auto nearest=passage_npcs_.count();
+        float range=32.0f;
+        for (std::size_t i=0;i<passage_npcs_.count();++i) {
+            const auto* actor=passage_npcs_.actor(i);
+            if (!actor || !actor->alive) continue;
+            const float distance=std::hypot(actor->x-position.x,actor->y-position.y);
+            if (distance<range && !minidayz::BridgeCrossing::npc_blocked(
+                &bridge_crossing_,(actor->x+position.x)*0.5f,(actor->y+position.y)*0.5f)) {
+                nearest=i;
+                range=distance;
+            }
+        }
+        if (nearest==passage_npcs_.count()) return;
+        if (strike && passage_strike_cooldown_==0) {
+            const auto tool=equipment_.equipped(minidayz::items::EquipmentSlot::hands);
+            passage_npcs_.damage(nearest,tool ? 40.0f : 20.0f);
+            passage_strike_cooldown_=0.4f;
+        }
+        if (range<18 && passage_hit_cooldown_==0 && passage_npcs_.actor(nearest)->alive) {
+            equipment_.apply_damage(player_,10.0f);
+            passage_hit_cooldown_=1.0f;
+            if (!player_.state().alive) bridge_crossing_.leave();
+        }
+    }
+
+    void interact_with_passage_exit() noexcept {
+        if (bridge_crossing_.area()==minidayz::Passage::bridge) {
+            start_next_source_map();
+            return;
+        }
+        const auto* entrance=near_bunker_entrance();
+        if (!entrance || entrance->source_variable_0) {
+            bridge_crossing_.leave();
+            return;
+        }
+        auto next=inventory_;
+        if (bridge_crossing_.area()==minidayz::Passage::bunker && !next.add(18,2))
+            return;
+        if (world_.mark_passage_cache_claimed(entrance->runtime_uid))
+            inventory_=next;
+    }
+
     void update_bridge_crossing(const minidayz::InputState& input,float dt) noexcept {
         touch_down_=input.touching;
         if (input.pressed & KEY_B) {
@@ -3567,12 +3636,9 @@ private:
         if (rules.walk_speed<=0.0f)
             rules.walk_speed=minidayz::stage1::source_player_altmove_max_speed({});
         bridge_crossing_.move(movement,dt,rules);
-        if ((input.pressed & KEY_A) && bridge_crossing_.at_exit()) {
-            if (bridge_crossing_.area()==minidayz::Passage::bridge)
-                start_next_source_map();
-            else
-                bridge_crossing_.leave();
-        }
+        update_passage_encounters((input.pressed & KEY_X)!=0,dt);
+        if ((input.pressed & KEY_A) && bridge_crossing_.at_exit())
+            interact_with_passage_exit();
     }
 
     void render_bridge_crossing(minidayz::Renderer& renderer) noexcept {
@@ -3612,6 +3678,12 @@ private:
         renderer.draw_solid_rect(BridgeCrossing::kExitStart,deck_top+5,
             BridgeCrossing::kLength-BridgeCrossing::kExitStart,deck_height-10,
             C2D_Color32(127,165,107,130),0.18f);
+        for (std::size_t i=0;i<passage_npcs_.count();++i) {
+            const auto* actor=passage_npcs_.actor(i);
+            if (actor && actor->alive)
+                (void)renderer.draw_source_sprite(actor->source_object,actor->animation_index,
+                    actor->animation_frame,actor->x,actor->y,1,1,0.44f);
+        }
         (void)renderer.draw_source_sprite(walker.source_skin(),walker.source_animation_index(),
             walker.source_animation_frame(),position.x,position.y,1.0f,1.0f,0.45f);
         renderer.reset_camera();
@@ -4940,6 +5012,8 @@ private:
     minidayz::terrain::VisibleSourcePlacementIndex visibility_index_{};
     std::vector<std::uint32_t> visible_world_placements_{};
     minidayz::NpcSystem npcs_{};
+    minidayz::NpcSystem passage_npcs_{};
+    float passage_hit_cooldown_{},passage_strike_cooldown_{};
     std::uint32_t world_seed_{};
     bool legacy_world_generation_{};
     bool legacy_split_roads_{};
