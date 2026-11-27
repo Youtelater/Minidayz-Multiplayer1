@@ -23,7 +23,8 @@ inline bool apply_verified_tree_fall(
     WorldSystem& world, std::uint64_t runtime_uid,
     std::uint64_t source_event_uid,
     const std::array<WorldPoint,4>& source_drop_positions,
-    items::GroundLootSystem& ground) noexcept {
+    items::GroundLootSystem& ground,
+    const std::array<std::uint16_t,4>* source_drop_counts=nullptr) noexcept {
     if(runtime_uid==0 || !world.generation_complete())return false;
     std::size_t index=world.placement_count();
     for(std::size_t i=0;i<world.placement_count();++i) {
@@ -75,7 +76,8 @@ inline bool apply_verified_tree_fall(
         return false;
     for(std::size_t i=0;i<rule->count;++i) {
         const auto& where=source_drop_positions[i];
-        if(!ground.add({rule->drop_item_ids[i],1,
+        const auto count=source_drop_counts?(*source_drop_counts)[i]:std::uint16_t{1};
+        if(!ground.add({rule->drop_item_ids[i],count,
                         items::kUseSourceItemCondition},where.x,where.y)) {
             ground=*ground_before;
             (void)world.set_placement_sprite_state(
@@ -110,7 +112,8 @@ inline TreeHitOutcome apply_verified_tree_hit(
     std::uint64_t source_hit_event_uid,
     float& original_tree_health_variable_0,
     const std::array<WorldPoint,4>& source_drop_positions,
-    items::GroundLootSystem& ground) noexcept {
+    items::GroundLootSystem& ground,
+    const std::array<std::uint16_t,4>* source_drop_counts=nullptr) noexcept {
     if (!world.generation_complete() || runtime_uid==0 ||
         !std::isfinite(original_tree_health_variable_0))
         return TreeHitOutcome::Rejected;
@@ -139,7 +142,7 @@ inline TreeHitOutcome apply_verified_tree_hit(
     // in the same RNG order as the source actions by the caller.
     if (!apply_verified_tree_fall(
             world,runtime_uid,hit->fall_event_uid,
-            source_drop_positions,ground))
+            source_drop_positions,ground,source_drop_counts))
         return TreeHitOutcome::Rejected;
     original_tree_health_variable_0=next_hp;
     return TreeHitOutcome::Fallen;
@@ -153,7 +156,8 @@ inline TreeHitOutcome apply_verified_tree_hit_at_trunk(
     WorldSystem& world,std::size_t trunk_index,
     std::uint64_t source_hit_event_uid,
     const std::array<WorldPoint,4>& source_drop_positions,
-    items::GroundLootSystem& ground) noexcept {
+    items::GroundLootSystem& ground,
+    const std::array<std::uint16_t,4>* source_drop_counts=nullptr) noexcept {
     const auto* trunk=world.placement(trunk_index);
     if(!trunk || trunk->object!=kOriginalTreeHitboxObject ||
        trunk->source_frame!=kOriginalTreeStandingHitboxFrame ||
@@ -169,7 +173,7 @@ inline TreeHitOutcome apply_verified_tree_hit_at_trunk(
             return TreeHitOutcome::Rejected;
         float hp=static_cast<float>(tree->source_variable_0);
         const auto outcome=apply_verified_tree_hit(world,uid,
-            source_hit_event_uid,hp,source_drop_positions,ground);
+            source_hit_event_uid,hp,source_drop_positions,ground,source_drop_counts);
         if(outcome!=TreeHitOutcome::Rejected)
             (void)world.set_source_tree_health(i,static_cast<std::uint64_t>(hp));
         return outcome;
@@ -234,15 +238,22 @@ inline SourceTreeCollisionResult dispatch_source_tree_projectile_collision(
     SourceTreeCollisionResult result{};
     result.chop_sound=chop[static_cast<std::size_t>(unit()*4.0)];
     std::array<WorldPoint,4> positions{};
+    std::array<std::uint16_t,4> counts{};
     if(tree->source_variable_0==1){
         result.fall_sound=fall_sounds[static_cast<std::size_t>(unit()*2.0)];
         for(std::size_t i=0;i<fall->count;++i){
             positions[i].x=static_cast<float>(tree->x-30.0+60.0*unit());
             positions[i].y=static_cast<float>(tree->y+40.0+10.0*unit());
+            // Spawn_drop item 38 -> t384 variable 1 choose(1,2,3,4,5),
+            // action 8478952837871408. Its draw happens before the next
+            // Spawn_drop coordinate expressions. Items 37/50 only Create.
+            counts[i]=fall->drop_item_ids[i]==38
+                ? static_cast<std::uint16_t>(1+static_cast<unsigned>(unit()*5.0))
+                : std::uint16_t{1};
         }
     }
     result.outcome=apply_verified_tree_hit_at_trunk(
-        world,trunk_index,hit->hit_event_uid,positions,ground);
+        world,trunk_index,hit->hit_event_uid,positions,ground,&counts);
     if(result.outcome==TreeHitOutcome::Rejected)return {};
     rng=*next;
     result.tutor_tree_chopped=result.outcome==TreeHitOutcome::Fallen;
