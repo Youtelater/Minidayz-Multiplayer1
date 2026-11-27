@@ -320,3 +320,18 @@ for obj,uid,item in ((443,823,53),(840,2335,85),(814,2311,86),(704,2166,75)):
 assert "return object==443 || object==840 || object==814 || object==704;" in native
 assert "row.object==443?0:row.count" in native
 print("Original direct box value templates: empty fuel, full MRE, rod and radio")
+
+
+# Passage cache artwork must use the original Map fixture's closed frame,
+# not a hand-drawn rectangle or a whole spritesheet.
+fixture=next(i for layer in map_layout[6] for i in layer[14]
+             if i[1]==796 and i[2]==2279)
+assert fixture[5]==[0,"lootbox",0,1]
+animation=p[3][796][7][0]
+assert animation[0]=="lootbox"
+assert animation[7][0][:9]==["images/bunker_lootbox-sheet0.png",511,1,1,24,16,1,0.5,0.5]
+scene=(ROOT/"source/main.cpp").read_text(encoding="utf-8")
+passage_render=scene.split("void render_bridge_crossing(",1)[1].split("void rebuild_source_house_roofs(",1)[0]
+assert "draw_source_sprite(796,0,0,cache.x,cache.y," in passage_render
+assert "draw_solid_rect(cache.x" not in passage_render
+print("Original closed bunker lootbox sprite frame verified")
