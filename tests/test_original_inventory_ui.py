@@ -26,22 +26,24 @@ assert "renderer.draw_item_icon(item->item_id," in src
 # The original cyan gui_slot_bg is a drag selection graphic, not the
 # parchment base, so the new square cells deliberately do not use it.
 assert "kOriginalSlotBackgroundArt" not in src.split(
-    "// Original GUI 'gui_slot' is a 30x30 PIXEL square.",1)[1].split(
+    "const int page_start=static_cast<int>(inventory_page_*kInventoryPageSize);",1)[1].split(
     "const std::size_t page_count",1)[0]
-grid=src.split("// Original GUI 'gui_slot' is a 30x30 PIXEL square.",1)[1].split(
+grid=src.split("const int page_start=static_cast<int>(inventory_page_*kInventoryPageSize);",1)[1].split(
     "const std::size_t page_count",1)[0]
 assert "kOriginalInventoryCardArt" not in grid, (
     "Backpack slots must not be composed from full equipment cards")
 assert "if(selected || drag_target_slot_==index)" in grid
 assert "if(item->count>1)" in grid
-assert "minidayz::items::ui::kSlotSize" in src
+assert "minidayz::items::ui::inventory_cell(local)" in src
+assert "ground_loot_.pickup_at(" in src
+assert "if (i!=3 && (!selected_item || selected_item->empty()" in src
 assert "minidayz::items::ui::kEquipment" in src
 assert "minidayz::items::ui::kActions" in src
 assert "minidayz::items::ui::kPageNavigation" in src
 # Touch down must not instantly unequip gear, or original item condition
 # and drop targets are lost before the release event.
 press=src.split("const int equipment_target = equipment_slot_at",1)[1].split(
-    "// Page through larger backpacks",1)[0]
+    "// Page through the clothing and bag",1)[0]
 assert "drag_equipped_source_slot_=equipment_target" in press
 assert "unequip_to_inventory" not in press
 release=src.split("if(drag_equipped_source_slot_>=0)",1)[1].split(

@@ -22,14 +22,14 @@ inline constexpr std::array<Rect,9> kEquipment{{
     {257,42,55,61},   // firearm
     {257,105,55,32}   // MP quick pistol: separate Drop_pistol slot
 }};
-inline constexpr int kColumns=8;
+inline constexpr int kColumns=9;
 inline constexpr int kRows=2;
 inline constexpr int kPageSize=15;
-inline constexpr int kSlotX=24;
-inline constexpr int kSlotY=157;
-inline constexpr int kSlotStepX=35;
-inline constexpr int kSlotStepY=35;
-inline constexpr int kSlotSize=30;
+inline constexpr int kSlotX=12;
+inline constexpr int kSlotY=162;
+inline constexpr int kSlotStepX=34;
+inline constexpr int kSlotStepY=36;
+inline constexpr int kSlotSize=24;
 inline constexpr Rect kActions{0,140,320,13};
 inline constexpr Rect kPageNavigation{9,225,302,14};
 
@@ -38,16 +38,27 @@ constexpr int equipment_at(int x,int y) noexcept {
         if(kEquipment[i].contains(x,y))return static_cast<int>(i);
     return -1;
 }
+// Keep stable inventory indices so old saves and drag transactions use
+// the same slots regardless of the displayed storage group.
+constexpr Rect inventory_cell(int local) noexcept {
+    return {kSlotX+(local%kColumns)*kSlotStepX,
+            kSlotY+(local/kColumns)*kSlotStepY,kSlotSize,kSlotSize};
+}
+
 constexpr int inventory_at(int x,int y,std::size_t page) noexcept {
-    for(int local=0;local<kPageSize;++local){
-        const int col=local%kColumns, row=local/kColumns;
-        const Rect box{kSlotX+col*kSlotStepX,
-                       kSlotY+row*kSlotStepY,kSlotSize,kSlotSize};
-        if(box.contains(x,y))
+    for(int local=0;local<kPageSize;++local)
+        if(inventory_cell(local).contains(x,y))
             return static_cast<int>(page*kPageSize)+local;
-    }
     return -1;
 }
+inline constexpr int kNearbyRows=6;
+inline constexpr Rect kNearbyPrevious{12,209,80,22};
+inline constexpr Rect kNearbyClose{120,209,80,22};
+inline constexpr Rect kNearbyNext{228,209,80,22};
+constexpr Rect nearby_row(int index) noexcept {
+    return {12,34+index*27,296,25};
+}
+
 constexpr int action_at(int x,int y) noexcept {
     return kActions.contains(x,y) ? x/64 : -1;
 }

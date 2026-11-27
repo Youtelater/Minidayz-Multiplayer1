@@ -259,6 +259,7 @@ public:
         last_source_warmth_=equipment_.temperature_offset();
         last_source_snowborn_level_=
             perks_.level(minidayz::items::SourcePerk::snowborn);
+        nearby_open_=false;
         inventory_page_=0;
         selected_inventory_slot_=-1;
         paused_=false;
@@ -801,7 +802,7 @@ public:
         // and MUST be compared to its Construct MiniMap_legend/GUI events.
         const bool map_button_tap=input.touching && !touch_down_ &&
             input.touch.px>=258 && input.touch.py<14;
-        if(!source_bed_build_.active &&
+        if(!source_bed_build_.active && !nearby_open_ &&
            ((input.pressed & KEY_Y) || map_button_tap)) {
             map_open_=!map_open_;
             if(map_button_tap)touch_down_=true;
@@ -905,13 +906,16 @@ public:
                 selected_inventory_slot_ = -1;
             }
         }
-        if ((input.pressed & KEY_R) &&
+        if (!nearby_open_ && (input.pressed & KEY_R) &&
             ground_loot_.pickup_nearest(
                 inventory_, player_.state().x, player_.state().y, 36.0f))
             stage2_audio_.play_item_pickup();
         auto movement=read_player_movement(input);
-        const bool touch_pressed = input.touching && !touch_down_;
-        const bool touch_released = !input.touching && touch_down_;
+        const bool nearby_was_open=nearby_open_;
+        if (nearby_was_open)
+            update_nearby_loot(input);
+        const bool touch_pressed = !nearby_was_open && input.touching && !touch_down_;
+        const bool touch_released = !nearby_was_open && !input.touching && touch_down_;
 
         // Cycle inventory -> crafting -> tent storage -> perks -> inventory.
         // Every Stage 2 panel stays on the lower 3DS touchscreen.
@@ -1061,15 +1065,18 @@ public:
            input.touch.px>=8 && input.touch.px<312 &&
            input.touch.py>=94 && input.touch.py<220)
             details_scroll_+=3;
-        if (!crafting_open_ && !storage_open_ && !perks_open_ && touch_pressed &&
+        if (!crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ && touch_pressed &&
             minidayz::items::ui::kActions.contains(
                 input.touch.px,input.touch.py)) {
             const int action = minidayz::items::ui::action_at(
                 input.touch.px,input.touch.py);
             if (action == 3) {
-                if(ground_loot_.pickup_nearest(
-                       inventory_, player_.state().x, player_.state().y, 36.0f))
-                    stage2_audio_.play_item_pickup();
+                nearby_open_=true;
+                nearby_page_=0;
+                nearby_pickup_failed_=false;
+                drag_source_slot_=drag_equipped_source_slot_=-1;
+                drag_target_slot_=drag_target_equipment_slot_=-1;
+                drag_moved_=false;
             } else if (selected_inventory_slot_ >= 0) {
                 const auto selected = static_cast<std::size_t>(selected_inventory_slot_);
                 const auto* item = inventory_.slot(selected);
@@ -1088,7 +1095,7 @@ public:
                                 inventory_, selected, 0, player_.state().x,
                                 player_.state().y))
                             play_original_drop_audio(item_id);
-                    } else if (action == 4) {
+                    } else if (action == 4 && item->count>1) {
                         // Half-stack split on the 3DS lower touchscreen.
                         for (std::size_t i = 0; i < inventory_.capacity(); ++i) {
                             const auto* target = inventory_.slot(i);
@@ -1106,7 +1113,7 @@ public:
                 }
             }
         }
-        if (!crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ && touch_pressed) {
+        if (!nearby_open_ && !crafting_open_ && !storage_open_ && !perks_open_ && !details_open_ && touch_pressed) {
             tap_was_selected_ = false;
             drag_start_x_=input.touch.px;
             drag_start_y_=input.touch.py;
@@ -1145,7 +1152,7 @@ public:
                 }else selected_equipment_slot_=-1;
                 selected_inventory_slot_=-1;
             }
-            // Page through larger backpacks without changing the 5 x 3 grid.
+            // Page through the clothing and bag storage views.
             if (minidayz::items::ui::kPageNavigation.contains(
                     input.touch.px,input.touch.py)) {
                 const std::size_t page_count =
@@ -2032,6 +2039,10 @@ public:
             render_source_map(renderer);
             return;
         }
+        if (nearby_open_) {
+            render_nearby_loot(renderer);
+            return;
+        }
         // Native 3DS inventory: use the actual Construct GUI frames
         // from assets/gfx, scaled to the 320x240 touch display.
         // Never use placeholder rectangles when the source sprite exists.
@@ -2186,9 +2197,14 @@ public:
                     C2D_Color32(216,175,103,255),0.88f);
             }
             static constexpr const char* actions[] = {
-                "USE", "ALT", "DROP", "PICK", "SPLIT"
+                "USE", "ALT", "DROP", "NEARBY", "SPLIT"
             };
+            const auto* selected_item=selected_inventory_slot_>=0
+                ? inventory_.slot(static_cast<std::size_t>(selected_inventory_slot_))
+                : nullptr;
             for (int i = 0; i < 5; ++i) {
+                if (i!=3 && (!selected_item || selected_item->empty() ||
+                             (i==4 && selected_item->count<2))) continue;
                 const float x = static_cast<float>(i * 64);
                 renderer.draw_solid_rect(x+1.0f,
                     static_cast<float>(minidayz::items::ui::kActions.y),
@@ -2515,23 +2531,22 @@ public:
             renderer.draw_text("CRAFT", 132.0f, 226.0f, 0.29f);
             return;
         }
-        // Original GUI 'gui_slot' is a 30x30 PIXEL square. Keep that
-        // aspect ratio instead of deforming it into the previous 56x29
-        // cyan-looking grid. A 3DS-compatible 8x2 arrangement gives 15
-        // actual inventory cells per page (one unused space at the end).
+        if (inventory_page_==0) {
+            renderer.draw_text("JACKET",12,153,0.18f);
+            renderer.draw_text("PANTS",114,153,0.18f);
+            renderer.draw_text("VEST",216,153,0.18f);
+            renderer.draw_text("CARRY",12,189,0.18f);
+        } else {
+            renderer.draw_text("BAGS",12,153,0.18f);
+        }
         const int page_start=static_cast<int>(inventory_page_*kInventoryPageSize);
         for(int local=0;local<minidayz::items::ui::kPageSize;++local) {
             const int index=page_start+local;
             if(index<0 || static_cast<std::size_t>(index)>=inventory_.capacity())
                 continue;
-            const int row=local/minidayz::items::ui::kColumns;
-            const int col=local%minidayz::items::ui::kColumns;
-            const float x=static_cast<float>(
-                minidayz::items::ui::kSlotX+
-                col*minidayz::items::ui::kSlotStepX);
-            const float y=static_cast<float>(
-                minidayz::items::ui::kSlotY+
-                row*minidayz::items::ui::kSlotStepY);
+            const auto cell=minidayz::items::ui::inventory_cell(local);
+            const float x=static_cast<float>(cell.x);
+            const float y=static_cast<float>(cell.y);
             const float size=static_cast<float>(minidayz::items::ui::kSlotSize);
             const bool selected=index==selected_inventory_slot_;
             const bool restricted=inventory_.is_exclusive_satchel_slot(
@@ -2559,12 +2574,12 @@ public:
             if(!item||item->empty())continue;
             // Item-ID to source Construct object comes from MDZItemTable.
             (void)renderer.draw_item_icon(item->item_id,
-                x+size*0.5f,y+size*0.5f,27.0f,27.0f,0.86f);
+                x+size*0.5f,y+size*0.5f,size-4.0f,size-4.0f,0.86f);
             if(item->count>1){
                 char amount[10]{};
                 std::snprintf(amount,sizeof(amount),"%u",
                     static_cast<unsigned>(item->count));
-                renderer.draw_text(amount,x+16.0f,y+21.0f,0.20f);
+                renderer.draw_text(amount,x+11.0f,y+14.0f,0.16f);
             }
             const float condition=static_cast<float>(item->condition)-
                 static_cast<float>(item->fractional_loss)/100.0f;
@@ -3427,6 +3442,88 @@ private:
             if (item && item->empty()) return i;
         }
         return minidayz::items::kInventorySlotCount;
+    }
+
+    static constexpr float kNearbyLootRadius=36.0f;
+    struct NearbyLootPage {
+        std::array<std::size_t,minidayz::items::ui::kNearbyRows> indices{};
+        std::size_t total{};
+        std::size_t rows{};
+    };
+
+    NearbyLootPage nearby_loot_page() const noexcept {
+        NearbyLootPage page{};
+        const auto& player=player_.state();
+        const std::size_t skip=nearby_page_*page.indices.size();
+        for (std::size_t i=0;i<ground_loot_.count();++i) {
+            const auto* entry=ground_loot_.entry(i);
+            if (std::hypot(entry->x-player.x,entry->y-player.y)>kNearbyLootRadius)
+                continue;
+            if (page.total++>=skip && page.rows<page.indices.size())
+                page.indices[page.rows++]=i;
+        }
+        return page;
+    }
+
+    void update_nearby_loot(const minidayz::InputState& input) noexcept {
+        using namespace minidayz::items::ui;
+        if (input.pressed & KEY_B) {
+            nearby_open_=false;
+            return;
+        }
+        auto page=nearby_loot_page();
+        if (page.rows==0 && nearby_page_>0) {
+            nearby_page_=page.total ? (page.total-1)/page.indices.size() : 0;
+            page=nearby_loot_page();
+        }
+        if (!input.touching || touch_down_) return;
+        const int x=input.touch.px,y=input.touch.py;
+        if (kNearbyClose.contains(x,y)) {
+            nearby_open_=false;
+        } else if (kNearbyPrevious.contains(x,y) && nearby_page_>0) {
+            --nearby_page_;
+            nearby_pickup_failed_=false;
+        } else if (kNearbyNext.contains(x,y) &&
+                   (nearby_page_+1)*page.indices.size()<page.total) {
+            ++nearby_page_;
+            nearby_pickup_failed_=false;
+        } else {
+            for (std::size_t row=0;row<page.rows;++row) {
+                if (!nearby_row(static_cast<int>(row)).contains(x,y)) continue;
+                const auto& player=player_.state();
+                nearby_pickup_failed_=!ground_loot_.pickup_at(
+                    inventory_,page.indices[row],player.x,player.y,kNearbyLootRadius);
+                if (!nearby_pickup_failed_) stage2_audio_.play_item_pickup();
+                break;
+            }
+        }
+    }
+
+    void render_nearby_loot(minidayz::Renderer& renderer) noexcept {
+        using namespace minidayz::items::ui;
+        renderer.draw_solid_rect(0,0,320,240,C2D_Color32(36,32,28,255),0.05f);
+        renderer.draw_text("NEARBY ITEMS",12,12,0.30f);
+        const auto page=nearby_loot_page();
+        for (std::size_t row=0;row<page.rows;++row) {
+            const auto& item=ground_loot_.entry(page.indices[row])->item;
+            const auto box=nearby_row(static_cast<int>(row));
+            renderer.draw_solid_rect(box.x,box.y,box.w,box.h,C2D_Color32(72,61,48,255),0.24f);
+            (void)renderer.draw_item_icon(item.item_id,box.x+15,box.y+12,21,21,0.80f);
+            const char* name=minidayz::items::source_item_name(item.item_id);
+            char label[46]{};
+            std::snprintf(label,sizeof(label),"%.34s x%u",name?name:"ITEM",
+                static_cast<unsigned>(item.count));
+            renderer.draw_text(label,box.x+32,box.y+8,0.22f);
+        }
+        if (page.total==0) renderer.draw_text("NO ITEMS IN REACH",12,43,0.24f);
+        if (nearby_pickup_failed_) renderer.draw_text("NO ROOM",12,197,0.20f);
+        const auto button=[&](Rect rect,const char* label) {
+            renderer.draw_solid_rect(rect.x,rect.y,rect.w,rect.h,C2D_Color32(91,74,52,255),0.60f);
+            renderer.draw_text(label,rect.x+11,rect.y+7,0.23f);
+        };
+        if (nearby_page_>0) button(kNearbyPrevious,"< PREV");
+        button(kNearbyClose,"CLOSE");
+        if ((nearby_page_+1)*page.indices.size()<page.total) button(kNearbyNext,"NEXT >");
     }
 
     int inventory_slot_at(int x, int y, std::size_t page) const noexcept {
@@ -4668,6 +4765,7 @@ private:
         source_furniture_feedback_seconds_=0.0f;
         last_source_warmth_ = 0.0f;
         last_source_snowborn_level_ = 0;
+        nearby_open_=false;
         inventory_page_ = 0;
         storage_page_ = 0;
         crafting_page_ = 0;
@@ -5093,6 +5191,9 @@ private:
     std::size_t pending_craft_recipe_{minidayz::items::kSourceCraftRecipeCount};
     float pending_craft_seconds_{};
     bool touch_down_{};
+    bool nearby_open_{};
+    bool nearby_pickup_failed_{};
+    std::size_t nearby_page_{};
     bool tap_was_selected_{};
     bool crafting_open_{};
     bool storage_open_{};

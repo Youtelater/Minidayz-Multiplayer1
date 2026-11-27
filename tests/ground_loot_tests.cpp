@@ -21,6 +21,16 @@ int main() {
     assert(ground.pickup_nearest(inventory, 102.0f, 200.0f, 5.0f));
     assert(ground.count() == 0 && inventory.count(11) == 3);
 
+    GroundLootSystem pile;
+    assert(pile.add({11,2,100},1,0));
+    assert(pile.add({18,1,100},4,0));
+    assert(!pile.pickup_at(inventory,1,0,0,3));
+    assert(!pile.pickup_at(inventory,2,0,0,5));
+    assert(pile.count()==2);
+    assert(pile.pickup_at(inventory,1,0,0,5));
+    assert(inventory.count(18)==1 && inventory.count(11)==3);
+    assert(pile.count()==1 && pile.entry(0)->item.item_id==11);
+
     // Failed pickup leaves the ground item untouched when inventory is full.
     InventorySystem full;
     for (std::uint16_t id = 1; id <= kInventorySlotCount; ++id)
@@ -28,6 +38,7 @@ int main() {
     GroundItem medkit{1, 1, kUseSourceItemCondition};
     assert(ground.add(medkit, 4.0f, 5.0f));
     assert(!ground.pickup_nearest(full, 4.0f, 5.0f, 1.0f));
+    assert(!ground.pickup_at(full,0,4,5,1));
     assert(ground.count() == 1);
 
     const auto saved = ground.snapshot();

@@ -1420,3 +1420,10 @@ Original Construct Sprite body objects `600, 206, 582, 583, 586, 587` each defin
 - The Manic Emu screenshot showed equipment labels and item art sharing the same space, with backdrop dividers visible through the slots. The 3DS layout now uses distinct cards with bounded icon areas, legible labels, a square backpack grid and a separate status line. Item icons still use their existing atlas references. Exact condition, warmth and protection are available in item details.
 - Rendering and touch use the same card coordinates. Touch ignores backpack positions outside the current capacity. Empty capacity displays as zero slots, and splitting a stack moves to the page containing the new stack.
 - The inventory model, touch layout, inventory scene and screen-layer checks pass. Manic Emu and Azahar visual and touch verification remain open.
+
+### Step 4A — nearby loot, item actions and storage groups
+
+- Compared the root `Pickpile`, `Sub_menu` and `Items_update` groups with the 3DS touch flow. The bottom screen now lists nearby stacks for individual pickup. The R shortcut still picks up the nearest stack. Pickup checks distance and capacity before removing the selected stack.
+- Carried slots are displayed in jacket, pants, vest and carry groups on the first page. Bag slots are on later pages. Stable slot indices and the existing shared capacity keep previous saves compatible. Clothing-dependent slot availability remains open.
+- Item actions appear when a stack is selected. Split appears for stacks of at least two items. The 3DS layout uses shared drawing and touch coordinates.
+- Native targeted pickup, inventory, touch layout and screen-layer checks passed. Emulator interaction and visual checks remain open.

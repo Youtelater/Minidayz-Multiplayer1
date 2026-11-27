@@ -7,8 +7,8 @@ int main(){
     static_assert(kEquipment.size()==9);
     static_assert(kEquipment[7].h>kEquipment[4].h,
                   "Original gun uses a separate portrait card from melee");
-    static_assert(kSlotSize==30);
-    static_assert(kColumns==8 && kRows==2);
+    static_assert(kSlotSize==24);
+    static_assert(kColumns==9 && kRows==2);
     // Equipment hitboxes match the cards and leave room for status text.
     for(int i=0;i<static_cast<int>(kEquipment.size());++i){
         const auto& r=kEquipment[static_cast<std::size_t>(i)];
@@ -21,12 +21,13 @@ int main(){
             assert(!overlap);
         }
     }
-    // The old layout squashed the original square gui_slot artwork
-    // into 56x29 stretched horizontal tiles. New geometry is 30x30.
+    // Each carried-storage cell uses the same square for input and drawing.
     for(int page=0;page<3;++page){
         for(int local=0;local<kPageSize;++local){
-            const int cx=kSlotX+(local%kColumns)*kSlotStepX+15;
-            const int cy=kSlotY+(local/kColumns)*kSlotStepY+15;
+            const auto cell=inventory_cell(local);
+            const int cx=cell.x+cell.w/2;
+            const int cy=cell.y+cell.h/2;
+            assert(inventory_at(cell.x+cell.w,cy,page)==-1);
             assert(inventory_at(cx,cy,page)==page*kPageSize+local);
             assert(equipment_at(cx,cy)==-1);
         }
@@ -50,6 +51,12 @@ int main(){
     assert(action_at(160,160)==-1);
     assert(kPageNavigation.contains(12,230));
     assert(!kPageNavigation.contains(30,215));
+    for (int row=0;row<kNearbyRows;++row) {
+        const auto target=nearby_row(row);
+        assert(target.contains(20,target.y+12));
+        assert(!nearby_row(row+1).contains(20,target.y+12));
+        assert(!kNearbyClose.contains(160,target.y+12));
+    }
     // Dual-column tent/stash uses 28x37 source-icon cells in a 30x40 grid;
     // taps in gutters or outside the visible storage pane must do nothing.
     for(int side=0;side<2;++side){

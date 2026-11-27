@@ -38,6 +38,8 @@ public:
         float x, float y, const struct SourceLootGuardContext& guards) noexcept;
     bool drop_from_inventory(InventorySystem& inventory, std::size_t slot,
                              std::uint16_t amount, float x, float y) noexcept;
+    bool pickup_at(InventorySystem& inventory, std::size_t index,
+                   float x, float y, float radius) noexcept;
     bool pickup_nearest(InventorySystem& inventory, float x, float y,
                         float radius) noexcept;
 

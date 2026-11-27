@@ -89,12 +89,20 @@ bool GroundLootSystem::pickup_nearest(
             best_index = i;
         }
     }
-    if (best_index == count_) return false;
-    GroundItem candidate = entries_[best_index].item;
+    return pickup_at(inventory,best_index,x,y,radius);
+}
+
+bool GroundLootSystem::pickup_at(InventorySystem& inventory, std::size_t index,
+                                float x, float y, float radius) noexcept {
+    if (index>=count_ || !std::isfinite(x) || !std::isfinite(y) ||
+        !std::isfinite(radius) || radius<0.0f ||
+        std::hypot(entries_[index].x-x,entries_[index].y-y)>radius)
+        return false;
+    GroundItem candidate=entries_[index].item;
     if (!inventory.pickup(candidate)) return false;
-    for (std::size_t i = best_index + 1; i < count_; ++i)
-        entries_[i - 1] = entries_[i];
-    entries_[--count_] = {};
+    for (std::size_t i=index+1;i<count_;++i)
+        entries_[i-1]=entries_[i];
+    entries_[--count_]={};
     return true;
 }
 
