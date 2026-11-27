@@ -477,6 +477,60 @@ inline bool source_box_direct_quantity_drops(std::uint64_t category,
     }
     return found;
 }
+// Ordered mixed Spawn_drop / direct Create + variable 1 source actions.
+// object=0 denotes Spawn_drop; direct Create bypasses Spawn_drop unlock swaps.
+inline constexpr SourceBoxDirectQuantityDrop kSourceBoxMixedDrops[]={
+    {18,840,85,100,-10,0,633221652701240,387097127016838},
+    {18,840,85,100,10,0,813151583535687,261774263596193},
+    {18,840,85,100,10,0,964573832608017,807153139196708},
+    {19,814,86,100,-10,0,515477598734361,783478953048140},
+    {20,704,75,100,-10,0,862102095940145,432333493989220},
+    {1011,0,19,1,0,0,731029233543557,0},
+    {1011,0,28,1,0,0,304447631010900,0},
+    {1011,0,63,1,0,0,412712429424378,0},
+    {1011,35,18,3,0,0,692546564637758,720380020382423},
+    {37,0,181,1,5,5,474645204187080,0},
+    {37,137,100,25,-10,0,431077539699793,560244952914407},
+    {38,0,171,1,5,5,818968242261816,0},
+    {38,28,17,10,-10,0,513207209115698,290449641269750},
+    {39,0,166,1,5,5,878396003274904,0},
+    {39,444,58,30,-10,0,609043848455196,763497290621854},
+    {40,0,153,1,5,5,168627157653623,0},
+    {40,59,16,12,-10,0,938834874671906,160774076138135},
+    {41,0,157,1,5,5,181533742372450,0},
+    {41,58,14,15,-10,0,890221921986144,781905881339471},
+    {42,0,161,1,5,5,395681608136990,0},
+    {42,57,15,30,-10,0,982297695157646,651888880585313},
+    {111,0,168,1,0,5,289680099826579,0},
+    {111,0,18,1,-5,5,128864100850241,0},
+    {111,0,24,1,0,0,407559413436207,0},
+    {111,0,120,1,0,0,363316170876698,0},
+    {111,31,13,20,0,5,864167434314714,738777126509320},
+    {112,0,187,1,0,5,931203346329440,0},
+    {112,31,13,20,0,5,294041924849817,402777771259701},
+    {112,31,13,20,0,-5,161715807451926,120257528708732},
+    {112,31,13,20,0,-5,630514429946739,275778090644897},
+    {116,1013,120,10,0,5,119908934625811,577410144710955},
+    {116,0,121,1,-10,5,949600185970119,0},
+    {116,0,121,1,10,5,798037407334530,0},
+    {116,0,125,1,5,-5,784662235851653,0},
+    {116,0,25,1,-5,0,107333496136635,0},
+};
+inline bool source_box_has_mixed_drops(std::uint64_t category) noexcept {
+    for(const auto& row:kSourceBoxMixedDrops)if(row.category==category)return true;
+    return false;
+}
+inline bool source_box_mixed_drops(std::uint64_t category,
+    GroundLootSystem& ground,float x,float y) noexcept {
+    bool found=false;
+    for(const auto& row:kSourceBoxMixedDrops){
+        if(row.category!=category)continue;
+        found=true;
+        const auto id=row.object?row.item:source_initial_item_after_default_unlocks(row.item);
+        if(!id || !source_item_exists(id) || !ground.add({id,row.count,kUseSourceItemCondition},x+row.dx,y+row.dy))return false;
+    }
+    return found;
+}
 // Native transaction: never consume a source box or advance its RNG
 // when its branch is not yet supported or cannot fit in ground storage.
 // The actual box is selected by the original Player181 collision mask.
@@ -491,7 +545,8 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
     const auto* category=source_box_category(box->source_variable_0);
     const bool nested=box->source_variable_0==51 || box->source_variable_0==52 || box->source_variable_0==53 || box->source_variable_0==999;
     const bool direct=box->source_variable_0>=5 && box->source_variable_0<=13;
-    if(!category && !nested && !direct)return false;
+    const bool mixed=source_box_has_mixed_drops(box->source_variable_0);
+    if(!category && !nested && !direct && !mixed)return false;
     // Keep the large native ground buffer on the heap, not ARM11 stack.
     auto next=std::unique_ptr<GroundLootSystem>(
         new(std::nothrow) GroundLootSystem(ground));
@@ -501,6 +556,7 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
         *random,*next,box->x,box->y))return false;
     if(direct && !source_box_direct_quantity_drops(box->source_variable_0,
         *next,box->x,box->y))return false;
+    if(mixed && !source_box_mixed_drops(box->source_variable_0,*next,box->x,box->y))return false;
     if(category)for(std::size_t i=0;i<category->count;++i){
         const auto& drop=kSourceBoxDrops[category->first+i];
         const auto pick=drop.choose?source_initial_loot_choice_index(
