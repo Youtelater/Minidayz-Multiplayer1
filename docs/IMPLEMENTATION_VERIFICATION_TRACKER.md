@@ -1,4 +1,6 @@
-## Step 1 reopened — emulator report of missing hospitals and gas stations (2026-11-27)
+## Step 1 ON HOLD — emulator report of missing hospitals and gas stations (2026-11-27)
+
+- User explicitly paused Step 1 and resumed Step 3. Preserve the pending building audit, CI and emulator checks; do not mark Step 1 complete. Step 2 remains user-confirmed. Step 3 prioritizes original source parity, including replacing unverified handheld passage encounters, cache placements and terminal/reward rules.
 
 - User confirmed Step 2 in emulator; Step 1 reopened because hospitals, gas stations and potentially other buildings were not observed. Step 3 remains separate.
 - Root data.deobfuscated.js event 6938246402369311 assigns hospital Array518 code 11; generate_array_tomap 1694439930581699 uses road marker types 12/13 and replaces them with 30/31 (gas), 50/51 (cafe) and 108/109 (lite shop). Root location branch 3463332379885827 contains category7/21 -> primary Sprite303; gas branches 731842808406228 and 174261871477223 contain category7/36 -> Sprite777, /37 -> Sprite780 and /7 -> Sprite432. This is actual source evidence, not a claim that the emulator has displayed them.
