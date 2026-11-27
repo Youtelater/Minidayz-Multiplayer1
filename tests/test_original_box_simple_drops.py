@@ -290,3 +290,14 @@ assert "return category==53;" in native
 save_event=next(e for e in walk(next(s[1] for s in p[6] if s[0]=="Game_events")) if e[4]==398740622982942)
 assert [c[9] for c in save_event[7][0][5]]==[[[11,"levelchanging"],[8,0],[7,[0,0]]],[[11,"saveandexit"],[8,0],[7,[0,0]]],[[11,"sav_checked"],[8,1],[7,[0,-2]]]]
 print("Original category 53 Save_run_progress dispatch and guards verified")
+
+# Verify the native state-byte mapping is restricted to source objects with
+# only four instance variables (there is no independent source var6).
+source_map=next(layout for layout in p[5] if layout[0]=="Map")
+for obj,uid,item in ((443,823,53),(840,2335,85),(814,2311,86),(704,2166,75)):
+    instance=next(inst for layer in source_map[6] for inst in layer[14]
+                  if inst[1]==obj and inst[2]==uid)
+    assert len(instance[3])==4 and instance[3][1]==[0] and instance[3][2]==[item]
+assert "return object==443 || object==840 || object==814 || object==704;" in native
+assert "row.object==443?0:row.count" in native
+print("Original direct box value templates: empty fuel, full MRE, rod and radio")
