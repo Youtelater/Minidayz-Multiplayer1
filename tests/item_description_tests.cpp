@@ -42,6 +42,14 @@ int main() {
     assert(bow && std::strstr(bow, "functional bow"));
     assert(bag && std::strstr(bag, "burlap bag"));
     assert(tent && std::strstr(tent, "civilian camping tent"));
+    const char* scope=source_item_description(124);
+    assert(scope && std::strstr(scope,"red laser beam"));
+    const char* fried_eggs=source_item_description(724);
+    assert(fried_eggs && std::strstr(fried_eggs,"fried egg"));
+    for (std::uint16_t id=761;id<=776;++id) {
+        const char* box=source_item_description(id);
+        assert(box && std::strstr(box,"10 times"));
+    }
     for (std::uint16_t id = 0; id <= 900; ++id) {
         const char* desc = source_item_description(id);
         if (desc) assert(std::strlen(desc) < 4096);

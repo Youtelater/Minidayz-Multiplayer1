@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -95,6 +96,29 @@ def main() -> None:
             raise SystemExit(f"Construct object index out of range: {object_index}")
         rows.append((item_id, object_index))
 
+    # Pickpile sets t6's frame from the item ID (source action
+    # 1141534153141387). Use the same indexed inventory atlas for IDs
+    # absent from MDZItemTable, excluding blank/default frame rectangles.
+    slots = objects[6][7][0][7]
+    assert objects[6][0] == "t6" and Path(slots[1][0]).name == "gui_slot-sheet0.png"
+    def rectangle(frame):
+        return (Path(frame[0]).name, *frame[2:6])
+
+    placeholders = {rectangle(frame) for frame in slots[:2]}
+    inventory_slot_icons = []
+    for item in ET.parse(ROOT / "l_eng_items.xml").getroot().findall("item"):
+        item_id = int(item.findtext("id"))
+        if (item_id in entries or item_id in (66, 67) or
+            not (item.findtext("name") or "").strip() or not 0 < item_id < len(slots)):
+            continue
+        frame = slots[item_id]
+        crop = rectangle(frame)
+        if (crop in placeholders or not crop[0].startswith("gui_slot") or
+            any(dimension <= 1 for dimension in crop[-2:]) or
+            not (ROOT / "assets/gfx" / crop[0]).is_file()):
+            continue
+        inventory_slot_icons.append(item_id)
+
     drop_rows: list[tuple[int, int]] = []
     unresolved_drops: list[tuple[int,str]] = []
     for identifier, name in sorted(drop_entries.items()):
@@ -128,6 +152,8 @@ def main() -> None:
         "inline constexpr ItemSpriteDefinition kItemSpriteDefinitions[] = {",
     ]
     lines.extend(f"    {{{item_id}, {object_index}}}," for item_id, object_index in rows)
+    lines += ["};", "inline constexpr std::uint16_t kInventorySlotIconIds[] = {"]
+    lines.extend(f"    {item_id}," for item_id in sorted(inventory_slot_icons))
     lines += ["};"]
     lines += [
         "// Multiplayer add-on references only; do not change source single-player spawn.",
@@ -151,6 +177,7 @@ def main() -> None:
         print(f"Unresolved original mappings: {len(missing)} (left without an icon)")
         for item_id, name in missing[:20]:
             print(f"  item {item_id}: {name}")
+    print(f"Source inventory slot fallback: {len(inventory_slot_icons)} additional icons")
     print(f"Multiplayer reference: {len(drop_rows)}/{len(drop_entries)} player-drop mappings, "
           f"{len(variant_rows)}/{len(variant_entries)} sprite variant mappings")
     if unresolved_drops:

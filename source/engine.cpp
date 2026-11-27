@@ -27,6 +27,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <iterator>
 #include <strings.h>
 #include <utility>
 #include <tuple>
@@ -887,10 +888,13 @@ bool Renderer::draw_item_icon(std::uint16_t item_id,float center_x,float center_
   if(items::kItemSpriteDefinitions[middle].item_id<item_id) first=middle+1;
   else last=middle;
  }
- if(first>=items::kItemSpriteDefinitionCount ||
-    items::kItemSpriteDefinitions[first].item_id!=item_id) return false;
- const std::uint16_t object=items::kItemSpriteDefinitions[first].object;
- const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,0,0};
+ const bool has_definition=first<items::kItemSpriteDefinitionCount &&
+    items::kItemSpriteDefinitions[first].item_id==item_id;
+ if(!has_definition && !std::binary_search(std::begin(items::kInventorySlotIconIds),
+       std::end(items::kInventorySlotIconIds),item_id)) return false;
+ const std::uint16_t object=has_definition?items::kItemSpriteDefinitions[first].object:6;
+ const std::uint32_t wanted_frame=has_definition?0u:item_id;
+ const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,0,wanted_frame};
  const auto* begin=stage1::kSpriteFrames;
  const auto* end=begin+stage1::kSpriteFrameCount;
  const auto* frame=std::lower_bound(begin,end,key,[](const stage1::SpriteFrameDef& item,const auto& wanted){
@@ -899,8 +903,9 @@ bool Renderer::draw_item_icon(std::uint16_t item_id,float center_x,float center_
  // Prefer the original object's animation 0/frame 0 icon. Some source
  // objects start at a nonzero animation: use their first real source frame
  // instead of displaying a blank item cell. Never substitute another object.
- if(frame==end||frame->object!=object||frame->animation!=0||frame->frame!=0 ||
+ if(frame==end||frame->object!=object||frame->animation!=0||frame->frame!=wanted_frame ||
     frame->width<=0.0f||frame->height<=0.0f) {
+   if(!has_definition) return false;
    frame=std::lower_bound(begin,end,object,
        [](const stage1::SpriteFrameDef& candidate,std::uint16_t wanted) {
          return candidate.object<wanted;

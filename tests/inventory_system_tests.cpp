@@ -3,7 +3,9 @@
 #include "minidayz/generated/item_source_catalog.hpp"
 #include "minidayz/generated/item_sprite_catalog.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <cstring>
 #include <cstdint>
 
@@ -16,6 +18,13 @@ int main() {
     assert(kItemDefinitions[0].id == 0);
     assert(kItemDefinitions[1].id == 1);
     assert(kItemDefinitions[1].name[0] != '\0');
+    const auto* fallback_begin=std::begin(kInventorySlotIconIds);
+    const auto* fallback_end=std::end(kInventorySlotIconIds);
+    assert(fallback_end-fallback_begin==70);
+    for (const auto id : {115, 118, 730, 762, 776, 778, 788})
+        assert(std::binary_search(fallback_begin,fallback_end,id));
+    for (const auto id : {0, 1, 66, 67, 351, 461, 999})
+        assert(!std::binary_search(fallback_begin,fallback_end,id));
     assert(kItemSpriteDefinitionCount == 329);
     assert(source_construct_object(1) != 65535);
     assert(source_sprite_object(1) != 65535);

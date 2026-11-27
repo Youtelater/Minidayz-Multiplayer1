@@ -38,9 +38,24 @@ def main() -> None:
     ids_by_name: dict[str, list[int]] = {}
     for iid, label in names_by_id.items():
         if label:
-            ids_by_name.setdefault(label, []).append(iid)
+            ids_by_name.setdefault(label.casefold(), []).append(iid)
     parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
     annotated_xml = ET.parse(DESCRIPTION_XML, parser=parser).getroot()
+    annotation_aliases = {
+        "feature- equivalent exchange": "equivalent exchange",
+        "feature- item carryover": "item carryover",
+        "40mm grenade": "40mm grenade shot",
+        "vog-25 grenade": "vog-25 grenade shot",
+        "m203": "m203 grenade launcher",
+        "gp-25": "gp-25 grenade launcher",
+        "laser sights": "laser sight",
+        "keycard>": "keycard",
+        "milkor mgl❓": "milkor mgl",
+        "colt m16a2": "m16a2",
+        "mini sight": "mini sights",
+        "fried egg": "fried eggs",
+        "-work gloves": "work gloves",
+    }
     annotated: dict[int, list[tuple[int, str]]] = {}
     comment = ""
     for child in annotated_xml:
@@ -48,14 +63,23 @@ def main() -> None:
             comment = (child.text or "").strip()
         elif child.tag == "text":
             text_id = int(child.findtext("id", "-1").strip())
-            if comment in ids_by_name and text_id in descriptions:
-                for iid in ids_by_name[comment]:
+            key=annotation_aliases.get(comment.casefold(),comment.casefold())
+            if key in ids_by_name and descriptions.get(text_id, "").strip():
+                for iid in ids_by_name[key]:
                     annotated.setdefault(iid, []).append((text_id, descriptions[text_id]))
+            if key=="ammo boxes" and text_id==761:
+                # A single source annotation introduces this group of
+                # identical descriptions for the distinct ammo-box IDs.
+                box_ids=ids_by_name["ammo box"]
+                assert set(box_ids)==set(range(761,777))
+                for iid in box_ids:
+                    assert descriptions[iid].strip()==descriptions[text_id].strip()
+                    annotated.setdefault(iid, []).append((iid, descriptions[iid]))
             comment = ""
+    ambiguous = sorted(iid for iid, rows in annotated.items()
+                       if len({text.strip() for _,text in rows}) != 1)
     verified = sorted((iid, rows[0][0], rows[0][1])
-                      for iid, rows in annotated.items()
-                      if len(rows) == 1)
-    ambiguous = sorted(iid for iid, rows in annotated.items() if len(rows) != 1)
+                      for iid, rows in annotated.items() if iid not in ambiguous)
     if not verified or ambiguous:
         if ambiguous:
             print(f"Skipped ambiguous original annotation item IDs: {ambiguous}")
