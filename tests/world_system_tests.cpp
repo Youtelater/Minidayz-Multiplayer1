@@ -1519,9 +1519,12 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
     const auto* chop_sound=chop[static_cast<std::size_t>(unit()*4.0)];
     const auto* fall_sound=fall[static_cast<std::size_t>(unit()*2.0)];
     std::array<WorldPoint,3> expected_positions{};
-    for(auto& pos:expected_positions){
+    std::array<std::uint16_t,3> expected_counts{};
+    for(std::size_t i=0;i<expected_positions.size();++i){
+        auto& pos=expected_positions[i];
         pos.x=static_cast<float>(second.placement(tree)->x-30.0+60.0*unit());
         pos.y=static_cast<float>(second.placement(tree)->y+40.0+10.0*unit());
+        expected_counts[i]=i<2?static_cast<std::uint16_t>(1+static_cast<unsigned>(unit()*5.0)):1;
     }
     const auto result=dispatch_source_tree_projectile_collision(
         second,hitbox_index,collision,empty,rng);
@@ -1532,6 +1535,7 @@ void test_source_event_tree_hit_health_and_atomic_fall() {
     for(std::size_t i=0;i<expected_positions.size();++i){
         assert(empty.entry(i)->x==expected_positions[i].x);
         assert(empty.entry(i)->y==expected_positions[i].y);
+        assert(empty.entry(i)->item.count==expected_counts[i]);
     }
 }
 
