@@ -3002,7 +3002,7 @@ void test_original_box_drop_catalog() {
     // Exercise every first-choice bucket with the same source RNG mapping;
     // all reachable normal branches must generate real source items.
     auto ground=std::make_unique<GroundLootSystem>();
-    for(const unsigned category:{51u,52u,53u}){
+    for(const unsigned category:{51u,52u,53u,999u}){
         for(std::uint32_t seed=0;seed<512;++seed){
             ground->clear();
             std::mt19937 random(seed);
@@ -3016,7 +3016,23 @@ void test_original_box_drop_catalog() {
             }
         }
     }
+    // Direct quantity actions must preserve stack size, coordinates and order.
+    for(unsigned category=5;category<=13;++category){
+        ground->clear();
+        assert(source_box_direct_quantity_drops(category,*ground,1000,1000));
+        std::size_t index=0;
+        for(const auto& row:kSourceBoxDirectQuantityDrops){
+            if(row.category!=category)continue;
+            const auto* entry=ground->entry(index++);
+            assert(entry && entry->item.item_id==row.item);
+            assert(entry->item.count==row.count);
+            assert(entry->x==1000.0f+row.dx && entry->y==1000.0f+row.dy);
+        }
+        assert(index==ground->count() && index==(category==13?3u:2u));
+    }
     ground->clear();
+    assert(!source_box_direct_quantity_drops(0,*ground,0,0));
+    assert(ground->count()==0);
     std::mt19937 random(7);
     assert(!source_box_default_nested_drops(0,random,*ground,0,0));
     assert(ground->count()==0);
