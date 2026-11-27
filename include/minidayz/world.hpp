@@ -284,6 +284,8 @@ public:
     bool set_placement_layer(std::size_t index,
                              std::uint16_t layer) noexcept;
     bool set_source_pump_water(std::size_t index,std::uint64_t water) noexcept;
+    // Original tree var0: independent HP stored in existing world sprite state.
+    bool set_source_tree_health(std::size_t index,std::uint64_t health) noexcept;
     // Original collision-on-796 transition: frame1 and instance bool1
     // must change together, exactly once per source box instance.
     bool open_source_bunker_lootbox(std::size_t index) noexcept;
