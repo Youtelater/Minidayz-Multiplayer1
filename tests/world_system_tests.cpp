@@ -3030,6 +3030,42 @@ void test_original_box_drop_catalog() {
         }
         assert(index==ground->count() && index==(category==13?3u:2u));
     }
+    // Verify the native ordered dispatch, not just extracted row metadata.
+    for(const unsigned category:{14u,15u,17u,37u,38u,39u,40u,41u,42u,111u,112u,116u,1011u}){
+        ground->clear();
+        assert(source_box_has_mixed_drops(category));
+        assert(source_box_mixed_drops(category,*ground,1000,1000));
+        std::size_t index=0;
+        for(const auto& row:kSourceBoxMixedDrops){
+            if(row.category!=category)continue;
+            const auto* entry=ground->entry(index++);
+            const auto id=row.object?row.item:source_initial_item_after_default_unlocks(row.item);
+            assert(entry && entry->item.item_id==id && entry->item.count==row.count);
+            assert(entry->x==1000.0f+row.dx && entry->y==1000.0f+row.dy);
+        }
+        assert(index>0 && index==ground->count());
+    }
+    // Check exact RNG bucket, order, positions and quantities for all
+    // original default-locked 456789 outcomes, including the ten-drop branch.
+    bool reached[16]={};
+    for(std::uint32_t seed=0;seed<512;++seed){
+        ground->clear();
+        std::mt19937 actual(seed), expected(seed);
+        const auto outcome=1+source_initial_loot_choice_index(expected(),15);
+        reached[outcome]=true;
+        assert(source_box_456789_drops(actual,*ground,1000,1000));
+        assert(actual==expected);
+        std::size_t index=0;
+        for(const auto& row:kSourceBox456789Drops){
+            if(row.category!=outcome)continue;
+            const auto* entry=ground->entry(index++);
+            const auto id=row.object?row.item:source_initial_item_after_default_unlocks(row.item);
+            assert(entry && entry->item.item_id==id && entry->item.count==row.count);
+            assert(entry->x==1000.0f+row.dx && entry->y==1000.0f+row.dy);
+        }
+        assert(index>0 && index==ground->count());
+    }
+    for(unsigned outcome=1;outcome<=15;++outcome)assert(reached[outcome]);
     ground->clear();
     assert(!source_box_direct_quantity_drops(0,*ground,0,0));
     assert(ground->count()==0);
