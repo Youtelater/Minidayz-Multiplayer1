@@ -1393,3 +1393,9 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - The native bunker passage has an accessible category 23 cache. The later Final Stand passage has category 1020 and 1021 caches at two marked points. These are 3DS placements. Press A near a cache to transfer its contents to the backpack. A full backpack leaves the cache available. Cache claims save independently from the existing end-of-passage interaction.
 - Emulator checks should cover reaching all three caches, backpack contents, retry with a full backpack, returning to the surface, and saving and continuing after a claim. For the bridge, check arrival on the next island and a save made partway across. Magazine placement, NVG state and achievement alternatives remain parity gaps.
+
+
+### Step 3 — resume original-source parity (2026-11-27)
+
+- [x] Step 1 placed on hold by user; Step 2 remains confirmed. Read root original blob bd6fc44626d2f4ede48f9a6b83dedbb23ce06a9d directly. Replaced hand-drawn passage cache rectangles with Sprite796 animation lootbox, frame 0, original Map fixture UID2279 and source crop (1,1,24,16), centered hotspot. Implementation c28ce33; root-source and native-render call-site assertions 9dd3da8 in existing CI audit.
+- [ ] Cache positions, direct backpack transfer, encounter tuning, short passage geometry and terminal/reward remain native adaptations, not original parity. Root bridge function 482054460208135 constructs actual 7200-pixel boundaries and background objects; root Bunker_generate 305470436850518 uses original terrain, obstacles, ambience and conditional placements. These still need native execution, and special equipment state, unlocks and emulator/CI validation remain open. Do not mark Step 3 complete.
