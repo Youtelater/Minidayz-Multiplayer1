@@ -1096,6 +1096,7 @@ public:
                                 inventory_.slot_accepts(i, item->item_id) &&
                                 inventory_.split_half(selected, i)) {
                                 selected_inventory_slot_ = static_cast<int>(i);
+                                inventory_page_=i/kInventoryPageSize;
                                 break;
                             }
                         }
@@ -1333,8 +1334,8 @@ public:
         touch_down_ = input.touching;
         // A backpack can shrink the inventory back to its 15-slot base. Keep
         // the visible page and selection inside the new capacity immediately.
-        const std::size_t valid_page_count =
-            (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize;
+        const std::size_t valid_page_count = std::max<std::size_t>(1,
+            (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize);
         if (inventory_page_ >= valid_page_count)
             inventory_page_ = valid_page_count - 1;
         if (selected_inventory_slot_ >= static_cast<int>(inventory_.capacity()))
@@ -2093,8 +2094,11 @@ public:
                         gear_slot_for_card(slot));
             }
             if(selected_id!=0){
-                if(const char* name=minidayz::items::source_item_name(selected_id))
-                    renderer.draw_text(name,10.0f,25.0f,0.19f);
+                if(const char* name=minidayz::items::source_item_name(selected_id)){
+                    char label[25]{};
+                    std::snprintf(label,sizeof(label),"%.24s",name);
+                    renderer.draw_text(label,10.0f,25.0f,0.19f);
+                }
             }
         }
         // Bleeding/infection and temperature remain visible while managing
@@ -2118,7 +2122,7 @@ public:
             weather_phase,
             static_cast<double>(source_weather_exposure_),
             static_cast<double>(equipment_.temperature_offset()));
-        renderer.draw_text(cold_status, 10.0f, 33.0f, 0.15f);
+
         if (item_use_runtime_.busy()) {
             char treatment[48]{};
             const auto* rule = minidayz::items::ItemUseRuntime::medical_rule(
@@ -2132,162 +2136,54 @@ public:
                     rule && rule->action == minidayz::items::SourceMedicalAction::stop_bleeding
                         ? "BANDAGING" : "TREATMENT",
                 static_cast<double>(item_use_runtime_.remaining()));
-            renderer.draw_text(treatment, 170.0f, 33.0f, 0.18f);
+            renderer.draw_text(treatment,10.0f,33.0f,0.18f);
+        } else if (near_bunker_entrance()) {
+            renderer.draw_text("A: ENTER BUNKER",10.0f,33.0f,0.18f);
+        } else if (near_bridge_platform()) {
+            renderer.draw_text("A: ENTER BRIDGE",10.0f,33.0f,0.18f);
+        } else if (source_furniture_feedback_seconds_>0.0f &&
+                   source_furniture_feedback_ && *source_furniture_feedback_) {
+            char notice[51]{};
+            std::snprintf(notice,sizeof(notice),"%.50s",source_furniture_feedback_);
+            renderer.draw_text(notice,10.0f,33.0f,0.18f);
+        } else {
+            renderer.draw_text(cold_status,10.0f,33.0f,0.15f);
         }
-        // Original MiniDAYZ parchment equipment cards, reflowed for
-        // the 3DS bottom touchscreen. Each card preserves the source
-        // image proportions and shows its original item sprite/condition.
         if (!storage_open_ && !crafting_open_ && !perks_open_ && !details_open_) {
             static constexpr const char* equipment_labels[] = {
-                "HELM", "COAT", "VEST", "PANTS", "HAND", "PACK", "SATCH", "GUN", "QUICK"
+                "HELM", "COAT", "VEST", "PANTS", "HAND", "PACK", "SATCHEL", "GUN", "QUICK"
             };
+            renderer.draw_solid_rect(6,41,308,182,C2D_Color32(44,38,32,255),0.14f);
             for (std::size_t i = 0; i < minidayz::items::ui::kEquipment.size(); ++i) {
-                // Actual original frame dimensions, not stretched equal cards:
-                // coat/vest 91x62, backpack/satchel 216x62, inventory 57x54.
                 const auto& card=minidayz::items::ui::kEquipment[i];
                 const float x=static_cast<float>(card.x);
                 const float y=static_cast<float>(card.y);
                 const float w=static_cast<float>(card.w);
                 const float h=static_cast<float>(card.h);
-                const auto& art=
-                    i==1 ? minidayz::stage1::kOriginalEquipmentCoatArt
-                    : i==2 ? minidayz::stage1::kOriginalEquipmentVestArt
-                    : i==5 ? minidayz::stage1::kOriginalEquipmentBackpackArt
-                    : i==6 ? minidayz::stage1::kOriginalEquipmentSatchelArt
-                    : minidayz::stage1::kOriginalInventoryCardArt;
-                // The original held weapon is in its own slot. The source
-                // inventory-card image is square, so never stretch it 56x34.
-                if(i==8){
-                    // gui_slot is an ITEM ICON ATLAS: its first frame is a
-                    // soda can, NOT an empty slot. Use the genuine original
-                    // inventory card image for the separate pistol cell.
-                    if(!ui_art(minidayz::stage1::kOriginalInventoryCardArt,
-                               x,y,w,h,0.24f))
-                        renderer.draw_solid_rect(x,y,w,h,
-                            C2D_Color32(54,46,35,255),0.24f);
-                }else if(i==7){
-                    // gui_firearm is NOT a card background: Construct
-                    // uses its 32 varying-size frames for actual guns.
-                    // The slot remains source parchment while the exact
-                    // selected weapon icon is rotated in foreground below.
-                    if(!ui_art(minidayz::stage1::kOriginalInventoryCardArt,
-                               x,y,w,h,0.24f))
-                        renderer.draw_solid_rect(x,y,w,h,
-                            C2D_Color32(146,130,99,255),0.24f);
-                }else if(i==4 || i==3){
-                    renderer.draw_solid_rect(x,y,w,h,
-                        C2D_Color32(131,118,91,255),0.24f);
-                    if(i==4)
-                        (void)ui_art(minidayz::stage1::kOriginalInventoryCardArt,
-                                     x+11.0f,y+2.0f,30.0f,30.0f,0.27f);
-                    else
-                        (void)ui_art(art,x+12.0f,y+1.0f,32.0f,32.0f,0.27f);
-                }else if(i==5 || i==6){
-                    // Source bags are 216x62. Fit within the smaller 3DS
-                    // toolbar cell WITHOUT stretching their native aspect.
-                    if(!ui_art(art,x,y+2.0f,w,w*62.0f/216.0f,0.24f))
-                        renderer.draw_solid_rect(x,y,w,h,
-                            C2D_Color32(146,130,99,255),0.24f);
-                }else if(!ui_art(art,x,y,w,h,0.24f)){
-                    renderer.draw_solid_rect(x,y,w,h,
-                        C2D_Color32(146,130,99,255),0.24f);
-                }
-                if(drag_equipped_source_slot_==static_cast<int>(i) ||
-                   selected_equipment_slot_==static_cast<int>(i)){
-                    const auto gold=C2D_Color32(229,185,83,255);
-                    renderer.draw_solid_rect(x,y,w,2.0f,gold,0.77f);
-                    renderer.draw_solid_rect(x,y+h-2.0f,w,2.0f,gold,0.77f);
-                }
-                const auto item_id=
-                    i==5 ? inventory_.equipped_backpack()
+                const bool selected=drag_equipped_source_slot_==static_cast<int>(i) ||
+                    drag_target_equipment_slot_==static_cast<int>(i) ||
+                    selected_equipment_slot_==static_cast<int>(i);
+                renderer.draw_solid_rect(x,y,w,h,selected
+                    ? C2D_Color32(123,96,55,255)
+                    : C2D_Color32(77,65,52,255),0.24f);
+                renderer.draw_text(equipment_labels[i],x+4,y+2,0.18f);
+
+                const auto item_id=i==5 ? inventory_.equipped_backpack()
                     : i==6 ? inventory_.equipped_satchel()
                     : i==8 ? equipment_.quick_pistol()
-                    : equipment_.equipped(
-                        gear_slot_for_card(static_cast<int>(i)));
-                const auto condition=
-                    i==5 ? inventory_.equipped_backpack_condition()
+                    : equipment_.equipped(gear_slot_for_card(static_cast<int>(i)));
+                if (!item_id) continue;
+                const float icon_height=h-15.0f;
+                const float icon_width=std::min(34.0f,w-8.0f);
+                (void)renderer.draw_item_icon(item_id,x+w*0.5f,y+11.0f+icon_height*0.5f,
+                    icon_width,icon_height,0.86f,i==7?1.5707963268f:0.0f);
+                const auto condition=i==5 ? inventory_.equipped_backpack_condition()
                     : i==6 ? inventory_.equipped_satchel_condition()
                     : i==8 ? equipment_.quick_pistol_snapshot().condition
                     : equipment_.snapshot().conditions[gear_index_for_card(static_cast<int>(i))];
-                const float icon_size=i==1||i==2?34.0f:
-                    i==0||i==3?31.0f:i==7?42.0f:i==8?24.0f:26.0f;
-                const float icon_x=x+(i==7?w*0.5f:i==8?14.0f:
-                    i==1||i==2?18.0f:i==0||i==3?w*0.5f:16.0f);
-                const float icon_y=y+(i==7?h*0.5f:i==8?16.0f:
-                    i==1||i==2?30.0f:i==0?25.0f:i==3?16.0f:17.0f);
-                if(item_id!=0){
-                    if(i==7)
-                        (void)renderer.draw_item_icon(item_id,icon_x,icon_y,
-                            42.0f,57.0f,0.86f,1.5707963268f);
-                    else
-                        (void)renderer.draw_item_icon(item_id,
-                            icon_x,icon_y,icon_size,icon_size,0.86f);
-                    const auto fraction=i==8
-                        ? equipment_.quick_pistol_snapshot().fractional_loss
-                        : (i<5 || i==7)
-                            ? equipment_.fraction_snapshot().fractional_loss[
-                                gear_index_for_card(static_cast<int>(i))]:0u;
-                    const float exact_condition=static_cast<float>(condition)-
-                        static_cast<float>(fraction)/100.0f;
-                    char durability[16]{};
-                    std::snprintf(durability,sizeof(durability),"%.0f%%",
-                        static_cast<double>(exact_condition));
-                    const bool long_coat=i==1||i==2;
-                    if(long_coat){
-                        // In the original inventory the jacket and vest
-                        // show condition and separate armor/warmth lines.
-                        renderer.draw_text(durability,x+45.0f,y+9.0f,0.25f);
-                        minidayz::items::SourceItemProtection effects{};
-                        if(minidayz::items::source_item_protection(
-                            item_id,effects)){
-                            const float armor=i==1
-                                ? effects.outerwear:effects.vest;
-                            if(effects.warmth!=0.0f && i==1){
-                                char heat[24]{};
-                                std::snprintf(heat,sizeof(heat),"HEAT %+.0f",
-                                    static_cast<double>(effects.warmth));
-                                renderer.draw_text(heat,x+43.0f,y+26.0f,0.22f);
-                            }
-                            if(armor!=0.0f){
-                                char armor_text[24]{};
-                                std::snprintf(armor_text,sizeof(armor_text),
-                                    "ARMOR %+.0f",static_cast<double>(armor));
-                                renderer.draw_text(armor_text,x+43.0f,y+41.0f,0.22f);
-                            }
-                        }
-                    } else if(i==7){
-                        renderer.draw_text(durability,x+8.0f,y+h-14.0f,0.22f);
-                    } else if(i==8){
-                        renderer.draw_text("Q",x+31.0f,y+3.0f,0.20f);
-                        renderer.draw_text(durability,x+29.0f,y+19.0f,0.15f);
-                    } else if(i==0||i==3) {
-                        renderer.draw_text(durability,x+10.0f,
-                            y+(i==3?23.0f:41.0f),0.21f);
-                    } else {
-                        const char* name=minidayz::items::source_item_name(item_id);
-                        renderer.draw_text(name&&*name?name:equipment_labels[i],
-                                           x+34.0f,y+7.0f,0.18f);
-                        renderer.draw_text(durability,x+34.0f,y+20.0f,0.22f);
-                    }
-                }else{
-                    const auto& empty_icon=
-                        i==0 ? minidayz::stage1::kOriginalHelmetPlaceholderArt
-                        : i==1 ? minidayz::stage1::kOriginalOuterwearPlaceholderArt
-                        : i==2 ? minidayz::stage1::kOriginalVestPlaceholderArt
-                        : i==3 ? minidayz::stage1::kOriginalPantsPlaceholderArt
-                        : i==5 ? minidayz::stage1::kOriginalBackpackPlaceholderArt
-                        : minidayz::stage1::kOriginalInventoryCardArt;
-                    // Empty melee, firearm and quick slots must not render
-                    // the soda can first frame from gui_slot's icon atlas.
-                    if(i!=4 && i!=7 && i!=8 && empty_icon.object!=65535)
-                        (void)ui_art(empty_icon,icon_x-icon_size*0.5f,
-                            icon_y-icon_size*0.5f,icon_size,icon_size,0.82f);
-                    if(i!=0&&i!=3)
-                        renderer.draw_text(equipment_labels[i],
-                            i==7?x+9.0f:i==8?x+25.0f:
-                                x+(i==1||i==2?43.0f:34.0f),
-                            y+8.0f,i==8?0.17f:0.20f);
-                }
+                renderer.draw_solid_rect(x+4,y+h-3,w-8,1,C2D_Color32(34,30,25,255),0.87f);
+                renderer.draw_solid_rect(x+4,y+h-3,(w-8)*condition/100.0f,1,
+                    C2D_Color32(216,175,103,255),0.88f);
             }
             static constexpr const char* actions[] = {
                 "USE", "ALT", "DROP", "PICK", "SPLIT"
@@ -2564,6 +2460,17 @@ public:
                     count,
                     exact_hundredths / 100u, exact_hundredths % 100u);
                 renderer.draw_text(heading, 16.0f, 101.0f, 0.27f);
+                minidayz::items::SourceItemProtection protection{};
+                if (minidayz::items::source_item_protection(item_id,protection)) {
+                    const float armor=std::max({protection.helmet,protection.outerwear,
+                                                protection.vest,protection.pants});
+                    if (protection.warmth!=0.0f || armor!=0.0f) {
+                        char effects[42]{};
+                        std::snprintf(effects,sizeof(effects),"HEAT %+.0f  ARMOR %+.0f",
+                            static_cast<double>(protection.warmth),static_cast<double>(armor));
+                        renderer.draw_text(effects,16,113,0.20f);
+                    }
+                }
                 if (description && *description) {
                     // Simple bounded word-wrapping for the original XML text.
                     // Do not substitute guessed descriptions for missing rows.
@@ -2574,11 +2481,11 @@ public:
                         std::size_t length = 0;
                         const char* next = pos;
                         const char* split = nullptr;
-                        while (*next && *next != '\n' && length < 50) {
+                        while (*next && *next != '\n' && length < 48) {
                             if (*next == ' ') split = next;
                             ++next; ++length;
                         }
-                        if (*next && *next != '\n' && length == 50 && split) {
+                        if (*next && *next != '\n' && length == 48 && split) {
                             length = static_cast<std::size_t>(split - pos);
                             next = split;
                         }
@@ -2586,7 +2493,7 @@ public:
                         buffer[length] = '\0';
                         if(line>=details_scroll_ && line<details_scroll_+6)
                             renderer.draw_text(buffer,16.0f,
-                                125.0f+static_cast<float>(line-details_scroll_)*14.0f,0.24f);
+                                125.0f+static_cast<float>(line-details_scroll_)*13.0f,0.24f);
                         ++content_lines;
                         pos = next;
                         while (*pos == ' ' || *pos == '\n') ++pos;
@@ -2604,7 +2511,7 @@ public:
                                14.0f, 205.0f, 0.18f);
             renderer.draw_solid_rect(10.0f, 225.0f, 300.0f, 13.0f,
                                      C2D_Color32(54, 68, 55, 255));
-            renderer.draw_text("ORIGINAL ITEM DESCRIPTION", 35.0f, 226.0f, 0.24f);
+            renderer.draw_text("DETAILS", 14.0f, 226.0f, 0.24f);
             renderer.draw_text("CRAFT", 132.0f, 226.0f, 0.29f);
             return;
         }
@@ -2635,7 +2542,7 @@ public:
             // empty slot caused the sixteen identical cans in Manic Emu.
             // Keep the original panel visible, draw only actual owned items.
             renderer.draw_solid_rect(x,y,size,size,
-                C2D_Color32(31,28,25,70),0.30f);
+                C2D_Color32(67,57,46,255),0.30f);
             if(selected || drag_target_slot_==index) {
                 const u32 gold=C2D_Color32(229,190,96,255);
                 renderer.draw_solid_rect(x,y,size,2.0f,gold,0.92f);
@@ -2695,32 +2602,17 @@ public:
         }
         const std::size_t page_count =
             (inventory_.capacity() + kInventoryPageSize - 1) / kInventoryPageSize;
-        char page_label[48]{};
-        std::snprintf(page_label, sizeof(page_label), "<  BACKPACK  %u/%u  >",
-            static_cast<unsigned>(inventory_page_ + 1),
-            static_cast<unsigned>(page_count));
-        renderer.draw_solid_rect(10.0f,225.0f,300.0f,13.0f,
-                                 C2D_Color32(74,66,50,255),0.61f);
-        renderer.draw_text("PAGE <",14.0f,226.0f,0.25f);
-        renderer.draw_text("CRAFT",132.0f,226.0f,0.30f);
-        renderer.draw_text(page_label,213.0f,226.0f,0.23f);
-        if(!crafting_open_ && !storage_open_ && !perks_open_ &&
-           source_furniture_feedback_seconds_>0.0f &&
-           source_furniture_feedback_ && *source_furniture_feedback_){
-            renderer.draw_solid_rect(12.0f,140.0f,296.0f,23.0f,
-                                     C2D_Color32(39,63,46,230));
-            renderer.draw_text(source_furniture_feedback_,
-                               16.0f,144.0f,0.29f);
-        }
-        if (near_bunker_entrance()) {
-            renderer.draw_solid_rect(18,104,284,21,C2D_Color32(39,63,46,230));
-            renderer.draw_text("A: ENTER BUNKER",48,108,0.37f);
-        } else if(near_bridge_platform()){
-            renderer.draw_solid_rect(18.0f, 104.0f, 284.0f, 21.0f,
-                                     C2D_Color32(39, 63, 46, 230));
-            renderer.draw_text("A: ENTER BRIDGE",
-                               48.0f, 108.0f, 0.37f);
-        }
+        char page_label[20]{};
+        if(page_count>1)
+            std::snprintf(page_label,sizeof(page_label),"%u/%u  >",
+                static_cast<unsigned>(inventory_page_+1),static_cast<unsigned>(page_count));
+        else
+            std::snprintf(page_label,sizeof(page_label),"%u SLOTS",
+                static_cast<unsigned>(inventory_.capacity()));
+        renderer.draw_solid_rect(10,225,300,13,C2D_Color32(74,66,50,255),0.61f);
+        if(inventory_page_>0) renderer.draw_text("< PAGE",14,226,0.25f);
+        renderer.draw_text("CRAFT",132,226,0.30f);
+        renderer.draw_text(page_label,244,226,0.23f);
     }
 
     void render(minidayz::Renderer& renderer) noexcept override {
@@ -3537,8 +3429,9 @@ private:
         return minidayz::items::kInventorySlotCount;
     }
 
-    static int inventory_slot_at(int x, int y, std::size_t page) noexcept {
-        return minidayz::items::ui::inventory_at(x,y,page);
+    int inventory_slot_at(int x, int y, std::size_t page) const noexcept {
+        const int slot=minidayz::items::ui::inventory_at(x,y,page);
+        return slot>=0 && static_cast<std::size_t>(slot)<inventory_.capacity() ? slot : -1;
     }
 
     const minidayz::WorldPlacement* near_bunker_entrance() const noexcept {

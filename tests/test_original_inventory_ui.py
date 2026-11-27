@@ -72,7 +72,7 @@ assert "static_cast<minidayz::items::EquipmentSlot>(\n                    drag_t
 assert "equipment_.snapshot().conditions[gear_index_for_card(slot)]" in src, (
     "Selected firearm details must read the weapon condition from slot 6")
 assert "equipment_.snapshot().conditions[static_cast<std::size_t>(slot)]" not in src
-assert "kOriginalInventoryCardArt" in src
+assert "kOriginalInventoryBackgroundArt" in src
 # World visuals stay on the TOP 400x240 display. Every inventory,
 # equipment, crafting, item details and storage card is rendered solely
 # inside Scene::render_bottom for the 320x240 touchscreen.
@@ -81,8 +81,12 @@ top=src.split("    void render(minidayz::Renderer& renderer) noexcept override {
 bottom=src.split("    void render_bottom(minidayz::Renderer& renderer) noexcept override {",1)[1].split(
     "    void render(minidayz::Renderer& renderer) noexcept override {",1)[0]
 assert "kOriginalSlotArt" not in bottom
-assert "kOriginalEquipmentBackpackArt" in bottom
-assert "kOriginalEquipmentSatchelArt" in bottom
+assert "inventory_.equipped_backpack()" in bottom
+assert "inventory_.equipped_satchel()" in bottom
+assert "drag_target_equipment_slot_==static_cast<int>(i)" in bottom
+assert "renderer.draw_text(equipment_labels[i],x+4,y+2" in bottom
+assert '%.24s' in bottom
+assert 'return slot>=0 && static_cast<std::size_t>(slot)<inventory_.capacity()' in src
 assert "if (crafting_open_)" in bottom
 assert "if (storage_open_)" in bottom
 assert "if (details_open_)" in bottom

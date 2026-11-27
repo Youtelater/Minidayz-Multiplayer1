@@ -9,12 +9,11 @@ int main(){
                   "Original gun uses a separate portrait card from melee");
     static_assert(kSlotSize==30);
     static_assert(kColumns==8 && kRows==2);
-    // All original equipment hitboxes are independent and match the
-    // parchment artwork used by source/main.cpp on the 320x240 touch UI.
+    // Equipment hitboxes match the cards and leave room for status text.
     for(int i=0;i<static_cast<int>(kEquipment.size());++i){
         const auto& r=kEquipment[static_cast<std::size_t>(i)];
         assert(equipment_at(r.x+r.w/2,r.y+r.h/2)==i);
-        assert(r.x>=0 && r.y>=0 && r.x+r.w<=320 && r.y+r.h<140);
+        assert(r.x>=0 && r.y>=41 && r.x+r.w<=320 && r.y+r.h<140);
         for(int j=i+1;j<static_cast<int>(kEquipment.size());++j){
             const auto& b=kEquipment[static_cast<std::size_t>(j)];
             const bool overlap=r.x<b.x+b.w && b.x<r.x+r.w &&

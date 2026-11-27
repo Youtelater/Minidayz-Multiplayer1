@@ -4,13 +4,7 @@
 
 namespace minidayz::items::ui {
 
-// Nintendo 3DS lower screen: 320x240. Source sizes from the ORIGINAL
-// Construct sprite frames (GUI_layout): gui_inv_card_outerwear 91/92x62,
-// gui_inv_card_vest 91/92x62, gui_inv_card_backpack 216x62,
-// gui_firearm 167x55 (rotated 90 degrees), gui_inventory_card
-// 57x54, and gui_slot 30x30.
-// Preserve each sprite's aspect ratio rather than stretching them into
-// the previous seven identical 76x36 rectangles.
+// Coordinates shared by the 320x240 inventory renderer and touch input.
 struct Rect {
     int x{},y{},w{},h{};
     constexpr bool contains(int px,int py) const noexcept {
@@ -18,14 +12,14 @@ struct Rect {
     }
 };
 inline constexpr std::array<Rect,9> kEquipment{{
-    {8,39,56,53},     // head: source inventory card
-    {68,39,92,62},    // coat: source outerwear card
-    {162,39,92,62},   // vest: source vest card
-    {8,103,56,34},    // pants: compact original inventory card
-    {68,103,52,34},   // hands: original melee/tool slot
-    {124,103,64,34},  // backpack: source card, scaled to fit
-    {192,103,62,34},  // satchel: source card, scaled to fit
-    {257,39,55,64},   // firearm: source gui_firearm rotated 90 degrees
+    {8,42,56,50},     // head
+    {68,42,92,59},    // coat
+    {162,42,92,59},   // vest
+    {8,103,56,34},    // pants
+    {68,103,52,34},   // hands
+    {124,103,64,34},  // backpack
+    {192,103,62,34},  // satchel
+    {257,42,55,61},   // firearm
     {257,105,55,32}   // MP quick pistol: separate Drop_pistol slot
 }};
 inline constexpr int kColumns=8;

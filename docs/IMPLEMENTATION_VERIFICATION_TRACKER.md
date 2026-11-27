@@ -1414,3 +1414,9 @@ Original Construct Sprite body objects `600, 206, 582, 583, 586, 587` each defin
 - [x] The 3DS adapter filters the inner 12 Circle Pad units and scales the remaining range to full movement. Collision samples are spaced by at most one pixel, which prevents skipping the tested one-pixel wall on a 200 ms frame. The existing player collider and speed formula still drive movement.
 - [x] Native player, NPC and save tests passed, along with the source skin, PlayerBase collider, AltMove and screen-layer checks.
 - [ ] Azahar gameplay remains open for Circle Pad response, player animation cadence, thin obstacles and runtime performance.
+
+### Step 4A — bottom-screen inventory
+
+- The Manic Emu screenshot showed equipment labels and item art sharing the same space, with backdrop dividers visible through the slots. The 3DS layout now uses distinct cards with bounded icon areas, legible labels, a square backpack grid and a separate status line. Item icons still use their existing atlas references. Exact condition, warmth and protection are available in item details.
+- Rendering and touch use the same card coordinates. Touch ignores backpack positions outside the current capacity. Empty capacity displays as zero slots, and splitting a stack moves to the page containing the new stack.
+- The inventory model, touch layout, inventory scene and screen-layer checks pass. Manic Emu and Azahar visual and touch verification remain open.
