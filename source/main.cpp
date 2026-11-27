@@ -85,8 +85,18 @@ void boot_checkpoint(const char* stage, bool reset=false) noexcept;
 // Rain event 609331584746158 chooses blizzard.wav specifically for value 2.
 constexpr std::uint8_t kSourceDefaultRainsLevel=2;
 using minidayz::persistence::SavedGame;
+using minidayz::persistence::WorldVisualSlot;
 using minidayz::persistence::load_saved_game;
 using minidayz::persistence::write_saved_game;
+
+const char* world_visual_save_path(WorldVisualSlot slot) noexcept {
+    switch (slot) {
+    case WorldVisualSlot::first: return "sdmc:/3ds/Minidayz/world_visual_1.sav";
+    case WorldVisualSlot::second: return "sdmc:/3ds/Minidayz/world_visual_2.sav";
+    case WorldVisualSlot::legacy: return "sdmc:/3ds/Minidayz/world_visual.sav";
+    }
+    return nullptr;
+}
 
 // Construct 2 creates a fresh random world on a new game; it does not use
 // SEED_RUN as a numeric world seed. Use the 3DS clock and hardware tick as
@@ -105,7 +115,8 @@ std::uint32_t make_new_world_seed() noexcept {
 
 class WorldPreviewScene final : public minidayz::Scene {
 public:
-    explicit WorldPreviewScene(const SavedGame* restored = nullptr) noexcept
+    explicit WorldPreviewScene(const SavedGame* restored = nullptr,
+                               WorldVisualSlot visual_slot=WorldVisualSlot::legacy) noexcept
         : world_seed_(restored ? restored->seed : make_new_world_seed()),
           legacy_world_generation_(restored && restored->version < 23u),
           legacy_split_roads_(restored && restored->version < 24u),
@@ -120,6 +131,7 @@ public:
           legacy_active_location_events_(restored && restored->version < 33u),
           legacy_service_quotas_(restored && restored->version < 34u),
           world_level_(restored ? restored->world_level : 0),
+          world_visual_slot_(visual_slot),
           has_saved_game_(restored != nullptr),
           player_(restored ? restored->player : make_initial_state()) {
         menu_selection_=minidayz::menu::default_selection(has_saved_game_);
@@ -200,7 +212,7 @@ public:
     bool restore_continue_from_disk() noexcept {
         std::unique_ptr<SavedGame> restored(new(std::nothrow) SavedGame{});
         minidayz::BridgePosition crossing{};
-        if(!restored || !load_saved_game(*restored,&crossing)) {
+        if(!restored || !load_saved_game(*restored,&crossing,&world_visual_slot_)) {
             has_saved_game_=false;
             menu_selection_=minidayz::menu::default_selection(false);
             return false;
@@ -279,7 +291,7 @@ public:
         return used;
     }
 
-    bool write_survivor_save(std::uint32_t seed, std::uint8_t level,
+    bool write_survivor_save(const minidayz::WorldSystem& world,
                              const minidayz::PlayerState& survivor,
                              const minidayz::items::GroundLootSystem& loot,
                              const minidayz::items::TentStorageSystem& tents,
@@ -301,22 +313,27 @@ public:
             craft.recipe_index = static_cast<std::uint16_t>(pending_craft_recipe_);
             craft.seconds_remaining = pending_craft_seconds_;
         }
-        return write_saved_game(seed, survivor, inventory_, equipment_, loot,
+        // A failed or interrupted commit leaves the journal referenced by the
+        // previous survivor save intact, including when traveling to a new island.
+        const auto next_slot=world_visual_slot_==WorldVisualSlot::first
+            ? WorldVisualSlot::second : WorldVisualSlot::first;
+        const auto level=world.generation_level();
+        if (!minidayz::persistence::write_world_visual_state(world,level,
+                world_visual_save_path(next_slot),"sdmc:/3ds/Minidayz/world_visual.tmp"))
+            return false;
+        if (!write_saved_game(world.seed(), survivor, inventory_, equipment_, loot,
             tents, &item_use_runtime_, &perks_, stashes, &day_night_,
-            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events,bridge,legacy_service_quotas);
+            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events,bridge,legacy_service_quotas,next_slot))
+            return false;
+        world_visual_slot_=next_slot;
+        return true;
     }
 
     bool write_scene_save() noexcept {
         const auto crossing=bridge_crossing_.position();
-        if (!write_survivor_save(world_seed_, world_level_, player_.state(),
+        return write_survivor_save(world_, player_.state(),
                                  ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, legacy_start_order_, legacy_category3_events_, legacy_category5_events_, legacy_category46_events_, legacy_category7_events_, legacy_exact_crash_selection_, legacy_active_location_events_,
-                                 bridge_crossing_.active()?&crossing:nullptr,legacy_service_quotas_)) return false;
-        // Persist changed original object frames separately, with the same
-        // seed/level and a checksum. Do not report Save success unless
-        // world state is recorded too.
-        return minidayz::persistence::write_world_visual_state(
-            world_,world_level_,"sdmc:/3ds/Minidayz/world_visual.sav",
-            "sdmc:/3ds/Minidayz/world_visual.tmp");
+                                 bridge_crossing_.active()?&crossing:nullptr,legacy_service_quotas_);
     }
 
     void on_enter() noexcept override {
@@ -400,8 +417,8 @@ public:
                     }
                     if (traveling) {
                         const minidayz::items::TentStorageSystem empty_tents{};
-                        if (!write_survivor_save(generating.seed(), generating.generation_level(),
-                                survivor, *generated_initial_loot, empty_tents, nullptr, false)) {
+                        if (!write_survivor_save(generating,survivor,*generated_initial_loot,
+                                empty_tents,nullptr,false)) {
                             fail_world_generation(true);
                             return;
                         }
@@ -452,9 +469,10 @@ public:
                     // never bypasses original generation or alters the seed.
                     const bool visual_ok=minidayz::persistence::read_world_visual_state(
                         world_,world_level_,
-                        "sdmc:/3ds/Minidayz/world_visual.sav");
+                        world_visual_save_path(world_visual_slot_));
                     continue_world_visual_state_=false;
-                    if(!visual_ok && world_.source_active_location_events()){
+                    if(!visual_ok && (world_visual_slot_!=WorldVisualSlot::legacy ||
+                                      world_.source_active_location_events())){
                         fail_world_generation(false);
                         return;
                     }
@@ -481,7 +499,7 @@ public:
                 if (rain_timer_.active()) stage2_audio_.start_rain_loop(world_level_==4);
                 else stage2_audio_.stop_rain_loop();
                 // Only overwrite the existing save after a new world succeeds.
-                if (write_scene_save()) has_saved_game_ = true;
+                if (!traveling && write_scene_save()) has_saved_game_ = true;
             }
             return;
         }
@@ -771,12 +789,12 @@ public:
             }
             return;
         }
+        pause_save_feedback_ = false;
+        pause_save_attempted_ = false;
         if (bridge_crossing_.active()) {
             update_bridge_crossing(input,dt);
             return;
         }
-        pause_save_feedback_ = false;
-        pause_save_attempted_ = false;
         // 3DS Y opens a world map without replacing the source inventory.
         // B/Y or a lower-screen close tap returns to the backpack.
         // This screen is an adaptation of the original minimap/map display,
@@ -2716,7 +2734,7 @@ public:
             renderer.draw_text("GENERATING NEW SURVIVAL WORLD", 51.0f, 198.0f, 0.37f);
             return;
         }
-        if (bridge_crossing_.active() && !paused_ && !menu_active_) {
+        if (bridge_crossing_.active() && !menu_active_) {
             render_bridge_crossing(renderer);
             return;
         }
@@ -3649,7 +3667,10 @@ private:
         std::mt19937 random(world_seed_ ^ static_cast<std::uint32_t>(entrance->runtime_uid) ^
             static_cast<std::uint32_t>(cache.category));
         if (!drops || !minidayz::items::source_box_special_equipment(
-                cache.category,random,*drops,0,0)) return;
+                cache.category,random,*drops,0,0)) {
+            passage_cache_feedback_="COULD NOT OPEN CACHE";
+            return;
+        }
         auto next=inventory_;
         for (std::size_t i=0;i<drops->count();++i) {
             auto item=drops->entry(i)->item;
@@ -3675,8 +3696,10 @@ private:
             return;
         }
         auto next=inventory_;
-        if (bridge_crossing_.area()==minidayz::Passage::bunker && !next.add(18,2))
+        if (bridge_crossing_.area()==minidayz::Passage::bunker && !next.add(18,2)) {
+            passage_cache_feedback_="BACKPACK FULL";
             return;
+        }
         if (world_.mark_passage_cache_claimed(entrance->runtime_uid))
             inventory_=next;
     }
@@ -5105,6 +5128,7 @@ private:
     bool source_location_creation_retry_{};
     std::size_t source_location_creation_retry_count_{};
     std::uint8_t world_level_{};
+    WorldVisualSlot world_visual_slot_{WorldVisualSlot::legacy};
     minidayz::WorldTravel travel_;
     minidayz::BridgeCrossing bridge_crossing_{};
     bool travel_failed_{};
@@ -5246,10 +5270,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     boot_checkpoint("reading save");
-    const bool has_saved_game = load_saved_game(*restored);
+    auto visual_slot=WorldVisualSlot::legacy;
+    const bool has_saved_game = load_saved_game(*restored,nullptr,&visual_slot);
     boot_checkpoint(has_saved_game?"save validated":"no valid save");
     std::unique_ptr<WorldPreviewScene> scene(new(std::nothrow)
-        WorldPreviewScene(has_saved_game ? restored.get() : nullptr));
+        WorldPreviewScene(has_saved_game ? restored.get() : nullptr,visual_slot));
     if (!scene) {
         boot_checkpoint("scene allocation failed");
         engine.shutdown();

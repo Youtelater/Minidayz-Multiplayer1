@@ -1015,12 +1015,17 @@ void test_original_bunker_entrance_generation() {
     assert(cache_world.mark_passage_cache_claimed(hatch_uid,2));
     assert(cache_world.mark_passage_cache_claimed(hatch_uid,4));
     assert(cache_world.mark_passage_cache_claimed(hatch_uid,8));
-    const auto states=cache_world.capture_sprite_states();
-    assert(cache_world.restore_sprite_states(states));
+    // Continue regenerates the island before restoring claimed caches.
+    constexpr const char* cache_path="minidayz_passage_cache_test.bin";
+    constexpr const char* cache_temp="minidayz_passage_cache_test.tmp";
+    assert(minidayz::persistence::write_world_visual_state(cache_world,1,cache_path,cache_temp));
+    assert(cache_world.generate_from_source(0x7bca13u,"Map",1));
+    assert(minidayz::persistence::read_world_visual_state(cache_world,1,cache_path));
     assert(!cache_world.mark_passage_cache_claimed(hatch_uid,2));
     assert(!cache_world.mark_passage_cache_claimed(hatch_uid,4));
     assert(!cache_world.mark_passage_cache_claimed(hatch_uid,8));
     assert(!cache_world.mark_passage_cache_claimed(hatch_uid));
+    std::remove(cache_path);
 
     // Explicitly exercise the original 6-per-half radiation variant
     // without relying on the seeded level-five theme choice.

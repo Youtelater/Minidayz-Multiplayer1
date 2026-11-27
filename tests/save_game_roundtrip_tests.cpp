@@ -1083,8 +1083,38 @@ int main() {
     assert(load_saved_game_from_path(restored,kFile,&resumed));
     assert(resumed.area==minidayz::Passage::final_stand && resumed.x==crossing.x);
 
+    using minidayz::persistence::WorldVisualSlot;
+    WorldVisualSlot visual_slot{};
+    assert(write_saved_game_to_paths(42,player,inventory,equipment,ground,tents,kFile,kTemp,
+        nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,4,nullptr,
+        false,false,false,false,false,false,false,false,false,false,false,&crossing,
+        false,WorldVisualSlot::first));
+    assert(load_saved_game_from_path(restored,kFile,&resumed,&visual_slot));
+    assert(visual_slot==WorldVisualSlot::first && resumed.area==crossing.area &&
+           resumed.x==crossing.x && resumed.y==crossing.y);
+    assert(!write_saved_game_to_paths(43,player,inventory,equipment,ground,tents,kFile,kFile,
+        nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,5,nullptr,
+        false,false,false,false,false,false,false,false,false,false,false,nullptr,
+        false,WorldVisualSlot::second));
+    assert(load_saved_game_from_path(restored,kFile,&resumed,&visual_slot));
+    assert(restored.seed==42 && visual_slot==WorldVisualSlot::first);
+    assert(write_saved_game_to_paths(43,player,inventory,equipment,ground,tents,kFile,kTemp,
+        nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,5,nullptr,
+        false,false,false,false,false,false,false,false,false,false,false,nullptr,
+        false,WorldVisualSlot::second));
+    assert(load_saved_game_from_path(restored,kFile,&resumed,&visual_slot));
+    assert(restored.seed==43 && visual_slot==WorldVisualSlot::second);
+    assert(!minidayz::BridgeCrossing::valid_position(resumed));
+    {
+        auto* f=std::fopen(kFile,"rb+");
+        assert(f && std::fseek(f,-1,SEEK_END)==0);
+        assert(std::fputc(255,f)!=EOF && std::fclose(f)==0);
+        assert(!load_saved_game_from_path(restored,kFile,&resumed,&visual_slot));
+    }
+
     assert(write_saved_game_to_paths(42,player,inventory,equipment,ground,tents,kFile,kTemp));
-    assert(load_saved_game_from_path(restored,kFile,&resumed));
+    assert(load_saved_game_from_path(restored,kFile,&resumed,&visual_slot));
+    assert(visual_slot==WorldVisualSlot::legacy);
     assert(!minidayz::BridgeCrossing::valid_position(resumed));
 
     // Truncation, a spurious trailing byte, NaN, and bad inventory all reject.

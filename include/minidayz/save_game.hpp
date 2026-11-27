@@ -19,6 +19,9 @@ namespace minidayz::persistence {
 
 inline constexpr std::uint32_t kSaveMagic = 0x4d445a33u;
 inline constexpr std::uint32_t kSaveVersion = 34u; // v34 uses original campaign roadside service quotas.
+// Save the new world journal in the inactive slot before committing the
+// survivor record that points to it. Older saves use the unnumbered journal.
+enum class WorldVisualSlot : std::uint8_t { legacy, first, second };
 // Preserve the original Construct wait when a craft is interrupted by autosave.
 struct PendingCraftSnapshot {
     std::uint16_t recipe_index{0xffffu};
@@ -64,8 +67,10 @@ struct SavedGame {
 };
 
 
-bool load_saved_game(SavedGame& save, BridgePosition* bridge=nullptr) noexcept;
-bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition* bridge=nullptr) noexcept;
+bool load_saved_game(SavedGame& save, BridgePosition* bridge=nullptr,
+                     WorldVisualSlot* visual_slot=nullptr) noexcept;
+bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition* bridge=nullptr,
+                               WorldVisualSlot* visual_slot=nullptr) noexcept;
 
 bool write_saved_game(std::uint32_t seed,
                       const PlayerState& player,
@@ -93,7 +98,8 @@ bool write_saved_game(std::uint32_t seed,
                       bool legacy_category7_events = false,
                       bool legacy_exact_crash_selection = false,
                       bool legacy_active_location_events = false, const BridgePosition* bridge=nullptr,
-                      bool legacy_service_quotas = false) noexcept;
+                      bool legacy_service_quotas = false,
+                      WorldVisualSlot visual_slot = WorldVisualSlot::legacy) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
@@ -123,5 +129,6 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       bool legacy_category7_events = false,
                       bool legacy_exact_crash_selection = false,
                       bool legacy_active_location_events = false, const BridgePosition* bridge=nullptr,
-                      bool legacy_service_quotas = false) noexcept;
+                      bool legacy_service_quotas = false,
+                      WorldVisualSlot visual_slot = WorldVisualSlot::legacy) noexcept;
 } // namespace minidayz::persistence

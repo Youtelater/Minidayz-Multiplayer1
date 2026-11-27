@@ -375,7 +375,10 @@ bool consume_legacy_padding(std::FILE* file, std::size_t bytes) noexcept {
 // Same survivor record and generation version, followed by bridge-local XY.
 inline constexpr std::uint32_t kBridgeSaveMagic=0x4d444252u;
 inline constexpr std::uint32_t kUndergroundSaveMagic=0x4d445547u;
-bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition* bridge) noexcept {
+constexpr int kWorldVisualSlotPrefix=0x56;
+
+bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition* bridge,
+                               WorldVisualSlot* visual_slot) noexcept {
     if (!path || path[0] == '\0') return false;
     std::FILE* file = std::fopen(path, "rb");
     if (!file) return false;
@@ -726,7 +729,17 @@ bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition
         body_ok=body_ok && BridgeCrossing::valid_position(local);
         candidate.magic=kSaveMagic;
     }
-    const bool no_extra_data = std::fgetc(file) == EOF;
+    auto slot=WorldVisualSlot::legacy;
+    int next=std::fgetc(file);
+    if (body_ok && candidate.version>=22 && next==kWorldVisualSlotPrefix) {
+        const int value=std::fgetc(file);
+        if (value==static_cast<int>(WorldVisualSlot::first) ||
+            value==static_cast<int>(WorldVisualSlot::second)) {
+            slot=static_cast<WorldVisualSlot>(value);
+            next=std::fgetc(file);
+        }
+    }
+    const bool no_extra_data = next==EOF && !std::ferror(file);
     std::fclose(file);
     const bool header_and_body_valid =
         header_ok && body_ok && no_extra_data && candidate.magic == kSaveMagic &&
@@ -790,6 +803,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition
         return false;
     // Never replace a caller's valid save with a partially decoded file.
     if (bridge) *bridge=local;
+    if (visual_slot) *visual_slot=slot;
     save = candidate;
     return true;
 }
@@ -821,10 +835,12 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       bool legacy_category7_events,
                       bool legacy_exact_crash_selection,
                       bool legacy_active_location_events,const BridgePosition* bridge,
-                      bool legacy_service_quotas) noexcept {
+                      bool legacy_service_quotas, WorldVisualSlot visual_slot) noexcept {
     if (!target_path || !temporary_path || !target_path[0] || !temporary_path[0] ||
         std::strcmp(target_path, temporary_path) == 0 || seed == 0 ||
-        world_level > 5u) return false;
+        world_level > 5u || (visual_slot!=WorldVisualSlot::legacy &&
+        visual_slot!=WorldVisualSlot::first && visual_slot!=WorldVisualSlot::second))
+        return false;
     auto save_buffer=std::unique_ptr<SavedGame>(new(std::nothrow) SavedGame{});
     if(!save_buffer)return false;
     auto& save=*save_buffer;
@@ -905,6 +921,9 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                             std::fwrite(&bridge->y,sizeof(bridge->y),1,file)==1 &&
                             (bridge->area==Passage::bridge ||
                              std::fwrite(&bridge->area,sizeof(bridge->area),1,file)==1))) &&
+                         (visual_slot==WorldVisualSlot::legacy ||
+                            (std::fputc(kWorldVisualSlotPrefix,file)!=EOF &&
+                             std::fputc(static_cast<int>(visual_slot),file)!=EOF)) &&
                          std::fflush(file) == 0;
     const bool closed = std::fclose(file) == 0;
     if (!written || !closed) {
@@ -922,8 +941,8 @@ bool write_saved_game_to_paths(std::uint32_t seed,
 }
 
 
-bool load_saved_game(SavedGame& save, BridgePosition* bridge) noexcept {
-    return load_saved_game_from_path(save, kSavePath,bridge);
+bool load_saved_game(SavedGame& save, BridgePosition* bridge, WorldVisualSlot* visual_slot) noexcept {
+    return load_saved_game_from_path(save,kSavePath,bridge,visual_slot);
 }
 
 bool write_saved_game(std::uint32_t seed,
@@ -951,13 +970,13 @@ bool write_saved_game(std::uint32_t seed,
                       bool legacy_category7_events,
                       bool legacy_exact_crash_selection,
                       bool legacy_active_location_events,const BridgePosition* bridge,
-                      bool legacy_service_quotas) noexcept {
+                      bool legacy_service_quotas, WorldVisualSlot visual_slot) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     return write_saved_game_to_paths(seed, player, inventory, equipment,
                                     ground_loot, tents, kSavePath, kSaveTempPath,
                                     item_use, perks, stashes, source_time, source_rain, source_loot,
-                                    pending_craft, world_level,source_energy, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events,bridge,legacy_service_quotas);
+                                    pending_craft, world_level,source_energy, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events,bridge,legacy_service_quotas,visual_slot);
 }
 
 } // namespace minidayz::persistence

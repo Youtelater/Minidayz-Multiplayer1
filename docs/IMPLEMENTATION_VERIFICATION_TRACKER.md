@@ -1399,3 +1399,10 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - [x] Step 1 placed on hold by user; Step 2 remains confirmed. Read root original blob bd6fc44626d2f4ede48f9a6b83dedbb23ce06a9d directly. Replaced hand-drawn passage cache rectangles with Sprite796 animation lootbox, frame 0, original Map fixture UID2279 and source crop (1,1,24,16), centered hotspot. Implementation c28ce33; root-source and native-render call-site assertions 9dd3da8 in existing CI audit.
 - [ ] Cache positions, direct backpack transfer, encounter tuning, short passage geometry and terminal/reward remain native adaptations, not original parity. Root bridge function 482054460208135 constructs actual 7200-pixel boundaries and background objects; root Bunker_generate 305470436850518 uses original terrain, obstacles, ambience and conditional placements. These still need native execution, and special equipment state, unlocks and emulator/CI validation remain open. Do not mark Step 3 complete.
+
+### Step 3 — passage and bridge save consistency
+
+- [x] Save and Continue now commit the survivor record and its matching world journal together. Bridge travel saves the destination journal before accepting the destination survivor. The survivor record selects one of two journal files, keeping the previously committed pair available if the write fails. Older saves still use the original journal path.
+- [x] Pausing retains the passage on the top screen. Resuming clears the previous pause menu's save result. A full backpack now gives feedback when the bunker exit supplies cannot be collected.
+- [x] The local devkitARM build produced a .3dsx. The Makefile now runs the two existing car trunk generators needed by a fresh checkout. Native player, save round-trip and targeted world interaction tests passed, including claimed cache restoration after regenerating the island. The original lootbox and interior-container audit checks passed.
+- [ ] The full world suite stops on the Step 1 hospital placement regression. Step 3 still needs gameplay verification in Azahar.

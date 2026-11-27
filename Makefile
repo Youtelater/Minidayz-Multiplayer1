@@ -93,7 +93,7 @@ $(TARGET).elf: $(OFILES)
 	@echo linking ...
 	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
 
-$(OFILES): | stage1-assets
+$(OFILES): | stage1-assets $(BUILD)
 
 $(BUILD)/%.o: %.cpp
 	@echo cxx $<
@@ -143,6 +143,7 @@ stage1-assets:
 	@python3 tools/stage1/build_source_family_members.py
 	@python3 tools/stage1/build_source_house_companions.py
 	@python3 tools/stage1/build_category46_source.py
+	@python3 tools/stage1/build_source_car_wreck_trunks.py
 	@python3 tools/stage1/build_source_building_polygons.py
 	@python3 tools/stage1/build_source_roof_family_points.py
 	@python3 tools/stage1/build_water_shoreline.py
@@ -186,6 +187,7 @@ stage1-assets:
 	@python3 tools/stage2/build_source_loot_catalog.py
 	@python3 tools/stage2/build_original_timed_loot.py
 	@python3 tools/stage2/build_original_initial_building_loot.py
+	@python3 tools/stage2/build_original_car_trunk_loot.py
 	@python3 tools/stage2/extract_item_behavior_trace.py
 	@python3 tools/stage2/validate_item_condition_trace.py
 	@python3 tools/stage2/audit_source_wear.py
