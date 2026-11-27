@@ -6,6 +6,8 @@ namespace minidayz {
 
 // The crossing uses local coordinates so an interrupted trip can resume
 // from the last island save without writing a bridge position into it.
+struct BridgePosition { float x{},y{}; };
+
 class BridgeCrossing {
 public:
     static constexpr float kLength=720.0f;
@@ -25,6 +27,19 @@ public:
         active_=true;
     }
 
+    static bool valid_position(BridgePosition p) noexcept {
+        return p.x>=0 && p.x<=kLength && p.y>=kCenterY-kHalfWidth && p.y<=kCenterY+kHalfWidth;
+    }
+    BridgePosition position() const noexcept {
+        return {walker_.state().x,walker_.state().y};
+    }
+    void resume(const PlayerSystem& survivor,BridgePosition p) noexcept {
+        active_=false;
+        if (!valid_position(p)) return;
+        enter(survivor);
+        walker_.state_for_setup().x=p.x;
+        walker_.state_for_setup().y=p.y;
+    }
     void leave() noexcept { active_=false; }
     bool active() const noexcept { return active_; }
     bool at_exit() const noexcept {

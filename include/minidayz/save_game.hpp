@@ -1,6 +1,7 @@
 #pragma once
 
 #include "minidayz/player.hpp"
+#include "minidayz/bridge_crossing.hpp"
 #include "minidayz/inventory.hpp"
 #include "minidayz/equipment.hpp"
 #include "minidayz/ground_loot.hpp"
@@ -63,8 +64,8 @@ struct SavedGame {
 };
 
 
-bool load_saved_game(SavedGame& save) noexcept;
-bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept;
+bool load_saved_game(SavedGame& save, BridgePosition* bridge=nullptr) noexcept;
+bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition* bridge=nullptr) noexcept;
 
 bool write_saved_game(std::uint32_t seed,
                       const PlayerState& player,
@@ -91,7 +92,7 @@ bool write_saved_game(std::uint32_t seed,
                       bool legacy_category46_events = false,
                       bool legacy_category7_events = false,
                       bool legacy_exact_crash_selection = false,
-                      bool legacy_active_location_events = false) noexcept;
+                      bool legacy_active_location_events = false, const BridgePosition* bridge=nullptr) noexcept;
 
 bool write_saved_game_to_paths(std::uint32_t seed,
                                const PlayerState& player,
@@ -120,5 +121,5 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       bool legacy_category46_events = false,
                       bool legacy_category7_events = false,
                       bool legacy_exact_crash_selection = false,
-                      bool legacy_active_location_events = false) noexcept;
+                      bool legacy_active_location_events = false, const BridgePosition* bridge=nullptr) noexcept;
 } // namespace minidayz::persistence

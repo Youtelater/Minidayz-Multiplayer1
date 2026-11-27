@@ -1057,6 +1057,18 @@ int main() {
     assert(restored.quick_pistol.item_id==0);
     assert(restored.quick_pistol.condition==100);
 
+    // A crossing stores both the island survivor and the walker's deck position.
+    minidayz::BridgePosition crossing{310.0f,118.0f}, resumed{};
+    assert(write_saved_game_to_paths(42,player,inventory,equipment,ground,tents,kFile,kTemp,
+        nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,2,nullptr,
+        false,false,false,false,false,false,false,false,false,false,false,&crossing));
+    assert(load_saved_game_from_path(restored,kFile,&resumed));
+    assert(resumed.x==crossing.x && resumed.y==crossing.y);
+    assert(restored.player.x==player.x && restored.player.y==player.y);
+    assert(write_saved_game_to_paths(42,player,inventory,equipment,ground,tents,kFile,kTemp));
+    assert(load_saved_game_from_path(restored,kFile,&resumed));
+    assert(!minidayz::BridgeCrossing::valid_position(resumed));
+
     // Truncation, a spurious trailing byte, NaN, and bad inventory all reject.
     assert(write_saved_game_to_paths(42, player, inventory, equipment,
                                     ground, tents, kFile, kTemp));

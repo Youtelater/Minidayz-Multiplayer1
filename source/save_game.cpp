@@ -372,7 +372,9 @@ bool consume_legacy_padding(std::FILE* file, std::size_t bytes) noexcept {
         (bytes == 0 || std::fread(padding, 1, bytes, file) == bytes);
 }
 
-bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
+// Same survivor record and generation version, followed by bridge-local XY.
+inline constexpr std::uint32_t kBridgeSaveMagic=0x4d444252u;
+bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition* bridge) noexcept {
     if (!path || path[0] == '\0') return false;
     std::FILE* file = std::fopen(path, "rb");
     if (!file) return false;
@@ -709,6 +711,12 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
     }
+    BridgePosition local{};
+    if (candidate.magic==kBridgeSaveMagic) {
+        body_ok=body_ok && candidate.version>=22 && candidate.world_level<5 &&
+            std::fread(&local,sizeof(local),1,file)==1 && BridgeCrossing::valid_position(local);
+        candidate.magic=kSaveMagic;
+    }
     const bool no_extra_data = std::fgetc(file) == EOF;
     std::fclose(file);
     const bool header_and_body_valid =
@@ -772,6 +780,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path) noexcept {
         !perk_validation.restore(candidate.perks))
         return false;
     // Never replace a caller's valid save with a partially decoded file.
+    if (bridge) *bridge=local;
     save = candidate;
     return true;
 }
@@ -802,7 +811,7 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       bool legacy_category46_events,
                       bool legacy_category7_events,
                       bool legacy_exact_crash_selection,
-                      bool legacy_active_location_events) noexcept {
+                      bool legacy_active_location_events,const BridgePosition* bridge) noexcept {
     if (!target_path || !temporary_path || !target_path[0] || !temporary_path[0] ||
         std::strcmp(target_path, temporary_path) == 0 || seed == 0 ||
         world_level > 5u) return false;
@@ -868,9 +877,14 @@ bool write_saved_game_to_paths(std::uint32_t seed,
         !item_use_validation.restore(save.pending_item_use) ||
         !perk_validation.restore(save.perks))
         return false;
+    if (bridge) {
+        if (world_level>=5 || !BridgeCrossing::valid_position(*bridge)) return false;
+        save.magic=kBridgeSaveMagic;
+    }
     std::FILE* file = std::fopen(temporary_path, "wb");
     if (!file) return false;
     const bool written = std::fwrite(&save, sizeof(save), 1, file) == 1 &&
+                         (!bridge || std::fwrite(bridge,sizeof(*bridge),1,file)==1) &&
                          std::fflush(file) == 0;
     const bool closed = std::fclose(file) == 0;
     if (!written || !closed) {
@@ -888,8 +902,8 @@ bool write_saved_game_to_paths(std::uint32_t seed,
 }
 
 
-bool load_saved_game(SavedGame& save) noexcept {
-    return load_saved_game_from_path(save, kSavePath);
+bool load_saved_game(SavedGame& save, BridgePosition* bridge) noexcept {
+    return load_saved_game_from_path(save, kSavePath,bridge);
 }
 
 bool write_saved_game(std::uint32_t seed,
@@ -916,13 +930,13 @@ bool write_saved_game(std::uint32_t seed,
                       bool legacy_category46_events,
                       bool legacy_category7_events,
                       bool legacy_exact_crash_selection,
-                      bool legacy_active_location_events) noexcept {
+                      bool legacy_active_location_events,const BridgePosition* bridge) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     return write_saved_game_to_paths(seed, player, inventory, equipment,
                                     ground_loot, tents, kSavePath, kSaveTempPath,
                                     item_use, perks, stashes, source_time, source_rain, source_loot,
-                                    pending_craft, world_level,source_energy, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events);
+                                    pending_craft, world_level,source_energy, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events,bridge);
 }
 
 } // namespace minidayz::persistence

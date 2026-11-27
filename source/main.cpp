@@ -198,7 +198,8 @@ public:
     // player/seed and a later Continue incorrectly resumes the new run.
     bool restore_continue_from_disk() noexcept {
         std::unique_ptr<SavedGame> restored(new(std::nothrow) SavedGame{});
-        if(!restored || !load_saved_game(*restored)) {
+        minidayz::BridgePosition crossing{};
+        if(!restored || !load_saved_game(*restored,&crossing)) {
             has_saved_game_=false;
             menu_selection_=minidayz::menu::default_selection(false);
             return false;
@@ -247,7 +248,7 @@ public:
         inventory_page_=0;
         selected_inventory_slot_=-1;
         paused_=false;
-        bridge_crossing_.leave();
+        bridge_crossing_.resume(player_,crossing);
         return true;
     }
 
@@ -289,7 +290,7 @@ public:
                               bool legacy_category46_events = false,
                               bool legacy_category7_events = false,
                               bool legacy_exact_crash_selection = false,
-                              bool legacy_active_location_events = false) noexcept {
+                              bool legacy_active_location_events = false, const minidayz::BridgePosition* bridge=nullptr) noexcept {
         minidayz::persistence::PendingCraftSnapshot craft{};
         if (pending_craft_recipe_ < minidayz::items::kSourceCraftRecipeCount &&
             pending_craft_seconds_ > 0.0f) {
@@ -298,12 +299,14 @@ public:
         }
         return write_saved_game(seed, survivor, inventory_, equipment_, loot,
             tents, &item_use_runtime_, &perks_, stashes, &day_night_,
-            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events);
+            &rain_timer_, &loot_timer_, &craft, level, &source_energy_drink_, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events,bridge);
     }
 
     bool write_scene_save() noexcept {
+        const auto crossing=bridge_crossing_.position();
         if (!write_survivor_save(world_seed_, world_level_, player_.state(),
-                                 ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, legacy_start_order_, legacy_category3_events_, legacy_category5_events_, legacy_category46_events_, legacy_category7_events_, legacy_exact_crash_selection_, legacy_active_location_events_)) return false;
+                                 ground_loot_, tents_, &stashes_, legacy_world_generation_, legacy_split_roads_, legacy_crash_coordinates_, legacy_site_generation_, legacy_start_order_, legacy_category3_events_, legacy_category5_events_, legacy_category46_events_, legacy_category7_events_, legacy_exact_crash_selection_, legacy_active_location_events_,
+                                 bridge_crossing_.active()?&crossing:nullptr)) return false;
         // Persist changed original object frames separately, with the same
         // seed/level and a checksum. Do not report Save success unless
         // world state is recorded too.
@@ -733,10 +736,6 @@ public:
             }
             return;
         }
-        if (bridge_crossing_.active()) {
-            update_bridge_crossing(input,dt);
-            return;
-        }
         // START is a physical 3DS pause control. Keep survival, AI,
         // crafting timers and autosave time frozen while the menu is up.
         if (input.pressed & KEY_START) paused_ = !paused_;
@@ -765,6 +764,10 @@ public:
                     }
                 }
             }
+            return;
+        }
+        if (bridge_crossing_.active()) {
+            update_bridge_crossing(input,dt);
             return;
         }
         pause_save_feedback_ = false;
@@ -1703,7 +1706,7 @@ public:
             renderer.draw_text("PLEASE KEEP THE GAME OPEN", 41.0f, 206.0f, 0.28f);
             return;
         }
-        if (bridge_crossing_.active()) {
+        if (bridge_crossing_.active() && !paused_ && !menu_active_) {
             renderer.reset_camera();
             renderer.draw_solid_rect(0,0,320,240,C2D_Color32(22,32,35,255));
             renderer.draw_text("BRIDGE CROSSING",74,46,0.45f);
@@ -2683,7 +2686,7 @@ public:
             renderer.draw_text("GENERATING NEW SURVIVAL WORLD", 51.0f, 198.0f, 0.37f);
             return;
         }
-        if (bridge_crossing_.active()) {
+        if (bridge_crossing_.active() && !paused_ && !menu_active_) {
             render_bridge_crossing(renderer);
             return;
         }

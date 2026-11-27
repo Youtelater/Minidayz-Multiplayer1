@@ -1356,3 +1356,8 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - Checked the original Load_bridge_level entry and exit events before implementation. The 3DS platform now opens a playable crossing. At its far end A begins the existing transactional island change. B returns to the island. The native deck uses the existing bridge background tile and player sprite. Its dimensions, controls and return behavior are handheld adaptations. Bridge encounters and mid-crossing save restoration remain open.
 - Player regression tests exercise deck boundaries, exit eligibility, cancellation and re-entry. Bunker and Final Stand transitions, special equipment state and emulator verification remain open.
+
+### Step 3 — saving on the bridge
+
+- Checked the original Game_events save and reload branches for onBridge, including event 441502873929221. START now opens the existing pause menu during a native crossing. Save and Continue retain the bridge position and the island return position in the same atomic survivor file. Existing island saves load with the crossing inactive. Committing a destination island clears crossing state.
+- The native save round-trip suite passed locally, including crossing XY, island XY and replacing a crossing save with an ordinary island save. Emulator verification remains open.
