@@ -3750,10 +3750,11 @@ private:
         if (const auto* entrance=area==minidayz::Passage::bridge ? nullptr : near_bunker_entrance()) {
             for (const auto& cache:passage_equipment_caches_) {
                 if (cache.area!=area || (entrance->source_variable_0 & cache.bit)) continue;
-                renderer.draw_solid_rect(cache.x-9,cache.y-7,18,14,
-                    C2D_Color32(157,128,81,255),0.4f);
-                renderer.draw_solid_rect(cache.x-9,cache.y-1,18,2,
-                    C2D_Color32(223,191,111,255),0.41f);
+                // Root Map instance 2279: Sprite796, lootbox animation 0,
+                // unopened frame 0, 24x16, centered hotspot. The cache
+                // positions above remain a native passage adaptation.
+                (void)renderer.draw_source_sprite(796,0,0,cache.x,cache.y,
+                    1.0f,1.0f,0.4f);
             }
         }
         (void)renderer.draw_source_sprite(walker.source_skin(),walker.source_animation_index(),
