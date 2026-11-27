@@ -1361,3 +1361,8 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 
 - Checked the original Game_events save and reload branches for onBridge, including event 441502873929221. START now opens the existing pause menu during a native crossing. Save and Continue retain the bridge position and the island return position in the same atomic survivor file. Existing island saves load with the crossing inactive. Committing a destination island clears crossing state.
 - The native save round-trip suite passed locally, including crossing XY, island XY and replacing a crossing save with an ordinary island save. Emulator verification remains open.
+
+### Step 3 — underground traversal
+
+- Generated surface hatches now open an underground passage. The second hatch used on later islands opens a route with a second partition. Either passage supports returning to the hatch and Save and Continue. The handheld passages have their own geometry and collision.
+- Native movement and save round-trip tests passed locally. Underground encounters, bunker loot, the Final Stand objective, bridge encounters, special lootbox equipment state and emulator verification remain open.

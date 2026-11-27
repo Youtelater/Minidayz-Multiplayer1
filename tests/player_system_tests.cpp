@@ -43,6 +43,13 @@ static void test_bridge_crossing() {
     assert(survivor.state().x==island_position.x && survivor.state().y==island_position.y);
     bridge.enter(survivor);
     assert(!bridge.at_exit() && bridge.walker().state().y==BridgeCrossing::kCenterY);
+    bridge.enter(survivor,Passage::bunker);
+    for (int i=0;i<40;++i) bridge.move({1,0,false},0.1f,rules);
+    assert(bridge.walker().state().x<BridgeCrossing::partitions[0].x);
+    for (int i=0;i<3;++i) bridge.move({0,1,false},0.1f,rules);
+    for (int i=0;i<90;++i) bridge.move({1,0,false},0.1f,rules);
+    assert(bridge.at_exit());
+
 }
 
 int main() {

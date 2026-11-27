@@ -1065,6 +1065,13 @@ int main() {
     assert(load_saved_game_from_path(restored,kFile,&resumed));
     assert(resumed.x==crossing.x && resumed.y==crossing.y);
     assert(restored.player.x==player.x && restored.player.y==player.y);
+    crossing.area=minidayz::Passage::final_stand;
+    assert(write_saved_game_to_paths(42,player,inventory,equipment,ground,tents,kFile,kTemp,
+        nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,4,nullptr,
+        false,false,false,false,false,false,false,false,false,false,false,&crossing));
+    assert(load_saved_game_from_path(restored,kFile,&resumed));
+    assert(resumed.area==minidayz::Passage::final_stand && resumed.x==crossing.x);
+
     assert(write_saved_game_to_paths(42,player,inventory,equipment,ground,tents,kFile,kTemp));
     assert(load_saved_game_from_path(restored,kFile,&resumed));
     assert(!minidayz::BridgeCrossing::valid_position(resumed));

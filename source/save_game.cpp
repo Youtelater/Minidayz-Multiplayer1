@@ -374,6 +374,7 @@ bool consume_legacy_padding(std::FILE* file, std::size_t bytes) noexcept {
 
 // Same survivor record and generation version, followed by bridge-local XY.
 inline constexpr std::uint32_t kBridgeSaveMagic=0x4d444252u;
+inline constexpr std::uint32_t kUndergroundSaveMagic=0x4d445547u;
 bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition* bridge) noexcept {
     if (!path || path[0] == '\0') return false;
     std::FILE* file = std::fopen(path, "rb");
@@ -712,9 +713,17 @@ bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
     }
     BridgePosition local{};
-    if (candidate.magic==kBridgeSaveMagic) {
-        body_ok=body_ok && candidate.version>=22 && candidate.world_level<5 &&
-            std::fread(&local,sizeof(local),1,file)==1 && BridgeCrossing::valid_position(local);
+    if (candidate.magic==kBridgeSaveMagic || candidate.magic==kUndergroundSaveMagic) {
+        const bool underground=candidate.magic==kUndergroundSaveMagic;
+        body_ok=body_ok && candidate.version>=22 &&
+            std::fread(&local.x,sizeof(local.x),1,file)==1 &&
+            std::fread(&local.y,sizeof(local.y),1,file)==1;
+        if (body_ok && underground)
+            body_ok=std::fread(&local.area,sizeof(local.area),1,file)==1 &&
+                local.area!=Passage::bridge && candidate.world_level>0 &&
+                (local.area!=Passage::final_stand || candidate.world_level>=4);
+        if (!underground) body_ok=body_ok && candidate.world_level<5;
+        body_ok=body_ok && BridgeCrossing::valid_position(local);
         candidate.magic=kSaveMagic;
     }
     const bool no_extra_data = std::fgetc(file) == EOF;
@@ -878,13 +887,23 @@ bool write_saved_game_to_paths(std::uint32_t seed,
         !perk_validation.restore(save.perks))
         return false;
     if (bridge) {
-        if (world_level>=5 || !BridgeCrossing::valid_position(*bridge)) return false;
-        save.magic=kBridgeSaveMagic;
+        if (!BridgeCrossing::valid_position(*bridge)) return false;
+        if (bridge->area==Passage::bridge) {
+            if (world_level>=5) return false;
+            save.magic=kBridgeSaveMagic;
+        } else {
+            if (world_level==0 || (bridge->area==Passage::final_stand && world_level<4))
+                return false;
+            save.magic=kUndergroundSaveMagic;
+        }
     }
     std::FILE* file = std::fopen(temporary_path, "wb");
     if (!file) return false;
     const bool written = std::fwrite(&save, sizeof(save), 1, file) == 1 &&
-                         (!bridge || std::fwrite(bridge,sizeof(*bridge),1,file)==1) &&
+                         (!bridge || (std::fwrite(&bridge->x,sizeof(bridge->x),1,file)==1 &&
+                            std::fwrite(&bridge->y,sizeof(bridge->y),1,file)==1 &&
+                            (bridge->area==Passage::bridge ||
+                             std::fwrite(&bridge->area,sizeof(bridge->area),1,file)==1))) &&
                          std::fflush(file) == 0;
     const bool closed = std::fclose(file) == 0;
     if (!written || !closed) {

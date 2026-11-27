@@ -821,6 +821,13 @@ public:
                 map_open_=false;
             return;
         }
+        if ((input.pressed & KEY_A) && selected_inventory_slot_<0) {
+            if (const auto* entrance=near_bunker_entrance()) {
+                bridge_crossing_.enter(player_, entrance->source_variable_2==1
+                    ? minidayz::Passage::final_stand : minidayz::Passage::bunker);
+                return;
+            }
+        }
         // A bridge platform opens a crossing before committing island travel.
         if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0 &&
             near_bridge_platform()) {
@@ -1709,6 +1716,15 @@ public:
         if (bridge_crossing_.active() && !paused_ && !menu_active_) {
             renderer.reset_camera();
             renderer.draw_solid_rect(0,0,320,240,C2D_Color32(22,32,35,255));
+            const auto area=bridge_crossing_.area();
+            if (area!=minidayz::Passage::bridge) {
+                renderer.draw_text(area==minidayz::Passage::bunker ? "BUNKER" : "FINAL STAND",
+                    88,46,0.45f);
+                renderer.draw_text(bridge_crossing_.at_exit() ? "A: RETURN TO SURFACE" :
+                    "FOLLOW THE PASSAGE",58,105,0.34f);
+                renderer.draw_text("B: RETURN TO ENTRANCE",51,175,0.31f);
+                return;
+            }
             renderer.draw_text("BRIDGE CROSSING",74,46,0.45f);
             if (bridge_crossing_.at_exit()) {
                 renderer.draw_text(travel_failed_ ? "A: RETRY TRAVEL" :
@@ -2667,7 +2683,10 @@ public:
             renderer.draw_text(source_furniture_feedback_,
                                16.0f,144.0f,0.29f);
         }
-        if(near_bridge_platform()){
+        if (near_bunker_entrance()) {
+            renderer.draw_solid_rect(18,104,284,21,C2D_Color32(39,63,46,230));
+            renderer.draw_text("A: ENTER BUNKER",48,108,0.37f);
+        } else if(near_bridge_platform()){
             renderer.draw_solid_rect(18.0f, 104.0f, 284.0f, 21.0f,
                                      C2D_Color32(39, 63, 46, 230));
             renderer.draw_text("A: ENTER BRIDGE",
@@ -3493,6 +3512,19 @@ private:
         return minidayz::items::ui::inventory_at(x,y,page);
     }
 
+    const minidayz::WorldPlacement* near_bunker_entrance() const noexcept {
+        if (!world_ready_ || world_level_==0) return nullptr;
+        const auto& player=player_.state();
+        for (std::size_t i=0;i<world_.placement_count();++i) {
+            const auto* entrance=world_.placement(i);
+            if (!entrance || entrance->object!=785 ||
+                entrance->source_uid!=644090747484030ULL) continue;
+            if (std::fabs(player.x-entrance->x)<=76 &&
+                std::fabs(player.y-entrance->y)<=54) return entrance;
+        }
+        return nullptr;
+    }
+
     bool near_bridge_platform() const noexcept {
         if (!world_ready_ || world_level_ >= 5) return false;
         const auto& player = player_.state();
@@ -3535,8 +3567,12 @@ private:
         if (rules.walk_speed<=0.0f)
             rules.walk_speed=minidayz::stage1::source_player_altmove_max_speed({});
         bridge_crossing_.move(movement,dt,rules);
-        if ((input.pressed & KEY_A) && bridge_crossing_.at_exit())
-            start_next_source_map();
+        if ((input.pressed & KEY_A) && bridge_crossing_.at_exit()) {
+            if (bridge_crossing_.area()==minidayz::Passage::bridge)
+                start_next_source_map();
+            else
+                bridge_crossing_.leave();
+        }
     }
 
     void render_bridge_crossing(minidayz::Renderer& renderer) noexcept {
@@ -3549,7 +3585,8 @@ private:
         constexpr float deck_top=BridgeCrossing::kCenterY-BridgeCrossing::kHalfWidth;
         constexpr float deck_height=2.0f*BridgeCrossing::kHalfWidth;
         renderer.reset_camera();
-        renderer.draw_solid_rect(0,0,view_width,240,C2D_Color32(35,63,75,255),0.01f);
+        renderer.draw_solid_rect(0,0,view_width,240,bridge_crossing_.area()==minidayz::Passage::bridge ?
+            C2D_Color32(35,63,75,255) : C2D_Color32(23,24,22,255),0.01f);
         renderer.set_camera(camera_x,0);
         renderer.draw_solid_rect(0,deck_top,BridgeCrossing::kLength,deck_height,
             C2D_Color32(63,67,65,255),0.10f);
@@ -3557,9 +3594,18 @@ private:
             C2D_Color32(118,132,125,255),0.15f);
         renderer.draw_solid_rect(0,deck_top+deck_height-5,BridgeCrossing::kLength,5,
             C2D_Color32(118,132,125,255),0.15f);
+        const auto area=bridge_crossing_.area();
+        if (area!=minidayz::Passage::bridge) {
+            for (std::size_t i=0;i<2;++i) {
+                if (!BridgeCrossing::has_partition(area,i)) continue;
+                const auto& partition=BridgeCrossing::partitions[i];
+                renderer.draw_solid_rect(partition.x,partition.top,24,
+                    partition.bottom-partition.top,C2D_Color32(109,106,92,255),0.23f);
+            }
+        }
         constexpr int deck_tile_width=20;
         for (int x=0;x<BridgeCrossing::kLength;x+=deck_tile_width) {
-            if (x+deck_tile_width<=camera_x || x>=camera_x+view_width) continue;
+            if (area!=minidayz::Passage::bridge || x+deck_tile_width<=camera_x || x>=camera_x+view_width) continue;
             (void)renderer.draw_original_image("bridge_bg.png",static_cast<float>(x),
                 deck_top,deck_tile_width,deck_height,0.16f);
         }
