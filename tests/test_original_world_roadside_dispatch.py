@@ -97,6 +97,29 @@ expected={
 assert set(mapping)==expected,(mapping,expected)
 assert len(mapping)==6,len(mapping)
 
+# Independent source proof of the campaign service counters. 41 is SET,
+# not ADD; the split-map assignments do not accumulate.
+def writes(node,name):
+    return [literal(a[5][1]) for a in node[6]
+            if a[:2]==[-1,41] and a[5][0]==[11,name]]
+for uid,expected_count in ((159730919035798,1),(2939943328018906,2),
+                           (6778445369859927,3),(599862058562986,4),
+                           (298986601539246,4)):
+    node=get(uid)
+    assert writes(node,"gas_stations")==[expected_count]
+    assert writes(node,"Roadside_cafes")==[expected_count]
+split=[n for n in walk([raw]) if n[4]==996290260027148]
+assert len(split)==2
+assert all(writes(n,"gas_stations")==[4] and
+           writes(n,"Roadside_cafes")==[4] for n in split)
+assert writes(get(159730919035798),"lite_shop")==[0]
+assert writes(get(2939943328018906),"lite_shop")==[1]
+assert writes(get(298986601539246),"lite_shop")==[2]
+# The root sheet-global lite_shop declaration has default 1; levels
+# 2/3 and the >4 branches do not assign it, so campaign travel retains it.
+assert not writes(get(6778445369859927),"lite_shop")
+assert not writes(get(599862058562986),"lite_shop")
+assert all(not writes(n,"lite_shop") for n in split)
 native=(ROOT/"source/world.cpp").read_text(encoding="utf-8")
 assert "place_gas_station_count(" not in native
 assert "replace_source_road_markers(map_markers_,rng_" in native

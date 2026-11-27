@@ -203,7 +203,9 @@ struct WorldGenerationProfile {
     std::uint8_t second_half_chaoshi{};
 };
 
-bool source_world_profile(std::uint8_t level, WorldGenerationProfile& profile) noexcept;
+// exact_service_quotas selects the root campaign's service counters; false retains v33-and-earlier world identity.
+bool source_world_profile(std::uint8_t level, WorldGenerationProfile& profile,
+                          bool exact_service_quotas = false) noexcept;
 
 // Source-backed dispatch descriptors extracted from the original generate_location function.
 inline constexpr std::size_t source_location_template_count() noexcept {
@@ -240,7 +242,8 @@ public:
                                  bool source_category46_events = false,
                                  bool source_category7_events = false,
                                  bool source_exact_crash_selection = false,
-                                 bool source_active_location_events = false);
+                                 bool source_active_location_events = false,
+                                 bool source_exact_service_quotas = false);
     bool advance_source_generation();
     std::uint8_t generation_phase() const noexcept { return generation_phase_; }
     bool generation_complete() const noexcept { return generation_phase_ == 6; }
@@ -397,6 +400,7 @@ private:
     bool source_category7_events_{};
     bool source_exact_crash_selection_{};
     bool source_active_location_events_{};
+    bool source_exact_service_quotas_{};
     bool source_start_ready_{};
     WorldPoint source_start_position_{};
     // Root Array518 is at most 16x33; retain dormant native geometry and
@@ -444,7 +448,8 @@ public:
                bool source_category46_events = false,
                bool source_category7_events = false,
                bool source_exact_crash_selection = false,
-               bool source_active_location_events = false) noexcept;
+               bool source_active_location_events = false,
+               bool source_exact_service_quotas = false) noexcept;
     bool advance() noexcept;
     WorldSystem* destination() const noexcept { return destination_.get(); }
     void cancel() noexcept { destination_.reset(); }

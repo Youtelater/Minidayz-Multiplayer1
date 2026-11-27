@@ -1,3 +1,10 @@
+## Step 1 reopened — emulator report of missing hospitals and gas stations (2026-11-27)
+
+- User confirmed Step 2 in emulator; Step 1 reopened because hospitals, gas stations and potentially other buildings were not observed. Step 3 remains separate.
+- Root data.deobfuscated.js event 6938246402369311 assigns hospital Array518 code 11; generate_array_tomap 1694439930581699 uses road marker types 12/13 and replaces them with 30/31 (gas), 50/51 (cafe) and 108/109 (lite shop). Root location branch 3463332379885827 contains category7/21 -> primary Sprite303; gas branches 731842808406228 and 174261871477223 contain category7/36 -> Sprite777, /37 -> Sprite780 and /7 -> Sprite432. This is actual source evidence, not a claim that the emulator has displayed them.
+- Corrected the root roadside quotas for new campaign maps: split assignments 996290260027148 use SET (41) to 4, not ADD; both halves repeat that final count rather than 8 each. The global lite_shop is assigned 0, 1 and 2 at levels 0, 1 and 4; normal campaign levels 2/3 retain 1 and level 5 retains 2. v34 saves use corrected generation; v33 and older retain their original marker/RNG identities; new travel uses v34. No assets or synthetic POIs added.
+- Added independent root quota audit, six-level native end-to-end POI building/activation regression for hospital, both gas orientations, fire station, cafe, shops and market, and v33/v34 save compatibility checks. CI/native and 3DS build results pending, and emulator verification of the actual buildings remains OPEN. Do not mark Step 1 complete.
+
 ## Part 1 — building generator maintenance
 
 - [x] Removed the roadside shelter feature added in `e3bc5f6`. An existing save from that revision can still contain its saved ground items.

@@ -469,7 +469,8 @@ bool WorldGrid::has_empty_3x3(int x, int y) const noexcept {
     return true;
 }
 
-bool source_world_profile(std::uint8_t level, WorldGenerationProfile& p) noexcept {
+bool source_world_profile(std::uint8_t level, WorldGenerationProfile& p,
+                          bool exact_service_quotas) noexcept {
     p = {};
     p.map_size_x = 16;
     p.map_size_y = 16;
@@ -486,11 +487,11 @@ bool source_world_profile(std::uint8_t level, WorldGenerationProfile& p) noexcep
     case 2:
         p.villages=6; p.militaries=4; p.cities=10; p.hospitals=3;
         p.firestations=3; p.chaoshi=1; p.gas_stations=3;
-        p.roadside_cafes=3; return true;
+        p.roadside_cafes=3; p.lite_shop=exact_service_quotas?1:0; return true;
     case 3:
         p.villages=3; p.militaries=5; p.cities=11; p.hospitals=4;
         p.firestations=2; p.chaoshi=1; p.gas_stations=4;
-        p.roadside_cafes=4; return true;
+        p.roadside_cafes=4; p.lite_shop=exact_service_quotas?1:0; return true;
     case 4:
         p.grid_height=33; p.second_half_start_y=18;
         p.villages=4; p.militaries=8; p.cities=6; p.hospitals=4;
@@ -498,7 +499,13 @@ bool source_world_profile(std::uint8_t level, WorldGenerationProfile& p) noexcep
         p.second_half_villages=4; p.second_half_militaries=6;
         p.second_half_cities=3; p.second_half_hospitals=2;
         p.second_half_firestations=2; p.second_half_chaoshi=2;
-        p.gas_stations=8; p.roadside_cafes=8; return true;
+        // Root 996290260027148 SETS each counter to 4; it does not add 4.
+        // generate_array_tomap repeats the final value independently in both halves.
+        // lite_shop is a sheet-global counter (713197208292162): level 4 sets 2,
+        // and level 5 retains that value along normal campaign travel.
+        p.gas_stations=exact_service_quotas?4:8;
+        p.roadside_cafes=exact_service_quotas?4:8;
+        p.lite_shop=exact_service_quotas?2:0; return true;
     default:
         if (level != 5) return false;
         // The source's CurrentLevel > 4 and >= 4 branches combine a first
@@ -509,7 +516,13 @@ bool source_world_profile(std::uint8_t level, WorldGenerationProfile& p) noexcep
         p.second_half_villages=4; p.second_half_militaries=6;
         p.second_half_cities=3; p.second_half_hospitals=2;
         p.second_half_firestations=2; p.second_half_chaoshi=2;
-        p.gas_stations=8; p.roadside_cafes=8; return true;
+        // Root 996290260027148 SETS each counter to 4; it does not add 4.
+        // generate_array_tomap repeats the final value independently in both halves.
+        // lite_shop is a sheet-global counter (713197208292162): level 4 sets 2,
+        // and level 5 retains that value along normal campaign travel.
+        p.gas_stations=exact_service_quotas?4:8;
+        p.roadside_cafes=exact_service_quotas?4:8;
+        p.lite_shop=exact_service_quotas?2:0; return true;
     }
 }
 
@@ -546,6 +559,7 @@ bool WorldSystem::initialize(std::uint32_t seed, WorldBounds bounds) noexcept {
     source_category7_events_ = false;
     source_exact_crash_selection_ = false;
     source_active_location_events_ = false;
+    source_exact_service_quotas_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -565,7 +579,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
                                           bool source_start_events, bool source_category3_events,
                                           bool source_category5_events, bool source_category46_events,
                                           bool source_category7_events, bool source_exact_crash_selection,
-                                          bool source_active_location_events) {
+                                          bool source_active_location_events, bool source_exact_service_quotas) {
     if (!initialize(seed) || !load_source_layout(name)) {
         reset();
         return false;
@@ -581,6 +595,7 @@ bool WorldSystem::begin_source_generation(std::uint32_t seed,
     source_category7_events_ = source_category7_events && name == "Map";
     source_exact_crash_selection_ = source_exact_crash_selection && name == "Map";
     source_active_location_events_ = source_active_location_events && name == "Map";
+    source_exact_service_quotas_ = source_exact_service_quotas && name == "Map";
     generation_level_ = level;
     generation_perk_dao_ = perk_dao;
     generation_is_map_ = name == "Map";
@@ -729,7 +744,7 @@ bool WorldSystem::build_map_markers(std::uint8_t level, std::uint32_t seed) {
     map_markers_.reserve(static_cast<std::size_t>(grid_.width()) * grid_.height());
     (void)seed; // The source uses one global random stream across generation stages.
     WorldGenerationProfile profile{};
-    if(!source_world_profile(level,profile))return false;
+    if(!source_world_profile(level,profile,source_exact_service_quotas_))return false;
     for (std::uint8_t y = 0; y < grid_.height(); ++y) {
         for (std::uint8_t x = 0; x < grid_.width(); ++x) {
             const std::uint16_t source_code = grid_.at(x, y);
@@ -1823,6 +1838,7 @@ void WorldSystem::reset() noexcept {
     source_category7_events_ = false;
     source_exact_crash_selection_ = false;
     source_active_location_events_ = false;
+    source_exact_service_quotas_ = false;
     source_start_ready_ = false;
     source_start_position_ = {};
     clear_source_location_reload();
@@ -2911,12 +2927,12 @@ bool WorldTravel::begin(std::uint32_t seed, std::uint8_t level,
                         std::uint8_t perk_dao, bool source_start_events, bool source_category3_events,
                         bool source_category5_events, bool source_category46_events,
                         bool source_category7_events, bool source_exact_crash_selection,
-                        bool source_active_location_events) noexcept {
+                        bool source_active_location_events, bool source_exact_service_quotas) noexcept {
     cancel();
     try {
         auto candidate = std::make_unique<WorldSystem>();
         if (!candidate->begin_source_generation(seed, "Map", level, perk_dao,
-                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events, source_category46_events, source_category7_events, source_exact_crash_selection, source_active_location_events)) return false;
+                                               false, false, false, false, source_start_events, source_category3_events, source_category5_events, source_category46_events, source_category7_events, source_exact_crash_selection, source_active_location_events, source_exact_service_quotas)) return false;
         destination_ = std::move(candidate);
         return true;
     } catch (const std::bad_alloc&) {

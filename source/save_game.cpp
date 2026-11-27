@@ -708,7 +708,7 @@ bool load_saved_game_from_path(SavedGame& save, const char* path, BridgePosition
             candidate.quick_pistol=old.quick_pistol;
             candidate.source_energy_seconds=0.0f;
         }
-    } else if (header_ok && (candidate.version == 22u || candidate.version == 23u || candidate.version == 24u || candidate.version == 25u || candidate.version == 26u || candidate.version == 27u || candidate.version == 28u || candidate.version == 29u || candidate.version == 30u || candidate.version == 31u || candidate.version == 32u || candidate.version == kSaveVersion)) {
+    } else if (header_ok && (candidate.version == 22u || candidate.version == 23u || candidate.version == 24u || candidate.version == 25u || candidate.version == 26u || candidate.version == 27u || candidate.version == 28u || candidate.version == 29u || candidate.version == 30u || candidate.version == 31u || candidate.version == 32u || candidate.version == 33u || candidate.version == kSaveVersion)) {
         body_ok = std::fseek(file, 0, SEEK_SET) == 0 &&
                   std::fread(&candidate, sizeof(candidate), 1, file) == 1;
     }
@@ -820,14 +820,15 @@ bool write_saved_game_to_paths(std::uint32_t seed,
                       bool legacy_category46_events,
                       bool legacy_category7_events,
                       bool legacy_exact_crash_selection,
-                      bool legacy_active_location_events,const BridgePosition* bridge) noexcept {
+                      bool legacy_active_location_events,const BridgePosition* bridge,
+                      bool legacy_service_quotas) noexcept {
     if (!target_path || !temporary_path || !target_path[0] || !temporary_path[0] ||
         std::strcmp(target_path, temporary_path) == 0 || seed == 0 ||
         world_level > 5u) return false;
     auto save_buffer=std::unique_ptr<SavedGame>(new(std::nothrow) SavedGame{});
     if(!save_buffer)return false;
     auto& save=*save_buffer;
-    save.version = legacy_world_generation ? 22u : (legacy_split_roads ? 23u : (legacy_crash_coordinates ? 24u : (legacy_site_generation ? 25u : (legacy_start_order ? 26u : (legacy_category3_events ? 27u : (legacy_category5_events ? 28u : (legacy_category46_events ? 29u : (legacy_category7_events ? 30u : (legacy_exact_crash_selection ? 31u : (legacy_active_location_events ? 32u : kSaveVersion))))))))));
+    save.version = legacy_world_generation ? 22u : (legacy_split_roads ? 23u : (legacy_crash_coordinates ? 24u : (legacy_site_generation ? 25u : (legacy_start_order ? 26u : (legacy_category3_events ? 27u : (legacy_category5_events ? 28u : (legacy_category46_events ? 29u : (legacy_category7_events ? 30u : (legacy_exact_crash_selection ? 31u : (legacy_active_location_events ? 32u : (legacy_service_quotas ? 33u : kSaveVersion)))))))))));
     save.seed = seed;
     save.world_level = world_level;
     save.source_energy_seconds=source_energy?source_energy->remaining():0.0f;
@@ -949,13 +950,14 @@ bool write_saved_game(std::uint32_t seed,
                       bool legacy_category46_events,
                       bool legacy_category7_events,
                       bool legacy_exact_crash_selection,
-                      bool legacy_active_location_events,const BridgePosition* bridge) noexcept {
+                      bool legacy_active_location_events,const BridgePosition* bridge,
+                      bool legacy_service_quotas) noexcept {
     (void)::mkdir("sdmc:/3ds", 0777);
     (void)::mkdir("sdmc:/3ds/Minidayz", 0777);
     return write_saved_game_to_paths(seed, player, inventory, equipment,
                                     ground_loot, tents, kSavePath, kSaveTempPath,
                                     item_use, perks, stashes, source_time, source_rain, source_loot,
-                                    pending_craft, world_level,source_energy, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events,bridge);
+                                    pending_craft, world_level,source_energy, legacy_world_generation, legacy_split_roads, legacy_crash_coordinates, legacy_site_generation, legacy_start_order, legacy_category3_events, legacy_category5_events, legacy_category46_events, legacy_category7_events, legacy_exact_crash_selection, legacy_active_location_events,bridge,legacy_service_quotas);
 }
 
 } // namespace minidayz::persistence

@@ -4041,7 +4041,107 @@ static void test_original_tree_overlap_or_guards(){
     assert(!world.source_placement_active(tree));
 }
 
+
+static void test_current_campaign_poi_buildings(){
+    using namespace minidayz;
+    // Root Array518 -> Sprite514 -> Array525 -> category7 primary Spawn.
+    // Verify actual resident building instances, not only grid quotas.
+    constexpr unsigned hospitals[]={1,2,3,4,6,4};
+    constexpr unsigned service[]={1,2,3,4,4,4};
+    constexpr unsigned shops[]={0,1,1,1,2,2};
+    for(std::uint8_t level=0;level<6;++level){
+        WorldGenerationProfile profile{},legacy{};
+        assert(source_world_profile(level,profile,true));
+        assert(source_world_profile(level,legacy,false));
+        assert(profile.gas_stations==service[level] && profile.roadside_cafes==service[level]);
+        assert(profile.lite_shop==shops[level]);
+        if(level>=4)assert(legacy.gas_stations==8 && legacy.roadside_cafes==8);
+        auto world=std::make_unique<WorldSystem>();
+        assert(world->begin_source_generation(0x526f6164u+level*173u,"Map",level,0,
+            false,false,false,false,true,true,true,true,true,true,true,true));
+        while(!world->generation_complete())assert(world->advance_source_generation());
+        unsigned hospital_markers=0;
+        unsigned gas[2]={},cafe[2]={},shop[2]={},road[2]={};
+        std::vector<std::vector<const WorldPlacement*>> by_marker(world->map_marker_count());
+        for(std::size_t i=0;i<world->placement_count();++i){
+            const auto* p=world->placement(i);
+            if(p->source_reload_marker && p->source_reload_marker<=by_marker.size())
+                by_marker[p->source_reload_marker-1].push_back(p);
+        }
+        for(std::size_t i=0;i<world->map_marker_count();++i){
+            const auto* m=world->map_marker(i);
+            if(m->cell_y==16)continue;
+            const unsigned half=m->cell_y>=17?1:0;
+            if(m->source_code==12 || m->source_code==13)++road[half];
+            auto building=[&](std::uint16_t object,std::uint64_t event){
+                for(const auto* p:by_marker[i])
+                    if(p->object==object && p->source_uid==event &&
+                       p->width>0 && p->height>0 &&
+                       !world_source::source_world_logic_marker_not_art(p->object))
+                        return true;
+                return false;
+            };
+            switch(m->marker_type){
+            case 11:
+                ++hospital_markers;
+                assert(building(303,8010825066154978ULL)); // hospital, category7/21
+                break;
+            case 30:case 31:
+                ++gas[half];
+                assert(building(777,248797217752765ULL)); // category7/36
+                assert(building(780,115435729712179ULL)); // category7/37
+                assert(building(432,2880138280899333ULL)); // category7/7
+                break;
+            case 15:
+                assert(building(309,4387494289118776ULL)); // fire station
+                break;
+            case 50:case 51:
+                if(m->source_code!=12 && m->source_code!=13)break;
+                ++cafe[half];
+                assert(building(958,583798671780306ULL));
+                break;
+            case 108:case 109:
+                ++shop[half];
+                assert(building(310,6748802535729681ULL));
+                assert(building(1254,562858657331253ULL));
+                break;
+            case 103:
+                assert(building(1252,333407439145105ULL));
+                assert(building(1254,562858657331253ULL));
+                break;
+            default:break;
+            }
+        }
+        assert(hospital_markers==hospitals[level]);
+        for(unsigned half=0;half<(level>=4?2u:1u);++half){
+            // The original PickRandom does nothing when the eligible
+            // road selection is exhausted; it never invents a new road.
+            unsigned remaining=road[half];
+            const auto expected_gas=std::min(remaining,service[level]);
+            remaining-=expected_gas;
+            const auto expected_cafe=std::min(remaining,service[level]);
+            remaining-=expected_cafe;
+            const auto expected_shop=std::min(remaining,shops[level]);
+            assert(gas[half]==expected_gas && cafe[half]==expected_cafe && shop[half]==expected_shop);
+        }
+        // Walk into the hospital and gas-station cells through the same
+        // location selection used by the top-screen world renderer.
+        for(std::size_t i=0;i<world->map_marker_count();++i){
+            const auto* m=world->map_marker(i);
+            if(m->marker_type!=11 && m->marker_type!=30 && m->marker_type!=31)continue;
+            const auto h=world_source::mapgen_hotspot(m->cell_x,m->cell_y);
+            assert(world->start_source_location_reload({h.x+500.0f,h.y+500.0f}));
+            assert(world->source_location_active(i));
+            for(const auto* placement:by_marker[i]){
+                if(placement->object==303 || placement->object==777 || placement->object==780)
+                    assert(world->source_placement_active(*placement));
+            }
+        }
+    }
+}
+
 int main() {
+    test_current_campaign_poi_buildings();
     test_original_tree_overlap_or_guards();
     test_source_first_visit_creation();
     test_source_crash_rejection_order();
