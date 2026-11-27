@@ -2545,6 +2545,19 @@ bool WorldSystem::set_source_pump_water(
     return true;
 }
 
+bool WorldSystem::set_source_tree_health(
+    std::size_t index,std::uint64_t health) noexcept {
+    if(!initialized_ || index>=placements_.size() || health>3)return false;
+    auto& p=placements_[index];
+    if(!world_source::source_tree_impact_point(p.object) ||
+       !source_placement_active(p))return false;
+    if((p.source_frame==0 && health==0) ||
+       (p.source_frame==1 && health!=0) ||
+       p.source_frame>1)return false;
+    p.source_variable_0=health;
+    return true;
+}
+
 bool WorldSystem::open_source_bunker_lootbox(std::size_t index) noexcept {
     if(!generation_complete() || index>=placements_.size())return false;
     const auto box=placements_[index];
