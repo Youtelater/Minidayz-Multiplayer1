@@ -498,6 +498,8 @@ inline constexpr SourceBoxDirectQuantityDrop kSourceBoxMixedDrops[]={
     {1011,0,28,1,0,0,304447631010900,0},
     {1011,0,63,1,0,0,412712429424378,0},
     {1011,35,18,3,0,0,692546564637758,720380020382423},
+    // Original category 29: Fire Axe, Map template UID672; var6=100, var5=-1 (unbound).
+    {29,94,204,1,-10,0,307135705949094,845826150488372},
     {37,0,181,1,5,5,474645204187080,0},
     {37,137,100,25,-10,0,431077539699793,560244952914407},
     {38,0,171,1,5,5,818968242261816,0},
@@ -540,6 +542,9 @@ inline constexpr bool source_box_has_percentage_value(std::uint16_t object) noex
 }
 inline GroundItem source_box_mixed_item(const SourceBoxDirectQuantityDrop& row) noexcept {
     const auto id=row.object?row.item:source_initial_item_after_default_unlocks(row.item);
+    // Fire Axe is a melee item, not a firearm. Its direct Create assigns
+    // condition (var6) and unbound ground state (var5), no magazine.
+    if(row.category==29 && row.object==94)return {id,1,100,0};
     if(source_box_has_percentage_value(row.object)){
         const auto value=static_cast<std::uint8_t>(row.object==443?0:row.count);
         return {id,1,value,0};
