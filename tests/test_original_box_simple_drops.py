@@ -146,3 +146,32 @@ for b in child[7]:
 assert expected==[tuple(map(int,m)) for m in re.findall(r"if\(!drop\((\d+),(-?\d+),(-?\d+)\)\)return false; // (\d+)",block)]
 assert len(expected)==6
 print("Original category 999 drop leaves:",len(expected))
+
+# Ordered mixed Spawn_drop and direct Create + variable-1 branches.
+mixed=[]
+mixed_categories={18,19,20,37,38,39,40,41,42,111,112,116,1011}
+for child in ev[7]:
+    if len(child[5])!=1 or child[5][0][:2]!=[796,71]:
+        continue
+    cat=child[5][0][9][2][1][1]
+    if cat not in mixed_categories:
+        continue
+    assert not (len(child)>7 and child[7])
+    acts=iter(child[6])
+    for a in acts:
+        if a[:2]==[189,69]:
+            assert a[5][0]==[1,[2,"Spawn_drop"]]
+            args=[x[1] for x in a[5][1][1:]]
+            assert args[0][0]==0 and (len(args)==3 or args[3:]==[[0,-1]]*3)
+            mixed.append([cat,0,args[0][1],1,offset(args[1],65),offset(args[2],66),a[3],0])
+        else:
+            obj=a[5][0][1]
+            assert a[:2]==[-1,94] and a[5][1]==[5,[2,"items_on_ground"]]
+            b=next(acts)
+            assert b[:2]==[obj,88] and b[5][0]==[10,1] and b[5][1][1][0]==0
+            mixed.append([cat,obj,objects[obj],b[5][1][1][1],
+                          offset(a[5][2][1],65),offset(a[5][3][1],66),a[3],b[3]])
+s=native.split("kSourceBoxMixedDrops[]={",1)[1].split("};",1)[0]
+assert mixed==[list(map(int,re.findall(r"-?\d+",row))) for row in re.findall(r"\{([^{}]+)\}",s)]
+assert len(mixed)==35 and {row[0] for row in mixed}==mixed_categories
+print("Original mixed/direct box drop actions:",len(mixed))
