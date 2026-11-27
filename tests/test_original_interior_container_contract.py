@@ -53,6 +53,12 @@ scene=(ROOT/"source/main.cpp").read_text(encoding="utf-8")
 assert "bool WorldSystem::open_source_bunker_lootbox(" in world
 assert "source_bunker_lootbox_closed(box)" in world
 assert "placements_[index].source_variable_1=1;" in world
-assert "world_.open_source_bunker_lootbox(idx)" in scene
+# Scene must use the transactional source path, never bypass its drops.
+transaction=(ROOT/"include/minidayz/source_box_simple_drops.hpp").read_text(encoding="utf-8")
+assert re.search(r"source_open_simple_box\s*\(\s*world_,idx,player_pos,ground_loot_,world_\.source_random\(\)\)",scene)
+assert "world_.open_source_bunker_lootbox(idx)" not in scene
+assert "if(!world.open_source_bunker_lootbox(index))return false;" in transaction
+assert transaction.index("if(nested && !source_box_default_nested_drops") < transaction.index("if(!world.open_source_bunker_lootbox(index))return false;")
+assert transaction.index("if(!world.open_source_bunker_lootbox(index))return false;") < transaction.index("ground=*next;")
 assert "placed.source_variable_1=" in world and "p.source_variable_1=" in world
 print("PASS: original bunker container frame1 and boolean1 are latched together and replayed from saved frame")
