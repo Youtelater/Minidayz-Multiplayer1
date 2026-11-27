@@ -94,3 +94,55 @@ for child in ev[7]:
     for r,retry in retries:
         assert re.search(rf"if\(randy=={r}\) \{{[^\n]*\n\s*constexpr int retry\[\]=\{{{retry}\}};",block)
     print("Original normal bunker box",cat,"drop leaves:",len(expected))
+
+# Direct Create / variable-1 quantity assignments retain both action UIDs.
+spawn=next(e for e in walk(next(s[1] for s in p[6] if s[0]=="Game_events"))
+           if e[4]==5418835019314848)
+objects={}
+for b in walk(spawn[7]):
+    if len(b[5])!=1:
+        continue
+    q=b[5][0]
+    if q[:2]!=[189,112] or q[9][:2]!=[[0,[0,0]],[8,0]] or q[9][2][1][0]!=0:
+        continue
+    for a in b[6]:
+        if a[:2]==[-1,94]:
+            objects[a[5][0][1]]=q[9][2][1][1]
+direct=[]
+for child in ev[7]:
+    if len(child[5])!=1 or child[5][0][:2]!=[796,71]:
+        continue
+    cat=child[5][0][9][2][1][1]
+    if not 5<=cat<=13:
+        continue
+    assert len(child[6])%2==0
+    for a,b in zip(child[6][::2],child[6][1::2]):
+        obj=a[5][0][1]
+        assert a[:2]==[-1,94] and a[5][1]==[5,[2,"items_on_ground"]]
+        assert b[:2]==[obj,88] and b[5][0]==[10,1]
+        direct.append([cat,obj,objects[obj],b[5][1][1][1],
+                       offset(a[5][2][1],65),offset(a[5][3][1],66),a[3],b[3]])
+s=native.split("kSourceBoxDirectQuantityDrops[]={",1)[1].split("};",1)[0]
+assert direct==[list(map(int,re.findall(r"-?\d+",row))) for row in re.findall(r"\{([^{}]+)\}",s)]
+assert len(direct)==19
+print("Original direct-quantity box drops:",len(direct))
+
+# Category 999 uses three source-ordered outcomes and six literal drop leaves.
+child=next(c for c in ev[7] if len(c[5])==1 and c[5][0][:2]==[796,71]
+           and c[5][0][9][2][1][1]==999)
+block=nested.split("case 999: {",1)[1].split("        return false;\n    }",1)[0]
+pool=child[6][0][5][1][1]
+assert pool[:2]==[19,82]
+assert "constexpr int pool[]={"+",".join(str(x[1]) for x in pool[2])+"};" in block
+expected=[]
+for b in child[7]:
+    r=b[5][0][9][2][1][1]
+    assert f"if(randy=={r}) {{ // {b[4]}" in block
+    for a in b[6]:
+        assert a[:2]==[189,69] and a[5][0]==[1,[2,"Spawn_drop"]]
+        args=[x[1] for x in a[5][1][1:]]
+        assert args[0][0]==0 and args[3:]==[[0,-1]]*3
+        expected.append((args[0][1],offset(args[1],65),offset(args[2],66),a[3]))
+assert expected==[tuple(map(int,m)) for m in re.findall(r"if\(!drop\((\d+),(-?\d+),(-?\d+)\)\)return false; // (\d+)",block)]
+assert len(expected)==6
+print("Original category 999 drop leaves:",len(expected))
