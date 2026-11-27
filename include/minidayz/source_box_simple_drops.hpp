@@ -529,14 +529,31 @@ inline bool source_box_has_mixed_drops(std::uint64_t category) noexcept {
     for(const auto& row:kSourceBoxMixedDrops)if(row.category==category)return true;
     return false;
 }
+// These four original Map templates have exactly four variables: name,
+// value, item ID and the final flag. They have no variable 6. Reuse the
+// native six-byte item's state byte for their variable 1, rather than
+// changing the physical stack count or the old save ABI.
+// t443 UID823 starts at 0; t840 UID2335, t814 UID2311 and t704 UID2166
+// are explicitly set to 100 by their box events.
+inline constexpr bool source_box_has_percentage_value(std::uint16_t object) noexcept {
+    return object==443 || object==840 || object==814 || object==704;
+}
+inline GroundItem source_box_mixed_item(const SourceBoxDirectQuantityDrop& row) noexcept {
+    const auto id=row.object?row.item:source_initial_item_after_default_unlocks(row.item);
+    if(source_box_has_percentage_value(row.object)){
+        const auto value=static_cast<std::uint8_t>(row.object==443?0:row.count);
+        return {id,1,value,0};
+    }
+    return {id,row.count,kUseSourceItemCondition,0};
+}
 inline bool source_box_mixed_drops(std::uint64_t category,
     GroundLootSystem& ground,float x,float y) noexcept {
     bool found=false;
     for(const auto& row:kSourceBoxMixedDrops){
         if(row.category!=category)continue;
         found=true;
-        const auto id=row.object?row.item:source_initial_item_after_default_unlocks(row.item);
-        if(!id || !source_item_exists(id) || !ground.add({id,row.count,kUseSourceItemCondition},x+row.dx,y+row.dy))return false;
+        const auto item=source_box_mixed_item(row);
+        if(!item.item_id || !source_item_exists(item.item_id) || !ground.add(item,x+row.dx,y+row.dy))return false;
     }
     return found;
 }
