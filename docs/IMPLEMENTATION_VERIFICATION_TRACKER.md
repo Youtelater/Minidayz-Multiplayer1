@@ -5,6 +5,8 @@
 - Corrected the root roadside quotas for new campaign maps: split assignments 996290260027148 use SET (41) to 4, not ADD; both halves repeat that final count rather than 8 each. The global lite_shop is assigned 0, 1 and 2 at levels 0, 1 and 4; normal campaign levels 2/3 retain 1 and level 5 retains 2. v34 saves use corrected generation; v33 and older retain their original marker/RNG identities; new travel uses v34. No assets or synthetic POIs added.
 - Added independent root quota audit, six-level native end-to-end POI building/activation regression for hospital, both gas orientations, fire station, cafe, shops and market, and v33/v34 save compatibility checks. CI/native and 3DS build results pending, and emulator verification of the actual buildings remains OPEN. Do not mark Step 1 complete.
 
+- CI wiring corrected in `ef1f9f9`: the independent root roadside dispatch/quota regression now runs in the 3DS push workflow immediately after source data extraction. Existing native world suite includes the six-level actual-building regression. Build/test outcomes and emulator verification remain open until confirmed; no new gameplay rules introduced.
+
 ## Part 1 — building generator maintenance
 
 - [x] Removed the roadside shelter feature added in `e3bc5f6`. An existing save from that revision can still contain its saved ground items.
