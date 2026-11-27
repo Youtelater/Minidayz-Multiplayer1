@@ -1283,3 +1283,9 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 - [x] Route categories 51–53 through the existing transactional box-open path; no unsupported-category empty opening. Source-source audit and native tests added (3be21482, ecef7576, 5fb8a5dd). All extracted drop IDs exist in the native item catalog; CI and runtime verification have not been observed.
 - [x] Move large bed-dismantle ground-loot transaction to checked heap allocation, avoiding another ARM11 stack regression (0c9ebd71).
 - [ ] map_fs-specific extra box branches, unlocked achievements, category53 Save_run_progress, direct Create and remaining categories, actual bunker/FinalStand and bridge entry/exit scenes, source Fade completion, combat-hit dispatch for tree damage, and final build/gameplay parity remain open. Do not mark Step 3 complete.
+
+### Step 3 — source direct quantity and category 999 box branches
+
+- [x] Read the root original Construct blob directly, not derived tracker data. Ported direct Create + variable-1 assignment for box categories 5–13: 19 ordered drops with original object IDs, Spawn_drop item mappings, counts, offsets, and both action UIDs. Added category 999's three ordered random outcomes and six exact literal Spawn_drop actions. Routed both through the existing heap-backed transactional box opening (f791f676).
+- [x] Added independent root-source audit (c6fe1837) and native regression coverage for category 999 and every direct quantity category (45858e56). Tests are committed, but CI and emulator execution are not verified in this session.
+- [ ] Remaining direct Create cases, non-default Spawn_drop parameter semantics and remaining nested categories, achievement unlocks and quest conditions, category 53 Save_run_progress, original Bunker/FinalStand and bridge scene transitions, source Fade, combat hit dispatch/tree damage, and final build and emulator parity remain open. Step 3 is not complete.
