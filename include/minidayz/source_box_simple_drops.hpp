@@ -415,8 +415,67 @@ inline bool source_box_default_nested_drops(std::uint64_t category,
         }
         return false;
     }
+    case 999: { // 957033466883016
+        constexpr int pool[]={1,2,3};
+        const int randy=pick(pool);
+        if(randy==1) { // 210336597575079
+            if(!drop(242,10,5))return false; // 683391297369540
+            if(!drop(758,-10,5))return false; // 405904378927929
+            if(!drop(758,-10,5))return false; // 909893986306895
+            return true;
+        }
+        if(randy==2) { // 793065042020001
+            if(!drop(243,10,5))return false; // 997757746526117
+            if(!drop(462,-10,5))return false; // 434812818530632
+            return true;
+        }
+        if(randy==3) { // 953292671901276
+            if(!drop(245,10,5))return false; // 865378487804537
+            return true;
+        }
+        return false;
+    }
     default:return false;
     }
+}
+// Original direct Create + Set instance variable 1 branches (5–13).
+// Object-to-item mapping is from Spawn_drop event 5418835019314848.
+struct SourceBoxDirectQuantityDrop {
+    std::uint16_t category,object,item,count;
+    int dx,dy;
+    std::uint64_t create_uid,set_uid;
+};
+inline constexpr SourceBoxDirectQuantityDrop kSourceBoxDirectQuantityDrops[]={
+    {5,30,11,30,-10,0,830489321749565,551147352530324},
+    {5,30,11,30,10,0,543615434550665,710078025218332},
+    {6,29,12,30,-10,0,223423840006814,980517091613862},
+    {6,29,12,30,10,0,133365826261222,841318704621879},
+    {7,31,13,15,-10,0,847263439637079,638707055115389},
+    {7,31,13,15,10,0,402118452268962,647826333530370},
+    {8,58,14,30,-10,0,638304838800480,784408970424703},
+    {8,58,14,30,10,0,413794190431448,980561959487246},
+    {9,57,15,30,-10,0,974852921856562,874749350342166},
+    {9,57,15,30,10,0,814700281272083,572092384746227},
+    {10,59,16,20,-10,0,331026146732388,940912535499435},
+    {10,59,16,20,10,0,791771551783665,213338620916612},
+    {11,28,17,15,-10,0,594730930621676,256686527940780},
+    {11,28,17,15,10,0,284639587721876,897141181464374},
+    {12,444,58,50,-10,0,573726606301362,144638394945628},
+    {12,444,58,50,10,0,158583749742755,533311061582807},
+    {13,566,69,30,-10,0,221752971392365,583427760301081},
+    {13,566,69,30,10,0,489097352903775,505664598798911},
+    {13,566,69,30,0,5,201300767367609,462861427093768},
+};
+inline bool source_box_direct_quantity_drops(std::uint64_t category,
+    GroundLootSystem& ground,float x,float y) noexcept {
+    bool found=false;
+    for(const auto& row:kSourceBoxDirectQuantityDrops){
+        if(row.category!=category)continue;
+        found=true;
+        if(!ground.add({row.item,row.count,kUseSourceItemCondition},
+                      x+row.dx,y+row.dy))return false;
+    }
+    return found;
 }
 // Native transaction: never consume a source box or advance its RNG
 // when its branch is not yet supported or cannot fit in ground storage.
@@ -430,8 +489,9 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
        !world_source::source_player_overlaps_world_sprite(
            *box,actor,box->origin_x,box->origin_y))return false;
     const auto* category=source_box_category(box->source_variable_0);
-    const bool nested=box->source_variable_0==51 || box->source_variable_0==52 || box->source_variable_0==53;
-    if(!category && !nested)return false;
+    const bool nested=box->source_variable_0==51 || box->source_variable_0==52 || box->source_variable_0==53 || box->source_variable_0==999;
+    const bool direct=box->source_variable_0>=5 && box->source_variable_0<=13;
+    if(!category && !nested && !direct)return false;
     // Keep the large native ground buffer on the heap, not ARM11 stack.
     auto next=std::unique_ptr<GroundLootSystem>(
         new(std::nothrow) GroundLootSystem(ground));
@@ -439,6 +499,8 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
     if(!next || !random)return false;
     if(nested && !source_box_default_nested_drops(box->source_variable_0,
         *random,*next,box->x,box->y))return false;
+    if(direct && !source_box_direct_quantity_drops(box->source_variable_0,
+        *next,box->x,box->y))return false;
     if(category)for(std::size_t i=0;i<category->count;++i){
         const auto& drop=kSourceBoxDrops[category->first+i];
         const auto pick=drop.choose?source_initial_loot_choice_index(
