@@ -3176,6 +3176,37 @@ void test_original_box_drop_catalog() {
         assert(index>0 && index==ground->count());
     }
     for(unsigned outcome=1;outcome<=15;++outcome)assert(reached[outcome]);
+    for (int category : {23,1020,1021}) {
+        for (std::uint32_t seed=0;seed<256;++seed) {
+            ground->clear();
+            std::mt19937 actual(seed), expected(seed);
+            assert(source_box_special_equipment(category,actual,*ground,1000,1000));
+            if (category==23) {
+                assert(ground->count()==1 && ground->entry(0)->item.item_id==265);
+                assert(ground->entry(0)->x==990 && ground->entry(0)->item.condition==100);
+            } else {
+                int expected_rounds=0;
+                std::uint16_t expected_weapon=0;
+                assert(source_execute_special_box(category,
+                    [&](std::size_t size){return source_initial_loot_choice_index(expected(),size);},
+                    [](std::string_view){return false;},
+                    [&](const SourceSpecialBoxAction& action){
+                        if (action.kind==1 && (action.variable==1 || action.variable==3))
+                            expected_rounds+=action.value;
+                        if (action.kind==1 && action.variable==6)
+                            expected_weapon=source_special_box_item(action.object);
+                        return true;
+                    },[](int,const auto&){return false;}));
+                assert(ground->count()>=2);
+                int rounds=0;
+                for (std::size_t i=0;i+1<ground->count();++i)
+                    rounds+=ground->entry(i)->item.count;
+                assert(rounds==expected_rounds);
+                assert(ground->entry(ground->count()-1)->item.item_id==expected_weapon);
+                assert(actual==expected);
+            }
+        }
+    }
     for(std::uint32_t seed=0;seed<512;++seed){
         ground->clear();
         std::mt19937 actual(seed), expected(seed);

@@ -4,6 +4,8 @@
 #include "minidayz/source_roof_interaction.hpp"
 #include "minidayz/original_initial_building_loot.hpp"
 #include "minidayz/source_special_box_actions.hpp"
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <memory>
 #include <new>
@@ -657,6 +659,68 @@ inline bool source_box_equipment_cache_drops(std::mt19937& rng,
         });
 }
 
+// Map template item IDs for the explicit Create actions. Ammo templates
+// use variable 10 and equipment templates use variable 16.
+inline std::uint16_t source_special_box_item(int object) noexcept {
+    constexpr struct { int object; std::uint16_t item; } items[]{
+        {28,17},{29,12},{30,11},{31,13},{44,156},{45,158},{47,154},
+        {52,160},{53,159},{54,161},{55,157},{56,153},{57,15},{58,14},
+        {59,16},{69,162},{70,155},{71,152},{105,265},{111,168},
+        {112,169},{113,170},{115,175},{116,174},{117,173},{123,179},
+        {124,178},{125,177},{129,184},{130,185},{131,186},{133,183},
+        {137,100},{138,101},{140,181},{444,58},{454,166},{455,165},
+        {456,167},{566,69},{1102,138}
+    };
+    for (const auto& entry : items)
+        if (entry.object==object) return entry.item;
+    return 0;
+}
+
+inline bool source_box_special_equipment(int category,std::mt19937& rng,
+    GroundLootSystem& ground,float x,float y) noexcept {
+    if (category!=23 && category!=1020 && category!=1021) return false;
+    struct Drop { int object,dx,dy; std::uint16_t item,count; };
+    std::array<Drop,2> drops{};
+    std::size_t count=0;
+    int rounds_in_weapon=0;
+    const bool decoded=source_execute_special_box(category,
+        [&](std::size_t size){return source_initial_loot_choice_index(rng(),size);},
+        [](std::string_view){return false;},
+        [&](const SourceSpecialBoxAction& action){
+            if (action.kind==0) {
+                const auto item=source_special_box_item(action.object);
+                if (!item || count==drops.size()) return false;
+                drops[count++]={action.object,action.dx,action.dy,item,1};
+                return true;
+            }
+            if (!count || drops[count-1].object!=action.object) return false;
+            switch (action.variable) {
+            case 1: drops[count-1].count=static_cast<std::uint16_t>(action.value); return true;
+            case 3: if (category!=23) rounds_in_weapon=action.value; return true;
+            case 5: return action.value==-1;
+            case 6: return action.value==100;
+            case 20: return category==23 && action.value==1;
+            default: return false;
+            }
+        },
+        [](int,const auto&){return false;});
+    if (!decoded || count!=(category==23 ? 1u : 2u)) return false;
+    // The native weapon slots have no magazine state. Keep the total
+    // number of rounds by adding those rounds to the loose ammo drop.
+    drops[0].count=static_cast<std::uint16_t>(drops[0].count+rounds_in_weapon);
+    for (std::size_t i=0;i<count;++i) {
+        const auto& drop=drops[i];
+        const auto limit=source_max_stack(drop.item);
+        if (!limit || !drop.count) return false;
+        for (auto remaining=drop.count;remaining>0;) {
+            const auto amount=std::min(remaining,limit);
+            if (!ground.add({drop.item,amount,100,0},x+drop.dx,y+drop.dy)) return false;
+            remaining=static_cast<std::uint16_t>(remaining-amount);
+        }
+    }
+    return true;
+}
+
 // Native transaction: never consume a source box or advance its RNG
 // when its branch is not yet supported or cannot fit in ground storage.
 // The actual box is selected by the original Player181 collision mask.
@@ -674,7 +738,9 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
     const bool mixed=source_box_has_mixed_drops(box->source_variable_0);
     const bool special=box->source_variable_0==456789;
     const bool equipment_cache=box->source_variable_0==1022;
-    if(!category && !nested && !direct && !mixed && !special && !equipment_cache)
+    const bool special_equipment=box->source_variable_0==23 ||
+        box->source_variable_0==1020 || box->source_variable_0==1021;
+    if(!category && !nested && !direct && !mixed && !special && !equipment_cache && !special_equipment)
         return false;
     // Keep the large native ground buffer on the heap, not ARM11 stack.
     auto next=std::unique_ptr<GroundLootSystem>(
@@ -688,6 +754,8 @@ inline bool source_open_simple_box(WorldSystem& world,std::size_t index,
     if(special && !source_box_456789_drops(*random,*next,box->x,box->y))return false;
     if(equipment_cache && !source_box_equipment_cache_drops(
         *random,*next,box->x,box->y))return false;
+    if(special_equipment && !source_box_special_equipment(
+        static_cast<int>(box->source_variable_0),*random,*next,box->x,box->y)) return false;
     if(mixed && !source_box_mixed_drops(box->source_variable_0,*next,box->x,box->y))return false;
     if(category)for(std::size_t i=0;i<category->count;++i){
         const auto& drop=kSourceBoxDrops[category->first+i];

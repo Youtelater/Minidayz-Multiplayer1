@@ -1372,3 +1372,8 @@ The build's procedural terrain report now contains all 638 single-cell and recta
 - Bridge, bunker and Final Stand passages now spawn NPC encounters with the existing movement and sprite system. X strikes a nearby enemy and contact damage carries back to the surface survivor.
 - Underground exits now provide a one-time bandage cache or terminal interaction. Both store their completion against the entrance in the world save. The encounter placements, combat tuning, supplies and terminal are native 3DS designs. Encounters restart when re-entering or continuing a passage.
 - Special equipment state for lootbox categories 23, 1020 and 1021 and emulator checks remain open.
+
+### Step 3 — special lootbox drops
+
+- Categories 23, 1020 and 1021 now dispatch through the native transactional box-opening path. The equipment IDs come from the Map templates. The existing source executor selects the branch, and native ground stacks retain the combined loose and loaded ammunition counts.
+- The native drops use full-condition equipment and loose ammunition. Loaded magazines, NVG charge and activation, and achievement-dependent alternatives remain parity gaps. The native selector uses the default locked achievement state. Runtime verification of these boxes and the passage encounters remains open.
