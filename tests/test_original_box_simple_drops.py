@@ -175,3 +175,36 @@ s=native.split("kSourceBoxMixedDrops[]={",1)[1].split("};",1)[0]
 assert mixed==[list(map(int,re.findall(r"-?\d+",row))) for row in re.findall(r"\{([^{}]+)\}",s)]
 assert len(mixed)==35 and {row[0] for row in mixed}==mixed_categories
 print("Original mixed/direct box drop actions:",len(mixed))
+
+# Category 456789: original 15 outcomes, default locked achievement branches.
+special=next(c for c in ev[7] if len(c[5])==1 and c[5][0][:2]==[796,71]
+             and c[5][0][9][2][1][1]==456789)
+pool=special[6][0][5][1][1]
+assert pool[:2]==[19,82]
+block=native.split("inline bool source_box_456789_drops",1)[1]
+assert "constexpr int pool[]={"+",".join(str(x[1]) for x in pool[2])+"};" in block
+special_rows=[]
+for b in special[7]:
+    outcome=b[5][0][9][2][1][1]
+    actions=b[6]
+    if len(b)>7 and b[7]:
+        assert outcome in (14,15) and len(b[7])==2 and b[7][1][5][0][1]==70
+        actions=b[7][1][6]
+    acts=iter(actions)
+    for a in acts:
+        if a[:2]==[189,69]:
+            assert a[5][0]==[1,[2,"Spawn_drop"]]
+            args=[x[1] for x in a[5][1][1:]]
+            assert args[0][0]==0 and (len(args)==3 or args[3:]==[[0,-1]]*3)
+            special_rows.append([outcome,0,args[0][1],1,offset(args[1],65),offset(args[2],66),a[3],0])
+        else:
+            obj=a[5][0][1]
+            assert a[:2]==[-1,94] and a[5][1]==[5,[2,"items_on_ground"]]
+            d=next(acts)
+            assert d[:2]==[obj,88] and d[5][0]==[10,1] and d[5][1][1][0]==0
+            special_rows.append([outcome,obj,objects[obj],d[5][1][1][1],
+                                 offset(a[5][2][1],65),offset(a[5][3][1],66),a[3],d[3]])
+s=native.split("kSourceBox456789Drops[]={",1)[1].split("};",1)[0]
+assert special_rows==[list(map(int,re.findall(r"-?\d+",row))) for row in re.findall(r"\{([^{}]+)\}",s)]
+assert len(special_rows)==56 and {row[0] for row in special_rows}==set(range(1,16))
+print("Original normal-map category 456789 drop actions:",len(special_rows))
