@@ -18,7 +18,10 @@ const char* source_item_name(std::uint16_t item_id) noexcept;
 struct InventorySlot {
     std::uint16_t item_id{};
     std::uint16_t count{};
-    std::uint8_t condition{100}; // Ceiling of original variable 6.
+    // Ceiling of source variable 6 for equipment. The four-variable
+    // gasoline can, MRE, spinning rod and radio have no var6: their
+    // explicit source variable 1 value can occupy this same native byte.
+    std::uint8_t condition{100};
     // Exact source condition = condition*100 - fractional_loss.
     // Occupies previous padding byte, retaining v10 item layout.
     std::uint8_t fractional_loss{};
@@ -28,6 +31,7 @@ struct InventorySlot {
 struct GroundItem {
     std::uint16_t item_id{};
     std::uint16_t count{};
+    // Same per-object state-byte representation as InventorySlot.
     std::uint8_t condition{kUseSourceItemCondition};
     std::uint8_t fractional_loss{};
     bool empty() const noexcept { return item_id == 0 || count == 0; }
