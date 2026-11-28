@@ -890,10 +890,13 @@ bool Renderer::draw_item_icon(std::uint16_t item_id,float center_x,float center_
  }
  const bool has_definition=first<items::kItemSpriteDefinitionCount &&
     items::kItemSpriteDefinitions[first].item_id==item_id;
- if(!has_definition && !std::binary_search(std::begin(items::kInventorySlotIconIds),
+ const bool stash_icon=item_id==461;
+ if(!has_definition && !stash_icon && !std::binary_search(std::begin(items::kInventorySlotIconIds),
        std::end(items::kInventorySlotIconIds),item_id)) return false;
- const std::uint16_t object=has_definition?items::kItemSpriteDefinitions[first].object:6;
- const std::uint32_t wanted_frame=has_definition?0u:item_id;
+ const std::uint16_t object=has_definition ? items::kItemSpriteDefinitions[first].object
+                                            : (stash_icon ? 4 : 6);
+ const std::uint32_t wanted_frame=has_definition ? 0u
+                                                : (stash_icon ? items::kSuppliesStashIconFrame : item_id);
  const auto key=std::tuple<std::uint16_t,std::uint16_t,std::uint32_t>{object,0,wanted_frame};
  const auto* begin=stage1::kSpriteFrames;
  const auto* end=begin+stage1::kSpriteFrameCount;

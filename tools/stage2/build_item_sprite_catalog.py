@@ -119,6 +119,24 @@ def main() -> None:
             continue
         inventory_slot_icons.append(item_id)
 
+    # Pickpile has a dedicated branch for Supplies Stash. Extract the
+    # exact backpack-card frame from the decoded original event.
+    def events(nodes):
+        for event in nodes:
+            if not isinstance(event, list) or len(event) < 7 or event[0] != 0:
+                continue
+            yield event
+            if len(event) > 7 and isinstance(event[7], list):
+                yield from events(event[7])
+
+    stash_event = next(e for e in events(dict(project["project"][6])["Game_events"])
+                       if e[4] == 176073617988905)
+    assert stash_event[5][0][9][-1] == [7, [0, 461]]
+    stash_action = next(a for a in stash_event[6] if a[3] == 488945600683386)
+    assert stash_action[:2] == [4, 72]
+    stash_frame = stash_action[5][0][1][1]
+    assert Path(objects[4][7][0][7][stash_frame][0]).name == "gui_item_backpack-sheet3.png"
+
     drop_rows: list[tuple[int, int]] = []
     unresolved_drops: list[tuple[int,str]] = []
     for identifier, name in sorted(drop_entries.items()):
@@ -154,7 +172,8 @@ def main() -> None:
     lines.extend(f"    {{{item_id}, {object_index}}}," for item_id, object_index in rows)
     lines += ["};", "inline constexpr std::uint16_t kInventorySlotIconIds[] = {"]
     lines.extend(f"    {item_id}," for item_id in sorted(inventory_slot_icons))
-    lines += ["};"]
+    lines += ["};",
+              f"inline constexpr std::uint16_t kSuppliesStashIconFrame = {stash_frame};"]
     lines += [
         "// Multiplayer add-on references only; do not change source single-player spawn.",
         f"inline constexpr std::size_t kMpPlayerDropSpriteCount = {len(drop_rows)};",

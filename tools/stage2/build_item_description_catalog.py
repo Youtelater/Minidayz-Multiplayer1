@@ -55,6 +55,20 @@ def main() -> None:
         "mini sight": "mini sights",
         "fried egg": "fried eggs",
         "-work gloves": "work gloves",
+        ".22lr ammo": ".22 lr ammo",
+        "car toolkit": "car tool kit",
+        "cloud berries": "cloudberries",
+        "long-range scope": "long range scope",
+        "gun sling": "rifle sling",
+        "fire-axe": "fire axe",
+        "warmhat": "warm hat",
+        "police cap": "police hat",
+        "12 gauge drum": "12 cal drum mag",
+        "dye bucket 🎨": "dye bucket🎨",
+        "5.45x39 drum mag": "c-mag 5.45 drum",
+        "cooked chincken": "cooked chicken",
+        "cooked wolf meat": "roasted wolf meat",
+        "cooked bear meat": "roasted bear meat",
     }
     annotated: dict[int, list[tuple[int, str]]] = {}
     comment = ""
@@ -76,8 +90,27 @@ def main() -> None:
                     assert descriptions[iid].strip()==descriptions[text_id].strip()
                     annotated.setdefault(iid, []).append((iid, descriptions[iid]))
             comment = ""
+    # The two ghillie IDs are the stowed template (1118 var2=145)
+    # and the wearable template (1114 var16=407). Their text differs.
+    for item_id, text_id in ((145, 145), (407, 408)):
+        assert text_id in {index for index, _ in annotated[item_id]}
+        annotated[item_id] = [(text_id, descriptions[text_id])]
+
+    # These two helmet colors have the same source description wording.
+    assert descriptions[451].strip() == descriptions[455].strip()
+    for item_id, text_id in ((252, 451), (253, 455)):
+        assert names_by_id[item_id] == "Moto Helmet"
+        annotated[item_id] = [(text_id, descriptions[text_id])]
+
+    # The Map templates identify 191 as m16 and 198 as m16+.
+    # Their annotated text rows currently differ only in whitespace.
+    assert names_by_id[191] == "Colt M16A2" and names_by_id[198] == "M16A2"
+    assert " ".join(descriptions[263].split()) == " ".join(descriptions[270].split())
+    annotated[191] = [(263, descriptions[263])]
+    annotated[198] = [(270, descriptions[270])]
+
     ambiguous = sorted(iid for iid, rows in annotated.items()
-                       if len({text.strip() for _,text in rows}) != 1)
+                       if len({" ".join(text.split()) for _,text in rows}) != 1)
     verified = sorted((iid, rows[0][0], rows[0][1])
                       for iid, rows in annotated.items() if iid not in ambiguous)
     if not verified or ambiguous:
@@ -109,7 +142,10 @@ def main() -> None:
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
     print(f"Generated {len(descriptions)} raw description rows, {len(verified)} verified item-name annotation mappings")
-    print(f"Item IDs with no original description ({len(missing)}): {missing}")
+    verified_ids = {row[0] for row in verified}
+    unmapped = sorted(iid for iid, name in names_by_id.items()
+                      if name and iid not in (66, 67) and iid not in verified_ids)
+    print(f"Named item IDs without a verified description ({len(unmapped)}): {unmapped}")
     print(f"Description IDs not present in item-name catalog ({len(extra)}): {extra}")
 
 if __name__ == "__main__":

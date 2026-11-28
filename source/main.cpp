@@ -3197,9 +3197,8 @@ public:
                 stash->x > camera_x + view_w + 24.0f ||
                 stash->y < camera_y - 24.0f ||
                 stash->y > camera_y + view_h + 24.0f) continue;
-            (void)renderer.draw_item_icon(
-                minidayz::items::kOriginalSuppliesStashItemId,
-                stash->x, stash->y, 28.0f, 28.0f, minidayz::world_source::source_dynamic_layer_depth(18,i,stashes_.count()+ground_loot_.count()));
+            (void)renderer.draw_source_sprite(995,0,1,stash->x,stash->y,1.0f,1.0f,
+                minidayz::world_source::source_dynamic_layer_depth(18,i,stashes_.count()+ground_loot_.count()));
         }
 
         for (std::size_t i = 0; i < ground_loot_.count(); ++i) {

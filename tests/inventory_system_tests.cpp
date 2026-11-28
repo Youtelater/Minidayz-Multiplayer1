@@ -25,6 +25,7 @@ int main() {
         assert(std::binary_search(fallback_begin,fallback_end,id));
     for (const auto id : {0, 1, 66, 67, 351, 461, 999})
         assert(!std::binary_search(fallback_begin,fallback_end,id));
+    static_assert(kSuppliesStashIconFrame == 12);
     assert(kItemSpriteDefinitionCount == 329);
     assert(source_construct_object(1) != 65535);
     assert(source_sprite_object(1) != 65535);

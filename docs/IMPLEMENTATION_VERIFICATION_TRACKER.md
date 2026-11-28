@@ -1440,3 +1440,10 @@ Original Construct Sprite body objects `600, 206, 582, 583, 586, 587` each defin
 - Verified descriptions increased from 306 to 379 through explicit source annotation aliases, identical text variants and the annotated ammo-box group. This leaves IDs 42, 43, 44, 58, 59, 73, 98, 142, 145, 191, 204, 252, 253, 254, 264, 407, 704, 705, 715, 720, 781 and 783 without a verified nonempty mapping.
 - Metadata coverage is separate from gameplay coverage. Item activation and alternate activation, ammo-box loading and unpacking, variant transitions, crafting, equipment-specific functions and spawn or unlock conditions still require event-level verification. A catalog entry or description does not establish that an item is obtainable or functional.
 - The native catalog, inventory and description tests pass. Emulator item rendering and gameplay verification remain open.
+
+### Step 4B — remaining item descriptions and Supplies Stash artwork
+
+- Original English description coverage is 401/401 named item IDs. The remaining joins use the source XML's names and annotations, equivalent wording for knife duplicates, and Map template identities for the stowed/worn ghillie suits and the two M16A2 variants.
+- The Supplies Stash uses Construct Sprite4 frame12 from original Pickpile event 176073617988905 in the inventory. A deployed stash uses Sprite995 frame1, the original visible frame selected by event 860053462189060. Both atlas pages are present in ROMFS.
+- Inventory icon coverage is 400/401. Shirt ID 351 is named and referenced by loot rolls, but the original Spawn_drop function has no creation branch for it and its indexed inventory frame points at the default canned-food rectangle. No source artwork was assigned to that ID.
+- The description and inventory tests were run on the native code. Full gameplay parity and emulator verification remain open.

@@ -50,6 +50,13 @@ int main() {
         const char* box=source_item_description(id);
         assert(box && std::strstr(box,"10 times"));
     }
+    assert(kVerifiedItemDescriptionCount==401);
+    for (const auto& item : kItemDefinitions) {
+        if (item.name[0] && item.id!=66 && item.id!=67)
+            assert(source_item_description(item.id));
+    }
+    assert(std::strstr(source_item_description(42),"field dressing"));
+    assert(std::strstr(source_item_description(191),"Colt 4-way"));
     for (std::uint16_t id = 0; id <= 900; ++id) {
         const char* desc = source_item_description(id);
         if (desc) assert(std::strlen(desc) < 4096);
