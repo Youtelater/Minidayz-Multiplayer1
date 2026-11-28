@@ -609,6 +609,26 @@ int main() {
         corrupt_slots, both_restored.satchel_snapshot()));
     assert(army_reloaded.slot(21)->item_id == 24);
 
+    auto legacy_army = army_saved;
+    legacy_army.capacity = 26;
+    for (std::size_t i = 1; i < 21; ++i) legacy_army.slots[i] = {1, 1};
+    legacy_army.slots[0] = {};
+    legacy_army.slots[24] = {24, 1, 67, 8};
+    legacy_army.slots[25] = {18, 1, 80};
+    assert(army_reloaded.restore_with_satchel(
+        legacy_army, both_restored.satchel_snapshot()));
+    assert(army_reloaded.capacity() == 24);
+    assert(army_reloaded.slot(0)->item_id == 18);
+    assert(army_reloaded.slot(22)->item_id == 24);
+    assert(army_reloaded.slot(22)->condition == 67);
+    assert(army_reloaded.slot(22)->fractional_loss == 8);
+
+    legacy_army.slots[0] = {1, 1};
+    assert(!army_reloaded.restore_with_satchel(
+        legacy_army, both_restored.satchel_snapshot()));
+    assert(army_reloaded.slot(0)->item_id == 18);
+    assert(army_reloaded.slot(22)->fractional_loss == 8);
+
     // A Medical Satchel accepts Bandages etc, not Army-only matches.
     assert(both_restored.add(460, 1, 0, 66));
     assert(!both_restored.equip_satchel_from_slot(2));

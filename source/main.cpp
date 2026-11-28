@@ -878,19 +878,20 @@ public:
                 if (crafted) stage2_audio_.play_crafting();
             }
         }
-        const bool inventory_x=(input.pressed & KEY_X) && selected_inventory_slot_>=0;
-        if (selected_inventory_slot_ >= 0 && (input.pressed & (KEY_A | KEY_X))) {
+        const bool inventory_selected = selected_inventory_slot_ >= 0;
+        const bool inventory_a = inventory_selected && (input.pressed & KEY_A);
+        const bool inventory_x = inventory_selected && (input.pressed & KEY_X);
+        if (inventory_a || inventory_x) {
             const auto selected_index = static_cast<std::size_t>(selected_inventory_slot_);
             const auto* item = inventory_.slot(selected_index);
             const bool deploy_storage = item && !item->empty() &&
                 (item->item_id == minidayz::items::kOriginalCivilianTentItemId ||
                  item->item_id == minidayz::items::kOriginalSuppliesStashItemId) &&
-                (input.pressed & KEY_X) != 0;
+                inventory_x;
             if (deploy_storage) {
                 (void)deploy_source_storage(selected_index);
             } else {
-                (void)use_original_inventory_item(
-                    selected_index,(input.pressed & KEY_X) != 0);
+                (void)use_original_inventory_item(selected_index, inventory_x);
             }
             const auto* selected = inventory_.slot(
                 static_cast<std::size_t>(selected_inventory_slot_));
@@ -1478,7 +1479,7 @@ public:
         // Native A adapts original mobile marker506 interactions, without
         // inventing full Construct touchscreen pathfinding. A selected item
         // retains its own independent inventory-use action above.
-        if ((input.pressed & KEY_A) && selected_inventory_slot_ < 0 &&
+        if ((input.pressed & KEY_A) && !inventory_a && selected_inventory_slot_ < 0 &&
             !source_bed_build_.active && !source_pump_pending_.runtime_uid &&
             !request_source_manual_door() &&
             !request_source_car_trunk())

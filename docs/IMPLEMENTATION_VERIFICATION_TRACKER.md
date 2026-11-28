@@ -1447,3 +1447,10 @@ Original Construct Sprite body objects `600, 206, 582, 583, 586, 587` each defin
 - The Supplies Stash uses Construct Sprite4 frame12 from original Pickpile event 176073617988905 in the inventory. A deployed stash uses Sprite995 frame1, the original visible frame selected by event 860053462189060. Both atlas pages are present in ROMFS.
 - Inventory icon coverage is 400/401. Shirt ID 351 is named and referenced by loot rolls, but the original Spawn_drop function has no creation branch for it and its indexed inventory frame points at the default canned-food rectangle. No source artwork was assigned to that ID.
 - The description and inventory tests were run on the native code. Full gameplay parity and emulator verification remain open.
+
+### Step 4B — inventory transfers and button handling
+
+- Matching stacks in disabled clothing pockets can now merge into active storage. Swaps that would put an item back into a disabled pocket are rejected.
+- When loading older saves with oversized bags, compatible overflow stacks can use restricted satchel slots. This keeps unrestricted space available for other items. An overflow that still cannot fit leaves the live inventory intact.
+- Using the last item in a stack with A no longer sends the same press to a door, trunk, or furniture interaction.
+- Eleven native test suites and the inventory UI check passed. The devkitPro 3DS build passed. Inventory rendering and controls still need an emulator run, and full original-game parity remains open.

@@ -660,9 +660,7 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
                            std::uint16_t max_stack) noexcept {
     if (from >= capacity_ || to >= capacity_ || from == to ||
         slots_[from].empty()) return false;
-    if (!slot_accepts(to, slots_[from].item_id) ||
-        (!slots_[to].empty() &&
-         !slot_accepts(from, slots_[to].item_id))) return false;
+    if (!slot_accepts(to, slots_[from].item_id)) return false;
     auto& source = slots_[from];
     auto& destination = slots_[to];
     const std::uint16_t moving = amount == 0 ? source.count : amount;
@@ -681,7 +679,8 @@ bool InventorySystem::move(std::size_t from, std::size_t to,
             return false;
         destination.count = static_cast<std::uint16_t>(destination.count + moving);
     } else {
-        if (moving != source.count) return false;
+        if (moving != source.count ||
+            !slot_accepts(from, destination.item_id)) return false;
         const InventorySlot temporary = destination;
         destination = source;
         source = temporary;
@@ -787,11 +786,12 @@ bool InventorySystem::restore_with_satchel(
     // into the surviving slots (merge only matching ID AND condition)
     // instead of deleting items or rejecting otherwise recoverable saves.
     // Everything happens in a local snapshot: a failed migration is atomic.
-    std::size_t restored_capacity = normalized_input.equipped_backpack == 0
+    const std::size_t main_capacity = normalized_input.equipped_backpack == 0
         ? kInventorySlotCount
         : source_backpack_capacity(normalized_input.equipped_backpack);
     const auto source_satchel = source_satchel_capacity(satchel.item_id);
-    restored_capacity += source_satchel.unrestricted + source_satchel.exclusive;
+    const std::size_t restricted_start = main_capacity + source_satchel.unrestricted;
+    const std::size_t restored_capacity = restricted_start + source_satchel.exclusive;
     if (restored_capacity < kInventorySlotCount ||
         restored_capacity > kMaximumInventorySlotCount)
         return false;
@@ -801,7 +801,10 @@ bool InventorySystem::restore_with_satchel(
             auto& displaced = normalized.slots[i];
             if (displaced.empty()) continue;
             const std::uint16_t limit = source_max_stack(displaced.item_id);
-            for (std::size_t j = 0; j < restored_capacity && !displaced.empty(); ++j) {
+            const std::size_t eligible_end =
+                source_satchel_exclusive_accepts(satchel.item_id, displaced.item_id)
+                    ? restored_capacity : restricted_start;
+            for (std::size_t j = 0; j < eligible_end && !displaced.empty(); ++j) {
                 auto& target = normalized.slots[j];
                 if (target.empty() || target.item_id != displaced.item_id ||
                     target.condition != displaced.condition ||
@@ -816,23 +819,20 @@ bool InventorySystem::restore_with_satchel(
                 if (displaced.count == 0) displaced = {};
             }
             if (displaced.empty()) continue;
-            for (std::size_t j = 0; j < restored_capacity; ++j) {
-                auto& target = normalized.slots[j];
-                if (!target.empty()) continue;
-                target = displaced;
-                displaced = {};
-                break;
+            // Keep general storage available for stacks the satchel rejects.
+            const auto first_restricted = normalized.slots.begin() + restricted_start;
+            const auto end_eligible = normalized.slots.begin() + eligible_end;
+            const auto empty = [](const InventorySlot& entry) { return entry.empty(); };
+            auto target = std::find_if(first_restricted, end_eligible, empty);
+            if (target == end_eligible) {
+                target = std::find_if(normalized.slots.begin(), first_restricted, empty);
+                if (target == first_restricted) return false;
             }
-            if (!displaced.empty()) return false; // no loss or silent overflow
+            *target = displaced;
+            displaced = {};
         }
     }
 
-    const std::size_t source_main_capacity =
-        normalized_input.equipped_backpack == 0
-            ? kInventorySlotCount
-            : source_backpack_capacity(normalized_input.equipped_backpack);
-    const std::size_t restricted_start =
-        source_main_capacity + source_satchel.unrestricted;
     for (std::size_t i = restricted_start; i < restored_capacity; ++i)
         if (!normalized.slots[i].empty() &&
             !source_satchel_exclusive_accepts(satchel.item_id,

@@ -110,8 +110,13 @@ int main() {
     loaded_pockets.bind_clothing_pockets(outfit.clothing_pockets());
     assert(loaded_pockets.slot(1)->item_id==18 && !loaded_pockets.slot_enabled(1));
     assert(!loaded_pockets.add_to_slot(1,18,1));
+    assert(loaded_pockets.add_to_slot(9,1,1));
+    assert(!loaded_pockets.move(1,9)); // swapping would fill a disabled pocket
+    assert(loaded_pockets.slot(9)->item_id==1);
+    assert(loaded_pockets.remove(9,1));
+    assert(loaded_pockets.add_to_slot(9,18,1));
     assert(loaded_pockets.move(1,9));
-    assert(loaded_pockets.slot(9)->item_id==18 && loaded_pockets.slot(1)->empty());
+    assert(loaded_pockets.slot(9)->count==2 && loaded_pockets.slot(1)->empty());
 
     assert(loaded_pockets.add_to_slot(10,303,1));
     assert(outfit.equip_from_inventory(loaded_pockets,10,EquipmentSlot::pants));
